@@ -11,7 +11,7 @@ non-Microsoft principals. Probe uses existing consent and stops at interactive p
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
- [Parameter(Mandatory)][ValidateSet('Discover','Inventory','Register','Probe','Export')][string]$Action,
+ [Parameter(Mandatory)][ValidateSet('Discover','Inventory','Register','Probe','Merge','Export')][string]$Action,
  [Parameter(Mandatory)][string]$StatePath,
  [securestring]$GraphToken,
  [securestring]$EstsAuth,
@@ -24,6 +24,7 @@ param(
  [switch]$ResolvePublishedCandidates,
  [switch]$Refresh,
  [switch]$RetryFailures,
+ [string[]]$InputDatabasePath,
  [string]$ExportPath
 )
 $ErrorActionPreference='Stop'
@@ -59,6 +60,12 @@ try {
    $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
    $plan=Get-TokenForgeProbePlan -Inventory $inventory -ClientId $ClientId -GraphOnly:$GraphOnly @principalOptions
    Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $EstsAuth -Plan $plan -DatabasePath $databasePath -ClientId $ClientId @principalOptions -Tenant $Tenant -MaxApplications $MaxApplications -MaxRedirects $MaxRedirects -Refresh:$Refresh
+  }
+  'Merge' {
+   if (-not $InputDatabasePath) { throw 'Merge requires InputDatabasePath.' }
+   foreach ($inputPath in $InputDatabasePath) { if (-not (Test-Path -LiteralPath $inputPath -PathType Leaf)) { throw 'A merge input file is missing.' } }
+   $sources=@($InputDatabasePath | ForEach-Object { Get-TokenForgeScopeDatabase -Path $_ })
+   Merge-TokenForgeScopeDatabase -Database $sources -Path $databasePath
   }
   'Export' {
    if(-not $ExportPath){throw 'Export requires ExportPath.'}

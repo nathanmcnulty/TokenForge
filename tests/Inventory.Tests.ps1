@@ -429,3 +429,29 @@ Describe 'Implicit discovery protocols' {
         Should -Invoke Invoke-TokenForgeHttp -ModuleName TokenForge -Times 0
     }
 }
+
+Describe 'Independent checkpoint merging' {
+    It 'deduplicates identical observations while preserving different principal namespaces' {
+        $one=Add-TokenForgeScopeObservation -Database (New-TokenForgeScopeDatabase) -Observation (New-TestObservation)
+        $different=New-TestObservation;$different.PrincipalFingerprint=('d'*64)
+        $two=Add-TokenForgeScopeObservation -Database (New-TokenForgeScopeDatabase) -Observation $different
+        $merged=Merge-TokenForgeScopeDatabase -Database $one,$one,$two -Path "$TestDrive/merged.json"
+        $merged.Observations.Count | Should -Be 2
+        @($merged.Observations.PrincipalFingerprint | Sort-Object -Unique).Count | Should -Be 2
+    }
+    It 'drops unapproved fields from registration history and preserves safe failure status' {
+        $db=New-TokenForgeScopeDatabase
+        $db.RegistrationAttempts=@([pscustomobject]@{AppId=$clientId;TenantFingerprint=('a'*64);AttemptedAt=[DateTimeOffset]::UtcNow.ToString('o');Outcome='Failed';HttpStatus=400;AccessToken='private-secret';ObjectId='private-object'})
+        $merged=Merge-TokenForgeScopeDatabase -Database $db,$db
+        $merged.RegistrationAttempts.Count | Should -Be 1
+        $merged.RegistrationAttempts[0].HttpStatus | Should -Be 400
+        ($merged|ConvertTo-Json -Depth 10) | Should -Not -Match 'private-secret|private-object|AccessToken|ObjectId'
+    }
+    It 'does not replace a target if a merge source contains invalid registration identity' {
+        $path="$TestDrive/preserved.json";Set-Content $path 'preserved'
+        $db=New-TokenForgeScopeDatabase
+        $db.RegistrationAttempts=@([pscustomobject]@{AppId='private-secret';TenantFingerprint=('a'*64);AttemptedAt='invalid';Outcome='Failed'})
+        { Merge-TokenForgeScopeDatabase -Database $db -Path $path } | Should -Throw '*identity*'
+        (Get-Content $path -Raw).Trim() | Should -Be preserved
+    }
+}

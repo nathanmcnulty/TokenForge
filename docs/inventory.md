@@ -71,3 +71,16 @@ $observer = Get-TokenForgeTokenClaims -AccessToken $assessmentGraphToken.AccessT
 ```
 
 Use the customer's tenant authority when assessing a guest session. The default `organizations` authority may select the user's home tenant; a mismatching token is excluded from the assessment evidence. These fingerprint checks do not replace authentication or API role checks. A live alternate-user/guest proof requires another authorized account; the current live evidence uses one user and tenant.
+
+## Merge independently checkpointed batches
+
+Use separate databases for parallel workers. Merge their snapshots through the whitelist rather than concatenating JSON or allowing simultaneous writes to one file. Identical records are deduplicated; namespaces, dated failures, and later successful observations remain in history. The destination is replaced only after every source validates.
+
+```powershell
+$sources = @($paths | ForEach-Object { Get-TokenForgeScopeDatabase -Path $_ })
+$combined = Merge-TokenForgeScopeDatabase -Database $sources -Path $combinedPath
+# CLI equivalent:
+& $runner -Action Merge -StatePath $combinedState -InputDatabasePath $paths
+```
+
+A merge of live checkpoint files is a snapshot of their progress, not proof that their scans completed. Save a final merged snapshot after the source workers finish, then compare it with the previous snapshot and export anonymous observations as needed.

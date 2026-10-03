@@ -3,3 +3,4 @@
 *.token.json
 *.cookies.json
 TestResults*.xml
+dist/

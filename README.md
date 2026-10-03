@@ -1,6 +1,6 @@
 # TokenForge
 
-PowerShell toolkit for finding Microsoft Entra first-party applications that publish the delegated scopes you need, then requesting access tokens using an authorized ESTSAUTH session or refresh token.
+PowerShell toolkit for finding Microsoft Entra first-party applications that publish the delegated scopes you need, then requesting access tokens using an authorized ESTSAUTH session, refresh token, or system-browser authorization-code flow.
 
 Initial version: PowerShell 7.4+ on Windows, Linux, and macOS. The repository is private. Live passkey-backed validation on Linux has confirmed native-client and SPA acquisition, refresh redemption, and read-only API access in one tenant. Availability still depends on the selected client, resource, session, and policy; see the [validation evidence](docs/live-validation.md).
 
@@ -87,7 +87,7 @@ No upstream dataset is committed here. ROADtools is MIT-licensed; upstream datas
 
 ## Broader discovery and tenant inventory
 
-The [inventory workflow](docs/inventory.md) aggregates three public sources, verifies Microsoft service-principal ownership, registers missing candidates without granting consent, builds a client/resource probe matrix, and checkpoints scope observations. It supports resumable batches, fresh least-scope candidate selection, availability/scope diffs, and anonymous exports. `scripts/Invoke-TokenForgeInventory.ps1` is the PowerShell CLI entry point; a standalone packaged executable remains future work.
+The [inventory workflow](docs/inventory.md) aggregates three public sources, verifies Microsoft service-principal ownership, registers missing candidates without granting consent, builds a client/resource probe matrix, and checkpoints scope observations. It supports resumable batches, fresh least-scope candidate selection, availability/scope diffs, and anonymous exports. `scripts/Invoke-TokenForgeInventory.ps1` is the PowerShell CLI entry point; a ZIP distribution with the runtime CLI is available through `scripts/Build-TokenForgePackage.ps1`. A standalone executable remains future work. See [browser authentication, assessment planning, and maintenance](docs/browser-assessment.md).
 
 ## Development
 

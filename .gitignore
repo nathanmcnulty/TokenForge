@@ -1,0 +1,5 @@
+.cache/
+.secrets/
+*.token.json
+*.cookies.json
+TestResults*.xml

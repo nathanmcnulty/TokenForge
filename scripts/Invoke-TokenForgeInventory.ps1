@@ -41,6 +41,7 @@ $lock=$null
 try {
  try {$lock=[IO.File]::Open((Join-Path $StatePath '.writer.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}
  catch {throw 'State directory is already in use by another writer.'}
+ if (-not $IsWindows) { [IO.File]::SetUnixFileMode((Join-Path $StatePath '.writer.lock'), ([IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite)) }
  switch ($Action) {
   'Discover' {Update-TokenForgeDiscovery -Path $discoveryPath}
   'Inventory' {
@@ -48,6 +49,7 @@ try {
    $discovery=Get-Content -LiteralPath $discoveryPath -Raw|ConvertFrom-Json
    $inventory=Get-TokenForgeTenantInventory -GraphToken $GraphToken -Discovery $discovery
    $inventory|ConvertTo-Json -Depth 100|Set-Content -LiteralPath $inventoryPath -Encoding utf8
+   if (-not $IsWindows) { [IO.File]::SetUnixFileMode($inventoryPath, ([IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite)) }
    $inventory
   }
   'Register' {

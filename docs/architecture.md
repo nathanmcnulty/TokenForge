@@ -1,40 +1,22 @@
 # Architecture and roadmap
 
-The first version keeps five public PowerShell functions:
+TokenForge separates credential-free planning, identity protocol execution, Graph tenant administration and persisted evidence. The PowerShell 7.4 module and script CLI run on Windows, Linux and macOS; a packaged standalone CLI remains future work.
 
-| Function | Responsibility |
-| --- | --- |
-| `Update-TokenForgeCatalog` | Download and validate a compatible metadata snapshot. |
-| `Get-TokenForgeCatalog` | Read and normalize a snapshot or upstream JSON file. |
-| `Find-TokenForgeApplication` | Match every required scope against one resource. |
-| `New-TokenForgeRequest` | Validate an explicit selection and return a credential-free plan. |
-| `Get-TokenForgeToken` | Execute cookie/PKCE or refresh-token acquisition and return secret-bearing results. |
+| Layer | Functions | Evidence boundary |
+| --- | --- | --- |
+| Public metadata | Catalog update/read, discovery update/aggregate, application matching | Source claims; not tenant consent |
+| Tenant state | Tenant inventory, registration, registration synchronization | Microsoft owner verified through Graph; configured grants distinct from preauthorization |
+| Planning | Explicit catalog/tenant requests, discovery requests, probe matrix | One client/resource; definitions do not establish client permission |
+| Acquisition | ESTS cookie PKCE, refresh redemption, discovery-only implicit flows | State checked, callback never contacted, exact identity host only |
+| Observations | Claims inspection, resumable probes, database, diff, coverage, export | Diagnostic scp; no signature or API authorization claim |
+| Authentication/API checks | Optional XDRInternals passkey adapter, read-only Graph/ARM status check | Credentials ephemeral; response bodies not retained |
 
-Catalogs and request plans contain ordinary structured data. A future standalone CLI can keep their meanings while replacing the execution host. Authentication stays separate from discovery so a catalog provider never receives session credentials. The one private HTTP function is a test boundary shared by authorization and redemption; it disables automatic redirects and returns responses to the protocol logic.
+Private identity and Graph transports disable automatic redirects. Graph pagination validates every next link. Public source providers receive no session credentials. Graph credentials and cookies are separate explicit inputs. Registering service principals is an administrative operation, while token probing uses existing authorization and stops at policy or consent pages.
 
-The CLI is future work, not a shipped executable. PowerShell itself already runs on the three target operating systems.
+Versioned JSON discovery/inventory/database documents preserve provenance and evidence labels. The runner serializes state-directory writers; observations checkpoint individually. No token or identity response is serialized. Scope history is partitioned by tenant/principal fingerprints; public exports omit those namespaces.
 
-## Initial boundaries
+An explicit assessment request cannot silently switch to broad implicit discovery. Discovery tries published callbacks and supported flows but cannot satisfy secret, broker or device-binding requirements. Scope selection minimizes observed extra permissions, with no guarantee Entra will issue only requested scopes. Customer role and policy requirements remain independent.
 
-- One explicitly selected client, resource, and set of delegated scopes per request.
-- ESTSAUTH or ESTSAUTHPERSISTENT input; authorization code + S256 PKCE, query callback, silent `prompt=none`.
-- Refresh-token input; no promise that a refresh token can be redeemed by another client. FOCI metadata is informational.
-- Explicit SPA mode; no inference of redirect platform type from its URL.
-- Public-cloud endpoints only; no HTML form processing or interactive authentication.
-- No access-token-to-access-token conversion, PRT handling, tenant grant enumeration, app-role requests, confidential-client secrets, or token persistence.
-- Token response scope evidence is separate from published catalog evidence and actual API access.
+See [the repeatable inventory workflow](inventory.md) for stages and examples. Next work includes a portable authentication provider interface independent of XDRInternals, additional supported cloud authorities, packaged CLI/JSON interfaces, more source conflict handling, and further tenants/resources/operation-specific API proofs. These require evidence and are not advertised as shipped capabilities.
 
-## Next work
-
-1. Extend the successful native/public and SPA proof to other clients, resources, and tenants; retain only aggregate results.
-2. Extend the bounded AADSTS-code diagnostics where evidence supports a useful classification; consider carefully bounded ESTS form-post support only for an observed required flow.
-3. Add optional tenant grant verification using an independently supplied Graph token, with a clear distinction between preauthorization, delegated grants, and user privileges.
-4. Aggregate additional metadata sources with per-record provenance and conflict reporting; do not silently union claims into asserted consent.
-5. Define a versioned JSON interface for `catalog`, `find`, `plan`, and `token`; prototype a packaged CLI. Provide deliberate secret input/output and exit-code behavior before adding persistence.
-
-## Research references
-
-- [Microsoft authorization code + PKCE flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow)
-- [Microsoft scopes and consent](https://learn.microsoft.com/en-us/entra/identity-platform/scopes-oidc)
-- The ESTSAUTH-to-code sequence in `research-passkeys/powershell/scripts/entra/reference/Register-EntraKeyVaultPasskeyViaEstsAuth.ps1` informed this implementation. Passkey registration and browser-page handling were not copied into TokenForge.
-- `mcp-entrascopes` informed the distinction between published scope metadata and tenant-specific evidence.
+References: [authorization code + PKCE](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow), [scopes and consent](https://learn.microsoft.com/en-us/entra/identity-platform/scopes-oidc), [implicit flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-implicit-grant-flow). The ESTS sequence in research-passkeys informed acquisition; browser policy processing and passkey registration were not copied into TokenForge.

@@ -64,7 +64,7 @@ function Invoke-TokenForgeBrowserAuthorization {
                 $reply = [Text.Encoding]::ASCII.GetBytes("HTTP/1.1 $status`r`nContent-Type: text/plain`r`nCache-Control: no-store`r`nReferrer-Policy: no-referrer`r`nConnection: close`r`nContent-Length: $($body.Length)`r`n`r`n$body")
                 $stream.Write($reply,0,$reply.Length)
                 if (-not $valid) { continue }
-                if ($hasError) { throw 'Browser authorization was declined. Identity response details suppressed.' }
+                if ($hasError) { throw (Get-TokenForgeIdentityFailure -Content $values['error_description'] -Fallback 'Browser authorization was declined. Identity response details suppressed.') }
                 return [pscustomobject]@{
                     Code = ConvertTo-SecureString $values['code'] -AsPlainText -Force
                     Verifier = ConvertTo-SecureString $verifier -AsPlainText -Force

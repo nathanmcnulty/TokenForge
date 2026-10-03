@@ -62,10 +62,10 @@ Describe 'System-browser PKCE callback' {
     $q=[System.Web.HttpUtility]::ParseQueryString($Uri.Query)
     $script:job=Start-ThreadJob -ArgumentList $q['redirect_uri'],$q['state'] -ScriptBlock {
      param($callback,$state)
-     Invoke-WebRequest -Headers @{Host=([uri]$callback).Authority} -Uri "$($callback.Replace('http://localhost','http://127.0.0.1'))?error=access_denied&error_description=synthetic-secret&state=$state" -TimeoutSec 5|Out-Null
+     Invoke-WebRequest -Headers @{Host=([uri]$callback).Authority} -Uri "$($callback.Replace('http://localhost','http://127.0.0.1'))?error=access_denied&error_description=AADSTS53003%20synthetic-secret&state=$state" -TimeoutSec 5|Out-Null
     }
    }
-   {Invoke-TokenForgeBrowserAuthorization $request 'https://login.microsoftonline.com/organizations/oauth2/v2.0' '' 5}|Should -Throw 'Browser authorization was declined. Identity response details suppressed.'
+   {Invoke-TokenForgeBrowserAuthorization $request 'https://login.microsoftonline.com/organizations/oauth2/v2.0' '' 5}|Should -Throw 'Browser authorization was declined. Identity response details suppressed. Identity error codes: AADSTS53003.'
    $script:job|Wait-Job|Receive-Job;$script:job|Remove-Job
   }
   It 'bounds a slow partial header by the authorization deadline' {

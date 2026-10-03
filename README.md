@@ -12,7 +12,7 @@ Initial version: PowerShell 7.4+ on Windows, Linux, and macOS. The repository is
 4. Request tokens using an ESTSAUTH/ESTSAUTHPERSISTENT cookie with authorization code + PKCE, or an existing refresh token.
 5. Use the token against the intended API to confirm access.
 
-Published metadata is discovery evidence. It does not establish tenant consent, current server-side preauthorization, API acceptance, or that a given client supports the chosen flow. Entra decides what it issues based on the client, session, permissions, user privileges, and policy. TokenForge does not create grants. A redirect published in the catalog can still be rejected by Entra; the module reports bounded AADSTS codes without printing identity response contents. Requests use explicit API scopes rather than `.default`.
+Published metadata is discovery evidence. It does not establish tenant consent, current server-side preauthorization, API acceptance, or that a given client supports the chosen flow. Entra decides what it issues based on the client, session, permissions, user privileges, and policy. TokenForge does not create grants. A redirect published in the catalog can still be rejected by Entra; the module reports bounded AADSTS codes without printing identity response contents. Assessment requests use explicit API scopes. The separate [inventory workflow](docs/inventory.md) uses `.default` and v1 resource requests to observe existing permission sets without creating consent.
 
 ## Quick start
 
@@ -61,7 +61,7 @@ By default, OAuth scopes use the resource application ID as their prefix. To use
 
 `Get-TokenForgeToken` compares requested API scopes with the OAuth token response's `scope` field. A partial response fails without returning tokens. If `scope` is omitted, the result is marked `Unverified` and a warning is emitted. Entra may return more scopes than requested. `AdditionalScopes` reports extra API scopes, and the module warns when they are present; standard OIDC scopes are excluded from this count. Explicit scope requests do not guarantee a token limited to those scopes. Review the actual `GrantedScopes` before use.
 
-The module treats Microsoft access tokens as opaque; it does not claim that decoding a JWT proves signature validity, permissions, or API acceptance.
+`Get-TokenForgeTokenClaims` inspects readable JWT payloads for diagnostic `scp` evidence and omits identity claims. It reports `SignatureValidated=false`; opaque tokens remain opaque. Decoding a JWT does not prove signature validity or API acceptance.
 
 Tokens are returned as `SecureString` properties. Convert the access token to plaintext only when constructing the intended API request:
 
@@ -84,6 +84,10 @@ try {
 `Update-TokenForgeCatalog -SourceUri <https-url> -Path <path>` downloads a compatible source and validates it before replacing the catalog. Pin the URL to an upstream commit for reproducible research. Snapshots retain the source URL, fetch time, and a SHA-256 of the loaded snapshot. The default URL follows the upstream branch; the hash is content provenance, not a commit ID or publisher signature. Refresh is explicit; the module never silently refreshes or falls back to stale data.
 
 No upstream dataset is committed here. ROADtools is MIT-licensed; upstream datasets retain their own terms. References: [EntraScopes](https://github.com/f-bader/entrascopes.com), [ROADtools dataset](https://github.com/dirkjanm/ROADtools/blob/master/roadtx/roadtools/roadtx/firstpartyscopes.json), [research-passkeys](https://github.com/nathanmcnulty/research-passkeys), [mcp-entrascopes](https://github.com/nathanmcnulty/mcp-entrascopes).
+
+## Broader discovery and tenant inventory
+
+The [inventory workflow](docs/inventory.md) aggregates three public sources, verifies Microsoft service-principal ownership, registers missing candidates without granting consent, builds a client/resource probe matrix, and checkpoints scope observations. It supports resumable batches, fresh least-scope candidate selection, availability/scope diffs, and anonymous exports. `scripts/Invoke-TokenForgeInventory.ps1` is the PowerShell CLI entry point; a standalone packaged executable remains future work.
 
 ## Development
 

@@ -110,6 +110,13 @@ Describe 'Offline identity protocol' {
         $result.GrantedScopes | Should -Contain User.Read
         Should -Invoke Invoke-TokenForgeHttp -ModuleName TokenForge -Exactly -Times 1 -ParameterFilter { $Uri.AbsolutePath.EndsWith('/token') }
     }
+    It 'does not echo malformed expiry response contents through numeric conversion errors' {
+        Mock Invoke-TokenForgeHttp -ModuleName TokenForge { @{Status=200;Content='{"access_token":"synthetic-access","token_type":"Bearer","scope":"User.Read Mail.Read","expires_in":"private-expiry-value"}'} }
+        $result=Get-TokenForgeToken -Request $plan -RefreshToken $secret
+        $result.ExpiresAt | Should -BeNullOrEmpty
+        ($result|ConvertTo-Json -Depth 10) | Should -Not -Match 'private-expiry-value'
+        $result.AccessToken.Dispose()
+    }
     It 'sets Origin only for explicitly selected SPA requests' {
         $plan.Spa = $true
         $null = Get-TokenForgeToken -Request $plan -RefreshToken $secret

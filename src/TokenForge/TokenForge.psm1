@@ -210,15 +210,22 @@ function Get-TokenForgeToken {
     $redirect = [uri]$Request.RedirectUri
     if (-not $redirect.IsAbsoluteUri -or $redirect.UserInfo -or $redirect.Query -or $redirect.Fragment) { throw 'Invalid request redirect URI.' }
     if ($Request.Spa -and $redirect.Scheme -ne 'https') { throw 'SPA requests require HTTPS.' }
-    if (@($Request.Scopes).Count -eq 0 -or @($Request.Scopes | Where-Object { $_ -notmatch '^[A-Za-z0-9_-][A-Za-z0-9_.-]*$' -or $_ -cin @('openid','profile','email','offline_access') }).Count) { throw 'Invalid request scope names.' }
-    $expected = @($Request.Scopes | ForEach-Object { "$($Request.ResourceUri.TrimEnd('/'))/$_" })
+    $isDiscovery = $Request.PSObject.Properties['Discovery'] -and $Request.Discovery -eq $true
+    if (-not $isDiscovery -and (@($Request.Scopes).Count -eq 0 -or @($Request.Scopes | Where-Object { $_ -notmatch '^[A-Za-z0-9_-][A-Za-z0-9_.-]*$' -or $_ -cin @('openid','profile','email','offline_access') }).Count)) { throw 'Invalid request scope names.' }
+    $expected = if ($isDiscovery) { @("$($Request.ResourceId)/.default") } else { @($Request.Scopes | ForEach-Object { "$($Request.ResourceUri.TrimEnd('/'))/$_" }) }
+    if ($isDiscovery -and (@($Request.Scopes).Count -gt 0 -or $Request.ResourceUri -ne $Request.ResourceId)) { throw 'Discovery requests must use one resource application ID and no asserted API scopes.' }
     if (@($Request.OAuthScopes).Count -eq 0 -or @($Request.OAuthScopes | Where-Object { $_ -cne 'offline_access' -and $expected -cnotcontains $_ }).Count -or @($expected | Where-Object { $Request.OAuthScopes -cnotcontains $_ }).Count) { throw 'Request OAuth scopes do not match the plan.' }
+    $protocol = if ($Request.PSObject.Properties['Protocol']) { [string]$Request.Protocol } else { 'OAuth2V2Pkce' }
+    if ($protocol -notin @('OAuth2V2Pkce','OAuth2V2Implicit','OAuth2V1Implicit') -or ($protocol -ne 'OAuth2V2Pkce' -and -not $isDiscovery)) { throw 'Implicit protocols are available only for explicit discovery plans.' }
+    $implicitFlow = $protocol -ne 'OAuth2V2Pkce'
+    if ($implicitFlow -and $PSCmdlet.ParameterSetName -eq 'Refresh') { throw 'Implicit discovery does not redeem refresh tokens; use a PKCE request plan.' }
+    $implicitTokens = $null
     $handler = [System.Net.Http.HttpClientHandler]::new()
     $handler.AllowAutoRedirect = $false
     $handler.CookieContainer = [System.Net.CookieContainer]::new()
     $client = [System.Net.Http.HttpClient]::new($handler)
     $client.Timeout = [TimeSpan]::FromSeconds(30)
-    $authority = "https://login.microsoftonline.com/$($Request.Tenant)/oauth2/v2.0"
+    $authority = if ($protocol -eq 'OAuth2V1Implicit') { "https://login.microsoftonline.com/$($Request.Tenant)/oauth2" } else { "https://login.microsoftonline.com/$($Request.Tenant)/oauth2/v2.0" }
     $origin = if ($Request.Spa) { $redirect.GetLeftPart([UriPartial]::Authority) } else { $null }
     $form = @{ client_id = $Request.ClientId; scope = ($Request.OAuthScopes -join ' ') }
     try {
@@ -241,6 +248,12 @@ function Get-TokenForgeToken {
                 response_type = 'code'; response_mode = 'query'; prompt = 'none'
                 code_challenge = $challenge; code_challenge_method = 'S256'; state = $state
             }
+            if ($implicitFlow) {
+                $query.response_type = 'token'; $query.response_mode = 'fragment'
+                $query.Remove('code_challenge'); $query.Remove('code_challenge_method')
+                $query.scope = "$($Request.ResourceId)/.default"
+                if ($protocol -eq 'OAuth2V1Implicit') { $query.Remove('scope'); $query.resource = $Request.ResourceId }
+            }
             $encoded = ($query.Keys | ForEach-Object { "$([uri]::EscapeDataString($_))=$([uri]::EscapeDataString([string]$query[$_]))" }) -join '&'
             $url = [uri]"$authority/authorize?$encoded"
             $code = $null
@@ -252,9 +265,14 @@ function Get-TokenForgeToken {
                 try { $next = [uri]::new($url, [string]$response.Location) } catch { throw 'Authorization returned an invalid redirect.' }
                 # Capture the callback without contacting it, even for native/custom schemes.
                 if ($next.GetLeftPart([UriPartial]::Path) -ceq $redirect.GetLeftPart([UriPartial]::Path)) {
-                    $values = [System.Web.HttpUtility]::ParseQueryString($next.Query)
+                    $values = [System.Web.HttpUtility]::ParseQueryString($(if ($implicitFlow) { $next.Fragment.TrimStart('#') } else { $next.Query }))
                     if (@($values.GetValues('state')).Count -ne 1 -or $values['state'] -cne $state) { throw 'Authorization state mismatch.' }
                     if ($values['error']) { throw (Get-TokenForgeIdentityFailure -Content $values['error_description'] -Fallback 'Silent authorization was declined. Interactive sign-in, consent, or tenant policy may be required.') }
+                    if ($implicitFlow) {
+                        if (@($values.GetValues('access_token')).Count -ne 1 -or [string]::IsNullOrWhiteSpace($values['access_token']) -or $next.Query) { throw 'Implicit authorization callback is missing a valid token.' }
+                        $implicitTokens = @{ access_token = $values['access_token']; token_type = $values['token_type']; expires_in = $values['expires_in']; scope = $values['scope'] }
+                        break
+                    }
                     if (@($values.GetValues('code')).Count -ne 1 -or [string]::IsNullOrWhiteSpace($values['code']) -or $next.Fragment) { throw 'Authorization callback is missing a valid code.' }
                     $code = $values['code']
                     break
@@ -264,13 +282,18 @@ function Get-TokenForgeToken {
                 }
                 $url = $next
             }
-            if (-not $code) { throw 'Authorization exceeded the redirect limit.' }
-            $form.grant_type = 'authorization_code'; $form.code = $code
-            $form.code_verifier = $verifier; $form.redirect_uri = $Request.RedirectUri
+            if (-not $code -and -not $implicitTokens) { throw 'Authorization exceeded the redirect limit.' }
+            if (-not $implicitFlow) {
+                $form.grant_type = 'authorization_code'; $form.code = $code
+                $form.code_verifier = $verifier; $form.redirect_uri = $Request.RedirectUri
+            }
         }
-        $response = Invoke-TokenForgeHttp -Client $client -Uri "$authority/token" -Form $form -Origin $origin
-        if ($response.Status -ne 200) { throw (Get-TokenForgeIdentityFailure -Content $response.Content -Fallback "Token request failed (HTTP $($response.Status)). Identity response details suppressed; verify session, client flow, consent, and tenant policy.") }
-        try { $tokens = ConvertFrom-Json -InputObject $response.Content -AsHashtable -ErrorAction Stop } catch { throw 'Token endpoint returned invalid JSON.' }
+        if ($implicitTokens) { $tokens = $implicitTokens }
+        else {
+            $response = Invoke-TokenForgeHttp -Client $client -Uri "$authority/token" -Form $form -Origin $origin
+            if ($response.Status -ne 200) { throw (Get-TokenForgeIdentityFailure -Content $response.Content -Fallback "Token request failed (HTTP $($response.Status)). Identity response details suppressed; verify session, client flow, consent, and tenant policy.") }
+            try { $tokens = ConvertFrom-Json -InputObject $response.Content -AsHashtable -ErrorAction Stop } catch { throw 'Token endpoint returned invalid JSON.' }
+        }
         if (-not $tokens['access_token'] -or $tokens['token_type'] -ine 'Bearer') { throw 'Token endpoint returned no usable bearer token.' }
         # Use the documented token response scope field; do not assume Microsoft tokens are readable JWTs.
         $granted = @()
@@ -283,14 +306,24 @@ function Get-TokenForgeToken {
             $_ -cnotin @('openid','profile','email','offline_access') -and
             $Request.Scopes -cnotcontains $_ -and $expected -cnotcontains $_
         })
-        if ($additional.Count) { Write-Warning "Entra returned $($additional.Count) additional API scopes beyond the request. Review GrantedScopes before using this token." }
+        if (-not $isDiscovery -and $additional.Count) { Write-Warning "Entra returned $($additional.Count) additional API scopes beyond the request. Review GrantedScopes before using this token." }
+        $expiresAt = $null
+        $seconds = [double]0
+        if ($tokens['expires_in'] -and [double]::TryParse([string]$tokens['expires_in'], [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$seconds) -and [double]::IsFinite($seconds) -and $seconds -ge 0 -and $seconds -le 604800) { $expiresAt = [DateTimeOffset]::UtcNow.AddSeconds($seconds) }
+        $secureAccess = ConvertTo-SecureString ([string]$tokens['access_token']) -AsPlainText -Force
+        $claims = Get-TokenForgeTokenClaims -AccessToken $secureAccess
+        if ($claims.HasDelegatedScopeClaim -and @($Request.Scopes | Where-Object { $claims.Scopes -cnotcontains $_ }).Count) {
+            $secureAccess.Dispose()
+            throw 'Decoded scp is missing one or more requested API scopes. No token returned.'
+        }
         [pscustomobject]@{
             PSTypeName = 'TokenForge.Token'
             ClientId = $Request.ClientId; ResourceId = $Request.ResourceId
             RequestedScopes = $Request.Scopes; GrantedScopes = $granted; AdditionalScopes = $additional; ScopeEvidence = if ($verified) { 'TokenResponse' } else { 'Unverified' }
-            ExpiresAt = if ($tokens['expires_in']) { [DateTimeOffset]::UtcNow.AddSeconds([double]$tokens['expires_in']) } else { $null }
+            ExpiresAt = $expiresAt
             TokenType = [string]$tokens['token_type']
-            AccessToken = ConvertTo-SecureString ([string]$tokens['access_token']) -AsPlainText -Force
+            AccessToken = $secureAccess
+            TokenClaims = $claims; Discovery = [bool]$isDiscovery; Protocol = $protocol
             RefreshToken = if ($tokens['refresh_token']) { ConvertTo-SecureString ([string]$tokens['refresh_token']) -AsPlainText -Force } else { $null }
         }
     } finally {
@@ -300,4 +333,6 @@ function Get-TokenForgeToken {
     }
 }
 
-Export-ModuleMember -Function Update-TokenForgeCatalog, Get-TokenForgeCatalog, Find-TokenForgeApplication, New-TokenForgeRequest, Get-TokenForgeToken
+foreach ($file in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'Private') -Filter '*.ps1' | Sort-Object Name) { . $file.FullName }
+foreach ($file in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'Public') -Filter '*.ps1' | Sort-Object Name) { . $file.FullName }
+Export-ModuleMember -Function Update-TokenForgeCatalog, Get-TokenForgeCatalog, Find-TokenForgeApplication, New-TokenForgeRequest, Get-TokenForgeToken, Get-TokenForgeTokenClaims, Get-TokenForgeDiscovery, Update-TokenForgeDiscovery, Get-TokenForgeTenantInventory, Register-TokenForgeApplication, New-TokenForgeDiscoveryRequest, Merge-TokenForgeScopeDatabase, New-TokenForgeScopeDatabase, Get-TokenForgeScopeDatabase, Add-TokenForgeScopeObservation, Compare-TokenForgeScopeDatabase, Export-TokenForgeScopeDatabase, Get-TokenForgeAssessmentCoverage, Invoke-TokenForgeScopeProbe, Sync-TokenForgeApplicationRegistration, Get-TokenForgeProbePlan, Get-TokenForgeEstsCookie, Test-TokenForgeTokenAccess, New-TokenForgeTenantRequest

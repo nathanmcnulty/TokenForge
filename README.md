@@ -2,7 +2,7 @@
 
 PowerShell toolkit for finding Microsoft Entra first-party applications that publish the delegated scopes you need, then requesting access tokens using an authorized ESTSAUTH session or refresh token.
 
-Initial version: PowerShell 7.4+ on Windows, Linux, and macOS. The repository is private. Authentication is experimental: offline protocol tests pass, but issuance has not yet been validated with a real tenant session.
+Initial version: PowerShell 7.4+ on Windows, Linux, and macOS. The repository is private. Live passkey-backed validation on Linux has confirmed native-client and SPA acquisition, refresh redemption, and read-only API access in one tenant. Availability still depends on the selected client, resource, session, and policy; see the [validation evidence](docs/live-validation.md).
 
 ## Workflow
 
@@ -12,7 +12,7 @@ Initial version: PowerShell 7.4+ on Windows, Linux, and macOS. The repository is
 4. Request tokens using an ESTSAUTH/ESTSAUTHPERSISTENT cookie with authorization code + PKCE, or an existing refresh token.
 5. Use the token against the intended API to confirm access.
 
-Published metadata is discovery evidence. It does not establish tenant consent, current server-side preauthorization, API acceptance, or that a given client supports the chosen flow. Entra decides what it issues based on the client, session, permissions, user privileges, and policy. TokenForge does not create grants. Requests use explicit API scopes rather than `.default`.
+Published metadata is discovery evidence. It does not establish tenant consent, current server-side preauthorization, API acceptance, or that a given client supports the chosen flow. Entra decides what it issues based on the client, session, permissions, user privileges, and policy. TokenForge does not create grants. A redirect published in the catalog can still be rejected by Entra; the module reports bounded AADSTS codes without printing identity response contents. Requests use explicit API scopes rather than `.default`.
 
 ## Quick start
 
@@ -59,7 +59,9 @@ By default, OAuth scopes use the resource application ID as their prefix. To use
 
 ## Scope evidence
 
-`Get-TokenForgeToken` compares requested API scopes with the OAuth token response's `scope` field. A partial response fails without returning tokens. If `scope` is omitted, the result is marked `Unverified` and a warning is emitted. The module treats Microsoft access tokens as opaque; it does not claim that decoding a JWT proves signature validity, permissions, or API acceptance.
+`Get-TokenForgeToken` compares requested API scopes with the OAuth token response's `scope` field. A partial response fails without returning tokens. If `scope` is omitted, the result is marked `Unverified` and a warning is emitted. Entra may return more scopes than requested. `AdditionalScopes` reports extra API scopes, and the module warns when they are present; standard OIDC scopes are excluded from this count. Explicit scope requests do not guarantee a token limited to those scopes. Review the actual `GrantedScopes` before use.
+
+The module treats Microsoft access tokens as opaque; it does not claim that decoding a JWT proves signature validity, permissions, or API acceptance.
 
 Tokens are returned as `SecureString` properties. Convert the access token to plaintext only when constructing the intended API request:
 

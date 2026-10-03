@@ -1,0 +1,138 @@
+{
+  "SchemaVersion": 1,
+  "ValidatedAtUtc": "2026-10-03T05:48:34.1256829+00:00",
+  "ModuleVersion": "0.1.0",
+  "CatalogContentSha256": "6679870fd246e91b26a847ace1b14d96643bf4b93b4aec044b091db78d55b55c",
+  "PasskeyBootstrap": "Succeeded",
+  "Passed": true,
+  "Results": [
+    {
+      "Case": "NativeCLI",
+      "Passed": true,
+      "RequestedScopeCount": 2,
+      "GrantedScopeCount": 12,
+      "AdditionalApiScopeCount": 7,
+      "ScopeEvidence": "TokenResponse",
+      "RefreshScopeEvidence": "TokenResponse",
+      "RefreshTokenReturned": true,
+      "RotatedRefreshTokenReturned": true,
+      "InitialApiChecks": [
+        {
+          "Check": "CurrentUser",
+          "Status": 200
+        },
+        {
+          "Check": "AuditLogs",
+          "Status": 200
+        }
+      ],
+      "RefreshApiChecks": [
+        {
+          "Check": "CurrentUser",
+          "Status": 200
+        },
+        {
+          "Check": "AuditLogs",
+          "Status": 200
+        }
+      ],
+      "ElapsedSeconds": 3.69
+    },
+    {
+      "Case": "MySigninsSPA",
+      "Passed": true,
+      "RequestedScopeCount": 1,
+      "GrantedScopeCount": 14,
+      "AdditionalApiScopeCount": 10,
+      "ScopeEvidence": "TokenResponse",
+      "RefreshScopeEvidence": "TokenResponse",
+      "RefreshTokenReturned": true,
+      "RotatedRefreshTokenReturned": true,
+      "InitialApiChecks": [
+        {
+          "Check": "CurrentUser",
+          "Status": 200
+        }
+      ],
+      "RefreshApiChecks": [
+        {
+          "Check": "CurrentUser",
+          "Status": 200
+        }
+      ],
+      "ElapsedSeconds": 2.18
+    },
+    {
+      "Case": "SecuritySPA",
+      "Passed": true,
+      "RequestedScopeCount": 2,
+      "GrantedScopeCount": 38,
+      "AdditionalApiScopeCount": 33,
+      "ScopeEvidence": "TokenResponse",
+      "RefreshScopeEvidence": "TokenResponse",
+      "RefreshTokenReturned": true,
+      "RotatedRefreshTokenReturned": true,
+      "InitialApiChecks": [
+        {
+          "Check": "Applications",
+          "Status": 200
+        },
+        {
+          "Check": "AuditLogs",
+          "Status": 200
+        }
+      ],
+      "RefreshApiChecks": [
+        {
+          "Check": "Applications",
+          "Status": 200
+        },
+        {
+          "Check": "AuditLogs",
+          "Status": 200
+        }
+      ],
+      "ElapsedSeconds": 3.04
+    },
+    {
+      "Case": "ARMNative",
+      "Passed": true,
+      "RequestedScopeCount": 1,
+      "GrantedScopeCount": 1,
+      "AdditionalApiScopeCount": 0,
+      "ScopeEvidence": "TokenResponse",
+      "RefreshScopeEvidence": "TokenResponse",
+      "RefreshTokenReturned": true,
+      "RotatedRefreshTokenReturned": true,
+      "InitialApiChecks": [
+        {
+          "Check": "Subscriptions",
+          "Status": 200
+        }
+      ],
+      "RefreshApiChecks": [
+        {
+          "Check": "Subscriptions",
+          "Status": 200
+        }
+      ],
+      "ElapsedSeconds": 2.25
+    },
+    {
+      "Case": "InvalidCookie",
+      "Passed": true,
+      "NoTokenReturned": true
+    },
+    {
+      "Case": "InvalidRefresh",
+      "Passed": true,
+      "NoTokenReturned": true
+    },
+    {
+      "Case": "PublishedRedirectRejected",
+      "Passed": true,
+      "ExpectedErrorCode": "50011",
+      "NoTokenReturned": true
+    }
+  ]
+}

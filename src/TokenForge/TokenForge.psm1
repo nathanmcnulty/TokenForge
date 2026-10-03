@@ -179,6 +179,18 @@ function Invoke-TokenForgeHttp {
     }
 }
 
+# Authorization HTML and token JSON both need bounded, credential-free failure details.
+function Get-TokenForgeIdentityFailure {
+    param([string]$Content, [string]$Fallback)
+    $codes = @([regex]::Matches($Content, '\bAADSTS([0-9]{4,9})\b') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique | Select-Object -First 5)
+    if ($codes.Count -eq 0) { return $Fallback }
+    $suffix = ($codes | ForEach-Object { "AADSTS$_" }) -join ', '
+    if ($codes -contains '50011') {
+        return "Identity request failed ($suffix). Entra rejected the redirect URI; published metadata may differ from the current app registration. Response details suppressed."
+    }
+    return "$Fallback Identity error codes: $suffix."
+}
+
 function Get-TokenForgeToken {
     <# .SYNOPSIS
     Request tokens using an ESTSAUTH session (code + PKCE), or an existing refresh token.
@@ -235,14 +247,14 @@ function Get-TokenForgeToken {
             for ($step = 0; $step -lt 10; $step++) {
                 $response = Invoke-TokenForgeHttp -Client $client -Uri $url
                 if ($response.Status -notin @(301,302,303,307,308) -or -not $response.Location) {
-                    throw 'Silent authorization did not return a redirect. Sign-in, consent, MFA, a policy interrupt, or an unsupported HTML flow may require browser interaction.'
+                    throw (Get-TokenForgeIdentityFailure -Content $response.Content -Fallback 'Silent authorization did not return a redirect. Sign-in, consent, MFA, a policy interrupt, or an unsupported HTML flow may require browser interaction.')
                 }
                 try { $next = [uri]::new($url, [string]$response.Location) } catch { throw 'Authorization returned an invalid redirect.' }
                 # Capture the callback without contacting it, even for native/custom schemes.
                 if ($next.GetLeftPart([UriPartial]::Path) -ceq $redirect.GetLeftPart([UriPartial]::Path)) {
                     $values = [System.Web.HttpUtility]::ParseQueryString($next.Query)
                     if (@($values.GetValues('state')).Count -ne 1 -or $values['state'] -cne $state) { throw 'Authorization state mismatch.' }
-                    if ($values['error']) { throw 'Silent authorization was declined. Interactive sign-in, consent, or tenant policy may be required.' }
+                    if ($values['error']) { throw (Get-TokenForgeIdentityFailure -Content $values['error_description'] -Fallback 'Silent authorization was declined. Interactive sign-in, consent, or tenant policy may be required.') }
                     if (@($values.GetValues('code')).Count -ne 1 -or [string]::IsNullOrWhiteSpace($values['code']) -or $next.Fragment) { throw 'Authorization callback is missing a valid code.' }
                     $code = $values['code']
                     break
@@ -257,7 +269,7 @@ function Get-TokenForgeToken {
             $form.code_verifier = $verifier; $form.redirect_uri = $Request.RedirectUri
         }
         $response = Invoke-TokenForgeHttp -Client $client -Uri "$authority/token" -Form $form -Origin $origin
-        if ($response.Status -ne 200) { throw "Token request failed (HTTP $($response.Status)). Identity response details suppressed; verify session, client flow, consent, and tenant policy." }
+        if ($response.Status -ne 200) { throw (Get-TokenForgeIdentityFailure -Content $response.Content -Fallback "Token request failed (HTTP $($response.Status)). Identity response details suppressed; verify session, client flow, consent, and tenant policy.") }
         try { $tokens = ConvertFrom-Json -InputObject $response.Content -AsHashtable -ErrorAction Stop } catch { throw 'Token endpoint returned invalid JSON.' }
         if (-not $tokens['access_token'] -or $tokens['token_type'] -ine 'Bearer') { throw 'Token endpoint returned no usable bearer token.' }
         # Use the documented token response scope field; do not assume Microsoft tokens are readable JWTs.
@@ -267,10 +279,15 @@ function Get-TokenForgeToken {
         $verified = $granted.Count -gt 0
         if ($verified -and $missing.Count) { throw 'Token response is missing one or more requested API scopes. No token returned.' }
         if (-not $verified) { Write-Warning 'Token response omitted scope; requested scopes are unverified. Check the intended API before relying on this token.' }
+        $additional = @($granted | Where-Object {
+            $_ -cnotin @('openid','profile','email','offline_access') -and
+            $Request.Scopes -cnotcontains $_ -and $expected -cnotcontains $_
+        })
+        if ($additional.Count) { Write-Warning "Entra returned $($additional.Count) additional API scopes beyond the request. Review GrantedScopes before using this token." }
         [pscustomobject]@{
             PSTypeName = 'TokenForge.Token'
             ClientId = $Request.ClientId; ResourceId = $Request.ResourceId
-            RequestedScopes = $Request.Scopes; GrantedScopes = $granted; ScopeEvidence = if ($verified) { 'TokenResponse' } else { 'Unverified' }
+            RequestedScopes = $Request.Scopes; GrantedScopes = $granted; AdditionalScopes = $additional; ScopeEvidence = if ($verified) { 'TokenResponse' } else { 'Unverified' }
             ExpiresAt = if ($tokens['expires_in']) { [DateTimeOffset]::UtcNow.AddSeconds([double]$tokens['expires_in']) } else { $null }
             TokenType = [string]$tokens['token_type']
             AccessToken = ConvertTo-SecureString ([string]$tokens['access_token']) -AsPlainText -Force

@@ -26,8 +26,8 @@ The CLI is future work, not a shipped executable. PowerShell itself already runs
 
 ## Next work
 
-1. Validate representative native/public and SPA clients using authorized live sessions; keep only aggregate results.
-2. Add sanitized OAuth error classification and carefully bounded support for observed ESTS form-post flows where needed.
+1. Extend the successful native/public and SPA proof to other clients, resources, and tenants; retain only aggregate results.
+2. Extend the bounded AADSTS-code diagnostics where evidence supports a useful classification; consider carefully bounded ESTS form-post support only for an observed required flow.
 3. Add optional tenant grant verification using an independently supplied Graph token, with a clear distinction between preauthorization, delegated grants, and user privileges.
 4. Aggregate additional metadata sources with per-record provenance and conflict reporting; do not silently union claims into asserted consent.
 5. Define a versioned JSON interface for `catalog`, `find`, `plan`, and `token`; prototype a packaged CLI. Provide deliberate secret input/output and exit-code behavior before adding persistence.

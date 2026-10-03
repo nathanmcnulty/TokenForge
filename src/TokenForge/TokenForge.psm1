@@ -307,6 +307,9 @@ function Get-TokenForgeToken {
             $Request.Scopes -cnotcontains $_ -and $expected -cnotcontains $_
         })
         if (-not $isDiscovery -and $additional.Count) { Write-Warning "Entra returned $($additional.Count) additional API scopes beyond the request. Review GrantedScopes before using this token." }
+        $expiresAt = $null
+        $seconds = [double]0
+        if ($tokens['expires_in'] -and [double]::TryParse([string]$tokens['expires_in'], [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$seconds) -and [double]::IsFinite($seconds) -and $seconds -ge 0 -and $seconds -le 604800) { $expiresAt = [DateTimeOffset]::UtcNow.AddSeconds($seconds) }
         $secureAccess = ConvertTo-SecureString ([string]$tokens['access_token']) -AsPlainText -Force
         $claims = Get-TokenForgeTokenClaims -AccessToken $secureAccess
         if ($claims.HasDelegatedScopeClaim -and @($Request.Scopes | Where-Object { $claims.Scopes -cnotcontains $_ }).Count) {
@@ -317,7 +320,7 @@ function Get-TokenForgeToken {
             PSTypeName = 'TokenForge.Token'
             ClientId = $Request.ClientId; ResourceId = $Request.ResourceId
             RequestedScopes = $Request.Scopes; GrantedScopes = $granted; AdditionalScopes = $additional; ScopeEvidence = if ($verified) { 'TokenResponse' } else { 'Unverified' }
-            ExpiresAt = if ($tokens['expires_in']) { [DateTimeOffset]::UtcNow.AddSeconds([double]$tokens['expires_in']) } else { $null }
+            ExpiresAt = $expiresAt
             TokenType = [string]$tokens['token_type']
             AccessToken = $secureAccess
             TokenClaims = $claims; Discovery = [bool]$isDiscovery; Protocol = $protocol

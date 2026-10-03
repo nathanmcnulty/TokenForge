@@ -188,6 +188,21 @@ Describe 'Service principal registration' {
         { Register-TokenForgeApplication -GraphToken $secret -Application $app } | Should -Throw '*not verified*'
         Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 0 -ParameterFilter { $Method -eq 'POST' }
     }
+    It 'checkpoints a cleanup failure and stops instead of claiming a rejected principal was removed' {
+        $app | Add-Member Registration Missing
+        $inventory=[pscustomobject]@{Applications=@($app);TenantFingerprint=('a'*64)}
+        Mock Invoke-TokenForgeGraph -ModuleName TokenForge { @{id='33333333-3333-3333-3333-333333333333';appId='11111111-1111-1111-1111-111111111111';appOwnerOrganizationId='44444444-4444-4444-4444-444444444444'} } -ParameterFilter {$Method -eq 'POST'}
+        Mock Invoke-TokenForgeGraph -ModuleName TokenForge { throw 'Graph request failed (HTTP 403)' } -ParameterFilter {$Method -eq 'DELETE'}
+        $path="$TestDrive/cleanup.json"
+        { Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $secret -DatabasePath $path -DelayMilliseconds 0 -Confirm:$false } | Should -Throw '*cleanup*'
+        $attempts=(Get-TokenForgeScopeDatabase -Path $path).RegistrationAttempts
+        $attempts.Count | Should -Be 1
+        $attempts[0].Outcome | Should -Be CleanupRequired
+        $attempts[0].AppId | Should -Be $clientId
+        (Get-Content $path -Raw) | Should -Not -Match '33333333-3333-3333-3333-333333333333|44444444-4444-4444-4444-444444444444'
+        { Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $secret -DatabasePath $path -DelayMilliseconds 0 -Confirm:$false } | Should -Throw '*unresolved*'
+        Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -ParameterFilter {$Method -eq 'POST'}
+    }
     It 'removes only a just-created candidate that fails ownership verification' {
         Mock Invoke-TokenForgeGraph -ModuleName TokenForge { @{ id = '33333333-3333-3333-3333-333333333333'; appId = '11111111-1111-1111-1111-111111111111'; appOwnerOrganizationId = '44444444-4444-4444-4444-444444444444' } } -ParameterFilter { $Method -eq 'POST' }
         { Register-TokenForgeApplication -GraphToken $secret -Application $app -Confirm:$false } | Should -Throw '*was removed*'
@@ -264,6 +279,25 @@ Describe 'Resumable probe and matrix planning' {
         $plan.Count | Should -Be 1
         $plan[0].Sources | Should -Contain GraphDiscovery
         $plan[0].Sources | Should -Contain PublishedScopeEdge
+    }
+    It 'plans principal grants for an explicitly selected assessment user instead of the inventory administrator' {
+        $inventory.TenantGrants=@(
+            [pscustomobject]@{ClientId=$clientId;ResourceId='33333333-3333-3333-3333-333333333333';ConsentType='Principal';PrincipalFingerprint=('b'*64);AppliesToCurrentPrincipal=$true},
+            [pscustomobject]@{ClientId=$clientId;ResourceId='44444444-4444-4444-4444-444444444444';ConsentType='Principal';PrincipalFingerprint=('d'*64);AppliesToCurrentPrincipal=$false}
+        )
+        $plan=@(Get-TokenForgeProbePlan -Inventory $inventory -PrincipalFingerprint ('d'*64))
+        $plan.ResourceId | Should -Contain '44444444-4444-4444-4444-444444444444'
+        $plan.ResourceId | Should -Not -Contain '33333333-3333-3333-3333-333333333333'
+    }
+    It 'attributes a different authorized probe user only after matching the explicit fingerprint' {
+        Mock Get-TokenForgeToken -ModuleName TokenForge {
+            param($Request)
+            [pscustomobject]@{AccessToken=ConvertTo-SecureString synthetic -AsPlainText -Force;RefreshToken=$null;GrantedScopes=@('User.Read');TokenClaims=[pscustomobject]@{Readable=$true;HasDelegatedScopeClaim=$true;Scopes=@('User.Read');TenantFingerprint=('a'*64);PrincipalFingerprint=('d'*64);ClientId=$Request.ClientId;Audience=$Request.ResourceId}}
+        }
+        $result=Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -PrincipalFingerprint ('d'*64) -DatabasePath "$TestDrive/observer.json" -DelayMilliseconds 0
+        $result.Outcome | Should -Be Succeeded
+        $result.PrincipalFingerprint | Should -Be ('d'*64)
+        $result.NamespaceVerification | Should -Be Matched
     }
     It 'checkpoints scope claims but no credentials, and resumes without another request' {
         $path = "$TestDrive/probes.json"

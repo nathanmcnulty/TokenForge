@@ -27,6 +27,7 @@ function Get-TokenForgeTenantInventory {
                 [pscustomobject]@{
                     ClientId = [string]$client['appId']; ResourceId = [string]$resource['appId']
                     Scopes = @(([string]$grant['scope']) -split '\s+' | Where-Object { $_ } | Sort-Object -Unique)
+                    PrincipalFingerprint = if ($grant['consentType'] -eq 'Principal' -and $grant['principalId']) { Get-TokenForgeFingerprint -Value "$($payload['tid'])/$($grant['principalId'])" } else { $null }
                     ConsentType = [string]$grant['consentType']
                     AppliesToCurrentPrincipal = $grant['consentType'] -eq 'AllPrincipals' -or ($principal -and $grant['principalId'] -eq $principal)
                     Evidence = 'TenantConfiguredGrant'
@@ -114,8 +115,18 @@ function Register-TokenForgeApplication {
     }
     if ($created['appId'] -ne $id.ToString()) { throw 'Creation response did not identify the requested application; no other principal was modified.' }
     if ($created['appOwnerOrganizationId'] -notin $script:MicrosoftOwnerTenants) {
-        if ($created['id']) { $null = Invoke-TokenForgeGraph -AccessToken $GraphToken -Uri "https://graph.microsoft.com/v1.0/servicePrincipals/$($created['id'])" -Method DELETE }
-        throw 'Created service principal failed ownership verification and was removed.'
+        try {
+            $objectId = [guid]::Empty
+            if (-not [guid]::TryParse([string]$created['id'],[ref]$objectId)) { throw 'No valid creation object ID.' }
+            $null = Invoke-TokenForgeGraph -AccessToken $GraphToken -Uri "https://graph.microsoft.com/v1.0/servicePrincipals/$objectId" -Method DELETE
+        } catch {
+            $failure = [InvalidOperationException]::new('Created service principal failed Microsoft ownership verification and cleanup failed; registration must stop. Inspect the public application ID in the checkpoint.')
+            $failure.Data['TokenForgeOutcome'] = 'CleanupRequired'
+            throw $failure
+        }
+        $failure = [InvalidOperationException]::new('Created service principal failed ownership verification and was removed.')
+        $failure.Data['TokenForgeOutcome'] = 'OwnerRejected'
+        throw $failure
     }
     [pscustomobject]@{ AppId = $id.ToString(); Outcome = 'Created'; Ownership = 'VerifiedMicrosoftOwner' }
 }

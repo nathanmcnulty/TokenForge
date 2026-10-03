@@ -16,6 +16,8 @@ param(
  [securestring]$GraphToken,
  [securestring]$EstsAuth,
  [guid[]]$ClientId,
+ [ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,
+ [string]$Tenant='organizations',
  [ValidateRange(1,100000)][int]$MaxApplications=100000,
  [ValidateRange(1,1000)][int]$MaxRedirects=8,
  [switch]$GraphOnly,
@@ -31,6 +33,8 @@ if (-not $IsWindows) { [IO.File]::SetUnixFileMode($StatePath, ([IO.UnixFileMode]
 $discoveryPath=Join-Path $StatePath 'discovery.json'
 $inventoryPath=Join-Path $StatePath 'inventory.json'
 $databasePath=Join-Path $StatePath 'scopes.json'
+$principalOptions=@{}
+if ($PrincipalFingerprint) { $principalOptions.PrincipalFingerprint=$PrincipalFingerprint }
 # Prevent checkpoint loss from overlapping writers, including a second CLI process.
 $lock=$null
 try {
@@ -53,8 +57,8 @@ try {
   'Probe' {
    if(-not $EstsAuth){throw 'Probe requires EstsAuth.'}
    $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
-   $plan=Get-TokenForgeProbePlan -Inventory $inventory -ClientId $ClientId -GraphOnly:$GraphOnly
-   Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $EstsAuth -Plan $plan -DatabasePath $databasePath -ClientId $ClientId -MaxApplications $MaxApplications -MaxRedirects $MaxRedirects -Refresh:$Refresh
+   $plan=Get-TokenForgeProbePlan -Inventory $inventory -ClientId $ClientId -GraphOnly:$GraphOnly @principalOptions
+   Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $EstsAuth -Plan $plan -DatabasePath $databasePath -ClientId $ClientId @principalOptions -Tenant $Tenant -MaxApplications $MaxApplications -MaxRedirects $MaxRedirects -Refresh:$Refresh
   }
   'Export' {
    if(-not $ExportPath){throw 'Export requires ExportPath.'}

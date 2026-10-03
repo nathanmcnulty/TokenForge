@@ -29,7 +29,7 @@ $cookie = Get-TokenForgeEstsCookie -PasskeyPath $passkeyPath -XdrModulePath $xdr
 
 Inventory requires Graph permissions to list service principals and optionally delegated grants. Registration requires `Application.ReadWrite.All` and an appropriate tenant role. Bootstrap permissions belong to the operator's authorized Graph session; TokenForge does not grant them. Microsoft documents the [create service principal permissions](https://learn.microsoft.com/en-us/graph/api/serviceprincipal-post-serviceprincipals?view=graph-rest-1.0) and [list permission grants permissions](https://learn.microsoft.com/en-us/graph/api/oauth2permissiongrant-list?view=graph-rest-1.0).
 
-Registration POSTs only an application ID, verifies its owner, and does not create consent grants, credentials or role assignments. By default it considers candidates with published Microsoft owner evidence. `-ResolvePublishedCandidates` can resolve further source-published IDs; owner verification remains mandatory, and a newly created principal with an unsupported owner is removed. Existing non-Microsoft principals are left alone. Registration may affect tenant inventory and audit logs.
+Registration POSTs only an application ID, verifies its owner, and does not create consent grants, credentials or role assignments. By default it considers candidates with published Microsoft owner evidence. `-ResolvePublishedCandidates` can resolve further source-published IDs; owner verification remains mandatory, and a newly created principal with an unsupported owner is removed. Existing non-Microsoft principals are left alone. If rollback of a newly created rejected candidate fails, the checkpoint records `CleanupRequired` and registration stops, including subsequent runs. Resolve the reported public application ID with tenant administration tooling, then append a `CleanupResolved` registration record for the same tenant/app only after verifying cleanup. Registration may affect tenant inventory and audit logs.
 
 Discovery aggregates ROADtools client/resource edges, merill/microsoft-info app candidates, EntraScopes resources, and verified Microsoft tenant principals. Resource IDs present only in catalog scope edges are retained as candidates too. Candidate names and source membership do not establish ownership. The supported owner registry is in `Private/Graph.ps1`; an unknown owner is not accepted merely because its display name contains Microsoft. No source promises an exhaustive application universe.
 
@@ -59,3 +59,15 @@ For explicit assessment requests, `New-TokenForgeTenantRequest` checks requested
 Claims inspection also returns private context fingerprints, never raw tenant/user claims. Readable JWT payloads are diagnostic evidence, with `SignatureValidated=false`. TokenForge does not validate Microsoft's access-token signatures or treat a decoded claim as proof of API acceptance. `Test-TokenForgeTokenAccess` performs a read-only Graph/ARM request and returns status without reading the response body. Test each assessment operation separately with the appropriate role and customer policy.
 
 `Export-TokenForgeScopeDatabase` strips tenant/principal fingerprints and exports successful public app/resource scope observations with matching client/resource evidence. Legacy observations require re-probing before export. Review exports before publication: observation dates and unusual combinations can still reveal context. Exported observations are anonymous tenant evidence, not universal preconsent. The repository remains private; no live database or upstream datasets are committed.
+
+## Separate administrator and assessment sessions
+
+Registration/inventory can use an administrator's Graph token while probing uses an authorized assessment user's cookie. Supply `-PrincipalFingerprint` from that user's readable Graph token claims; the issued probe token must match it. The tenant fingerprint must still match the inventory. Principal-specific configured grant edges are selected for the assessment user's fingerprint, while tenant-wide grants apply to every user.
+
+```powershell
+$observer = Get-TokenForgeTokenClaims -AccessToken $assessmentGraphToken.AccessToken
+& $runner -Action Probe -StatePath $state -EstsAuth $assessmentCookie `
+    -PrincipalFingerprint $observer.PrincipalFingerprint -Tenant $customerTenantId
+```
+
+Use the customer's tenant authority when assessing a guest session. The default `organizations` authority may select the user's home tenant; a mismatching token is excluded from the assessment evidence. These fingerprint checks do not replace authentication or API role checks. A live alternate-user/guest proof requires another authorized account; the current live evidence uses one user and tenant.

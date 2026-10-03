@@ -135,7 +135,7 @@ function Sync-TokenForgeApplicationRegistration {
         if (-not $PSCmdlet.ShouldProcess($app.AppId,'Register Microsoft-owned candidate without granting consent')) { continue }
         $httpStatus = $null
         try { $result = Register-TokenForgeApplication -GraphToken $GraphToken -Application $app -ResolvePublishedCandidate:$ResolvePublishedCandidates -Confirm:$false; $outcome = $result.Outcome }
-        catch { $outcome = 'Failed'; $match = [regex]::Match($_.Exception.Message,'\bHTTP ([0-9]{3})\b'); if ($match.Success) { $httpStatus = [int]$match.Groups[1].Value } }
+        catch { $outcome = 'Failed'; $match = [regex]::Match($_.Exception.Message,'\bHTTP ([0-9]{3})\b'); if ($match.Success) { $httpStatus = [int]$match.Groups[1].Value }; if ($httpStatus -in @(401,403)) { throw "Registration stopped (HTTP $httpStatus); renew the Graph session or verify authorization before resuming." } }
         $attempt = [pscustomobject]@{ AppId = $app.AppId; TenantFingerprint = $Inventory.TenantFingerprint; AttemptedAt = [DateTimeOffset]::UtcNow.ToString('o'); Outcome = $outcome; HttpStatus = $httpStatus }
         $database.RegistrationAttempts += $attempt
         $database.UpdatedAt = [DateTimeOffset]::UtcNow.ToString('o')

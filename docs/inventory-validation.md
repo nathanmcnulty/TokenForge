@@ -10,6 +10,10 @@ The first broad Graph probe completed 305 new observations: 88 readable delegate
 
 The optional software-passkey adapter successfully obtained an in-memory cookie. Four confidential-client candidates were tested with implicit-only discovery; none returned a usable token, and three returned AADSTS700051 (implicit response type disabled). Implicit fallback has synthetic protocol coverage and live negative evidence; successful implicit acquisition is not yet established.
 
-Local validation passed 68 tests. They cover multi-client matrices, bounded-batch resumption, owner mismatch handling and rollback, Graph paging boundaries, secret-free checkpoints/exports, tenant/principal evidence isolation, stale/failed observations, least-extra-scope selection, and state validation for implicit callbacks. Earlier [native/SPA/refresh/API validation](live-validation.md) remains separate evidence.
+Local validation passed 70 tests. They cover multi-client matrices, bounded-batch resumption, owner mismatch handling and rollback, Graph paging boundaries, secret-free checkpoints/exports, tenant/principal evidence isolation, stale/failed observations, least-extra-scope selection, and state validation for implicit callbacks. Earlier [native/SPA/refresh/API validation](live-validation.md) remains separate evidence.
+
+A separate sample of 20 non-Graph resource relationships returned seven readable delegated-scope tokens, one opaque token and twelve failures. These observations are kept in a separate private checkpoint database during parallel registration to avoid concurrent writers.
 
 The experiment continues across further candidates and resources. The private database is resumable and preserves failure outcomes; the published figures above describe this completed batch only.
+
+The fresh coverage-ranking proof selected the smallest observed set covering `Application.Read.All` and `AuditLog.Read.All` from the available successful candidates. Explicit acquisition returned both requested scopes, and a read-only Graph service-principal request returned HTTP 200. The token also contained 29 additional API scopes (34 total `scp` entries including OIDC scopes), so this proves usable assessment access in this session, not a two-scope token.

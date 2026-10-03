@@ -90,6 +90,7 @@ function Save-TokenForgeDocument {
     $temporary = Join-Path $directory ([guid]::NewGuid().ToString() + '.tmp')
     try {
         $Document | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $temporary -Encoding utf8
+        if (-not $IsWindows) { [IO.File]::SetUnixFileMode($temporary, ([IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite)) }
         Move-Item -LiteralPath $temporary -Destination $fullPath -Force
     } finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary } }
 }

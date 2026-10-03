@@ -132,6 +132,23 @@ Describe 'Service principal registration' {
             return $null
         }
     }
+    It 'stops registration on an expired Graph session without recording candidate failures' {
+        $app | Add-Member Registration Missing
+        $inventory = [pscustomobject]@{ Applications=@($app);TenantFingerprint=('a'*64) }
+        Mock Register-TokenForgeApplication -ModuleName TokenForge { throw 'Graph request failed (HTTP 401); details suppressed.' }
+        { Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $secret -DatabasePath "$TestDrive/expired.json" -DelayMilliseconds 0 -Confirm:$false } | Should -Throw '*stopped*401*'
+        (Get-TokenForgeScopeDatabase -Path "$TestDrive/expired.json").RegistrationAttempts.Count | Should -Be 0
+    }
+    It 'continues bounded registration batches after checkpointed candidates' {
+        $app | Add-Member Registration Missing
+        $second=$app.PSObject.Copy();$second.AppId='22222222-2222-2222-2222-222222222222'
+        $inventory=[pscustomobject]@{Applications=@($app,$second);TenantFingerprint=('a'*64)}
+        Mock Register-TokenForgeApplication -ModuleName TokenForge { [pscustomobject]@{Outcome='Created'} }
+        $path="$TestDrive/register-bounded.json"
+        @(Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $secret -DatabasePath $path -MaxApplications 1 -DelayMilliseconds 0 -Confirm:$false).Count | Should -Be 1
+        @(Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $secret -DatabasePath $path -MaxApplications 1 -DelayMilliseconds 0 -Confirm:$false).Count | Should -Be 1
+        (Get-TokenForgeScopeDatabase -Path $path).RegistrationAttempts.Count | Should -Be 2
+    }
     It 'creates only the application service principal without granting consent' {
         (Register-TokenForgeApplication -GraphToken $secret -Application $app -Confirm:$false).Outcome | Should -Be Created
         Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -ParameterFilter { $Method -eq 'POST' -and $Body.Count -eq 1 -and $Body.ContainsKey('appId') -and $Uri.AbsolutePath -eq '/v1.0/servicePrincipals' }
@@ -171,6 +188,7 @@ Describe 'Scope database and assessment selection' {
         $text = Get-Content "$TestDrive/db.json" -Raw
         $text | Should -Not -Match 'private-secret|private-person|AccessToken|Identity'
         (Get-TokenForgeScopeDatabase -Path "$TestDrive/db.json").Observations.Count | Should -Be 1
+        if (-not $IsWindows) { ([int][IO.File]::GetUnixFileMode("$TestDrive/db.json") -band 63) | Should -Be 0 }
     }
     It 'rejects raw identity values in fingerprint fields' {
         $observation = New-TestObservation; $observation.TenantFingerprint = 'private-tenant'

@@ -11,7 +11,7 @@ BeforeAll {
     }
     function New-TestObservation {
         param([string]$Client = '11111111-1111-1111-1111-111111111111', [string[]]$Scopes = @('User.Read'), [string]$Outcome = 'Succeeded', [string]$Time = ([DateTimeOffset]::UtcNow.ToString('o')))
-        [pscustomobject]@{ ClientId = $Client; ResourceId = '00000003-0000-0000-c000-000000000000'; Outcome = $Outcome; ObservedAt = $Time; TenantFingerprint = ('a'*64); PrincipalFingerprint = ('b'*64); ScpScopes = $Scopes; ResponseScopes = $Scopes; SignatureValidated = $false }
+        [pscustomobject]@{ ClientId = $Client; ResourceId = '00000003-0000-0000-c000-000000000000'; Outcome = $Outcome; ObservedAt = $Time; TenantFingerprint = ('a'*64); PrincipalFingerprint = ('b'*64); ScpScopes = $Scopes; ResponseScopes = $Scopes; SignatureValidated = $false; NamespaceVerification = 'Matched'; RequestVerification = 'Matched' }
     }
 }
 
@@ -59,10 +59,19 @@ Describe 'Source aggregation' {
         $app.Sources.Count | Should -Be 2
         ($discovery.Applications | Where-Object AppId -eq $graph).IsResourceCandidate | Should -BeTrue
     }
+    It 'retains resource-only catalog edges with a published source and identifier URI' {
+        $discovery = Get-TokenForgeDiscovery -Catalog $catalog
+        $resource = @($discovery.Applications | Where-Object AppId -eq $graph)
+        $resource.Count | Should -Be 1
+        $resource[0].IsResourceCandidate | Should -BeTrue
+        $resource[0].Ownership | Should -Be Unverified
+        $resource[0].Sources.Evidence | Should -Contain PublishedResource
+        $resource[0].IdentifierUris | Should -Contain 'https://graph.microsoft.com'
+    }
     It 'counts invalid source records without discarding valid candidates' {
         $apps = @([pscustomobject]@{ AppId = 'not-an-id'; AppDisplayName = 'Invalid'; AppOwnerOrganizationId = ''; Source = 'Graph' })
         $discovery = Get-TokenForgeDiscovery -Catalog $catalog -MicrosoftApps $apps
-        $discovery.Applications.Count | Should -Be 2
+        $discovery.Applications.Count | Should -Be 3
         $discovery.InvalidSourceRecordCount | Should -Be 1
     }
 }
@@ -153,6 +162,13 @@ Describe 'Service principal registration' {
         (Register-TokenForgeApplication -GraphToken $secret -Application $app -Confirm:$false).Outcome | Should -Be Created
         Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -ParameterFilter { $Method -eq 'POST' -and $Body.Count -eq 1 -and $Body.ContainsKey('appId') -and $Uri.AbsolutePath -eq '/v1.0/servicePrincipals' }
     }
+    It 'can explicitly resolve a resource-only published candidate and still verifies its owner' {
+        $app.OwnerTenantId=$null;$app.Ownership='Unverified'
+        $app | Add-Member Sources @([pscustomobject]@{Evidence='PublishedResource'})
+        { Register-TokenForgeApplication -GraphToken $secret -Application $app -Confirm:$false } | Should -Throw '*published*'
+        (Register-TokenForgeApplication -GraphToken $secret -Application $app -ResolvePublishedCandidate -Confirm:$false).Outcome | Should -Be Created
+        Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -ParameterFilter {$Method -eq 'POST'}
+    }
     It 'honors WhatIf' {
         Register-TokenForgeApplication -GraphToken $secret -Application $app -WhatIf | Out-Null
         Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 0 -ParameterFilter { $Method -eq 'POST' }
@@ -208,6 +224,14 @@ Describe 'Scope database and assessment selection' {
         @(Get-TokenForgeAssessmentCoverage -Database $db -ResourceId $graph -Scope User.Read -TenantFingerprint ('c'*64) -PrincipalFingerprint ('b'*64)).Count | Should -Be 0
         @(Get-TokenForgeAssessmentCoverage -Database $db -ResourceId $graph -Scope User.Read -TenantFingerprint ('a'*64) -PrincipalFingerprint ('b'*64)).Count | Should -Be 0
     }
+    It 'does not select legacy or unverified token namespaces for assessments' {
+        $observation=New-TestObservation
+        $observation.NamespaceVerification='Unverifiable'
+        $db=Add-TokenForgeScopeObservation -Database (New-TokenForgeScopeDatabase) -Observation $observation
+        @(Get-TokenForgeAssessmentCoverage -Database $db -ResourceId $graph -Scope User.Read -TenantFingerprint ('a'*64) -PrincipalFingerprint ('b'*64)).Count | Should -Be 0
+        $db.Observations[0].PSObject.Properties.Remove('NamespaceVerification')
+        @(Get-TokenForgeAssessmentCoverage -Database $db -ResourceId $graph -Scope User.Read -TenantFingerprint ('a'*64) -PrincipalFingerprint ('b'*64)).Count | Should -Be 0
+    }
     It 'does not report scopes removed when the latest probe fails' {
         $old = Add-TokenForgeScopeObservation -Database (New-TokenForgeScopeDatabase) -Observation (New-TestObservation)
         $new = Add-TokenForgeScopeObservation -Database (New-TokenForgeScopeDatabase) -Observation (New-TestObservation -Outcome Failed -Scopes @())
@@ -231,7 +255,8 @@ Describe 'Resumable probe and matrix planning' {
         $inventory = [pscustomobject]@{ Applications = @($app); TenantGrants = @(); TenantFingerprint = ('a'*64); PrincipalFingerprint = ('b'*64); DiscoveryCatalogHash = ('c'*64) }
         $secret = ConvertTo-SecureString synthetic -AsPlainText -Force
         Mock Get-TokenForgeToken -ModuleName TokenForge {
-            [pscustomobject]@{ AccessToken = ConvertTo-SecureString 'private-access' -AsPlainText -Force; RefreshToken = ConvertTo-SecureString 'private-refresh' -AsPlainText -Force; GrantedScopes = @('User.Read'); TokenClaims = [pscustomobject]@{ Readable = $true; HasDelegatedScopeClaim = $true; Scopes = @('User.Read') } }
+            param($Request)
+            [pscustomobject]@{ AccessToken = ConvertTo-SecureString 'private-access' -AsPlainText -Force; RefreshToken = ConvertTo-SecureString 'private-refresh' -AsPlainText -Force; GrantedScopes = @('User.Read'); TokenClaims = [pscustomobject]@{ Readable = $true; HasDelegatedScopeClaim = $true; Scopes = @('User.Read'); TenantFingerprint=('a'*64); PrincipalFingerprint=('b'*64); Audience=$Request.ResourceId; ClientId=$Request.ClientId } }
         }
     }
     It 'deduplicates Graph and published edges without inventing client consent' {
@@ -275,6 +300,25 @@ Describe 'Resumable probe and matrix planning' {
         $next.Count | Should -Be 1
         $next[0].ClientId | Should -Not -Be $first[0].ClientId
         (Get-TokenForgeScopeDatabase -Path $path).Observations.Count | Should -Be 2
+    }
+    It 'rejects cookie tokens from a different inventory principal without retaining their scopes' {
+        Mock Get-TokenForgeToken -ModuleName TokenForge {
+            [pscustomobject]@{AccessToken=ConvertTo-SecureString synthetic -AsPlainText -Force;RefreshToken=$null;GrantedScopes=@('User.Read');TokenClaims=[pscustomobject]@{Readable=$true;HasDelegatedScopeClaim=$true;Scopes=@('User.Read');TenantFingerprint=('a'*64);PrincipalFingerprint=('d'*64)}}
+        }
+        $result=Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath "$TestDrive/context.json" -DelayMilliseconds 0
+        $result.Outcome | Should -Be ContextMismatch
+        $result.NamespaceVerification | Should -Be Mismatch
+        $result.ScpScopes.Count | Should -Be 0
+        Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Exactly -Times 1
+    }
+    It 'does not label another resource token as the requested API' {
+        Mock Get-TokenForgeToken -ModuleName TokenForge {
+            [pscustomobject]@{AccessToken=ConvertTo-SecureString synthetic -AsPlainText -Force;RefreshToken=$null;GrantedScopes=@('User.Read');TokenClaims=[pscustomobject]@{Readable=$true;HasDelegatedScopeClaim=$true;Scopes=@('User.Read');TenantFingerprint=('a'*64);PrincipalFingerprint=('b'*64);ClientId=$clientId;Audience='https://other-api.test'}}
+        }
+        $result=Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath "$TestDrive/audience.json" -DelayMilliseconds 0
+        $result.Outcome | Should -Be ContextMismatch
+        $result.RequestVerification | Should -Be Mismatch
+        $result.ScpScopes.Count | Should -Be 0
     }
     It 'records opaque token evidence without claiming verified scp' {
         Mock Get-TokenForgeToken -ModuleName TokenForge { [pscustomobject]@{ AccessToken = ConvertTo-SecureString synthetic -AsPlainText -Force; RefreshToken = $null; GrantedScopes = @('User.Read'); TokenClaims = [pscustomobject]@{ Readable = $false; HasDelegatedScopeClaim = $false; Scopes = @() } } }

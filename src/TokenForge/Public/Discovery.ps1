@@ -22,6 +22,15 @@ function Get-TokenForgeDiscovery {
         }
     }
     $rows = @()
+    # API IDs from scope edges are candidates even when a separate resource list omits them.
+    $resourceIds = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($app in $Catalog.Applications) {
+        foreach ($grant in $app.Grants) { $null = $resourceIds.Add([string]$grant.ResourceId) }
+    }
+    foreach ($id in $Catalog.ResourceIdentifiers.Values) { $null = $resourceIds.Add([string]$id) }
+    foreach ($id in @($resourceIds | Sort-Object)) {
+        $rows += [pscustomobject]@{ Id = $id; Name = $id; Owner = $null; Source = $Catalog.Source; Evidence = 'PublishedResource'; Resource = $true }
+    }
     foreach ($row in $MicrosoftApps) {
         $rows += [pscustomobject]@{ Id = $row.AppId; Name = $row.AppDisplayName; Owner = $row.AppOwnerOrganizationId; Source = $MicrosoftAppsSource; Evidence = "Published$($row.Source)"; Resource = $false }
     }
@@ -40,6 +49,7 @@ function Get-TokenForgeDiscovery {
             $map[$key] = [pscustomobject]@{ AppId = $key; Name = [string]$row.Name; OwnerTenantId = $null; Ownership = 'Unverified'; Sources = @(); PublicClient = $null; Foci = $null; RedirectUris = @(); PreferredRedirectUri = ''; Grants = @(); IsResourceCandidate = $false; IdentifierUris = @() }
         }
         $candidate = $map[$key]
+        if ($candidate.Name -eq $key -and $row.Name) { $candidate.Name = [string]$row.Name }
         $candidate.Sources += [pscustomobject]@{ Name = $row.Source; Location = $row.Source; Evidence = $row.Evidence }
         if ($row.Owner -in $script:MicrosoftOwnerTenants) { $candidate.OwnerTenantId = [string]$row.Owner; $candidate.Ownership = 'PublishedMicrosoftOwner' }
         if ($row.Resource) { $candidate.IsResourceCandidate = $true }

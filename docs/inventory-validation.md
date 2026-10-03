@@ -10,10 +10,16 @@ The first broad Graph probe completed 305 new observations: 88 readable delegate
 
 The optional software-passkey adapter successfully obtained an in-memory cookie. Four confidential-client candidates were tested with implicit-only discovery; none returned a usable token, and three returned AADSTS700051 (implicit response type disabled). Implicit fallback has synthetic protocol coverage and live negative evidence; successful implicit acquisition is not yet established.
 
-Local validation passed 70 tests. They cover multi-client matrices, bounded-batch resumption, owner mismatch handling and rollback, Graph paging boundaries, secret-free checkpoints/exports, tenant/principal evidence isolation, stale/failed observations, least-extra-scope selection, and state validation for implicit callbacks. Earlier [native/SPA/refresh/API validation](live-validation.md) remains separate evidence.
+Local validation passed 75 tests. They cover multi-client matrices, bounded-batch resumption, owner mismatch handling and rollback, Graph paging boundaries, secret-free checkpoints/exports, tenant/principal evidence isolation, stale/failed observations, least-extra-scope selection, and state validation for implicit callbacks. Earlier [native/SPA/refresh/API validation](live-validation.md) remains separate evidence.
 
 A separate sample of 20 non-Graph resource relationships returned seven readable delegated-scope tokens, one opaque token and twelve failures. These observations are kept in a separate private checkpoint database during parallel registration to avoid concurrent writers.
 
 The experiment continues across further candidates and resources. The private database is resumable and preserves failure outcomes; the published figures above describe this completed batch only.
 
 The fresh coverage-ranking proof selected the smallest observed set covering `Application.Read.All` and `AuditLog.Read.All` from the available successful candidates. Explicit acquisition returned both requested scopes, and a read-only Graph service-principal request returned HTTP 200. The token also contained 29 additional API scopes (34 total `scp` entries including OIDC scopes), so this proves usable assessment access in this session, not a two-scope token.
+
+Discovery now also retains resource IDs found only in catalog scope edges, expanding the candidate union to 5,455 IDs (1,780 resource candidates). Six previously unsuccessful family-client candidates rejected redemption of an authorized Azure CLI refresh token; no additional refresh-discovery coverage is claimed. New context checks prevent recording a different tenant/principal token as the inventory user and require fresh matching evidence for assessment selection. Earlier observations remain history pending re-probe.
+
+The first fresh Graph re-probe confirmed tenant/principal fingerprints for all 91 earlier successful clients. A further pass is collecting client/audience consistency evidence as well. Scope selection and public export now require that request evidence; legacy records are retained as history.
+
+The further Graph pass confirmed all 91 successful clients with matching tenant/principal, issued-client and resource-audience evidence. Ten source-published resource-only candidates were registered successfully and verified as Microsoft-owned without grants; expansion to the remaining resource-only candidates is underway. A same-client refresh control returned 12 scp entries, while the six cross-client family attempts remained rejected.

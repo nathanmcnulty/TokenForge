@@ -53,7 +53,7 @@ function Invoke-TokenForgeScopeProbe {
                 ObservedAt = [DateTimeOffset]::UtcNow.ToString('o'); Outcome = 'Failed'
                 Protocol = 'OAuth2V2Pkce'; Spa = $false; RequestedScopes = @('.default')
                 ResponseScopes = @(); ScpScopes = @(); ClaimsReadable = $false; HasScpClaim = $false
-                SignatureValidated = $false; ErrorCodes = @(); AttemptCount = 0; ElapsedSeconds = 0
+                SignatureValidated = $false; NamespaceVerification = 'Unverifiable'; RequestVerification = 'Unverifiable'; ErrorCodes = @(); AttemptCount = 0; ElapsedSeconds = 0
                 CatalogHash = $Inventory.DiscoveryCatalogHash
             }
             if ($app.Registration -eq 'Missing') { $observation.Outcome = 'MissingRegistration' }
@@ -78,6 +78,27 @@ function Invoke-TokenForgeScopeProbe {
                         try {
                             $request = New-TokenForgeDiscoveryRequest -Application $app -ResourceId $resource -RedirectUri $redirect -Tenant $Tenant -Spa:$spa -Protocol $attempt.Protocol
                             $token = Get-TokenForgeToken -Request $request -EstsAuth $EstsAuth -WarningAction SilentlyContinue
+                            $claims = $token.TokenClaims
+                            if ($claims.PSObject.Properties['TenantFingerprint'] -and $claims.PSObject.Properties['PrincipalFingerprint']) {
+                                if (($claims.TenantFingerprint -and $claims.TenantFingerprint -ne $Inventory.TenantFingerprint) -or ($claims.PrincipalFingerprint -and $claims.PrincipalFingerprint -ne $Inventory.PrincipalFingerprint)) {
+                                    $observation.Outcome = 'ContextMismatch'
+                                    $observation.NamespaceVerification = 'Mismatch'
+                                    break
+                                }
+                                if ($claims.TenantFingerprint -and $claims.PrincipalFingerprint) { $observation.NamespaceVerification = 'Matched' }
+                            }
+                            $aliases = @($resource.ToString()) + @($Inventory.Applications | Where-Object AppId -eq $resource.ToString() | ForEach-Object { $_.IdentifierUris })
+                            if ($resource.ToString() -eq '00000003-0000-0000-c000-000000000000') { $aliases += 'https://graph.microsoft.com' }
+                            if ($resource.ToString() -eq '797f4846-ba00-4fd7-ba43-dac1f8f63013') { $aliases += @('https://management.azure.com','https://management.core.windows.net') }
+                            $audience = if ($claims.PSObject.Properties['Audience']) { [string]$claims.Audience } else { '' }
+                            $issuedClient = if ($claims.PSObject.Properties['ClientId']) { [string]$claims.ClientId } else { '' }
+                            $audienceMatched = $audience -and $audience.TrimEnd('/') -in @($aliases | ForEach-Object { ([string]$_).TrimEnd('/') })
+                            if (($issuedClient -and $issuedClient -ne $app.AppId) -or ($audience -and -not $audienceMatched)) {
+                                $observation.Outcome = 'ContextMismatch'
+                                $observation.RequestVerification = 'Mismatch'
+                                break
+                            }
+                            if ($issuedClient -and $audienceMatched) { $observation.RequestVerification = 'Matched' }
                             $observation.ResponseScopes = @($token.GrantedScopes)
                             $observation.ClaimsReadable = $token.TokenClaims.Readable
                             $observation.HasScpClaim = $token.TokenClaims.HasDelegatedScopeClaim
@@ -95,7 +116,7 @@ function Invoke-TokenForgeScopeProbe {
                         }
                         if ($DelayMilliseconds) { Start-Sleep -Milliseconds $DelayMilliseconds }
                     }
-                    if ($observation.Outcome -in @('Succeeded','OpaqueToken','NoDelegatedScp')) { break }
+                    if ($observation.Outcome -in @('Succeeded','OpaqueToken','NoDelegatedScp','ContextMismatch')) { break }
                 }
             }
             $observation.ElapsedSeconds = [math]::Round($watch.Elapsed.TotalSeconds,3)
@@ -126,7 +147,7 @@ function Sync-TokenForgeApplicationRegistration {
     foreach ($attempt in $database.RegistrationAttempts) {
         if ($attempt.TenantFingerprint -eq $Inventory.TenantFingerprint) { $completed[$attempt.AppId] = $attempt.Outcome }
     }
-    $apps = @($Inventory.Applications | Where-Object { $_.Registration -eq 'Missing' -and ($_.Ownership -eq 'PublishedMicrosoftOwner' -or ($ResolvePublishedCandidates -and @($_.Sources | Where-Object { $_.Evidence -in @('PublishedMetadata','PublishedGraph','PublishedEntraDocs','PublishedLearn','PublishedGitHub') }).Count -gt 0)) -and (-not $ClientId -or $_.AppId -in @($ClientId | ForEach-Object ToString)) } | Sort-Object AppId)
+    $apps = @($Inventory.Applications | Where-Object { $_.Registration -eq 'Missing' -and ($_.Ownership -eq 'PublishedMicrosoftOwner' -or ($ResolvePublishedCandidates -and @($_.Sources | Where-Object { $_.Evidence -in @('PublishedMetadata','PublishedResource','PublishedGraph','PublishedEntraDocs','PublishedLearn','PublishedGitHub') }).Count -gt 0)) -and (-not $ClientId -or $_.AppId -in @($ClientId | ForEach-Object ToString)) } | Sort-Object AppId)
     $processedApplications = 0
     foreach ($app in $apps) {
         if ($completed.ContainsKey($app.AppId) -and (-not $RetryFailures -or $completed[$app.AppId] -ne 'Failed')) { continue }

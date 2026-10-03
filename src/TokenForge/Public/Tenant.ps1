@@ -67,7 +67,7 @@ function Get-TokenForgeTenantInventory {
             PublicClient = $candidate.PublicClient; Foci = $candidate.Foci
             RedirectUris = $redirects; TenantRedirectUris = if ($verified) { @($sp['replyUrls']) } else { @() }; PreferredRedirectUri = $candidate.PreferredRedirectUri
             PublishedGrants = $candidate.Grants; DelegatedScopeDefinitions = $definitions
-            IdentifierUris = @($candidate.IdentifierUris)
+            IdentifierUris = @(@($candidate.IdentifierUris) + @(if ($verified) { $sp['servicePrincipalNames'] }) | Where-Object { $_ -is [string] -and $_ } | Sort-Object -Unique)
             IsResourceCandidate = $candidate.IsResourceCandidate -or $definitions.Count -gt 0
         }
     }
@@ -98,7 +98,7 @@ function Register-TokenForgeApplication {
     }
     # A caller-provided display name is never sufficient evidence to create an application.
     $publishedOwner = $Application.OwnerTenantId -in $script:MicrosoftOwnerTenants -and $Application.Ownership -in @('PublishedMicrosoftOwner','VerifiedMicrosoftOwner')
-    $publishedCandidate = $ResolvePublishedCandidate -and $Application.PSObject.Properties['Sources'] -and @($Application.Sources | Where-Object { $_.Evidence -in @('PublishedMetadata','PublishedGraph','PublishedEntraDocs','PublishedLearn','PublishedGitHub') }).Count -gt 0
+    $publishedCandidate = $ResolvePublishedCandidate -and $Application.PSObject.Properties['Sources'] -and @($Application.Sources | Where-Object { $_.Evidence -in @('PublishedMetadata','PublishedResource','PublishedGraph','PublishedEntraDocs','PublishedLearn','PublishedGitHub') }).Count -gt 0
     if (-not $publishedOwner -and -not $publishedCandidate) { throw 'Creation requires published Microsoft ownership evidence, or explicit resolution of a published candidate.' }
     if (-not $PSCmdlet.ShouldProcess($id.ToString(), 'Create Microsoft application service principal without granting consent')) {
         return [pscustomobject]@{ AppId = $id.ToString(); Outcome = 'NotCreated'; Ownership = $Application.Ownership }

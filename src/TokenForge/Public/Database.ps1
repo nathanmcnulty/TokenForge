@@ -28,9 +28,11 @@ function Add-TokenForgeScopeObservation {
     foreach ($field in @('TenantFingerprint','PrincipalFingerprint')) {
         if ($Observation.$field -and $Observation.$field -notmatch '^[a-f0-9]{64}$') { throw 'Observations must use fingerprints, not tenant or user IDs.' }
     }
-    if ($Observation.Outcome -notin @('Succeeded','NoDelegatedScp','OpaqueToken','Failed','NoRedirect','Disabled','MissingRegistration','OwnerMismatch','BrokerRequired')) { throw 'Invalid observation outcome.' }
+    if ($Observation.Outcome -notin @('Succeeded','NoDelegatedScp','OpaqueToken','Failed','NoRedirect','Disabled','MissingRegistration','OwnerMismatch','BrokerRequired','ContextMismatch')) { throw 'Invalid observation outcome.' }
+    if ($Observation.PSObject.Properties['NamespaceVerification'] -and $Observation.NamespaceVerification -notin @('Matched','Mismatch','Unverifiable')) { throw 'Invalid namespace verification evidence.' }
+    if ($Observation.PSObject.Properties['RequestVerification'] -and $Observation.RequestVerification -notin @('Matched','Mismatch','Unverifiable')) { throw 'Invalid request verification evidence.' }
     $clean = [ordered]@{}
-    foreach ($field in @('ClientId','ResourceId','Outcome','TenantFingerprint','PrincipalFingerprint','ObservedAt','Protocol','Spa','RedirectFingerprint','RequestedScopes','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','SignatureValidated','ErrorCodes','AttemptCount','ElapsedSeconds','CatalogHash')) {
+    foreach ($field in @('ClientId','ResourceId','Outcome','TenantFingerprint','PrincipalFingerprint','ObservedAt','Protocol','Spa','RedirectFingerprint','RequestedScopes','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','NamespaceVerification','RequestVerification','SignatureValidated','ErrorCodes','AttemptCount','ElapsedSeconds','CatalogHash')) {
         if ($Observation.PSObject.Properties[$field]) { $clean[$field] = $Observation.$field }
     }
     foreach ($field in @('RequestedScopes','ResponseScopes','ScpScopes')) {
@@ -81,7 +83,7 @@ function Export-TokenForgeScopeDatabase {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Database, [Parameter(Mandatory)][string]$Path)
     $records = foreach ($observation in $Database.Observations) {
-        if ($observation.Outcome -ne 'Succeeded') { continue }
+        if ($observation.Outcome -ne 'Succeeded' -or -not $observation.PSObject.Properties['RequestVerification'] -or $observation.RequestVerification -ne 'Matched') { continue }
         [pscustomobject]@{
             ClientId = $observation.ClientId; ResourceId = $observation.ResourceId
             ObservedAt = $observation.ObservedAt; Scopes = @($observation.ScpScopes)
@@ -112,6 +114,8 @@ function Get-TokenForgeAssessmentCoverage {
         if ($observation.ResourceId -eq $ResourceId.ToString() -and $observation.TenantFingerprint -eq $TenantFingerprint -and $observation.PrincipalFingerprint -eq $PrincipalFingerprint) { $latest[$observation.ClientId] = $observation }
     }
     $rows = foreach ($observation in $latest.Values) {
+        if (-not $observation.PSObject.Properties['NamespaceVerification'] -or $observation.NamespaceVerification -ne 'Matched') { continue }
+        if (-not $observation.PSObject.Properties['RequestVerification'] -or $observation.RequestVerification -ne 'Matched') { continue }
         if ($observation.Outcome -ne 'Succeeded' -or [DateTimeOffset]::Parse($observation.ObservedAt) -lt [DateTimeOffset]::UtcNow.AddHours(-$MaxAgeHours)) { continue }
         $apiScopes = @($observation.ScpScopes | Where-Object { $_ -cnotin @('openid','profile','email','offline_access') })
         $missing = @($Scope | Where-Object { $apiScopes -cnotcontains $_ })

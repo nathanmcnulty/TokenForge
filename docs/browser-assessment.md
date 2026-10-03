@@ -5,7 +5,7 @@ TokenForge 0.3 adds a system-browser authorization-code flow with PKCE. It works
 ```powershell
 # Use verified tenant metadata and select a published localhost client deliberately.
 $request = New-TokenForgeTenantRequest -Inventory $inventory `
-    -ClientId '04b07795-8ddb-461a-bbee-02f9e1bf7b46' `
+    -ClientId '14d82eec-204b-4c2f-b7e8-296a70dab67e' `
     -ResourceId '00000003-0000-0000-c000-000000000000' `
     -Scope User.Read -RedirectUri 'http://localhost' `
     -Tenant 'your-tenant.example' -OfflineAccess
@@ -19,7 +19,7 @@ The callback listens on IPv4 loopback at an allocated port. The request uses `ht
 
 Protocol references: [Microsoft authorization-code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow) and [localhost redirect rules](https://learn.microsoft.com/en-us/entra/identity-platform/reply-url). Browser UI and live redemption still need validation on each supported operating system.
 
-The new browser path has passed offline callback and redemption tests. Live second-account sign-in is pending; it has not yet established Nora’s API access, role status, or guest behavior. Keep this change in draft until that proof completes.
+The browser path passed live Linux validation with a second account using Microsoft Graph Command Line Tools: PKCE redemption, Graph `/me` identity verification, client/audience matching, and observer-specific assessment coverage succeeded. Entra returned 108 API scopes, including 107 beyond the requested `User.Read`. Role and guest status remain unchecked. The same request with Azure CLI returned AADSTS65002, so that client is not a working example for this scope. See the [bounded validation evidence](browser-validation-2026-10-03.json).
 
 ## Assessment manifests
 

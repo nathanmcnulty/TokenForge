@@ -16,7 +16,7 @@ try {
  foreach($name in @('Invoke-TokenForge.ps1','Invoke-TokenForgeInventory.ps1')) {Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination (Join-Path $stage 'scripts')}
  $null=New-Item -ItemType Directory -Path (Join-Path $stage 'docs')
  Get-ChildItem -LiteralPath (Join-Path $root 'docs') -File -Filter '*.md'|Copy-Item -Destination (Join-Path $stage 'docs')
- Copy-Item -LiteralPath (Join-Path $root 'docs/live-validation-2026-10-02.json') -Destination (Join-Path $stage 'docs')
+ foreach($name in @('live-validation-2026-10-02.json','browser-validation-2026-10-03.json')) {Copy-Item -LiteralPath (Join-Path $root "docs/$name") -Destination (Join-Path $stage 'docs')}
  $archive=Join-Path $OutputPath "TokenForge-$($manifest.Version).zip"
  Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $archive -Force
  $hash=(Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()

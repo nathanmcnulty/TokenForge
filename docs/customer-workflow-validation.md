@@ -11,10 +11,16 @@ The prior live-validation and inventory PRs were merged to `main`. This candidat
 - The reviewed export contains 8,515 historical observations, all with exactly the six permitted public fields. Two observed leading-dot scope names are preserved as scalar observations. Nested data is rejected before replacing an export. No export was published.
 - The 0.3.0 ZIP was built, extracted, and imported successfully with 26 exported commands. It contains only the runtime CLI scripts, module, manifests, and reviewed documentation. PowerShell 7.4+ remains required.
 
-## Pending evidence
+## Live second-account evidence
 
-The browser-control connector failed initialization (`CUA_REPL_ENABLED_SURFACES is required`). A system-browser sign-in was launched with Nora's login hint, using the tenant domain and a published native localhost callback. The system's default browser is Edge. Account selection/MFA requires human interaction. The sign-in deadline expired without a callback; no second-account access or ordinary-user/guest status is claimed.
+The browser-control connector failed initialization (`CUA_REPL_ENABLED_SURFACES is required`), so account selection/MFA used the system browser, Edge. The initial request expired. A subsequent Azure CLI request for Graph `User.Read` returned AADSTS65002 following the reported app-assignment issue. This is app/API preauthorization failure, not proof of user roles or API privileges.
 
-The live proof must compare Graph `/me` identity with the requested observer inside the process, check client/audience/context, and save only bounded noncredential results. Tokens, codes, cookies, raw identity responses, and browser session state must remain out of Git. Validate a second ordinary-user or customer-like tenant separately; a second email address alone does not establish either condition.
+The Microsoft Graph Command Line Tools client completed browser authorization-code + PKCE on Linux. Graph `/me` returned HTTP 200 and its identity matched the requested observer inside the process. Client and audience matched; the observer was in the same tenant as the existing inventory but had a different principal fingerprint. A separate private scope database supplied fresh `User.Read` assessment coverage for that observer and client.
+
+The token contained 111 `scp` entries: 108 API scopes and three OIDC scopes. It included 107 API scopes beyond the single requested `User.Read`. These are scope observations; `/me` was the only API operation checked with this token. No additional API privilege, role, license, or guest status is inferred. The [bounded JSON proof](browser-validation-2026-10-03.json) omits raw identity values, namespace fingerprints, authorization codes, and tokens. Returned access/refresh token objects were disposed after validation, and TokenForge persisted no credentials. Private scope observations remain outside Git.
+
+## Remaining evidence
+
+Ordinary-user role status, guest behavior, and a separate customer-like tenant still need validation. A second account alone does not establish any of those conditions.
 
 Windows/macOS CI verifies offline behavior. Synthetic callback clients connect directly to IPv4 loopback while preserving the expected localhost Host header, avoiding Windows DNS fallback delays; the slow-header deadline test remains bounded. Real browser UI, localhost resolution, and token redemption on each platform remain distinct live evidence. Package signing, publication, and a standalone executable are future work.

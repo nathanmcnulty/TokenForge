@@ -382,6 +382,56 @@ Describe 'Resumable probe and matrix planning' {
     }
 }
 
+Describe 'Explicit requests from observed scope evidence' {
+    BeforeEach {
+        $app = [pscustomobject]@{ AppId=$clientId; Name='Fixture'; Registration='Present'; Ownership='VerifiedMicrosoftOwner'; PublicClient=$true; Foci=$false; RedirectUris=@('https://example.test/callback'); PreferredRedirectUri='https://example.test/callback' }
+        $resource = [pscustomobject]@{ AppId=$graph; Registration='Present'; Ownership='VerifiedMicrosoftOwner'; DelegatedScopeDefinitions=@() }
+        $inventory = [pscustomobject]@{ Applications=@($app,$resource); TenantFingerprint=('a'*64); PrincipalFingerprint=('b'*64); DiscoveryCatalogHash=('c'*64) }
+        $observation = New-TestObservation -Scopes Private.Unlisted
+        $db = Add-TokenForgeScopeObservation -Database (New-TokenForgeScopeDatabase) -Observation $observation
+        $arguments = @{ Inventory=$inventory; Database=$db; ClientId=$clientId; ResourceId=$graph; Scope=@('Private.Unlisted'); RedirectUri='https://example.test/callback' }
+    }
+    It 'plans an observed scope absent from definitions without treating discovery as explicit authorization' {
+        $plan = New-TokenForgeTenantRequest @arguments
+        $plan.Scopes | Should -Contain Private.Unlisted
+        $plan.Source | Should -Be VerifiedPrivateScopeObservation
+        $plan.Evidence | Should -Be MatchedObservedScpNotGuaranteedExplicitAuthorization
+        $plan.ObservedAt | Should -Be $observation.ObservedAt
+        $plan.ContentSha256 | Should -BeNullOrEmpty
+        $plan.OAuthScopes | Should -Contain "$graph/Private.Unlisted"
+        $plan.PSObject.Properties['Discovery'] | Should -BeNullOrEmpty
+    }
+    It 'does not extend observed coverage to an unobserved scope or different resource' {
+        $arguments.Scope=@('Other.Unlisted')
+        { New-TokenForgeTenantRequest @arguments } | Should -Throw '*No fresh*'
+        $arguments.Scope=@('Private.Unlisted'); $arguments.ResourceId=$clientId
+        { New-TokenForgeTenantRequest @arguments } | Should -Throw '*No fresh*'
+    }
+    It 'rejects stale observations and a later failed probe' {
+        $db.Observations[0].ObservedAt=[DateTimeOffset]::UtcNow.AddDays(-2).ToString('o')
+        { New-TokenForgeTenantRequest @arguments } | Should -Throw '*No fresh*'
+        $db.Observations[0].ObservedAt=[DateTimeOffset]::UtcNow.AddMinutes(-1).ToString('o')
+        $null=Add-TokenForgeScopeObservation -Database $db -Observation (New-TestObservation -Outcome Failed -Scopes @())
+        { New-TokenForgeTenantRequest @arguments } | Should -Throw '*No fresh*'
+    }
+    It 'rejects unverified request or namespace evidence' -ForEach @('RequestVerification','NamespaceVerification') {
+        $db.Observations[0].$_='Unverifiable'
+        { New-TokenForgeTenantRequest @arguments } | Should -Throw '*No fresh*'
+    }
+    It 'selects another authorized observer only with an explicit matching fingerprint' {
+        $db.Observations[0].PrincipalFingerprint=('d'*64)
+        { New-TokenForgeTenantRequest @arguments } | Should -Throw '*No fresh*'
+        $plan=New-TokenForgeTenantRequest @arguments -PrincipalFingerprint ('d'*64)
+        $plan.Scopes | Should -Contain Private.Unlisted
+    }
+    It 'retains ownership and published redirect boundaries' {
+        $arguments.RedirectUri='https://unpublished.test/callback'
+        { New-TokenForgeTenantRequest @arguments } | Should -Throw '*redirect*'
+        $arguments.RedirectUri='https://example.test/callback';$resource.Ownership='Unknown'
+        { New-TokenForgeTenantRequest @arguments } | Should -Throw '*ownership-verified*'
+    }
+}
+
 Describe 'Resource API boundary' {
     It 'rejects token/resource mismatch before contacting the API' {
         $token = [pscustomobject]@{ ResourceId = $graph; AccessToken = ConvertTo-SecureString synthetic -AsPlainText -Force }

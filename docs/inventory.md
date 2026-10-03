@@ -56,6 +56,22 @@ Coverage uses fresh context-matched observations in exactly this tenant/principa
 
 For explicit assessment requests, `New-TokenForgeTenantRequest` checks requested scopes against enabled tenant resource definitions. This is a planning check, not evidence of client consent. Entra may issue extra permissions even for an explicit request; inspect actual scopes. An implicit-only client may support discovery of a broad permission set without supporting a narrower explicit PKCE request.
 
+Pass `-Database $db` to use fresh observed scope evidence instead of resource definitions. This supports scope names present in tokens but absent from tenant definitions. The chosen client/resource must have a successful, fresh, namespace- and request-matched observation covering every requested scope; a newer failure supersedes an older success. Registered Microsoft ownership and published callback checks still apply. Use `-PrincipalFingerprint` for a separate assessment observer and `-MaxAgeHours` to set the observation age limit (24 hours by default). This produces an explicit request, not an implicit fallback or a guarantee of narrower permissions.
+
+```powershell
+$candidate = Get-TokenForgeAssessmentCoverage -Database $db -ResourceId $graph `
+    -Scope Application.Read.All,AuditLog.Read.All `
+    -TenantFingerprint $inventory.TenantFingerprint `
+    -PrincipalFingerprint $inventory.PrincipalFingerprint |
+    Where-Object CoversAll | Select-Object -First 1
+if (-not $candidate) { throw 'No fresh complete observed candidate.' }
+$request = New-TokenForgeTenantRequest -Inventory $inventory -Database $db `
+    -ClientId $candidate.ClientId -ResourceId $graph `
+    -Scope Application.Read.All,AuditLog.Read.All -RedirectUri $publishedCallback
+$token = Get-TokenForgeToken -Request $request -EstsAuth $cookie
+# Inspect actual claims and test the required API operations before assessment use.
+```
+
 Claims inspection also returns private context fingerprints, never raw tenant/user claims. Readable JWT payloads are diagnostic evidence, with `SignatureValidated=false`. TokenForge does not validate Microsoft's access-token signatures or treat a decoded claim as proof of API acceptance. `Test-TokenForgeTokenAccess` performs a read-only Graph/ARM request and returns status without reading the response body. Test each assessment operation separately with the appropriate role and customer policy.
 
 `Export-TokenForgeScopeDatabase` strips tenant/principal fingerprints and exports successful public app/resource scope observations with matching client/resource evidence. Legacy observations require re-probing before export. Review exports before publication: observation dates and unusual combinations can still reveal context. Exported observations are anonymous tenant evidence, not universal preconsent. The repository remains private; no live database or upstream datasets are committed.

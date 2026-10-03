@@ -150,6 +150,30 @@ Describe 'Offline identity protocol' {
         Mock Invoke-TokenForgeHttp -ModuleName TokenForge { @{ Status = 200; Content = '{"access_token":"synthetic-access","token_type":"Bearer"}' } }
         (Get-TokenForgeToken -Request $plan -RefreshToken $secret -WarningAction SilentlyContinue).ScopeEvidence | Should -Be Unverified
     }
+    It 'reports additional API scopes without treating OIDC scopes as extra API permissions' {
+        Mock Invoke-TokenForgeHttp -ModuleName TokenForge { @{ Status = 200; Content = '{"access_token":"synthetic-access","token_type":"Bearer","scope":"User.Read Mail.Read Directory.Read.All openid profile email"}' } }
+        $result = Get-TokenForgeToken -Request $plan -RefreshToken $secret -WarningVariable notices -WarningAction SilentlyContinue
+        $result.AdditionalScopes | Should -Be @('Directory.Read.All')
+        $notices | Should -Match '1 additional API scopes'
+    }
+    It 'recognizes fully qualified scopes when calculating additional permissions' {
+        Mock Invoke-TokenForgeHttp -ModuleName TokenForge { @{ Status = 200; Content = '{"access_token":"synthetic-access","token_type":"Bearer","scope":"https://graph.microsoft.com/User.Read https://graph.microsoft.com/Mail.Read"}' } }
+        (Get-TokenForgeToken -Request $plan -RefreshToken $secret).AdditionalScopes.Count | Should -Be 0
+    }
+    It 'identifies a server-rejected published redirect without echoing HTML' {
+        Mock Invoke-TokenForgeHttp -ModuleName TokenForge { @{ Status = 200; Location = $null; Content = '<html>AADSTS50011: rejected synthetic-secret and user@example.test</html>' } }
+        try { Get-TokenForgeToken -Request $plan -EstsAuth $secret; throw 'NoFailure' } catch {
+            $_.Exception.Message | Should -Match 'AADSTS50011.*Entra rejected the redirect URI'
+            $_.Exception.Message | Should -Not -Match 'synthetic-secret|user@example.test'
+        }
+    }
+    It 'retains numeric token-endpoint failure codes without identity response contents' {
+        Mock Invoke-TokenForgeHttp -ModuleName TokenForge { @{ Status = 400; Content = '{"error_description":"AADSTS65001: synthetic-secret user@example.test"}' } }
+        try { Get-TokenForgeToken -Request $plan -RefreshToken $secret; throw 'NoFailure' } catch {
+            $_.Exception.Message | Should -Match 'HTTP 400.*AADSTS65001'
+            $_.Exception.Message | Should -Not -Match 'synthetic-secret|user@example.test'
+        }
+    }
     It 'rejects tampered plans before any request' {
         $plan.OAuthScopes = @('https://other.test/.default')
         { Get-TokenForgeToken -Request $plan -RefreshToken $secret } | Should -Throw '*do not match*'

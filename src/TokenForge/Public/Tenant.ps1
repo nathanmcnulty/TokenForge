@@ -88,7 +88,7 @@ function Register-TokenForgeApplication {
     Ensure a discovered Microsoft application has a tenant service principal; do not grant permissions.
     #>
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
-    param([Parameter(Mandatory)][securestring]$GraphToken, [Parameter(Mandatory)]$Application, [switch]$ResolvePublishedCandidate)
+    param([Parameter(Mandatory)][securestring]$GraphToken, [Parameter(Mandatory)]$Application, [switch]$ResolvePublishedCandidate, [switch]$ResolveSignInCandidate)
     $id = [guid]::Empty
     if (-not [guid]::TryParse([string]$Application.AppId,[ref]$id)) { throw 'Invalid application ID.' }
     $uri = "https://graph.microsoft.com/v1.0/servicePrincipals(appId='$id')"
@@ -100,7 +100,8 @@ function Register-TokenForgeApplication {
     # A caller-provided display name is never sufficient evidence to create an application.
     $publishedOwner = $Application.OwnerTenantId -in $script:MicrosoftOwnerTenants -and $Application.Ownership -in @('PublishedMicrosoftOwner','VerifiedMicrosoftOwner')
     $publishedCandidate = $ResolvePublishedCandidate -and $Application.PSObject.Properties['Sources'] -and @($Application.Sources | Where-Object { $_.Evidence -in @('PublishedMetadata','PublishedResource','PublishedGraph','PublishedEntraDocs','PublishedLearn','PublishedGitHub') }).Count -gt 0
-    if (-not $publishedOwner -and -not $publishedCandidate) { throw 'Creation requires published Microsoft ownership evidence, or explicit resolution of a published candidate.' }
+    $signInCandidate = $ResolveSignInCandidate -and $Application.PSObject.Properties['Sources'] -and @($Application.Sources | Where-Object Evidence -eq 'ObservedSignInNotOwnership').Count -gt 0
+    if (-not $publishedOwner -and -not $publishedCandidate -and -not $signInCandidate) { throw 'Creation requires published Microsoft ownership evidence, or explicit resolution of a published/sign-in candidate.' }
     if (-not $PSCmdlet.ShouldProcess($id.ToString(), 'Create Microsoft application service principal without granting consent')) {
         return [pscustomobject]@{ AppId = $id.ToString(); Outcome = 'NotCreated'; Ownership = $Application.Ownership }
     }
@@ -113,7 +114,11 @@ function Register-TokenForgeApplication {
         if ($failureStatus) { throw "Service principal creation failed (HTTP $failureStatus); no consent was granted." }
         throw 'Service principal creation failed; no consent was granted.'
     }
-    if ($created['appId'] -ne $id.ToString()) { throw 'Creation response did not identify the requested application; no other principal was modified.' }
+    if ($created -isnot [Collections.IDictionary] -or $created['appId'] -ne $id.ToString()) {
+        $failure = [InvalidOperationException]::new('Creation response did not identify the requested application; registration stopped for manual cleanup verification.')
+        $failure.Data['TokenForgeOutcome'] = 'CleanupRequired'
+        throw $failure
+    }
     if ($created['appOwnerOrganizationId'] -notin $script:MicrosoftOwnerTenants) {
         try {
             $objectId = [guid]::Empty

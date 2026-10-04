@@ -1,0 +1,75 @@
+BeforeAll {
+ Import-Module "$PSScriptRoot/../src/TokenForge/TokenForge.psd1" -Force
+ $tid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';$id='11111111-1111-1111-1111-111111111111'
+ $encoded=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((@{tid=$tid;oid='bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'}|ConvertTo-Json -Compress))).TrimEnd('=').Replace('+','-').Replace('/','_')
+ $token=ConvertTo-SecureString "e30.$encoded.synthetic" -AsPlainText -Force
+ $fp=(Get-TokenForgeTokenClaims $token).TenantFingerprint
+}
+AfterAll {$token.Dispose()}
+Describe 'Sign-in application extraction' {
+ BeforeEach {
+  $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@([pscustomobject]@{AppId=$id;Registration='Present';Ownership='VerifiedMicrosoftOwner'})}
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {param($Uri)
+   if($Uri.Query -eq '?page=2'){return @{value=@(@{appId='22222222-2222-2222-2222-222222222222';userPrincipalName='private-user';ipAddress='private-ip'})}}
+   @{value=@(@{appId=$id},@{appId=$id.ToUpper()},@{appId='bad'},@{appId=[guid]::Empty.ToString()});'@odata.nextLink'='https://graph.microsoft.com/beta/auditLogs/signIns?page=2'}
+  }
+ }
+ It 'deduplicates only client UUIDs across pages and excludes raw events' {
+  $r=Get-TokenForgeSignInApplications -GraphToken $token -Inventory $inventory
+  $r.Applications.Count|Should -Be 2;$r.RecordCount|Should -Be 5;$r.InvalidAppIdCount|Should -Be 2
+  $r.Applications[0].SignInCount|Should -Be 2;$r.Applications[0].RegisteredMicrosoft|Should -BeTrue
+  $r.Applications[1].KnownInInventory|Should -BeFalse
+  ($r|ConvertTo-Json -Depth 8)|Should -Not -Match 'private-user|private-ip|userPrincipalName|ipAddress'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -ParameterFilter {$Uri.Query -notmatch '\$select' -and [uri]::UnescapeDataString($Uri.Query) -match 'nonInteractiveUser'}
+ }
+ It 'fails rather than returning partial discovery at the paging limit' {
+  {Get-TokenForgeSignInApplications $token $inventory -MaxPages 1}|Should -Throw '*page limit*'
+ }
+ It 'rejects off-endpoint paging links before sending another request' -TestCases @(@{Link='https://evil.test/beta/auditLogs/signIns'},@{Link='https://graph.microsoft.com/v1.0/me'},@{Link='http://graph.microsoft.com/beta/auditLogs/signIns'}) {
+  param($Link)
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge { @{value=@();'@odata.nextLink'=$Link} }
+  {Get-TokenForgeSignInApplications $token $inventory}|Should -Throw '*boundary*'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1
+ }
+ It 'rejects a different tenant and invalid window before querying' {
+  $inventory.TenantFingerprint='f'*64
+  {Get-TokenForgeSignInApplications $token $inventory}|Should -Throw '*tenant*'
+  {Get-TokenForgeSignInApplications $token $inventory -Since ([DateTimeOffset]::UtcNow.AddDays(-32))}|Should -Throw '*window*'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 0
+ }
+ It 'does not convert authorization failure to empty discovery' {
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {throw 'Graph request failed (HTTP 403); response details suppressed.'}
+  {Get-TokenForgeSignInApplications $token $inventory}|Should -Throw '*403*'
+ }
+}
+Describe 'Explicit sign-in candidate registration' {
+ BeforeEach {
+  $app=[pscustomobject]@{AppId=$id;OwnerTenantId=$null;Ownership='Unverified';Registration='Missing';Sources=@([pscustomobject]@{Evidence='ObservedSignInNotOwnership'})}
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {param($Method)
+   if($Method -eq 'POST'){@{appId=$id;id='33333333-3333-3333-3333-333333333333';appOwnerOrganizationId='f8cdef31-a31e-4b4a-93e4-5f571e91255a'}}else{$null}
+  }
+ }
+ It 'requires the sign-in-specific opt-in, not merely published candidate resolution' {
+  {Register-TokenForgeApplication $token $app -ResolvePublishedCandidate -Confirm:$false}|Should -Throw '*requires*'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 0 -ParameterFilter {$Method -eq 'POST'}
+  (Register-TokenForgeApplication $token $app -ResolveSignInCandidate -Confirm:$false).Outcome|Should -Be Created
+ }
+ It 'registers only selected missing sign-in candidates and checkpoints ownership' {
+  $i=[pscustomobject]@{TenantFingerprint=$fp;Applications=@($app)}
+  $result=@(Sync-TokenForgeApplicationRegistration $i $token "$TestDrive/signin-register.json" -ResolveSignInCandidates -DelayMilliseconds 0 -Confirm:$false)
+  $result.Count|Should -Be 1;$result[0].Outcome|Should -Be Created
+ }
+ It 'rolls back only a newly created exact candidate with a non-Microsoft owner' {
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{appId=$id;id='33333333-3333-3333-3333-333333333333';appOwnerOrganizationId='44444444-4444-4444-4444-444444444444'}} -ParameterFilter {$Method -eq 'POST'}
+  {Register-TokenForgeApplication $token $app -ResolveSignInCandidate -Confirm:$false}|Should -Throw '*was removed*'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -ParameterFilter {$Method -eq 'DELETE' -and $Uri.AbsolutePath -eq '/v1.0/servicePrincipals/33333333-3333-3333-3333-333333333333'}
+ }
+ It 'stops and checkpoints ambiguous creation responses without deleting another principal' -TestCases @(@{Response=@{appId='44444444-4444-4444-4444-444444444444'}},@{Response=$null},@{Response=@{id='33333333-3333-3333-3333-333333333333'}}) {
+  param($Response)
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {$Response} -ParameterFilter {$Method -eq 'POST'}
+  $i=[pscustomobject]@{TenantFingerprint=$fp;Applications=@($app)};$path="$TestDrive/ambiguous.json"
+  {Sync-TokenForgeApplicationRegistration $i $token $path -ResolveSignInCandidates -DelayMilliseconds 0 -Confirm:$false}|Should -Throw '*cleanup*'
+  (Get-TokenForgeScopeDatabase $path).RegistrationAttempts[0].Outcome|Should -Be CleanupRequired
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 0 -ParameterFilter {$Method -eq 'DELETE'}
+ }
+}

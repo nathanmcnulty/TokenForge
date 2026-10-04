@@ -300,6 +300,10 @@ Describe 'Resumable probe and matrix planning' {
         $result.PrincipalFingerprint | Should -Be ('d'*64)
         $result.NamespaceVerification | Should -Be Matched
     }
+    It 'forwards persistent ESTS cookie names to every protocol request' {
+        $null=Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -CookieName ESTSAUTHPERSISTENT -ResourceId $graph -DatabasePath "$TestDrive/persistent.json" -DelayMilliseconds 0
+        Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Exactly -Times 1 -ParameterFilter {$CookieName -eq 'ESTSAUTHPERSISTENT'}
+    }
     It 'checkpoints scope claims but no credentials, and resumes without another request' {
         $path = "$TestDrive/probes.json"
         $first = @(Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath $path -DelayMilliseconds 0)

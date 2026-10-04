@@ -2,7 +2,7 @@
 
 PowerShell toolkit for finding Microsoft Entra first-party applications that publish the delegated scopes you need, then requesting access tokens using an authorized ESTSAUTH session, refresh token, or system-browser authorization-code flow.
 
-Initial version: PowerShell 7.4+ on Windows, Linux, and macOS. The repository is private. Live passkey-backed validation on Linux has confirmed native-client and SPA acquisition, refresh redemption, and read-only API access in one tenant. Availability still depends on the selected client, resource, session, and policy; see the [validation evidence](docs/live-validation.md).
+Initial version: PowerShell 7.4+ on Windows, Linux, and macOS. Live passkey-backed validation on Linux has confirmed native-client and SPA acquisition, refresh redemption, and read-only API access in one tenant. Availability still depends on the selected client, resource, session, and policy; see the [validation evidence](docs/live-validation.md).
 
 Start with [from login to an access token](docs/authentication-flow.md) for the plain-language walkthrough, including what stays in memory, what is saved, and how credentials are protected.
 
@@ -105,3 +105,5 @@ Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force
 ```
 
 CI runs the same tests on Windows, Linux, and macOS. Tests use synthetic credentials and mock identity responses. No live cookies or tokens are required. Read [SECURITY.md](SECURITY.md), [architecture and roadmap](docs/architecture.md), and the [live validation procedure](docs/live-validation.md).
+
+Application IDs now accumulate in a persistent [`applications.json` catalog](docs/application-metadata.md), with supported attributes, provenance, observation dates, and change history. Scheduled discovery publishes public metadata and anonymous scope batches on `discovery-data`; local tenant metadata stays private.

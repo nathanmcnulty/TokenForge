@@ -10,6 +10,7 @@ function Invoke-TokenForgeScopeProbe {
     param(
         [Parameter(Mandatory)]$Inventory,
         [Parameter(Mandatory)][securestring]$EstsAuth,
+        [ValidateSet('ESTSAUTH','ESTSAUTHPERSISTENT')][string]$CookieName='ESTSAUTH',
         [guid[]]$ResourceId,
         [object[]]$Plan,
         [ValidateSet('OAuth2V2Pkce','OAuth2V2Implicit','OAuth2V1Implicit')][string[]]$Protocols = @('OAuth2V2Pkce','OAuth2V2Implicit','OAuth2V1Implicit'),
@@ -80,7 +81,7 @@ function Invoke-TokenForgeScopeProbe {
                         $observation.Spa = $spa
                         try {
                             $request = New-TokenForgeDiscoveryRequest -Application $app -ResourceId $resource -RedirectUri $redirect -Tenant $Tenant -Spa:$spa -Protocol $attempt.Protocol
-                            $token = Get-TokenForgeToken -Request $request -EstsAuth $EstsAuth -WarningAction SilentlyContinue
+                            $token = Get-TokenForgeToken -Request $request -EstsAuth $EstsAuth -CookieName $CookieName -WarningAction SilentlyContinue
                             $claims = $token.TokenClaims
                             if ($claims.PSObject.Properties['TenantFingerprint'] -and $claims.PSObject.Properties['PrincipalFingerprint']) {
                                 if (($claims.TenantFingerprint -and $claims.TenantFingerprint -ne $Inventory.TenantFingerprint) -or ($claims.PrincipalFingerprint -and $claims.PrincipalFingerprint -ne $probePrincipal)) {

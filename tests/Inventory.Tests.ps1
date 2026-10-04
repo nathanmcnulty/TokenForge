@@ -134,6 +134,7 @@ Describe 'Tenant inventory' {
 Describe 'Service principal registration' {
     BeforeEach {
         $secret = ConvertTo-SecureString synthetic -AsPlainText -Force
+        Mock Get-TokenForgeTokenClaims -ModuleName TokenForge { [pscustomobject]@{TenantFingerprint=('a'*64)} }
         $app = [pscustomobject]@{ AppId = $clientId; OwnerTenantId = $owner; Ownership = 'PublishedMicrosoftOwner' }
         Mock Invoke-TokenForgeGraph -ModuleName TokenForge {
             param($AccessToken,$Uri,$Method,$Body)

@@ -1,0 +1,155 @@
+{
+  "SchemaVersion": 1,
+  "Date": "2026-10-04",
+  "Platform": "Linux",
+  "TenantCount": 1,
+  "SignInDiscovery": {
+    "WindowHours": 1,
+    "EventTypes": [
+      "interactiveUser",
+      "managedIdentity",
+      "nonInteractiveUser",
+      "servicePrincipal"
+    ],
+    "Enumeration": "Complete",
+    "PageCount": 4,
+    "RecordCount": 3658,
+    "UniqueClientApps": 419,
+    "UnknownToPriorInventory": 8,
+    "RegisteredMicrosoftApps": 2,
+    "Accounts": [
+      {
+        "Account": "secadmin",
+        "GraphMeStatus": 200,
+        "LogReadStatus": 200,
+        "ObservedApps": 419,
+        "UnknownApps": 8,
+        "RegistrationResults": [
+          {
+            "Name": "Created",
+            "Count": 2
+          }
+        ]
+      },
+      {
+        "Account": "nora",
+        "GraphMeStatus": 200,
+        "LogReadStatus": 403,
+        "ObservedApps": null,
+        "UnknownApps": null,
+        "RegistrationResults": []
+      }
+    ]
+  },
+  "Inventory": {
+    "VerifiedMicrosoftApps": 2053,
+    "EligibleClients": 2046,
+    "DisabledMicrosoftApps": 7
+  },
+  "GraphSweeps": [
+    {
+      "Account": "secadmin",
+      "Completed": true,
+      "PlannedClients": 2046,
+      "CoveredClients": 2046,
+      "Outcomes": [
+        {
+          "Name": "BrokerRequired",
+          "Count": 156
+        },
+        {
+          "Name": "Failed",
+          "Count": 427
+        },
+        {
+          "Name": "NoRedirect",
+          "Count": 1222
+        },
+        {
+          "Name": "Succeeded",
+          "Count": 241
+        }
+      ],
+      "ReadableMatchedScopeTokens": 241,
+      "MaxRedirects": 1,
+      "Protocols": [
+        "OAuth2V2Pkce",
+        "OAuth2V2Implicit",
+        "OAuth2V1Implicit"
+      ],
+      "Resource": "MicrosoftGraph",
+      "SignatureValidated": false,
+      "FreshObservations": 2046,
+      "ExistingRecentCheckpointsMayBeReused": true,
+      "RedirectLimitDescribesCurrentPass": true,
+      "NewRegisteredAppsProbed": 2,
+      "RegistrationReadback": [
+        {
+          "Name": "AlreadyPresent",
+          "Count": 2
+        }
+      ]
+    },
+    {
+      "Account": "nora",
+      "Completed": true,
+      "PlannedClients": 2046,
+      "CoveredClients": 2046,
+      "Outcomes": [
+        {
+          "Name": "BrokerRequired",
+          "Count": 156
+        },
+        {
+          "Name": "Failed",
+          "Count": 423
+        },
+        {
+          "Name": "NoRedirect",
+          "Count": 1222
+        },
+        {
+          "Name": "Succeeded",
+          "Count": 245
+        }
+      ],
+      "ReadableMatchedScopeTokens": 245,
+      "MaxRedirects": 1,
+      "Protocols": [
+        "OAuth2V2Pkce",
+        "OAuth2V2Implicit",
+        "OAuth2V1Implicit"
+      ],
+      "Resource": "MicrosoftGraph",
+      "SignatureValidated": false,
+      "FreshObservations": 1969,
+      "ExistingRecentCheckpointsMayBeReused": true,
+      "RedirectLimitDescribesCurrentPass": true,
+      "NewRegisteredAppsProbed": 2,
+      "RegistrationReadback": [
+        {
+          "Name": "AlreadyPresent",
+          "Count": 2
+        }
+      ]
+    }
+  ],
+  "ApiChecks": [
+    {
+      "Account": "secadmin",
+      "ApiStatus": 200,
+      "AdditionalScopes": 0,
+      "UsedSweepEvidence": true
+    },
+    {
+      "Account": "nora",
+      "ApiStatus": 200,
+      "AdditionalScopes": 0,
+      "UsedSweepEvidence": true
+    }
+  ],
+  "CredentialValuesPersisted": false,
+  "ScopeEvidence": "ReadableMatchedJwtClaimsNotSignatureValidation",
+  "Coverage": "TerminalObservationsForEveryEligibleClientAgainstGraph",
+  "OtherResourceMatrixLiveSweep": "AdministratorPriorCoverageRetained;NewBothAccountRunGraphOnly"
+}

@@ -146,6 +146,8 @@ function Sync-TokenForgeApplicationRegistration {
         [switch]$ResolvePublishedCandidates,
         [switch]$ResolveSignInCandidates
     )
+    $context = Get-TokenForgeTokenClaims -AccessToken $GraphToken
+    if (-not $context.TenantFingerprint -or $context.TenantFingerprint -ne $Inventory.TenantFingerprint) { throw 'Graph token tenant does not match registration inventory.' }
     $database = Get-TokenForgeScopeDatabase -Path $DatabasePath
     $completed = @{}
     foreach ($attempt in $database.RegistrationAttempts) {

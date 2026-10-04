@@ -32,7 +32,7 @@ The module function is `Get-TokenForgeSignInApplications`. It bounds the window 
 
 Log reads require the Graph permission and user role described by Microsoft; an account may be able to request tokens but still receive 403 for tenant-wide logs. Authorization failures, malformed collections, off-endpoint next links, loops, and page limits fail the stage instead of reporting an empty/complete result. No partial discovery is returned. Choose smaller windows if necessary; repeat them explicitly and discovery merges IDs idempotently.
 
-A log entry is **not** Microsoft ownership evidence. `ResolveSignInCandidates` explicitly permits resolution of these unverified IDs. Existing non-Microsoft principals are rejected and left untouched. When Graph creates a new principal, its returned application ID and Microsoft owner must match. A newly created exact candidate with a non-Microsoft owner is removed; an ambiguous response or failed cleanup stops registration with a `CleanupRequired` checkpoint. This is the only ownership-resolution rollback. Successful registration does not create consent grants, assign users, or grant roles.
+A log entry is **not** Microsoft ownership evidence. `ResolveSignInCandidates` explicitly permits resolution of these unverified IDs. Registration synchronization also rejects a Graph token from another tenant before making registration calls. Existing non-Microsoft principals are rejected and left untouched. When Graph creates a new principal, its returned application ID and Microsoft owner must match. A newly created exact candidate with a non-Microsoft owner is removed; an ambiguous response or failed cleanup stops registration with a `CleanupRequired` checkpoint. This is the only ownership-resolution rollback. Successful registration does not create consent grants, assign users, or grant roles.
 
 ## Iterate known Microsoft apps with each account
 
@@ -57,3 +57,16 @@ Each client/resource pair tries published redirects, bounded by `MaxRedirects`, 
 Run the same command again to resume: completed pairs in that account/tenant namespace are skipped. `MaxApplications` counts pending clients, so repeated bounded batches advance. Use `-Refresh` only when you deliberately want to reattempt completed pairs. Failures are completed observations too; a fresh sweep can differ because sessions, assignments, policies, clients, and roles change. Registration has a separate `-RetryFailures` option.
 
 `Get-TokenForgeProbePlan` shows the exact planned pairs. Compare that plan with the latest checkpoint per client/resource and observer to report coverage. “Complete” means a terminal result for every selected pair, not a usable token from every app or proof of all server-side preconsent. Some known source candidates cannot be registered, some registered apps have no supported public-client flow, and some tokens are opaque.
+
+## Live validation on 2026-10-04
+
+The [bounded proof](signin-sweep-validation-2026-10-04.json) records Linux testing in the existing authorized tenant. A complete one-hour window included all four selected event types: 3,658 records across four pages, containing 419 distinct client app IDs. Eight IDs were absent from the prior catalog/inventory. Resolution created two missing Microsoft-owned principals; after refresh the inventory contained 2,053 verified Microsoft apps, of which 2,046 were enabled. Both accounts read back those two registrations as verified and already present. No consent or user/role assignment was created.
+
+| Observer | Graph client coverage | Matching delegated-scope observations | Fresh User.Read /me check | Tenant-wide sign-in logs |
+| --- | --- | --- | --- | --- |
+| Administrator | 2,046 / 2,046 | 241 | 200, zero extra scopes | 200 |
+| Nora | 2,046 / 2,046 | 245 | 200, zero extra scopes | 403 |
+
+The sweep covered every eligible client against Graph, using one preferred published redirect for the current pass and all three supported discovery protocols. It resumed recent checkpoints, including earlier deeper callback attempts. Nora reused 77 recent terminal records; all remaining pairs were newly observed. Counts therefore describe the resulting evidence database, not a controlled comparison of account privilege. The two new apps require broker flows and were recorded as `BrokerRequired` for both observers. Structural outcomes and failed requests count toward terminal coverage, not token success.
+
+This run did not repeat the entire non-Graph resource matrix with both accounts. Existing administrator resource observations were retained, and the default tool can run that broader plan. Raw tokens, cookies, identity response bodies, and sign-in records were not saved. Detailed observations and the merged account-partitioned scope database remain in the private local state directory, outside the repository. No live Windows/macOS authentication or additional tenant was tested.

@@ -59,6 +59,12 @@ Describe 'Explicit sign-in candidate registration' {
   $result=@(Sync-TokenForgeApplicationRegistration $i $token "$TestDrive/signin-register.json" -ResolveSignInCandidates -DelayMilliseconds 0 -Confirm:$false)
   $result.Count|Should -Be 1;$result[0].Outcome|Should -Be Created
  }
+ It 'rejects another tenant before registration calls or checkpoint writes' {
+  $i=[pscustomobject]@{TenantFingerprint=('f'*64);Applications=@($app)}
+  {Sync-TokenForgeApplicationRegistration $i $token "$TestDrive/wrong-tenant.json" -ResolveSignInCandidates -Confirm:$false}|Should -Throw '*tenant*'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 0
+  Test-Path "$TestDrive/wrong-tenant.json"|Should -BeFalse
+ }
  It 'rolls back only a newly created exact candidate with a non-Microsoft owner' {
   Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{appId=$id;id='33333333-3333-3333-3333-333333333333';appOwnerOrganizationId='44444444-4444-4444-4444-444444444444'}} -ParameterFilter {$Method -eq 'POST'}
   {Register-TokenForgeApplication $token $app -ResolveSignInCandidate -Confirm:$false}|Should -Throw '*was removed*'

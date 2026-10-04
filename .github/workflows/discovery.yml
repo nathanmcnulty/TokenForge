@@ -1,0 +1,108 @@
+name: Refresh application metadata
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      chunk_index:
+        description: 'Chunk index (-1 rotates automatically)'
+        default: '-1'
+        required: true
+      chunk_size:
+        description: 'Applications per batch (1-200)'
+        default: '100'
+        required: true
+      public_only:
+        description: 'Refresh published metadata without login or probing'
+        type: boolean
+        default: false
+permissions:
+  contents: write
+concurrency:
+  group: discovery-data-writer
+  cancel-in-progress: false
+jobs:
+  discover:
+    # No PR trigger: code with access to Nora credentials runs only from main.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Load public data branch
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference='Stop'
+          $data=Join-Path $env:RUNNER_TEMP 'discovery-data'
+          New-Item -ItemType Directory $data | Out-Null
+          Set-Location $data
+          git init --quiet
+          git remote add origin "https://github.com/$env:GITHUB_REPOSITORY.git"
+          $branch=gh api "repos/$env:GITHUB_REPOSITORY/branches/discovery-data" --silent 2>$null
+          if($LASTEXITCODE -eq 0){
+            git fetch --depth=1 origin discovery-data
+            if($LASTEXITCODE -ne 0){throw 'Data fetch failed.'}
+            git checkout --quiet -B discovery-data FETCH_HEAD
+          }else{
+            # Confirm repository access before treating a missing branch as first run.
+            gh api "repos/$env:GITHUB_REPOSITORY" --silent
+            if($LASTEXITCODE -ne 0){throw 'Repository access failed.'}
+            git checkout --quiet --orphan discovery-data
+          }
+      - name: Sign in with Nora's software passkey
+        id: login
+        if: inputs.public_only != true
+        uses: nathanmcnulty/action-passkey-login@d443b0d18fe3a9cf162811bd67a67b9dec77a7e7
+        with:
+          confirm-application: 'true'
+          expected-client-id: '04b07795-8ddb-461a-bbee-02f9e1bf7b46'
+          credential-id: ${{ secrets.NORA_PASSKEY_CREDENTIAL_ID }}
+          user-handle: ${{ secrets.NORA_PASSKEY_USER_HANDLE }}
+          private-key: ${{ secrets.NORA_PASSKEY_PRIVATE_KEY }}
+          user-principal-name: ${{ secrets.NORA_PASSKEY_UPN }}
+      - name: Discover and probe a bounded batch
+        shell: pwsh
+        env:
+          TOKENFORGE_ESTS_COOKIE: ${{ steps.login.outputs.auth-cookie }}
+          TOKENFORGE_COOKIE_NAME: ${{ steps.login.outputs.cookie-name }}
+          TOKENFORGE_TENANT_FINGERPRINT: ${{ secrets.NORA_TENANT_FINGERPRINT }}
+          TOKENFORGE_PRINCIPAL_FINGERPRINT: ${{ secrets.NORA_PRINCIPAL_FINGERPRINT }}
+          AUTHENTICATED: ${{ steps.login.outputs.authenticated }}
+          PUBLIC_ONLY: ${{ inputs.public_only }}
+          CHUNK_INDEX: ${{ inputs.chunk_index || '-1' }}
+          CHUNK_SIZE: ${{ inputs.chunk_size || '100' }}
+        run: |
+          $publicOnly=$env:PUBLIC_ONLY -eq 'true'
+          if(-not $publicOnly -and $env:AUTHENTICATED -ne 'true'){throw 'Passkey authentication was not verified.'}
+          ./scripts/Invoke-TokenForgeCiDiscovery.ps1 -DataPath (Join-Path $env:RUNNER_TEMP 'discovery-data') -ChunkIndex ([int]$env:CHUNK_INDEX) -ChunkSize ([int]$env:CHUNK_SIZE) -RunNumber ([int]$env:GITHUB_RUN_NUMBER) -PublicOnly:$publicOnly
+      - name: Commit public metadata
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference='Stop'
+          Set-Location (Join-Path $env:RUNNER_TEMP 'discovery-data')
+          # Allowlist public outputs only; private inventory and checkpoints never enter this tree.
+          git add -- applications.json
+          if(Test-Path scopes){
+            foreach($file in Get-ChildItem -LiteralPath scopes -File -Force){
+              if($file.Name -notmatch '^chunk-[0-9]{4,6}\.json$'){throw 'Unexpected scope export path.'}
+              git add -- $file.FullName
+              if($LASTEXITCODE -ne 0){throw 'Scope staging failed.'}
+            }
+          }
+          git diff --cached --quiet
+          if($LASTEXITCODE -eq 0){exit 0}
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Refresh public application metadata and anonymous scope batch'
+          if($LASTEXITCODE -ne 0){throw 'Data commit failed.'}
+          $env:GIT_CONFIG_COUNT='1'
+          $env:GIT_CONFIG_KEY_0='http.https://github.com/.extraheader'
+          $env:GIT_CONFIG_VALUE_0='AUTHORIZATION: basic '+[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('x-access-token:'+$env:GH_TOKEN))
+          try{git push origin HEAD:refs/heads/discovery-data;if($LASTEXITCODE -ne 0){throw 'Data push failed.'}}
+          finally{$env:GIT_CONFIG_VALUE_0=$null;$env:GIT_CONFIG_COUNT=$null}

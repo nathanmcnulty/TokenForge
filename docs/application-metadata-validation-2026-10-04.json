@@ -1,0 +1,22 @@
+{
+  "SchemaVersion": 1,
+  "Platform": "Linux",
+  "MetadataProof": {
+    "ImportedKinds": ["Discovery", "Inventory", "SignIns", "ScopeObservations"],
+    "ScopeAccountCount": 2,
+    "RetainedApplicationIds": 5521,
+    "RunsIncludingTwoPublicRefreshes": 6,
+    "ChangedAttributeVersions": 2964
+  },
+  "CiRunnerProof": {
+    "AccountAlias": "nora",
+    "PasskeyActionLogin": "Succeeded",
+    "ExpectedContextMatched": true,
+    "GraphIdentityConfirmed": true,
+    "EnabledMicrosoftApplications": 2046,
+    "BatchSize": 5,
+    "Outcomes": {"Succeeded": 1, "Failed": 1, "NoRedirect": 3},
+    "Publication": "Public metadata and anonymous scope export only"
+  },
+  "Limitations": "One existing tenant; one bounded live CI-runner batch. Scope observations do not prove universal consent or API acceptance for every app."
+}

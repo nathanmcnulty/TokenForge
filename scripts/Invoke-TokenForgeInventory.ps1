@@ -13,8 +13,10 @@ non-Microsoft principals. Probe uses existing consent and stops at interactive p
 param(
  [Parameter(Mandatory)][ValidateSet('Discover','SignIns','Inventory','Register','Probe','Merge','Export')][string]$Action,
  [Parameter(Mandatory)][string]$StatePath,
+ [string]$MetadataPath,
  [securestring]$GraphToken,
  [securestring]$EstsAuth,
+ [ValidateSet('ESTSAUTH','ESTSAUTHPERSISTENT')][string]$CookieName='ESTSAUTH',
  [guid[]]$ClientId,
  [ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,
  [string]$Tenant='organizations',
@@ -39,6 +41,7 @@ if (-not $IsWindows) { [IO.File]::SetUnixFileMode($StatePath, ([IO.UnixFileMode]
 $discoveryPath=Join-Path $StatePath 'discovery.json'
 $inventoryPath=Join-Path $StatePath 'inventory.json'
 $databasePath=Join-Path $StatePath 'scopes.json'
+if(-not $MetadataPath){$MetadataPath=Join-Path $StatePath 'applications.json'}
 $principalOptions=@{}
 if ($PrincipalFingerprint) { $principalOptions.PrincipalFingerprint=$PrincipalFingerprint }
 # Prevent checkpoint loss from overlapping writers, including a second CLI process.
@@ -48,7 +51,7 @@ try {
  catch {throw 'State directory is already in use by another writer.'}
  if (-not $IsWindows) { [IO.File]::SetUnixFileMode((Join-Path $StatePath '.writer.lock'), ([IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite)) }
  switch ($Action) {
-  'Discover' {Update-TokenForgeDiscovery -Path $discoveryPath}
+  'Discover' {Update-TokenForgeDiscovery -Path $discoveryPath -MetadataPath $MetadataPath}
   'SignIns' {
    if(-not $GraphToken){throw 'SignIns requires GraphToken.'}
    $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
@@ -66,6 +69,7 @@ try {
     Save-TokenForgeDocument -Document $report -Path $reportPath
     Save-TokenForgeDocument -Document $discovery -Path $discoveryPath
    } $report $discovery (Join-Path $StatePath 'signin-applications.json') $discoveryPath
+   $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $report -Kind SignIns
    $report
   }
   'Inventory' {
@@ -74,6 +78,7 @@ try {
    $inventory=Get-TokenForgeTenantInventory -GraphToken $GraphToken -Discovery $discovery
    $inventory|ConvertTo-Json -Depth 100|Set-Content -LiteralPath $inventoryPath -Encoding utf8
    if (-not $IsWindows) { [IO.File]::SetUnixFileMode($inventoryPath, ([IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite)) }
+   $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $inventory -Kind Inventory
    $inventory
   }
   'Register' {
@@ -85,13 +90,16 @@ try {
    if(-not $EstsAuth){throw 'Probe requires EstsAuth.'}
    $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
    $plan=Get-TokenForgeProbePlan -Inventory $inventory -ClientId $ClientId -GraphOnly:$GraphOnly @principalOptions
-   Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $EstsAuth -Plan $plan -DatabasePath $databasePath -ClientId $ClientId @principalOptions -Tenant $Tenant -MaxApplications $MaxApplications -MaxRedirects $MaxRedirects -Refresh:$Refresh
+   Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $EstsAuth -CookieName $CookieName -Plan $plan -DatabasePath $databasePath -ClientId $ClientId @principalOptions -Tenant $Tenant -MaxApplications $MaxApplications -MaxRedirects $MaxRedirects -Refresh:$Refresh
+   $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document (Get-TokenForgeScopeDatabase -Path $databasePath) -Kind ScopeObservations
   }
   'Merge' {
    if (-not $InputDatabasePath) { throw 'Merge requires InputDatabasePath.' }
    foreach ($inputPath in $InputDatabasePath) { if (-not (Test-Path -LiteralPath $inputPath -PathType Leaf)) { throw 'A merge input file is missing.' } }
    $sources=@($InputDatabasePath | ForEach-Object { Get-TokenForgeScopeDatabase -Path $_ })
-   Merge-TokenForgeScopeDatabase -Database $sources -Path $databasePath
+   $merged=Merge-TokenForgeScopeDatabase -Database $sources -Path $databasePath
+   $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $merged -Kind ScopeObservations
+   $merged
   }
   'Export' {
    if(-not $ExportPath){throw 'Export requires ExportPath.'}

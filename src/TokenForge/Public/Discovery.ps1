@@ -43,7 +43,7 @@ function Get-TokenForgeDiscovery {
     $invalidRecordCount = 0
     foreach ($row in $rows) {
         $id = [guid]::Empty
-        if (-not [guid]::TryParse([string]$row.Id,[ref]$id)) { $invalidRecordCount++; continue }
+        if (-not [guid]::TryParse([string]$row.Id,[ref]$id) -or $id -eq [guid]::Empty) { $invalidRecordCount++; continue }
         $key = $id.ToString()
         if (-not $map.ContainsKey($key)) {
             $map[$key] = [pscustomobject]@{ AppId = $key; Name = [string]$row.Name; OwnerTenantId = $null; Ownership = 'Unverified'; Sources = @(); PublicClient = $null; Foci = $null; RedirectUris = @(); PreferredRedirectUri = ''; Grants = @(); IsResourceCandidate = $false; IdentifierUris = @() }
@@ -74,6 +74,7 @@ function Update-TokenForgeDiscovery {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$Path,
+        [string]$MetadataPath,
         [uri]$ScopesUri = $script:CatalogUrl,
         [uri]$MicrosoftAppsUri = 'https://raw.githubusercontent.com/merill/microsoft-info/main/_info/MicrosoftApps.json',
         [uri]$ResourcesUri = 'https://raw.githubusercontent.com/f-bader/entrascopes.com/main/resources.json'
@@ -87,6 +88,8 @@ function Update-TokenForgeDiscovery {
         $apps = Invoke-RestMethod -Uri $MicrosoftAppsUri -TimeoutSec 30 -ErrorAction Stop
         $resources = Invoke-RestMethod -Uri $ResourcesUri -TimeoutSec 30 -ErrorAction Stop
         $discovery = Get-TokenForgeDiscovery -Catalog $catalog -MicrosoftApps $apps -Resources $resources -MicrosoftAppsSource $MicrosoftAppsUri.AbsoluteUri -ResourcesSource $ResourcesUri.AbsoluteUri
+        if(-not $MetadataPath){$MetadataPath=Join-Path (Split-Path ($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)) -Parent) 'applications.json'}
+        $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $discovery -Kind Discovery
         Save-TokenForgeDocument -Document $discovery -Path $Path
         $discovery
     } finally { Remove-Item -LiteralPath $catalogPath -Force -ErrorAction SilentlyContinue }
@@ -99,8 +102,12 @@ function Save-TokenForgeDocument {
     $null = New-Item -ItemType Directory -Path $directory -Force
     $temporary = Join-Path $directory ([guid]::NewGuid().ToString() + '.tmp')
     try {
-        $Document | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $temporary -Encoding utf8
-        if (-not $IsWindows) { [IO.File]::SetUnixFileMode($temporary, ([IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite)) }
+        $options=[IO.FileStreamOptions]::new()
+        $options.Mode=[IO.FileMode]::CreateNew; $options.Access=[IO.FileAccess]::Write; $options.Share=[IO.FileShare]::None
+        if(-not $IsWindows){$options.UnixCreateMode=[IO.UnixFileMode]384}
+        $stream=[IO.FileStream]::new($temporary,$options)
+        $writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false))
+        try{$writer.Write((ConvertTo-Json -InputObject $Document -Depth 100));$writer.Flush();$stream.Flush($true)}finally{$writer.Dispose()}
         Move-Item -LiteralPath $temporary -Destination $fullPath -Force
     } finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary } }
 }

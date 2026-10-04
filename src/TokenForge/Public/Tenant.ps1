@@ -68,6 +68,7 @@ function Get-TokenForgeTenantInventory {
             PublicClient = $candidate.PublicClient; Foci = $candidate.Foci
             RedirectUris = $redirects; TenantRedirectUris = if ($verified) { @($sp['replyUrls']) } else { @() }; PreferredRedirectUri = $candidate.PreferredRedirectUri
             PublishedGrants = $candidate.Grants; DelegatedScopeDefinitions = $definitions
+            AppRoleDefinitions = @(if($verified){foreach($role in @($sp['appRoles'])){if($role -and $role['value']){[pscustomobject]@{Id=[string]$role['id'];Value=[string]$role['value'];DisplayName=[string]$role['displayName'];Description=[string]$role['description'];AllowedMemberTypes=@($role['allowedMemberTypes']);Enabled=$role['isEnabled'] -eq $true}}}})
             IdentifierUris = @(@($candidate.IdentifierUris) + @(if ($verified) { $sp['servicePrincipalNames'] }) | Where-Object { $_ -is [string] -and $_ } | Sort-Object -Unique)
             IsResourceCandidate = $candidate.IsResourceCandidate -or $definitions.Count -gt 0
         }

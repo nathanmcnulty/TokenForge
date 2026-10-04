@@ -22,6 +22,7 @@ function Get-TokenForgeScopedToken {
         [ValidateRange(30,900)][int]$TimeoutSeconds=300,
         [string]$Tenant='organizations',
         [guid]$BootstrapClientId='14d82eec-204b-4c2f-b7e8-296a70dab67e',
+        [ValidateRange(0,2147483647)][int]$MaxBootstrapAdditionalScopes=2147483647,
         [ValidateRange(1,8760)][int]$MaxAgeHours=24,
         [ValidateRange(1,100)][int]$MaxCandidates=8,
         [ValidateRange(1,8)][int]$MaxRedirects=2,
@@ -52,7 +53,7 @@ function Get-TokenForgeScopedToken {
     $attempts=[Collections.Generic.List[object]]::new()
     try{
         if($PSCmdlet.ParameterSetName -eq 'Passkey'){$ownedCookie=Get-TokenForgeEstsCookie -PasskeyPath $PasskeyPath -XdrModulePath $XdrModulePath;$EstsAuth=$ownedCookie}
-        $authentication=if($Browser){@{Browser=$true;LoginHint=$LoginHint;TimeoutSeconds=$TimeoutSeconds}}else{@{EstsAuth=$EstsAuth;CookieName=$CookieName}}
+        $authentication=if($Browser){@{Browser=$true;LoginHint=$LoginHint;TimeoutSeconds=$TimeoutSeconds;NoConsent=$true}}else{@{EstsAuth=$EstsAuth;CookieName=$CookieName}}
         $request=New-TokenForgeTenantRequest -Inventory $Inventory -ClientId $BootstrapClientId -ResourceId $graphId -Scope User.Read -RedirectUri $bootstrapRedirect[0] -Tenant $Tenant
         try{$bootstrap=Get-TokenForgeToken -Request $request @authentication}catch{
             $codes=@([regex]::Matches($_.Exception.Message,'\bAADSTS[0-9]{4,9}\b')|ForEach-Object Value|Sort-Object -Unique)
@@ -64,11 +65,14 @@ function Get-TokenForgeScopedToken {
         if(-not $payload -or -not [guid]::TryParse([string]$payload['tid'],[ref]$tid) -or -not [guid]::TryParse([string]$payload['oid'],[ref]$oid) -or
            $claims.TenantFingerprint -ne $Inventory.TenantFingerprint -or -not $claims.PrincipalFingerprint -or
            $claims.ClientId -ne $BootstrapClientId.ToString() -or $claims.Audience -notin @($graphId,'https://graph.microsoft.com','https://graph.microsoft.com/')){throw 'Observer bootstrap context does not match the verified inventory/client/resource.'}
+        if(-not $claims.HasDelegatedScopeClaim -or $claims.Scopes -cnotcontains 'User.Read'){throw 'Observer bootstrap requires a readable delegated User.Read scope.'}
+        $bootstrapExtras=@($claims.Scopes|Where-Object {$_ -cnotin @('User.Read','openid','profile','email','offline_access')})
+        if($bootstrapExtras.Count -gt $MaxBootstrapAdditionalScopes -or @($bootstrap.AdditionalScopes).Count -gt $MaxBootstrapAdditionalScopes){throw 'Observer bootstrap exceeds the additional-scope limit; choose a narrower BootstrapClientId.'}
         $me=Invoke-TokenForgeGraph -AccessToken $bootstrap.AccessToken -Uri 'https://graph.microsoft.com/v1.0/me?$select=id'
         if([string]$me['id'] -ine $oid.ToString()){throw 'Graph identity does not match the bootstrap token context.'}
         $principal=$claims.PrincipalFingerprint;$tenantFingerprint=$claims.TenantFingerprint
         $bootstrap.AccessToken.Dispose();if($bootstrap.RefreshToken){$bootstrap.RefreshToken.Dispose()};$bootstrap=$null;$payload=$null;$me=$null
-        $candidates=@(Get-TokenForgeAssessmentCoverage -Database $Database -ResourceId $ResourceId -Scope $Scope -TenantFingerprint $tenantFingerprint -PrincipalFingerprint $principal -MaxAgeHours $MaxAgeHours|Where-Object {$_.CoversAll -and $_.AdditionalScopeCount -le $MaxAdditionalScopes})
+        $candidates=@(Get-TokenForgeAssessmentCoverage -Database $Database -ResourceId $ResourceId -Scope $Scope -TenantFingerprint $tenantFingerprint -PrincipalFingerprint $principal -MaxAgeHours $MaxAgeHours|Where-Object CoversAll)
         if(-not $candidates.Count){throw 'No fresh coverage for the authenticated observer; run scope discovery for this account.'}
         $candidateCount=0
         foreach($candidate in $candidates){
@@ -97,6 +101,8 @@ function Get-TokenForgeScopedToken {
                     if($extra.Count -gt $MaxAdditionalScopes -or @($selected.AdditionalScopes).Count -gt $MaxAdditionalScopes){throw 'Issued token exceeds the additional-scope limit.'}
                     $selected|Add-Member Request $request
                     $selected|Add-Member SelectionEvidence 'FreshObserverScopeCoverageWithMatchedIssuedContext'
+                    $selected|Add-Member ConsentEvidence 'SilentAuthorizationSucceededForThisRequest'
+                    $selected|Add-Member BootstrapEvidence ([pscustomobject]@{ClientId=$BootstrapClientId.ToString();AdditionalScopeCount=$bootstrapExtras.Count;IdentityConfirmedByGraph=$true})
                     $selected|Add-Member ObservedAdditionalScopeCount $extra.Count
                     $selected|Add-Member AttemptSummary @($attempts.ToArray())
                     $selected|Add-Member ApiCheck $(if($ApiUri){try{Test-TokenForgeTokenAccess -Token $selected -Uri $ApiUri}catch{[pscustomobject]@{Status=$null;Accepted=$false;Evidence='TransportFailureDetailsSuppressed'}}}else{$null})

@@ -195,7 +195,8 @@ function Get-TokenForgeToken {
     <# .SYNOPSIS
     Request tokens using an ESTSAUTH session, system-browser code + PKCE, or a refresh token.
     .DESCRIPTION
-    Secrets are SecureString inputs/outputs. Cookie and refresh flows cannot satisfy interactive policy. Browser mode permits account selection and MFA.
+    Secrets are SecureString inputs/outputs. Cookie and refresh flows cannot satisfy interactive policy.
+    Browser mode permits account selection and MFA; NoConsent requires an existing session without interaction.
     #>
     [CmdletBinding(DefaultParameterSetName = 'Cookie')]
     param(
@@ -205,6 +206,7 @@ function Get-TokenForgeToken {
         [Parameter(Mandatory, ParameterSetName = 'Refresh')][securestring]$RefreshToken,
         [Parameter(Mandatory, ParameterSetName = 'Browser')][switch]$Browser,
         [Parameter(ParameterSetName = 'Browser')][string]$LoginHint,
+        [Parameter(ParameterSetName = 'Browser')][switch]$NoConsent,
         [Parameter(ParameterSetName = 'Browser')][ValidateRange(30,900)][int]$TimeoutSeconds = 300
     )
     # Plans may be saved as JSON. Validate the network-relevant fields again at the boundary.
@@ -237,7 +239,7 @@ function Get-TokenForgeToken {
             $form.grant_type = 'refresh_token'
             $form.refresh_token = [System.Net.NetworkCredential]::new('', $RefreshToken).Password
         } elseif ($PSCmdlet.ParameterSetName -eq 'Browser') {
-            $authorization = Invoke-TokenForgeBrowserAuthorization -Request $Request -Authority $authority -LoginHint $LoginHint -TimeoutSeconds $TimeoutSeconds
+            $authorization = Invoke-TokenForgeBrowserAuthorization -Request $Request -Authority $authority -LoginHint $LoginHint -TimeoutSeconds $TimeoutSeconds -NoConsent:$NoConsent
             try {
                 $form.grant_type = 'authorization_code'
                 $form.code = [System.Net.NetworkCredential]::new('', $authorization.Code).Password
@@ -346,4 +348,4 @@ function Get-TokenForgeToken {
 
 foreach ($file in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'Private') -Filter '*.ps1' | Sort-Object Name) { . $file.FullName }
 foreach ($file in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'Public') -Filter '*.ps1' | Sort-Object Name) { . $file.FullName }
-Export-ModuleMember -Function Update-TokenForgeCatalog, Get-TokenForgeCatalog, Find-TokenForgeApplication, New-TokenForgeRequest, Get-TokenForgeToken, Get-TokenForgeTokenClaims, Get-TokenForgeDiscovery, Update-TokenForgeDiscovery, Get-TokenForgeTenantInventory, Register-TokenForgeApplication, New-TokenForgeDiscoveryRequest, Merge-TokenForgeScopeDatabase, New-TokenForgeScopeDatabase, Get-TokenForgeScopeDatabase, Add-TokenForgeScopeObservation, Compare-TokenForgeScopeDatabase, Export-TokenForgeScopeDatabase, Get-TokenForgeAssessmentCoverage, Invoke-TokenForgeScopeProbe, Sync-TokenForgeApplicationRegistration, Get-TokenForgeProbePlan, Get-TokenForgeScopedToken, Get-TokenForgeEstsCookie, Test-TokenForgeTokenAccess, New-TokenForgeTenantRequest, Get-TokenForgeAssessmentPlan, Get-TokenForgeMaintenanceReport
+Export-ModuleMember -Function Update-TokenForgeCatalog, Get-TokenForgeCatalog, Find-TokenForgeApplication, New-TokenForgeRequest, Get-TokenForgeToken, Get-TokenForgeTokenClaims, Get-TokenForgeDiscovery, Update-TokenForgeDiscovery, Get-TokenForgeTenantInventory, Register-TokenForgeApplication, New-TokenForgeDiscoveryRequest, Merge-TokenForgeScopeDatabase, New-TokenForgeScopeDatabase, Get-TokenForgeScopeDatabase, Add-TokenForgeScopeObservation, Compare-TokenForgeScopeDatabase, Export-TokenForgeScopeDatabase, Get-TokenForgeAssessmentCoverage, Invoke-TokenForgeScopeProbe, Sync-TokenForgeApplicationRegistration, Get-TokenForgeProbePlan, Get-TokenForgeScopedToken, Get-TokenForgeScopeCandidates, Get-TokenForgeEstsCookie, Test-TokenForgeTokenAccess, New-TokenForgeTenantRequest, Get-TokenForgeAssessmentPlan, Get-TokenForgeMaintenanceReport

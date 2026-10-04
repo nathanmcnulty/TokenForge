@@ -68,6 +68,24 @@ Describe 'System-browser PKCE callback' {
    {Invoke-TokenForgeBrowserAuthorization $request 'https://login.microsoftonline.com/organizations/oauth2/v2.0' '' 5}|Should -Throw 'Browser authorization was declined. Identity response details suppressed. Identity error codes: AADSTS53003.'
    $script:job|Wait-Job|Receive-Job;$script:job|Remove-Job
   }
+  It 'stops silent consent and interaction errors without an interactive retry' -TestCases @(
+   @{IdentityError='consent_required'},@{IdentityError='interaction_required'},@{IdentityError='login_required'}
+  ) {
+   param($IdentityError)
+   Mock Open-TokenForgeBrowser {
+    param($Uri)
+    $q=[System.Web.HttpUtility]::ParseQueryString($Uri.Query)
+    $q['prompt']|Should -Be none
+    $script:job=Start-ThreadJob -ArgumentList $q['redirect_uri'],$q['state'],$IdentityError -ScriptBlock {
+     param($callback,$state,$identityError)
+     Invoke-WebRequest -Headers @{Host=([uri]$callback).Authority} -Uri "$($callback.Replace('http://localhost','http://127.0.0.1'))?error=$identityError&error_description=synthetic-secret&state=$state" -TimeoutSec 5|Out-Null
+    }
+   }
+   try {
+    {Invoke-TokenForgeBrowserAuthorization $request 'https://login.microsoftonline.com/organizations/oauth2/v2.0' '' 5 -NoConsent}|Should -Throw '*no interactive fallback performed*'
+    Should -Invoke Open-TokenForgeBrowser -Times 1 -Exactly
+   } finally {$script:job|Wait-Job|Receive-Job;$script:job|Remove-Job}
+  }
   It 'bounds a slow partial header by the authorization deadline' {
    Mock Open-TokenForgeBrowser {
     param($Uri)
@@ -86,7 +104,8 @@ Describe 'System-browser PKCE callback' {
  }
 }
 Describe 'Browser code redemption shares the token validation boundary' {
- It 'redeems the captured code with the actual loopback URI and validates issued scopes' {
+ It 'redeems the captured code with the actual loopback URI and validates issued scopes' -TestCases @(@{Silent=$false},@{Silent=$true}) {
+  param($Silent)
   $catalog=Get-TokenForgeCatalog -Path "$PSScriptRoot/fixtures/catalog.json"
   $catalog.Applications[0].RedirectUris=@('http://localhost')
   $plan=New-TokenForgeRequest -Catalog $catalog -ClientId $catalog.Applications[0].ClientId -ResourceId '00000003-0000-0000-c000-000000000000' -Scope User.Read -RedirectUri http://localhost
@@ -103,9 +122,10 @@ Describe 'Browser code redemption shares the token validation boundary' {
    $Form.grant_type|Should -Be authorization_code
    @{Status=200;Content='{"access_token":"synthetic-access","token_type":"Bearer","scope":"User.Read"}'}
   }
-  $token=Get-TokenForgeToken -Request $plan -Browser
+  $token=Get-TokenForgeToken -Request $plan -Browser -NoConsent:$Silent
   try{$token.AccessToken|Should -BeOfType securestring;$token.GrantedScopes|Should -Contain User.Read}
   finally{$token.AccessToken.Dispose()}
   Should -Invoke Invoke-TokenForgeHttp -ModuleName TokenForge -Times 1
+  Should -Invoke Invoke-TokenForgeBrowserAuthorization -ModuleName TokenForge -Times 1 -ParameterFilter {$NoConsent -eq $Silent}
  }
 }

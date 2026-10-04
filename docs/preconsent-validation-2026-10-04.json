@@ -1,0 +1,48 @@
+{
+  "SchemaVersion": 1,
+  "ValidationDate": "2026-10-04",
+  "Environment": "Linux PowerShell; existing tenant and authorized second account",
+  "ReadOnlyInventoryRefresh": {
+    "VerifiedMicrosoftServicePrincipals": 2051,
+    "ConfiguredGrantCountBefore": 18,
+    "ConfiguredGrantCountAfter": 18,
+    "GrantEnumeration": "Complete"
+  },
+  "CandidateReport": {
+    "ResourceId": "00000003-0000-0000-c000-000000000000",
+    "RequestedScopes": ["User.Read"],
+    "ClientRows": 382,
+    "FreshCompleteObservedCoverage": 68,
+    "TopClientId": "038ddad9-5bbe-4f64-b0cd-12434d1e633b",
+    "TopObservedAdditionalScopeCount": 0
+  },
+  "ExplicitSilentRequests": [
+    {
+      "Authentication": "Passkey-derived cookie",
+      "BootstrapClientId": "038ddad9-5bbe-4f64-b0cd-12434d1e633b",
+      "ClientId": "038ddad9-5bbe-4f64-b0cd-12434d1e633b",
+      "RequestedScopes": ["User.Read"],
+      "BootstrapAdditionalScopeCount": 0,
+      "FinalAdditionalScopeCount": 0,
+      "ApiStatus": 200,
+      "ConsentEvidence": "SilentAuthorizationSucceededForThisRequest"
+    },
+    {
+      "Authentication": "Existing system-browser session",
+      "BootstrapClientId": "a6943a7f-5ba0-4a34-bf91-ab439efdda3f",
+      "ClientId": "a6943a7f-5ba0-4a34-bf91-ab439efdda3f",
+      "RequestedScopes": ["User.Read"],
+      "BootstrapAdditionalScopeCount": 0,
+      "FinalAdditionalScopeCount": 0,
+      "ApiStatus": 200,
+      "ConsentEvidence": "SilentAuthorizationSucceededForThisRequest"
+    }
+  ],
+  "SignatureValidated": false,
+  "Limits": [
+    "Silent issuance is account/session/client/resource/request-specific, not proof of universal Microsoft preauthorization.",
+    "The two bootstrap alternatives were validated here; availability elsewhere is unestablished.",
+    "New grants, roles, policies, credentials, and service principals were not created by this validation.",
+    "Other tenants, guests, and live Windows/macOS authentication remain outside this milestone."
+  ]
+}

@@ -1,7 +1,7 @@
 #Requires -Version 7.4
 [CmdletBinding()]
 param(
- [Parameter(Mandatory)][ValidateSet('Connect','Token','Plan','Maintain')][string]$Action,
+ [Parameter(Mandatory)][ValidateSet('Connect','Token','Candidates','Plan','Maintain')][string]$Action,
  [string]$RequestPath,
  [string]$LoginHint,
  [ValidateRange(30,900)][int]$TimeoutSeconds=300,
@@ -19,8 +19,10 @@ param(
  [string]$PasskeyPath,
  [string]$XdrModulePath,
  [switch]$Browser,
+ [switch]$NoConsent,
  [string]$Tenant='organizations',
  [guid]$BootstrapClientId='14d82eec-204b-4c2f-b7e8-296a70dab67e',
+ [ValidateRange(0,2147483647)][int]$MaxBootstrapAdditionalScopes=2147483647,
  [ValidateRange(0,2147483647)][int]$MaxAdditionalScopes=2147483647,
  [switch]$OfflineAccess,
  [uri]$ApiUri,
@@ -31,7 +33,7 @@ Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1') -For
 if($Action -eq 'Connect') {
  if(-not $RequestPath){throw 'Connect requires a credential-free RequestPath.'}
  $request=Get-Content -LiteralPath $RequestPath -Raw|ConvertFrom-Json
- Get-TokenForgeToken -Request $request -Browser -LoginHint $LoginHint -TimeoutSeconds $TimeoutSeconds
+ Get-TokenForgeToken -Request $request -Browser -LoginHint $LoginHint -TimeoutSeconds $TimeoutSeconds -NoConsent:$NoConsent
  return
 }
 if($Action -eq 'Token') {
@@ -48,7 +50,7 @@ if($Action -eq 'Token') {
   $ResourceId=$check[0].ResourceId;$Scope=$check[0].RequiredScopes;$ApiUri=$check[0].ApiUri
  }elseif($CheckId){throw 'CheckId requires ManifestPath.'}
  if($ResourceId -eq [guid]::Empty -or -not $Scope){throw 'Token requires ResourceId and Scope, or ManifestPath and CheckId.'}
- $options=@{Inventory=$inventory;Database=$database;ResourceId=$ResourceId;Scope=$Scope;Tenant=$Tenant;BootstrapClientId=$BootstrapClientId;MaxAgeHours=$MaxAgeHours;MaxAdditionalScopes=$MaxAdditionalScopes;OfflineAccess=$OfflineAccess;TimeoutSeconds=$TimeoutSeconds}
+ $options=@{Inventory=$inventory;Database=$database;ResourceId=$ResourceId;Scope=$Scope;Tenant=$Tenant;BootstrapClientId=$BootstrapClientId;MaxBootstrapAdditionalScopes=$MaxBootstrapAdditionalScopes;MaxAgeHours=$MaxAgeHours;MaxAdditionalScopes=$MaxAdditionalScopes;OfflineAccess=$OfflineAccess;TimeoutSeconds=$TimeoutSeconds}
  if($ApiUri){$options.ApiUri=$ApiUri}
  if($PasskeyPath){if(-not $XdrModulePath){throw 'Passkey authentication requires XdrModulePath.'};$options.PasskeyPath=$PasskeyPath;$options.XdrModulePath=$XdrModulePath}
  elseif($EstsAuth){$options.EstsAuth=$EstsAuth;$options.CookieName=$CookieName}
@@ -56,9 +58,15 @@ if($Action -eq 'Token') {
  Get-TokenForgeScopedToken @options
  return
 }
-if(-not $StatePath -or -not $PrincipalFingerprint){throw 'Plan and Maintain require private StatePath and PrincipalFingerprint.'}
+if(-not $StatePath -or -not $PrincipalFingerprint){throw 'Candidates, Plan and Maintain require private StatePath and PrincipalFingerprint.'}
 $inventory=Get-Content -LiteralPath (Join-Path $StatePath 'inventory.json') -Raw|ConvertFrom-Json
-$database=Get-TokenForgeScopeDatabase -Path (Join-Path $StatePath 'scopes.json')
+if(-not $DatabasePath){$DatabasePath=Join-Path $StatePath 'scopes.json'}
+$database=Get-TokenForgeScopeDatabase -Path $DatabasePath
+if($Action -eq 'Candidates'){
+ if($ResourceId -eq [guid]::Empty -or -not $Scope){throw 'Candidates requires ResourceId and Scope.'}
+ Get-TokenForgeScopeCandidates -Inventory $inventory -Database $database -ResourceId $ResourceId -Scope $Scope -PrincipalFingerprint $PrincipalFingerprint -MaxAgeHours $MaxAgeHours
+ return
+}
 if($Action -eq 'Plan') {
  if(-not $ManifestPath){throw 'Plan requires ManifestPath.'}
  Get-TokenForgeAssessmentPlan -ManifestPath $ManifestPath -Database $database -TenantFingerprint $inventory.TenantFingerprint -PrincipalFingerprint $PrincipalFingerprint -MaxAgeHours $MaxAgeHours

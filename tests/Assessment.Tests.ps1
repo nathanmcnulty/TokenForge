@@ -79,3 +79,13 @@ Describe 'Observation ordering uses instants rather than timestamp text' {
   (Get-TokenForgeMaintenanceReport -Inventory $inventory -Database (New-TokenForgeScopeDatabase) -PrincipalFingerprint ('b'*64)).InventoryRefreshRequired|Should -BeTrue
  }
 }
+Describe 'Documented core read-only manifest' {
+ It 'validates all eight resource-bound read-only checks and preserves unverified prerequisites' {
+  $plan=Get-TokenForgeAssessmentPlan -ManifestPath (Join-Path $PSScriptRoot '../manifests/core-readonly.json') -Database (New-TokenForgeScopeDatabase) -TenantFingerprint ('a'*64) -PrincipalFingerprint ('b'*64)
+  $plan.Checks.Count|Should -Be 8
+  @($plan.Checks|Where-Object Method -ne GET).Count|Should -Be 0
+  @($plan.Checks|Where-Object RoleStatus -ne NotValidated).Count|Should -Be 0
+  ($plan.Checks|Where-Object Id -eq conditional-access).ApiUri|Should -Match '/identity/conditionalAccess/policies'
+  ($plan.Checks|Where-Object Id -eq own-licenses).RequiredScopes|Should -Contain LicenseAssignment.Read.All
+ }
+}

@@ -127,7 +127,7 @@ function Get-TokenForgeAssessmentCoverage {
             ClientId = $observation.ClientId; ResourceId = $observation.ResourceId
             CoversAll = $missing.Count -eq 0; MissingScopes = $missing; AdditionalScopes = $additional
             AdditionalScopeCount = $additional.Count; ObservedApiScopeCount = $apiScopes.Count
-            ObservedAt = $observation.ObservedAt; Protocol = if ($observation.PSObject.Properties['Protocol']) { $observation.Protocol } else { 'Unknown' }; Spa = if ($observation.PSObject.Properties['Spa']) { $observation.Spa } else { $null }; Evidence = 'ObservedScpNotApiAuthorization'
+            RedirectFingerprint = if ($observation.PSObject.Properties['RedirectFingerprint']) { $observation.RedirectFingerprint } else { $null }; ObservedAt = $observation.ObservedAt; Protocol = if ($observation.PSObject.Properties['Protocol']) { $observation.Protocol } else { 'Unknown' }; Spa = if ($observation.PSObject.Properties['Spa']) { $observation.Spa } else { $null }; Evidence = 'ObservedScpNotApiAuthorization'
         }
     }
     @($rows | Sort-Object @{ Expression = { $_.MissingScopes.Count } }, AdditionalScopeCount, ObservedApiScopeCount, ClientId)

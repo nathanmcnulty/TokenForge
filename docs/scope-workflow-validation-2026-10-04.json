@@ -1,0 +1,240 @@
+{
+  "SchemaVersion": 1,
+  "ObservedAt": "2026-10-03T23:59:07.3154821-08:00",
+  "Platform": "Linux",
+  "Observers": [
+    {
+      "Observer": "Admin",
+      "Checks": [
+        {
+          "TokenOutcome": "Succeeded",
+          "ApiStatus": 200,
+          "Id": "self-profile",
+          "ClientId": "4536f486-82f7-4cfc-bfcc-6cf40d5ba55a",
+          "AdditionalScopeCount": 0,
+          "ApiAccepted": true
+        },
+        {
+          "TokenOutcome": "Succeeded",
+          "ApiStatus": 200,
+          "Id": "service-principals",
+          "ClientId": "7f5a85eb-674c-4dee-8c57-1544c5769cfb",
+          "AdditionalScopeCount": 1,
+          "ApiAccepted": true
+        },
+        {
+          "TokenOutcome": "Succeeded",
+          "ApiStatus": 200,
+          "Id": "directory-audits",
+          "ClientId": "5801fbf1-8df2-4c3c-a65c-e230edf60ca2",
+          "AdditionalScopeCount": 12,
+          "ApiAccepted": true
+        },
+        {
+          "TokenOutcome": "Succeeded",
+          "ApiStatus": 200,
+          "Id": "conditional-access",
+          "ClientId": "a57aca87-cbc0-4f3c-8b9e-dc095fdc8978",
+          "AdditionalScopeCount": 3,
+          "ApiAccepted": true
+        },
+        {
+          "TokenOutcome": "Succeeded",
+          "ApiStatus": 200,
+          "Id": "directory-roles",
+          "ClientId": "c61d67cf-295a-462c-972f-33af37008751",
+          "AdditionalScopeCount": 2,
+          "ApiAccepted": true
+        },
+        {
+          "TokenOutcome": "Succeeded",
+          "ApiStatus": 200,
+          "Id": "own-licenses",
+          "ClientId": "cb2ff863-7f30-4ced-ab89-a00194bcf6d9",
+          "AdditionalScopeCount": 5,
+          "ApiAccepted": true
+        },
+        {
+          "Id": "security-alerts",
+          "ApiStatus": null,
+          "EntraCodes": [],
+          "TokenOutcome": "NeedsObservation"
+        },
+        {
+          "TokenOutcome": "Succeeded",
+          "ApiStatus": 200,
+          "Id": "azure-subscriptions",
+          "ClientId": "0140a36d-95e1-4df5-918c-ca7ccd1fafc9",
+          "AdditionalScopeCount": 0,
+          "ApiAccepted": true
+        }
+      ],
+      "Context": {
+        "HiddenMembershipVisibility": "NotEstablished",
+        "AzureRbacCoverage": "NotChecked",
+        "DirectActiveRoles": {
+          "Complete": true,
+          "Status": 200,
+          "Count": 2
+        },
+        "DirectEligibleRoles": {
+          "Complete": true,
+          "Status": 200,
+          "Count": 1
+        },
+        "EligiblePimGroupMemberships": {
+          "Complete": true,
+          "Status": 200,
+          "Count": 0
+        },
+        "Licenses": {
+          "Complete": true,
+          "Status": 200,
+          "EnabledEntraPremiumPlans": [
+            "AAD_PREMIUM_P2",
+            "AAD_PREMIUM"
+          ],
+          "Count": 2
+        },
+        "TransitiveMemberships": {
+          "Complete": true,
+          "Status": 200,
+          "Count": 6
+        },
+        "GroupDerivedRoles": {
+          "Complete": true,
+          "ActiveCount": 0,
+          "EligibleCount": 0,
+          "Coverage": "Visible transitive groups; hidden memberships not independently established",
+          "QueriedGroupCount": 4,
+          "FailureStatuses": [],
+          "VisibleGroupCount": 4
+        }
+      }
+    },
+    {
+      "Observer": "OrdinaryUser",
+      "Checks": [
+        {
+          "TokenOutcome": "Succeeded",
+          "ApiStatus": 200,
+          "Id": "self-profile",
+          "ClientId": "038ddad9-5bbe-4f64-b0cd-12434d1e633b",
+          "AdditionalScopeCount": 0,
+          "ApiAccepted": true
+        },
+        {
+          "TokenOutcome": "Succeeded",
+          "ApiStatus": 200,
+          "Id": "service-principals",
+          "ClientId": "7f5a85eb-674c-4dee-8c57-1544c5769cfb",
+          "AdditionalScopeCount": 1,
+          "ApiAccepted": true
+        },
+        {
+          "TokenOutcome": "Succeeded",
+          "ApiStatus": 403,
+          "Id": "directory-audits",
+          "ClientId": "04b07795-8ddb-461a-bbee-02f9e1bf7b46",
+          "AdditionalScopeCount": 8,
+          "ApiAccepted": false
+        },
+        {
+          "TokenOutcome": "Succeeded",
+          "ApiStatus": 403,
+          "Id": "conditional-access",
+          "ClientId": "a57aca87-cbc0-4f3c-8b9e-dc095fdc8978",
+          "AdditionalScopeCount": 3,
+          "ApiAccepted": false
+        },
+        {
+          "TokenOutcome": "Succeeded",
+          "ApiStatus": 200,
+          "Id": "directory-roles",
+          "ClientId": "c61d67cf-295a-462c-972f-33af37008751",
+          "AdditionalScopeCount": 2,
+          "ApiAccepted": true
+        },
+        {
+          "TokenOutcome": "Succeeded",
+          "ApiStatus": 200,
+          "Id": "own-licenses",
+          "ClientId": "cb2ff863-7f30-4ced-ab89-a00194bcf6d9",
+          "AdditionalScopeCount": 5,
+          "ApiAccepted": true
+        },
+        {
+          "Id": "security-alerts",
+          "ApiStatus": null,
+          "EntraCodes": [],
+          "TokenOutcome": "NeedsObservation"
+        },
+        {
+          "TokenOutcome": "Succeeded",
+          "ApiStatus": 200,
+          "Id": "azure-subscriptions",
+          "ClientId": "04b07795-8ddb-461a-bbee-02f9e1bf7b46",
+          "AdditionalScopeCount": 0,
+          "ApiAccepted": true
+        }
+      ],
+      "Context": {
+        "HiddenMembershipVisibility": "NotEstablished",
+        "AzureRbacCoverage": "NotChecked",
+        "DirectActiveRoles": {
+          "Complete": true,
+          "Status": 200,
+          "Count": 0
+        },
+        "DirectEligibleRoles": {
+          "Complete": true,
+          "Status": 200,
+          "Count": 0
+        },
+        "EligiblePimGroupMemberships": {
+          "Complete": true,
+          "Status": 200,
+          "Count": 0
+        },
+        "Licenses": {
+          "Complete": true,
+          "Status": 200,
+          "EnabledEntraPremiumPlans": [
+            "AAD_PREMIUM_P2",
+            "AAD_PREMIUM"
+          ],
+          "Count": 2
+        },
+        "TransitiveMemberships": {
+          "Complete": true,
+          "Status": 200,
+          "Count": 3
+        },
+        "GroupDerivedRoles": {
+          "Complete": true,
+          "ActiveCount": 0,
+          "EligibleCount": 0,
+          "Coverage": "Visible transitive groups; hidden memberships not independently established",
+          "QueriedGroupCount": 3,
+          "FailureStatuses": [],
+          "VisibleGroupCount": 3
+        }
+      }
+    }
+  ],
+  "AuthenticationPolicyChanged": false,
+  "PermissionGrantsChanged": false,
+  "SignatureValidated": false,
+  "SingleCommandProof": {
+    "AuthenticatedBy": "LocalPasskey",
+    "ClientId": "038ddad9-5bbe-4f64-b0cd-12434d1e633b",
+    "RequestedScopes": [
+      "User.Read"
+    ],
+    "AdditionalScopeCount": 0,
+    "ApiStatus": 200,
+    "Protocol": "OAuth2V2Pkce",
+    "ReturnedSecretType": "SecureString",
+    "AttemptCount": 0
+  }
+}

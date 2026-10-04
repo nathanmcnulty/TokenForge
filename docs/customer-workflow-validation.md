@@ -24,3 +24,7 @@ The token contained 111 `scp` entries: 108 API scopes and three OIDC scopes. It 
 Ordinary-user role status, guest behavior, and a separate customer-like tenant still need validation. A second account alone does not establish any of those conditions.
 
 Windows/macOS CI verifies offline behavior. Synthetic callback clients connect directly to IPv4 loopback while preserving the expected localhost Host header, avoiding Windows DNS fallback delays; the slow-header deadline test remains bounded. Real browser UI, localhost resolution, and token redemption on each platform remain distinct live evidence. Package signing, publication, and a standalone executable are future work.
+
+## Follow-up scope workflow validation
+
+The later [scope-to-token workflow](scope-token-workflow.md) adds single-command acquisition, eight documented assessments, and a live admin/ordinary-user comparison. Direct active/eligible roles, visible group-derived roles, eligible PIM group memberships, and license service-plan status were checked. This supersedes the role-status gap above within those explicitly bounded paths. Other tenants, guest behavior, and live Windows/macOS authentication remain outside this completed milestone.

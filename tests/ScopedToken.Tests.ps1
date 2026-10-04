@@ -5,7 +5,7 @@ BeforeAll {
   $json=@{tid=$TenantId;oid=$ObjectId;appid=$Client;aud='00000003-0000-0000-c000-000000000000';scp=($Scopes -join ' ')}|ConvertTo-Json -Compress
   $encoded=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json)).TrimEnd('=').Replace('+','-').Replace('/','_')
   $secret=ConvertTo-SecureString "e30.$encoded.synthetic" -AsPlainText -Force
-  [pscustomobject]@{AccessToken=$secret;RefreshToken=(ConvertTo-SecureString synthetic-refresh -AsPlainText -Force);TokenClaims=(Get-TokenForgeTokenClaims -AccessToken $secret);AdditionalScopes=@();ClientId=$Client;ResourceId='00000003-0000-0000-c000-000000000000'}
+  [pscustomobject]@{AccessToken=$secret;RefreshToken=(ConvertTo-SecureString synthetic-refresh -AsPlainText -Force);TokenClaims=(Get-TokenForgeTokenClaims -AccessToken $secret);AdditionalScopes=@();ClientId=$Client;ResourceId='00000003-0000-0000-c000-000000000000';ExpiresAt=[DateTimeOffset]::UtcNow.AddHours(1);Protocol='OAuth2V2Pkce'}
  }
 }
 Describe 'Single-command scoped tokens' {
@@ -22,6 +22,7 @@ Describe 'Single-command scoped tokens' {
   $observation=[pscustomobject]@{ClientId=$client;ResourceId=$graph;Outcome='Succeeded';ObservedAt=[DateTimeOffset]::UtcNow.ToString('o');TenantFingerprint=$tenantFp;PrincipalFingerprint=$principalFp;ScpScopes=@('User.Read');NamespaceVerification='Matched';RequestVerification='Matched';Spa=$true;Protocol='OAuth2V2Pkce';RedirectFingerprint=$redirectHash}
   $db.Observations=@($observation)
   $cookie=ConvertTo-SecureString synthetic-cookie -AsPlainText -Force
+  $vaultRoot=if($IsMacOS){$TestDrive -replace '^/var/','/private/var/'}else{$TestDrive}
   $options=@{Inventory=$inventory;Database=$db;ResourceId=$graph;Scope=@('User.Read');EstsAuth=$cookie}
   $requests=[Collections.Generic.List[object]]::new()
   Mock Get-TokenForgeToken -ModuleName TokenForge {param($Request) $requests.Add($Request);if($Request.ClientId -eq $bootstrapId){return $bootstrap};return $issued}
@@ -141,6 +142,47 @@ Describe 'Single-command scoped tokens' {
   $result.Request.RedirectUri|Should -Be 'http://localhost'
   $result.Request.Spa|Should -BeFalse
   Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 2 -Exactly -ParameterFilter {$Browser -and $NoConsent}
+ }
+ It 'saves an opted-in session and reuses its exact cookie without another passkey login' {
+  $path=Join-Path $vaultRoot 'private/session.tfvault';$password=ConvertTo-SecureString synthetic-unlock-passphrase -AsPlainText -Force
+  $null=New-TokenForgeVault $path $password
+  $first=Get-TokenForgeScopedToken @options -VaultPath $path -VaultPassword $password -SessionName test -CookieName ESTSAUTHPERSISTENT
+  try {
+   $first.VaultTokenId|Should -Match '^[a-f0-9]{64}$'
+   $bootstrap=New-WorkflowToken $bootstrapId $tid $oid;$issued=New-WorkflowToken $client $tid $oid
+   $options.Remove('EstsAuth')
+   $second=Get-TokenForgeScopedToken @options -VaultPath $path -VaultPassword $password -SessionName test
+   try {
+    $second.VaultTokenId|Should -Be $first.VaultTokenId
+    (Get-TokenForgeVault $path $password).Sessions[0].CookieName|Should -Be ESTSAUTHPERSISTENT
+    Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 4 -ParameterFilter {$CookieName -eq 'ESTSAUTHPERSISTENT'}
+    Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 2
+   }finally{$second.AccessToken.Dispose();$second.RefreshToken.Dispose()}
+  }finally{$first.AccessToken.Dispose();$first.RefreshToken.Dispose();$password.Dispose()}
+ }
+ It 'does not save secrets unless all vault options are provided explicitly' {
+  {Get-TokenForgeScopedToken @options -VaultPath missing.tfvault}|Should -Throw '*requires VaultPath*'
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 0
+ }
+ It 'rejects a loaded session whose account does not match live Graph-confirmed context' {
+  $path=Join-Path $vaultRoot 'wrong-context/session.tfvault';$password=ConvertTo-SecureString synthetic-unlock-passphrase -AsPlainText -Force
+  $null=New-TokenForgeVault $path $password
+  $first=Get-TokenForgeScopedToken @options -VaultPath $path -VaultPassword $password -SessionName test
+  $first.AccessToken.Dispose();$first.RefreshToken.Dispose()
+  InModuleScope TokenForge -Parameters @{Path=$path;Password=$password} {Invoke-TokenForgeVaultTransaction $Path $Password -Mode Update -Update {param($d)$d.Sessions['test'].PrincipalFingerprint='e'*64}}
+  $bootstrap=New-WorkflowToken $bootstrapId $tid $oid;$issued=New-WorkflowToken $client $tid $oid;$options.Remove('EstsAuth')
+  try{{Get-TokenForgeScopedToken @options -VaultPath $path -VaultPassword $password -SessionName test}|Should -Throw '*does not match the selected vault session*'}finally{$password.Dispose()}
+ }
+ It 'stops on persistence failure without trying other clients and disposes acquired tokens' {
+  $path=Join-Path $vaultRoot 'save-failure/session.tfvault';$password=ConvertTo-SecureString synthetic-unlock-passphrase -AsPlainText -Force
+  $null=New-TokenForgeVault $path $password
+  Mock Save-TokenForgeScopedCredential -ModuleName TokenForge {throw 'synthetic-sensitive-error'}
+  try {
+   {Get-TokenForgeScopedToken @options -VaultPath $path -VaultPassword $password -SessionName test}|Should -Throw '*vault persistence failed*'
+   Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 2 -Exactly
+   {[Net.NetworkCredential]::new('', $issued.AccessToken).Password}|Should -Throw
+   {[Net.NetworkCredential]::new('', $issued.RefreshToken).Password}|Should -Throw
+  }finally{$password.Dispose()}
  }
  It 'skips disabled ranked clients before consuming the candidate limit' {
   ($inventory.Applications|Where-Object AppId -eq $client).AccountEnabled=$false

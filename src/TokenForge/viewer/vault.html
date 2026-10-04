@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-@SCRIPT_HASH@'; style-src 'sha256-@STYLE_HASH@'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>TokenForge · Session explorer</title>
+<style>
+:root{color-scheme:dark;--bg:#0d1522;--panel:#172236;--border:#30415b;--ink:#e8eef7;--muted:#a4b4ca;--accent:#83dec1}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,sans-serif}header,main{max-width:1200px;margin:auto;padding:28px}header{display:flex;justify-content:space-between;gap:20px;align-items:center;border-bottom:1px solid var(--border)}h1{font-size:27px;margin:0}h2{font-size:19px;margin:0 0 12px}h3{font-size:14px;color:var(--muted);margin:0 0 8px}.badge,.chip{border:1px solid var(--border);border-radius:20px;padding:5px 11px;font-size:12px}.badge{color:var(--accent)}p{margin:8px 0;color:var(--muted)}.flow{display:flex;gap:10px;margin:0 0 28px;align-items:center;flex-wrap:wrap}.stage{padding:12px 16px;background:var(--panel);border:1px solid var(--border);border-radius:9px}.arrow{color:var(--accent)}.layout{display:grid;grid-template-columns:310px 1fr;gap:20px}.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px}select,button{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:10px;width:100%}button{text-align:left;margin-top:10px;cursor:pointer;overflow-wrap:anywhere}button:hover,button.selected{border-color:var(--accent)}label{display:block;color:var(--muted);margin-bottom:8px}.subtitle{font-size:12px;color:var(--muted);display:block}.fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field{background:var(--bg);padding:14px;border-radius:8px;overflow-wrap:anywhere}.value{font-family:ui-monospace,monospace;font-size:13px}.chips{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 20px}.chip{color:var(--accent)}.note{border-left:3px solid #f0c581;padding-left:14px;margin-top:20px}.status{margin-top:16px;font-size:12px;overflow-wrap:anywhere}footer{max-width:1200px;padding:0 28px 32px;margin:auto;color:var(--muted);font-size:12px}@media(max-width:760px){header{align-items:flex-start;flex-direction:column}.layout,.fields{grid-template-columns:1fr}header,main{padding:20px}.flow{font-size:12px}.stage{padding:8px}}
+</style>
+</head>
+<body>
+<header><div><h1>TokenForge <span class="subtitle">Session explorer · learn how the pieces fit</span></h1></div><span class="badge">Offline metadata view</span></header>
+<main>
+<div class="flow"><span class="stage">Sign-in session</span><span class="arrow">→</span><span class="stage">Confirm account</span><span class="arrow">→</span><span class="stage">Choose client + scopes</span><span class="arrow">→</span><span class="stage">Code + PKCE</span><span class="arrow">→</span><span class="stage">API access token</span></div>
+<div class="layout"><aside class="panel"><label for="sessions">Saved session</label><select id="sessions"></select><p id="sessionInfo" class="status"></p><h2>Acquired tokens</h2><div id="tokens"></div></aside>
+<section class="panel"><h2 id="detailTitle">Choose a token</h2><p>A client requests the token. The resource API receives it. Scopes describe delegated permissions at that API.</p><div id="fields" class="fields"></div><h3>Requested scopes</h3><div id="requested" class="chips"></div><h3>Issued scopes · scp</h3><div id="issued" class="chips"></div><div class="note"><strong>Evidence has limits</strong><p id="evidence">Stored fields describe an earlier request. They do not establish a new sign-in or current API access.</p><p>JWT signatures are not validated locally. Roles, licensing and API authorization can still lead to HTTP 403.</p></div></section></div>
+</main><footer><span id="exportTime"></span> This file contains metadata only. It cannot unlock a vault, reveal token values, or request tokens. Session aliases, scopes and timestamps may still describe a private assessment. No network, browser storage or external assets are used.</footer>
+<script>
+const data=@DATA@;
+const sessions=document.getElementById('sessions'),tokens=document.getElementById('tokens');
+const el=(tag,text,cls)=>{const n=document.createElement(tag);n.textContent=text;if(cls)n.className=cls;return n;};
+const value=v=>v===null||v===undefined?'Unknown':String(v);
+function renderToken(t,button){for(const b of tokens.children)b.classList.remove('selected');if(button)button.classList.add('selected');document.getElementById('detailTitle').textContent='Access token · '+t.ClientId;
+const fields=document.getElementById('fields');fields.replaceChildren();
+for(const [title,v,help] of [['Client · appid / azp',t.ClientId,'Application identity used for issuance'],['Resource audience · aud',t.Audience,'API this token is intended to access'],['Resource application ID',t.ResourceId,'Resource chosen by the request'],['Expires · exp',t.ExpiresAt,'Reported lifetime, not a guarantee of acceptance'],['Actual extra scopes',t.AdditionalScopeCount,'Issued API permissions beyond the requested set'],['Refresh token saved',t.HasRefreshToken?'Yes':'No','Credential remains encrypted in the vault'],['Protocol',t.Protocol,'How this token was acquired'],['Expiry status',t.ExpiryStatus,'Unknown expiry prevents cached access retrieval']]){const box=el('div','', 'field');box.append(el('h3',title),el('div',value(v),'value'),el('p',help,'subtitle'));fields.append(box);}
+for(const [id,scopes] of [['requested',t.RequestedScopes],['issued',t.IssuedScopes]]){const box=document.getElementById(id);box.replaceChildren();for(const s of scopes||[])box.append(el('span',s,'chip'));}
+document.getElementById('evidence').textContent='Earlier issuance evidence: '+value(t.ConsentEvidence)+'. Acquisition time: '+value(t.AcquiredAt)+'. Cached metadata is not evidence of a new request.';
+}
+function renderSession(){const s=data.Sessions[Number(sessions.value)];tokens.replaceChildren();if(!s){document.getElementById('sessionInfo').textContent='No saved sessions.';return;}
+document.getElementById('sessionInfo').textContent=(s.HasCookie?'Reusable ESTS cookie saved. ':'Tokens only; no browser cookies were copied. ')+(s.RetentionExpired?'Local retention expired. ':'Local retention ends '+s.RetainUntil+'. ');
+for(const t of s.Tokens){const b=el('button',t.RequestedScopes.join(', '));b.type='button';b.append(el('span',t.ClientId,'subtitle'));b.onclick=()=>renderToken(t,b);tokens.append(b);}
+if(s.Tokens.length)renderToken(s.Tokens[0],tokens.firstChild);else{document.getElementById('evidence').textContent='No acquired tokens in this session. Stored fields are not evidence of current API access.';document.getElementById('detailTitle').textContent='No acquired tokens';for(const id of ['fields','requested','issued'])document.getElementById(id).replaceChildren();}}
+document.getElementById('exportTime').textContent='Exported '+data.GeneratedAt+'. Status fields are snapshots at export time.';
+for(const [i,s] of data.Sessions.entries()){const o=el('option',s.Name);o.value=i;sessions.append(o);}sessions.onchange=renderSession;renderSession();
+</script>
+</body></html>

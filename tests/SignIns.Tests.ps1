@@ -73,3 +73,23 @@ Describe 'Explicit sign-in candidate registration' {
   Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 0 -ParameterFilter {$Method -eq 'DELETE'}
  }
 }
+Describe 'Sign-in CLI discovery persistence' {
+ It 'saves whitelisted discovery and merges repeated client evidence idempotently' {
+  $state=Join-Path $TestDrive state;$null=New-Item -ItemType Directory $state
+  $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@()}
+  $inventory|ConvertTo-Json -Depth 8|Set-Content (Join-Path $state inventory.json)
+  $catalog=Get-TokenForgeCatalog "$PSScriptRoot/fixtures/catalog.json"
+  Get-TokenForgeDiscovery $catalog|ConvertTo-Json -Depth 20|Set-Content (Join-Path $state discovery.json)
+  Mock Import-Module {}
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@(@{appId='22222222-2222-2222-2222-222222222222';userPrincipalName='private-user';ipAddress='private-ip'})}}
+  $runner="$PSScriptRoot/../scripts/Invoke-TokenForgeInventory.ps1"
+  $r=& $runner -Action SignIns -StatePath $state -GraphToken $token
+  $r.Enumeration|Should -Be Complete
+  $null=& $runner -Action SignIns -StatePath $state -GraphToken $token
+  $saved=Get-Content (Join-Path $state discovery.json) -Raw|ConvertFrom-Json
+  $candidate=$saved.Applications|Where-Object AppId -eq '22222222-2222-2222-2222-222222222222'
+  $candidate.Ownership|Should -Be Unverified
+  @($candidate.Sources|Where-Object Evidence -eq 'ObservedSignInNotOwnership').Count|Should -Be 1
+  (Get-Content (Join-Path $state signin-applications.json) -Raw)|Should -Not -Match 'private-user|private-ip'
+ }
+}

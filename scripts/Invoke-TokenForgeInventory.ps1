@@ -61,8 +61,11 @@ try {
     if(-not @($app.Sources|Where-Object Evidence -eq 'ObservedSignInNotOwnership').Count){$app.Sources+= [pscustomobject]@{Name='SignInLogs';Location='https://graph.microsoft.com/beta/auditLogs/signIns';Evidence='ObservedSignInNotOwnership'}}
    }
    $discovery.Applications=@($map.Values|Sort-Object AppId)
-   Save-TokenForgeDocument -Document $report -Path (Join-Path $StatePath 'signin-applications.json')
-   Save-TokenForgeDocument -Document $discovery -Path $discoveryPath
+   & (Get-Module TokenForge) {
+    param($report,$discovery,$reportPath,$discoveryPath)
+    Save-TokenForgeDocument -Document $report -Path $reportPath
+    Save-TokenForgeDocument -Document $discovery -Path $discoveryPath
+   } $report $discovery (Join-Path $StatePath 'signin-applications.json') $discoveryPath
    $report
   }
   'Inventory' {

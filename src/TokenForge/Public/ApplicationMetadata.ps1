@@ -99,14 +99,14 @@ function Update-TokenForgeApplicationMetadata {
         ScopeObservations {@('ClientId','ResourceId','Outcome','Protocol','Spa','RequestedScopes','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','SignatureValidated','NamespaceVerification','RequestVerification','ErrorCodes','AttemptCount','ElapsedSeconds','RedirectFingerprint','CatalogHash')}
     }
     $stamp=if($Kind -eq 'Discovery'){$Document.FetchedAt}elseif($Kind -eq 'ScopeObservations'){$Document.UpdatedAt}else{$Document.CapturedAt}
-    $observed=[DateTimeOffset]::Parse($stamp).ToUniversalTime()
+    $observed=([DateTimeOffset]$stamp).ToUniversalTime()
     if($observed -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Application metadata observation date is in the future.'}
     $tenant=if($Kind -in @('Discovery','ScopeObservations')){$null}else{[string]$Document.TenantFingerprint}
     # Scope databases carry namespaces on each observation, not on the document.
     if($Kind -eq 'ScopeObservations'){$tenant=$null}
     if($Kind -in @('Inventory','SignIns') -and $tenant -notmatch '^[a-f0-9]{64}$'){throw 'A tenant fingerprint is required for private metadata.'}
     if($Kind -eq 'SignIns' -and $Document.Enumeration -ne 'Complete'){throw 'Incomplete sign-in discovery cannot update application metadata.'}
-    $rows=if($Kind -eq 'ScopeObservations'){@($Document.Observations|Sort-Object {[DateTimeOffset]::Parse($_.ObservedAt)})}else{@($Document.Applications)}
+    $rows=if($Kind -eq 'ScopeObservations'){@($Document.Observations|Sort-Object {([DateTimeOffset]$_.ObservedAt)})}else{@($Document.Applications)}
     $full=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
     $null=New-Item -ItemType Directory -Path (Split-Path $full) -Force
     $lock=$null
@@ -130,7 +130,7 @@ function Update-TokenForgeApplicationMetadata {
                 $rowTenant=[string]$row.TenantFingerprint;$principal=[string]$row.PrincipalFingerprint;$resource=[string]$row.ResourceId
                 if($rowTenant -notmatch '^[a-f0-9]{64}$' -or $principal -notmatch '^[a-f0-9]{64}$'){throw 'Scope observation namespace is invalid.'}
                 $resourceId=[guid]::Empty;if(-not [guid]::TryParse($resource,[ref]$resourceId) -or $resourceId -eq [guid]::Empty){throw 'Invalid scope resource ID.'};$resource=$resourceId.ToString()
-                $date=[DateTimeOffset]::Parse($row.ObservedAt).ToUniversalTime()
+                $date=([DateTimeOffset]$row.ObservedAt).ToUniversalTime()
                 if($date -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Future scope observation date.'}
             }
             $origin=@($Kind,$rowTenant,$principal,$resource) -join '/'
@@ -165,6 +165,7 @@ function Update-TokenForgeApplicationMetadata {
                 }
             }
             $sources=@(if($Kind -in @('Discovery','Inventory')){@($row.Sources|ForEach-Object {[ordered]@{Name=$_.Name;Location=if($_.PSObject.Properties['Location'] -or ($_ -is [Collections.IDictionary] -and $_.Contains('Location'))){$_.Location}else{$null};Evidence=$_.Evidence}})}else{@([ordered]@{Name=$Kind;Location=if($Kind -eq 'SignIns'){'https://graph.microsoft.com/beta/auditLogs/signIns'}else{'LocalScopeDatabase'};Evidence=if($Kind -eq 'SignIns'){'ObservedSignInNotOwnership'}else{'DiagnosticScopeObservation'}})})
+            if($Kind -eq 'Inventory'){$sources+= [ordered]@{Name='TenantServicePrincipals';Location='https://graph.microsoft.com/v1.0/servicePrincipals';Evidence='TenantMetadataSnapshot'}}
             $hash=Get-TokenForgeFingerprint -Value (ConvertTo-Json -InputObject ([ordered]@{Attributes=$attributes;Sources=$sources}) -Depth 100 -Compress)
             if(-not $catalog.Applications.Contains($appId)){$catalog.Applications[$appId]=@{AppId=$appId;FirstSeenAt=$date.ToString('o');LastSeenAt=$date.ToString('o');Records=@{}}}
             $app=$catalog.Applications[$appId]

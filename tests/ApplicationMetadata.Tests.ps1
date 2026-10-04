@@ -141,3 +141,13 @@ Describe 'Collected metadata value types' {
         Test-Path $path|Should -BeFalse
     }
 }
+Describe 'Metadata date fidelity' {
+    It 'preserves UTC DateTime source values regardless of host timezone' {
+        $doc=New-MetadataDiscovery
+        $doc.FetchedAt=[datetime]::new(2026,1,1,0,0,0,[DateTimeKind]::Utc)
+        $path=Join-Path $TestDrive 'typed-date.json'
+        $null=Update-TokenForgeApplicationMetadata $path $doc Discovery
+        $date=[DateTimeOffset](Get-TokenForgeApplicationMetadata $path).Applications[$id].FirstSeenAt
+        $date.UtcDateTime|Should -Be $doc.FetchedAt
+    }
+}

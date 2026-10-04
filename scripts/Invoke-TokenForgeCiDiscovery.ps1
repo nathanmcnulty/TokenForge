@@ -81,7 +81,7 @@ try {
  $public=Get-Content $freshPath -Raw|ConvertFrom-Json
  $previous=if(Test-Path $exportPath){@((Get-Content $exportPath -Raw|ConvertFrom-Json).Observations)}else{@()}
  $latest=@{}
- foreach($row in @(@($previous)+@($public.Observations)|Sort-Object {[DateTimeOffset]::Parse($_.ObservedAt)})){$latest["$($row.ClientId)/$($row.ResourceId)"]=$row}
+ foreach($row in @(@($previous)+@($public.Observations)|Sort-Object {([DateTimeOffset]$_.ObservedAt)})){$row.ObservedAt=([DateTimeOffset]$row.ObservedAt).ToUniversalTime().ToString('o');$latest["$($row.ClientId)/$($row.ResourceId)"]=$row}
  $public.Observations=@($latest.Values|Sort-Object ClientId,ResourceId)
  & (Get-Module TokenForge) {param($document,$path) Save-TokenForgeDocument -Document $document -Path $path} $public $exportPath
  Assert-PublicScopeExports $DataPath

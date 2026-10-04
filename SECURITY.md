@@ -2,6 +2,8 @@
 
 Use TokenForge with sessions and tenants you are authorized to access. ESTSAUTH cookies and refresh tokens are credentials with potentially broad reach.
 
+The [authentication walkthrough](docs/authentication-flow.md) explains the complete credential lifecycle. TokenForge has no persistent cookie jar or broker cache; browser profiles and local software-passkey files are separate credential stores with their own protections.
+
 - Inputs and returned tokens use `SecureString`. Requests necessarily contain plaintext in process memory; SecureString is not a portable encrypted vault, and this module does not guarantee memory erasure.
 - The module writes discovery metadata and whitelisted tenant/scope observations to disk, including tenant/principal fingerprints. Keep these private. It has no token cache, browser scraping, telemetry, or automatic token export. The optional passkey adapter returns a cookie in memory.
 - Avoid transcripts, HTTP tracing, debugging secrets, shell arguments containing credentials, and logging full result objects. PowerShell error history and external instrumentation may retain runtime information even when outward messages are sanitized.

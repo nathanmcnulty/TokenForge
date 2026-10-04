@@ -1,5 +1,7 @@
 # Single-command scope-to-token workflow
 
+For a step-by-step explanation of login, session cookies, authorization codes, token issuance, and credential storage, read [from login to an access token](authentication-flow.md).
+
 `Get-TokenForgeScopedToken` and `Invoke-TokenForge.ps1 -Action Token` reuse tenant-verified inventory and fresh private observations. They identify the authenticated account, rank its candidates by extra observed API scopes, request explicit scopes with PKCE, and verify issued tenant/principal/client/audience and `scp` coverage. Version 0.5 requires `prompt=none` for both bootstrap and final browser authorization, matching cookie/passkey behavior. Missing consent, login, MFA, or account selection stops silent acquisition; there is no interactive fallback or `.default` retry.
 
 ```powershell

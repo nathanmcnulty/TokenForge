@@ -4,6 +4,8 @@ PowerShell toolkit for finding Microsoft Entra first-party applications that pub
 
 Initial version: PowerShell 7.4+ on Windows, Linux, and macOS. The repository is private. Live passkey-backed validation on Linux has confirmed native-client and SPA acquisition, refresh redemption, and read-only API access in one tenant. Availability still depends on the selected client, resource, session, and policy; see the [validation evidence](docs/live-validation.md).
 
+Start with [from login to an access token](docs/authentication-flow.md) for the plain-language walkthrough, including what stays in memory, what is saved, and how credentials are protected.
+
 For single-command scope selection and token acquisition, see [the scope-to-token workflow](docs/scope-token-workflow.md). It supports passkeys, existing ESTS cookies, and browser sessions, with account-specific ranking, silent authorization without new consent, and separate API checks. `Get-TokenForgeScopeCandidates` and CLI `-Action Candidates` compare published hints, applicable tenant grants, and fresh observed scopes without authenticating or changing the tenant.
 
 ## Workflow

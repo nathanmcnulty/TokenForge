@@ -1,0 +1,19 @@
+{
+  "SchemaVersion": 1,
+  "Observations": [
+    {
+      "ClientId": "038ddad9-5bbe-4f64-b0cd-12434d1e633b",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-04T23:38:34.0000000+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    }
+  ],
+  "Disclaimer": "Observed scopes are session/tenant dependent, not universal consent or guaranteed API access."
+}

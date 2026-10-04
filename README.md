@@ -8,6 +8,8 @@ Start with [from login to an access token](docs/authentication-flow.md) for the 
 
 For single-command scope selection and token acquisition, see [the scope-to-token workflow](docs/scope-token-workflow.md). It supports passkeys, existing ESTS cookies, and browser sessions, with account-specific ranking, silent authorization without new consent, and separate API checks. `Get-TokenForgeScopeCandidates` and CLI `-Action Candidates` compare published hints, applicable tenant grants, and fresh observed scopes without authenticating or changing the tenant.
 
+For opt-in saved sessions and tokens, see [the encrypted session vault](docs/session-vault.md). The CLI can reuse a named saved ESTS session and export an offline metadata-only teaching viewer. Memory-only remains the default. The same guide compares Go and .NET and recommends a shared .NET core for the future standalone CLI.
+
 ## Workflow
 
 1. Load scope metadata from ROADtools (the source used by EntraScopes), or a compatible local JSON file.

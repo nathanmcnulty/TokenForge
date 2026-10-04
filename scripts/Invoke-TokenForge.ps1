@@ -1,7 +1,7 @@
 #Requires -Version 7.4
 [CmdletBinding()]
 param(
- [Parameter(Mandatory)][ValidateSet('Connect','Token','Candidates','Plan','Maintain')][string]$Action,
+ [Parameter(Mandatory)][ValidateSet('Connect','Token','Candidates','Plan','Maintain','VaultCreate','VaultList','VaultToken','VaultRemove','VaultView')][string]$Action,
  [string]$RequestPath,
  [string]$LoginHint,
  [ValidateRange(30,900)][int]$TimeoutSeconds=300,
@@ -26,10 +26,41 @@ param(
  [ValidateRange(0,2147483647)][int]$MaxAdditionalScopes=2147483647,
  [switch]$OfflineAccess,
  [uri]$ApiUri,
- [string]$CheckId
+ [string]$CheckId,
+ [string]$VaultPath,
+ [securestring]$VaultPassword,
+ [ValidatePattern('^[a-z][a-z0-9_-]{0,63}$')][string]$SessionName,
+ [ValidateRange(1,168)][int]$SessionRetentionHours=8,
+ [ValidatePattern('^[a-f0-9]{64}$')][string]$TokenId,
+ [switch]$RefreshOnly,
+ [string]$OutputPath
 )
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1') -Force
+$ownedVaultPassword=$null
+try {
+if($VaultPath -and -not $VaultPassword){$ownedVaultPassword=Read-Host 'Vault passphrase' -AsSecureString;$VaultPassword=$ownedVaultPassword}
+if($Action -like 'Vault*'){
+ if(-not $VaultPath){throw 'Vault actions require VaultPath.'}
+ switch($Action){
+  'VaultCreate' {New-TokenForgeVault -Path $VaultPath -Password $VaultPassword}
+  'VaultList' {Get-TokenForgeVault -Path $VaultPath -Password $VaultPassword}
+  'VaultToken' {
+   if(-not $SessionName -or -not $TokenId){throw 'VaultToken requires SessionName and TokenId.'}
+   Get-TokenForgeVaultToken -Path $VaultPath -Password $VaultPassword -SessionName $SessionName -TokenId $TokenId -MaxAdditionalScopes $MaxAdditionalScopes -RefreshOnly:$RefreshOnly
+  }
+  'VaultRemove' {
+   if(-not $SessionName){throw 'VaultRemove requires SessionName.'}
+   $remove=@{Path=$VaultPath;Password=$VaultPassword;SessionName=$SessionName};if($TokenId){$remove.TokenId=$TokenId}
+   Remove-TokenForgeVaultEntry @remove
+  }
+  'VaultView' {
+   if(-not $OutputPath){throw 'VaultView requires OutputPath.'}
+   Export-TokenForgeVaultView -Path $VaultPath -Password $VaultPassword -OutputPath $OutputPath
+  }
+ }
+ return
+}
 if($Action -eq 'Connect') {
  if(-not $RequestPath){throw 'Connect requires a credential-free RequestPath.'}
  $request=Get-Content -LiteralPath $RequestPath -Raw|ConvertFrom-Json
@@ -51,10 +82,12 @@ if($Action -eq 'Token') {
  }elseif($CheckId){throw 'CheckId requires ManifestPath.'}
  if($ResourceId -eq [guid]::Empty -or -not $Scope){throw 'Token requires ResourceId and Scope, or ManifestPath and CheckId.'}
  $options=@{Inventory=$inventory;Database=$database;ResourceId=$ResourceId;Scope=$Scope;Tenant=$Tenant;BootstrapClientId=$BootstrapClientId;MaxBootstrapAdditionalScopes=$MaxBootstrapAdditionalScopes;MaxAgeHours=$MaxAgeHours;MaxAdditionalScopes=$MaxAdditionalScopes;OfflineAccess=$OfflineAccess;TimeoutSeconds=$TimeoutSeconds}
+ if($VaultPath){if(-not $SessionName){throw 'Vault persistence requires an explicit SessionName.'};$options.VaultPath=$VaultPath;$options.VaultPassword=$VaultPassword;$options.SessionName=$SessionName;$options.SessionRetentionHours=$SessionRetentionHours}
  if($ApiUri){$options.ApiUri=$ApiUri}
  if($PasskeyPath){if(-not $XdrModulePath){throw 'Passkey authentication requires XdrModulePath.'};$options.PasskeyPath=$PasskeyPath;$options.XdrModulePath=$XdrModulePath}
  elseif($EstsAuth){$options.EstsAuth=$EstsAuth;$options.CookieName=$CookieName}
- else{if($XdrModulePath){throw 'XdrModulePath requires PasskeyPath.'};$options.Browser=$true;$options.LoginHint=$LoginHint}
+ elseif($Browser -or -not $VaultPath){if($XdrModulePath){throw 'XdrModulePath requires PasskeyPath.'};$options.Browser=$true;$options.LoginHint=$LoginHint}
+ elseif($XdrModulePath){throw 'XdrModulePath requires PasskeyPath.'}
  Get-TokenForgeScopedToken @options
  return
 }
@@ -95,3 +128,5 @@ $report|Add-Member DiscoveryRefreshRequired ([DateTimeOffset]::Parse($discovery.
 $report|Add-Member InventoryDiscoveryMismatch ($inventory.DiscoveryCatalogHash -ne $discovery.CatalogContentSha256)
 $report|Add-Member ObservationDrift @(if($BeforeDatabasePath){Compare-TokenForgeScopeDatabase -Before (Get-TokenForgeScopeDatabase -Path $BeforeDatabasePath) -After $database})
 $report
+
+} finally {if($ownedVaultPassword){$ownedVaultPassword.Dispose()}}

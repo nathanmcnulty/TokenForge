@@ -47,3 +47,7 @@ For a new client/resource:
 6. Retain only aggregate outcomes. Keep credentials, codes, callback URLs, assertions, tenant/user identifiers, and page/API contents out of artifacts.
 
 References: [Graph current-user access](https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0), [Graph audit logs](https://learn.microsoft.com/en-us/graph/api/directoryaudit-list?view=graph-rest-1.0), [AADSTS50011](https://learn.microsoft.com/en-us/troubleshoot/entra/entra-id/app-integration/error-code-aadsts50011-redirect-uri-mismatch).
+
+## Opt-in session vault validation (2026-10-04)
+
+A Linux passkey-backed scoped request saved an encrypted ESTS session and returned access/refresh tokens. After disposing that result, a second CLI request supplied only the vault unlock/name for authentication. Both Graph `/me` checks returned 200, with zero additional API scopes. The second acquisition preserved the local retention deadline. Explicit cached-token retrieval returned caller-owned `SecureString` objects; normal listing omitted credential fields, and the metadata-only viewer exported successfully. The temporary proof vault and viewer were removed. [Bounded results](vault-validation-2026-10-04.json) contain no account identifiers, fingerprints, or credentials. Offline CI exercises Windows/macOS storage code; live authentication on those platforms remains untested.

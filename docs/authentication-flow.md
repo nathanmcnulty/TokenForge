@@ -1,6 +1,6 @@
 # From login to an access token
 
-TokenForge reuses an authorized Entra sign-in session to request tokens through selected Microsoft first-party clients. It does not keep a persistent cookie jar, token cache, or background broker service. Entra issues the tokens and decides whether the request is authorized.
+TokenForge reuses an authorized Entra sign-in session to request tokens through selected Microsoft first-party clients. Memory-only is the default. An [opt-in encrypted vault](session-vault.md) can save named ESTS sessions and acquired tokens; there is no background broker service. Entra issues the tokens and decides whether the request is authorized.
 
 The normal scoped flow is:
 
@@ -71,7 +71,7 @@ The scoped command bounds the number of client and callback attempts. It does no
 
 For each selected client, TokenForge sends Entra an authorization request containing the client ID, target resource's explicit scopes, published callback, a random `state` value, and a PKCE challenge.
 
-In cookie mode, each token request creates a new in-memory HTTP cookie container. It adds the supplied ESTS cookie for the identity host. The same original cookie value can authenticate the bootstrap and subsequent client requests, but their HTTP containers are separate. Responses can update that request's temporary container; TokenForge does not save the updated jar or return it as a cache.
+In cookie mode, each token request creates a new in-memory HTTP cookie container. It adds the supplied ESTS cookie for the identity host. The same original cookie value can authenticate the bootstrap and subsequent client requests, but their HTTP containers are separate. Responses can update that request's temporary container; TokenForge does not save the updated jar or return it as a cache. Opt-in vault capture saves the original supplied cookie under its exact name.
 
 In browser mode, the browser sends its own cookies and returns the code to TokenForge's temporary loopback listener.
 
@@ -106,20 +106,20 @@ try {
 }
 ```
 
-For later renewal, the lower-level token command can submit a caller-held refresh token with the same request. That uses the token endpoint directly and does not need the ESTS cookie. Automatic cross-client refresh discovery and a persistent refresh-token cache are not implemented.
+For later renewal, the lower-level token command can submit a caller-held refresh token with the same request. That uses the token endpoint directly and does not need the ESTS cookie. Automatic cross-client refresh discovery and automatic vault refresh rotation are not implemented; an opted-in scoped request can save its returned refresh token.
 
 ## What is saved, and how it is protected
 
 | Material | Where it lives | Relevant protection |
 | --- | --- | --- |
 | Local software-passkey credential | Credential file on disk | Sensitive signing key material; restricted file/directory access. TokenForge does not encrypt the file or add hardware protection. |
-| Passkey login cookies and TokenForge HTTP cookie containers | Process memory | Temporary sessions; no TokenForge cookie-jar file or persistent broker cache |
+| Passkey login cookies and TokenForge HTTP cookie containers | Process memory | Temporary containers; original supplied cookie can be explicitly saved in the encrypted vault |
 | Browser session cookies | Browser memory/profile | Browser and OS protections; TokenForge neither manages nor audits that store |
 | Authorization code and PKCE verifier | Process memory during authorization/redemption; the code also appears in the browser callback URL in browser mode | Matching state, PKCE, bounded callbacks and timeouts; browser history is controlled by the browser |
-| Returned access/refresh tokens | Caller-owned process memory | `SecureString` interface and explicit disposal; no automatic token persistence |
+| Returned access/refresh tokens | Caller-owned process memory | `SecureString` interface and explicit disposal; persistence only through explicit vault options |
 | Inventory and scope observations | Private JSON files | Whitelisted metadata, no token objects; account/tenant fingerprints still need privacy protection |
 
-The current Linux credential and assessment directories were checked as owner-only (`0700`), and the working local passkey and checked state files as owner-readable/writable (`0600`). These permissions restrict other Unix accounts, not processes running as the same user or a privileged administrator. The adapter rejects linked passkey files and Unix files with group/other permissions. Windows ACL validation and a portable encrypted credential vault are not implemented by this check.
+The current Linux credential and assessment directories were checked as owner-only (`0700`), and the working local passkey and checked state files as owner-readable/writable (`0600`). These permissions restrict other Unix accounts, not processes running as the same user or a privileged administrator. The adapter rejects linked passkey files and Unix files with group/other permissions. Those passkey checks are distinct from the new vault: vault paths enforce Unix permissions or protected Windows ACLs and passphrase encryption.
 
 TokenForge's token transport confines identity redirects to the supported HTTPS identity host and captures published callbacks locally instead of sending codes to them. API checks stay on the selected Graph or ARM host and disable redirects. Identity errors are reduced to generic messages and bounded numeric codes. Observation storage whitelists metadata rather than serializing token objects.
 
@@ -127,4 +127,4 @@ Memory-only does not mean inaccessible or securely erased. The passkey helper, H
 
 Disposal is local cleanup. It does not revoke the Entra session, unregister the passkey, revoke issued tokens, or sign out the browser.
 
-If a future version adds a saved broker-style session store, that will need an explicit design for OS-backed secret storage, expiry, account/tenant separation, access controls, and clearing/revocation behavior. The current metadata database must not be used as that store.
+The [session vault guide](session-vault.md) explains the opt-in encrypted store, account isolation, expiry, concurrency, removal, and native CLI roadmap. OS-backed key protection is future work. The metadata database must not be used as a credential store.

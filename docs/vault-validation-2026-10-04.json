@@ -1,0 +1,23 @@
+{
+  "SchemaVersion": 1,
+  "Date": "2026-10-04",
+  "Platform": "Linux",
+  "TenantCount": 1,
+  "FreshPasskeyCapture": {
+    "ApiStatus": 200,
+    "AdditionalScopes": 0,
+    "EncryptedFilePresent": true,
+    "HasCookie": true,
+    "HasRefreshToken": true
+  },
+  "SavedSessionReuse": {
+    "ApiStatus": 200,
+    "AdditionalScopes": 0,
+    "NoFreshAuthenticationArgument": true,
+    "RetainUntilUnchanged": true,
+    "ExplicitRetrievalSecureString": true,
+    "MetadataHasNoCredentialFields": true
+  },
+  "ViewerExported": true,
+  "ProofVaultRemovedAfterValidation": true
+}

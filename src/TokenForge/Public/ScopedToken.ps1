@@ -7,7 +7,7 @@ function Get-TokenForgeScopedToken {
     Candidates use fresh private observations, published redirects and explicit PKCE requests.
     The optional GET API result is separate from token success. Caller owns returned token secrets.
     #>
-    [CmdletBinding(DefaultParameterSetName='Cookie')]
+    [CmdletBinding(DefaultParameterSetName='Vault')]
     param(
         [Parameter(Mandatory)]$Inventory,
         [Parameter(Mandatory)]$Database,
@@ -19,6 +19,10 @@ function Get-TokenForgeScopedToken {
         [Parameter(Mandatory,ParameterSetName='Passkey')][string]$XdrModulePath,
         [Parameter(Mandatory,ParameterSetName='Browser')][switch]$Browser,
         [Parameter(ParameterSetName='Browser')][string]$LoginHint,
+        [Parameter(Mandatory,ParameterSetName='Vault')][Parameter(ParameterSetName='Cookie')][Parameter(ParameterSetName='Passkey')][Parameter(ParameterSetName='Browser')][string]$VaultPath,
+        [Parameter(Mandatory,ParameterSetName='Vault')][Parameter(ParameterSetName='Cookie')][Parameter(ParameterSetName='Passkey')][Parameter(ParameterSetName='Browser')][securestring]$VaultPassword,
+        [Parameter(Mandatory,ParameterSetName='Vault')][Parameter(ParameterSetName='Cookie')][Parameter(ParameterSetName='Passkey')][Parameter(ParameterSetName='Browser')][ValidatePattern('^[a-z][a-z0-9_-]{0,63}$')][string]$SessionName,
+        [ValidateRange(1,168)][int]$SessionRetentionHours=8,
         [ValidateRange(30,900)][int]$TimeoutSeconds=300,
         [string]$Tenant='organizations',
         [guid]$BootstrapClientId='14d82eec-204b-4c2f-b7e8-296a70dab67e',
@@ -31,6 +35,7 @@ function Get-TokenForgeScopedToken {
         [uri]$ApiUri
     )
     if(@($Scope|Where-Object {$_ -notmatch '^[A-Za-z0-9_-][A-Za-z0-9_.-]*$' -or $_ -cin @('openid','profile','email','offline_access')}).Count){throw 'Provide explicit API scope names.'}
+    if(($VaultPath -or $VaultPassword -or $SessionName) -and (-not $VaultPath -or -not $VaultPassword -or -not $SessionName)){throw 'Vault persistence requires VaultPath, VaultPassword, and an explicit SessionName.'}
     $now=[DateTimeOffset]::UtcNow
     $captured=[DateTimeOffset]::Parse($Inventory.CapturedAt)
     if($captured -lt $now.AddHours(-$MaxAgeHours) -or $captured -gt $now.AddMinutes(5)){throw 'Inventory is stale or future-dated; refresh it before requesting tokens.'}
@@ -49,9 +54,20 @@ function Get-TokenForgeScopedToken {
         $(if($Browser){$u.Scheme -eq 'http' -and $u.Host -eq 'localhost' -and $u.AbsolutePath -eq '/'}else{$u.Scheme -eq 'https' -and $u.AbsolutePath -match '/nativeclient$'})
     }|Select-Object -First 1)
     if(-not $bootstrapRedirect.Count){throw 'Bootstrap client has no supported published redirect for this authentication method.'}
-    $ownedCookie=$null;$bootstrap=$null;$selected=$null;$returned=$false
+    $ownedCookie=$null;$bootstrap=$null;$selected=$null;$returned=$false;$vaultContext=$null
     $attempts=[Collections.Generic.List[object]]::new()
     try{
+        if($VaultPath){
+            $vault=Invoke-TokenForgeVaultTransaction -Path $VaultPath -Password $VaultPassword
+            $saved=$vault.Sessions[$SessionName]
+            if($saved){$vaultContext=@{TenantFingerprint=$saved.TenantFingerprint;PrincipalFingerprint=$saved.PrincipalFingerprint;Revision=$saved.Revision}}
+            if($PSCmdlet.ParameterSetName -eq 'Vault'){
+                if(-not $saved -or -not $saved.Cookie -or [DateTimeOffset]::Parse($saved.RetainUntil) -le [DateTimeOffset]::UtcNow){throw 'Selected vault session has no reusable cookie or its local retention deadline passed; authenticate explicitly.'}
+                if($saved.CookieName -notin @('ESTSAUTH','ESTSAUTHPERSISTENT')){throw 'Unsupported saved session cookie name.'}
+                $ownedCookie=ConvertTo-SecureString $saved.Cookie -AsPlainText -Force;$EstsAuth=$ownedCookie;$CookieName=$saved.CookieName
+            }
+            $saved=$null;$vault=$null
+        }
         if($PSCmdlet.ParameterSetName -eq 'Passkey'){$ownedCookie=Get-TokenForgeEstsCookie -PasskeyPath $PasskeyPath -XdrModulePath $XdrModulePath;$EstsAuth=$ownedCookie}
         $authentication=if($Browser){@{Browser=$true;LoginHint=$LoginHint;TimeoutSeconds=$TimeoutSeconds;NoConsent=$true}}else{@{EstsAuth=$EstsAuth;CookieName=$CookieName}}
         $request=New-TokenForgeTenantRequest -Inventory $Inventory -ClientId $BootstrapClientId -ResourceId $graphId -Scope User.Read -RedirectUri $bootstrapRedirect[0] -Tenant $Tenant
@@ -70,6 +86,7 @@ function Get-TokenForgeScopedToken {
         if($bootstrapExtras.Count -gt $MaxBootstrapAdditionalScopes -or @($bootstrap.AdditionalScopes).Count -gt $MaxBootstrapAdditionalScopes){throw 'Observer bootstrap exceeds the additional-scope limit; choose a narrower BootstrapClientId.'}
         $me=Invoke-TokenForgeGraph -AccessToken $bootstrap.AccessToken -Uri 'https://graph.microsoft.com/v1.0/me?$select=id'
         if([string]$me['id'] -ine $oid.ToString()){throw 'Graph identity does not match the bootstrap token context.'}
+        if($vaultContext -and ($vaultContext.TenantFingerprint -ne $claims.TenantFingerprint -or $vaultContext.PrincipalFingerprint -ne $claims.PrincipalFingerprint)){throw 'Confirmed observer does not match the selected vault session.'}
         $principal=$claims.PrincipalFingerprint;$tenantFingerprint=$claims.TenantFingerprint
         $bootstrap.AccessToken.Dispose();if($bootstrap.RefreshToken){$bootstrap.RefreshToken.Dispose()};$bootstrap=$null;$payload=$null;$me=$null
         $candidates=@(Get-TokenForgeAssessmentCoverage -Database $Database -ResourceId $ResourceId -Scope $Scope -TenantFingerprint $tenantFingerprint -PrincipalFingerprint $principal -MaxAgeHours $MaxAgeHours|Where-Object CoversAll)
@@ -106,9 +123,19 @@ function Get-TokenForgeScopedToken {
                     $selected|Add-Member ObservedAdditionalScopeCount $extra.Count
                     $selected|Add-Member AttemptSummary @($attempts.ToArray())
                     $selected|Add-Member ApiCheck $(if($ApiUri){try{Test-TokenForgeTokenAccess -Token $selected -Uri $ApiUri}catch{[pscustomobject]@{Status=$null;Accepted=$false;Evidence='TransportFailureDetailsSuppressed'}}}else{$null})
+                    if($VaultPath){
+                        try{
+                            $tokenId=Save-TokenForgeScopedCredential -Path $VaultPath -Password $VaultPassword -SessionName $SessionName -Cookie $(if($Browser){$null}else{$EstsAuth}) -CookieName $CookieName -Token $selected -RetentionHours $SessionRetentionHours -ExpectedRevision $(if($vaultContext){$vaultContext.Revision}else{$null}) -ReuseSession:($PSCmdlet.ParameterSetName -eq 'Vault')
+                            $selected|Add-Member VaultTokenId $tokenId
+                        }catch{
+                            $failure=[InvalidOperationException]::new('Token was acquired but vault persistence failed; token discarded. Details suppressed.')
+                            $failure.Data['TokenForgeVaultPersistence']=$true;throw $failure
+                        }
+                    }
                     $returned=$true
                     return $selected
                 }catch{
+                    if($_.Exception.Data['TokenForgeVaultPersistence']){throw}
                     $attempts.Add([pscustomobject]@{ClientId=$candidate.ClientId;Outcome='RequestRejectedOrContextMismatch';EntraCodes=@([regex]::Matches($_.Exception.Message,'\bAADSTS[0-9]{4,9}\b')|ForEach-Object Value|Sort-Object -Unique)})
                     if($selected){$selected.AccessToken.Dispose();if($selected.RefreshToken){$selected.RefreshToken.Dispose()};$selected=$null}
                 }
@@ -118,6 +145,7 @@ function Get-TokenForgeScopedToken {
         $failure.Data['TokenForgeAttempts']=$attempts.ToArray()
         throw $failure
     }finally{
+        $saved=$null;$vault=$null;$vaultContext=$null
         if($ownedCookie){$ownedCookie.Dispose()}
         if($bootstrap){$bootstrap.AccessToken.Dispose();if($bootstrap.RefreshToken){$bootstrap.RefreshToken.Dispose()}}
         if($selected -and -not $returned){$selected.AccessToken.Dispose();if($selected.RefreshToken){$selected.RefreshToken.Dispose()}}

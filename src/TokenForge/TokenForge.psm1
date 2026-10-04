@@ -193,16 +193,19 @@ function Get-TokenForgeIdentityFailure {
 
 function Get-TokenForgeToken {
     <# .SYNOPSIS
-    Request tokens using an ESTSAUTH session (code + PKCE), or an existing refresh token.
+    Request tokens using an ESTSAUTH session, system-browser code + PKCE, or a refresh token.
     .DESCRIPTION
-    Secrets are SecureString inputs/outputs. This does not grant consent or satisfy interactive policy.
+    Secrets are SecureString inputs/outputs. Cookie and refresh flows cannot satisfy interactive policy. Browser mode permits account selection and MFA.
     #>
     [CmdletBinding(DefaultParameterSetName = 'Cookie')]
     param(
         [Parameter(Mandatory)]$Request,
         [Parameter(Mandatory, ParameterSetName = 'Cookie')][securestring]$EstsAuth,
         [Parameter(ParameterSetName = 'Cookie')][ValidateSet('ESTSAUTH','ESTSAUTHPERSISTENT')][string]$CookieName = 'ESTSAUTH',
-        [Parameter(Mandatory, ParameterSetName = 'Refresh')][securestring]$RefreshToken
+        [Parameter(Mandatory, ParameterSetName = 'Refresh')][securestring]$RefreshToken,
+        [Parameter(Mandatory, ParameterSetName = 'Browser')][switch]$Browser,
+        [Parameter(ParameterSetName = 'Browser')][string]$LoginHint,
+        [Parameter(ParameterSetName = 'Browser')][ValidateRange(30,900)][int]$TimeoutSeconds = 300
     )
     # Plans may be saved as JSON. Validate the network-relevant fields again at the boundary.
     $clientGuid = [guid]::Empty
@@ -218,7 +221,7 @@ function Get-TokenForgeToken {
     $protocol = if ($Request.PSObject.Properties['Protocol']) { [string]$Request.Protocol } else { 'OAuth2V2Pkce' }
     if ($protocol -notin @('OAuth2V2Pkce','OAuth2V2Implicit','OAuth2V1Implicit') -or ($protocol -ne 'OAuth2V2Pkce' -and -not $isDiscovery)) { throw 'Implicit protocols are available only for explicit discovery plans.' }
     $implicitFlow = $protocol -ne 'OAuth2V2Pkce'
-    if ($implicitFlow -and $PSCmdlet.ParameterSetName -eq 'Refresh') { throw 'Implicit discovery does not redeem refresh tokens; use a PKCE request plan.' }
+    if ($implicitFlow -and $PSCmdlet.ParameterSetName -ne 'Cookie') { throw 'Implicit discovery does not redeem refresh tokens; use a PKCE request plan.' }
     $implicitTokens = $null
     $handler = [System.Net.Http.HttpClientHandler]::new()
     $handler.AllowAutoRedirect = $false
@@ -233,6 +236,14 @@ function Get-TokenForgeToken {
             if ($RefreshToken.Length -eq 0) { throw 'Refresh token is empty.' }
             $form.grant_type = 'refresh_token'
             $form.refresh_token = [System.Net.NetworkCredential]::new('', $RefreshToken).Password
+        } elseif ($PSCmdlet.ParameterSetName -eq 'Browser') {
+            $authorization = Invoke-TokenForgeBrowserAuthorization -Request $Request -Authority $authority -LoginHint $LoginHint -TimeoutSeconds $TimeoutSeconds
+            try {
+                $form.grant_type = 'authorization_code'
+                $form.code = [System.Net.NetworkCredential]::new('', $authorization.Code).Password
+                $form.code_verifier = [System.Net.NetworkCredential]::new('', $authorization.Verifier).Password
+                $form.redirect_uri = $authorization.RedirectUri
+            } finally { $authorization.Code.Dispose(); $authorization.Verifier.Dispose() }
         } else {
             if ($EstsAuth.Length -eq 0) { throw 'ESTSAUTH cookie is empty.' }
             try {
@@ -335,4 +346,4 @@ function Get-TokenForgeToken {
 
 foreach ($file in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'Private') -Filter '*.ps1' | Sort-Object Name) { . $file.FullName }
 foreach ($file in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'Public') -Filter '*.ps1' | Sort-Object Name) { . $file.FullName }
-Export-ModuleMember -Function Update-TokenForgeCatalog, Get-TokenForgeCatalog, Find-TokenForgeApplication, New-TokenForgeRequest, Get-TokenForgeToken, Get-TokenForgeTokenClaims, Get-TokenForgeDiscovery, Update-TokenForgeDiscovery, Get-TokenForgeTenantInventory, Register-TokenForgeApplication, New-TokenForgeDiscoveryRequest, Merge-TokenForgeScopeDatabase, New-TokenForgeScopeDatabase, Get-TokenForgeScopeDatabase, Add-TokenForgeScopeObservation, Compare-TokenForgeScopeDatabase, Export-TokenForgeScopeDatabase, Get-TokenForgeAssessmentCoverage, Invoke-TokenForgeScopeProbe, Sync-TokenForgeApplicationRegistration, Get-TokenForgeProbePlan, Get-TokenForgeEstsCookie, Test-TokenForgeTokenAccess, New-TokenForgeTenantRequest
+Export-ModuleMember -Function Update-TokenForgeCatalog, Get-TokenForgeCatalog, Find-TokenForgeApplication, New-TokenForgeRequest, Get-TokenForgeToken, Get-TokenForgeTokenClaims, Get-TokenForgeDiscovery, Update-TokenForgeDiscovery, Get-TokenForgeTenantInventory, Register-TokenForgeApplication, New-TokenForgeDiscoveryRequest, Merge-TokenForgeScopeDatabase, New-TokenForgeScopeDatabase, Get-TokenForgeScopeDatabase, Add-TokenForgeScopeObservation, Compare-TokenForgeScopeDatabase, Export-TokenForgeScopeDatabase, Get-TokenForgeAssessmentCoverage, Invoke-TokenForgeScopeProbe, Sync-TokenForgeApplicationRegistration, Get-TokenForgeProbePlan, Get-TokenForgeEstsCookie, Test-TokenForgeTokenAccess, New-TokenForgeTenantRequest, Get-TokenForgeAssessmentPlan, Get-TokenForgeMaintenanceReport

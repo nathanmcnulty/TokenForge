@@ -1,0 +1,51 @@
+{
+  "ObservedAt": "2026-10-03T18:48:49.0099884-08:00",
+  "Platform": "Linux",
+  "PasskeyLogin": true,
+  "IdentityMatched": true,
+  "NamespaceMatched": true,
+  "MinimalScopeProof": {
+    "ClientId": "038ddad9-5bbe-4f64-b0cd-12434d1e633b",
+    "RequestedScopes": [
+      "User.Read"
+    ],
+    "ApiStatus": 200,
+    "AdditionalScopeCount": 0,
+    "ApiScopeCount": 1
+  },
+  "RefreshProof": {
+    "ApiStatus": 200,
+    "AdditionalScopeCount": 0,
+    "PrincipalMatched": true
+  },
+  "ContextChecks": [
+    {
+      "Count": 0,
+      "Complete": true,
+      "Status": 200,
+      "Name": "DirectDirectoryRoles"
+    },
+    {
+      "Count": 2,
+      "Complete": true,
+      "Status": 200,
+      "Name": "Licenses"
+    },
+    {
+      "TestKeyFound": true,
+      "Status": 200,
+      "Name": "RegisteredTestPasskey"
+    },
+    {
+      "Name": "DirectoryAudit",
+      "Status": 403
+    }
+  ],
+  "ArmProof": {
+    "ApiStatus": 200,
+    "TokenIssued": true,
+    "PrincipalMatched": true
+  },
+  "SignatureValidated": false,
+  "SchemaVersion": 1
+}

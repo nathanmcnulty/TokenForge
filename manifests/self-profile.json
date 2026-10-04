@@ -1,0 +1,12 @@
+{
+  "SchemaVersion": 1,
+  "Checks": [{
+    "Id": "self-profile",
+    "ResourceId": "00000003-0000-0000-c000-000000000000",
+    "Scopes": ["User.Read"],
+    "ApiUri": "https://graph.microsoft.com/v1.0/me",
+    "Roles": [],
+    "Licensing": [],
+    "Reference": "https://learn.microsoft.com/en-us/graph/api/user-get"
+  }]
+}

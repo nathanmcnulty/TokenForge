@@ -11,7 +11,7 @@ non-Microsoft principals. Probe uses existing consent and stops at interactive p
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
- [Parameter(Mandatory)][ValidateSet('Discover','Inventory','Register','Probe','Merge','Export')][string]$Action,
+ [Parameter(Mandatory)][ValidateSet('Discover','SignIns','Inventory','Register','Probe','Merge','Export')][string]$Action,
  [Parameter(Mandatory)][string]$StatePath,
  [securestring]$GraphToken,
  [securestring]$EstsAuth,
@@ -22,6 +22,11 @@ param(
  [ValidateRange(1,1000)][int]$MaxRedirects=8,
  [switch]$GraphOnly,
  [switch]$ResolvePublishedCandidates,
+ [switch]$ResolveSignInCandidates,
+ [DateTimeOffset]$Since=[DateTimeOffset]::UtcNow.AddDays(-7),
+ [DateTimeOffset]$Until=[DateTimeOffset]::UtcNow,
+ [ValidateSet('interactiveUser','nonInteractiveUser','servicePrincipal','managedIdentity')][string[]]$EventTypes=@('interactiveUser','nonInteractiveUser','servicePrincipal','managedIdentity'),
+ [ValidateRange(1,10000)][int]$MaxPages=1000,
  [switch]$Refresh,
  [switch]$RetryFailures,
  [string[]]$InputDatabasePath,
@@ -44,6 +49,25 @@ try {
  if (-not $IsWindows) { [IO.File]::SetUnixFileMode((Join-Path $StatePath '.writer.lock'), ([IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite)) }
  switch ($Action) {
   'Discover' {Update-TokenForgeDiscovery -Path $discoveryPath}
+  'SignIns' {
+   if(-not $GraphToken){throw 'SignIns requires GraphToken.'}
+   $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
+   $report=Get-TokenForgeSignInApplications -GraphToken $GraphToken -Inventory $inventory -Since $Since -Until $Until -EventTypes $EventTypes -MaxPages $MaxPages -Verbose:($VerbosePreference -eq 'Continue')
+   $discovery=Get-Content -LiteralPath $discoveryPath -Raw|ConvertFrom-Json
+   $map=@{};foreach($app in $discovery.Applications){$map[$app.AppId]=$app}
+   foreach($row in $report.Applications){
+    if(-not $map.ContainsKey($row.AppId)){$map[$row.AppId]=[pscustomobject]@{AppId=$row.AppId;Name=$row.AppId;OwnerTenantId=$null;Ownership='Unverified';Sources=@();PublicClient=$null;Foci=$null;RedirectUris=@();PreferredRedirectUri='';Grants=@();IsResourceCandidate=$false;IdentifierUris=@()}}
+    $app=$map[$row.AppId]
+    if(-not @($app.Sources|Where-Object Evidence -eq 'ObservedSignInNotOwnership').Count){$app.Sources+= [pscustomobject]@{Name='SignInLogs';Location='https://graph.microsoft.com/beta/auditLogs/signIns';Evidence='ObservedSignInNotOwnership'}}
+   }
+   $discovery.Applications=@($map.Values|Sort-Object AppId)
+   & (Get-Module TokenForge) {
+    param($report,$discovery,$reportPath,$discoveryPath)
+    Save-TokenForgeDocument -Document $report -Path $reportPath
+    Save-TokenForgeDocument -Document $discovery -Path $discoveryPath
+   } $report $discovery (Join-Path $StatePath 'signin-applications.json') $discoveryPath
+   $report
+  }
   'Inventory' {
    if(-not $GraphToken){throw 'Inventory requires GraphToken.'}
    $discovery=Get-Content -LiteralPath $discoveryPath -Raw|ConvertFrom-Json
@@ -55,7 +79,7 @@ try {
   'Register' {
    if(-not $GraphToken){throw 'Register requires GraphToken.'}
    $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
-   Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $GraphToken -DatabasePath $databasePath -ClientId $ClientId -MaxApplications $MaxApplications -ResolvePublishedCandidates:$ResolvePublishedCandidates -RetryFailures:$RetryFailures -WhatIf:$WhatIfPreference
+   Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $GraphToken -DatabasePath $databasePath -ClientId $ClientId -MaxApplications $MaxApplications -ResolvePublishedCandidates:$ResolvePublishedCandidates -ResolveSignInCandidates:$ResolveSignInCandidates -RetryFailures:$RetryFailures -WhatIf:$WhatIfPreference
   }
   'Probe' {
    if(-not $EstsAuth){throw 'Probe requires EstsAuth.'}

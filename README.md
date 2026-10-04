@@ -95,6 +95,8 @@ No upstream dataset is committed here. ROADtools is MIT-licensed; upstream datas
 
 The [inventory workflow](docs/inventory.md) aggregates three public sources, verifies Microsoft service-principal ownership, registers missing candidates without granting consent, builds a client/resource probe matrix, and checkpoints scope observations. It supports resumable batches, fresh least-scope candidate selection, availability/scope diffs, and anonymous exports. `scripts/Invoke-TokenForgeInventory.ps1` is the PowerShell CLI entry point; a ZIP distribution with the runtime CLI is available through `scripts/Build-TokenForgePackage.ps1`. A standalone executable remains future work. See [browser authentication, assessment planning, and maintenance](docs/browser-assessment.md).
 
+See [sign-in discovery and account-specific sweeps](docs/signin-discovery-and-sweeps.md) to extract previously unknown app IDs, resolve missing Microsoft service principals, and resume token-scope probing separately for each account.
+
 ## Development
 
 ```powershell

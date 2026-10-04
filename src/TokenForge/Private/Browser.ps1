@@ -8,7 +8,7 @@ function Open-TokenForgeBrowser {
 }
 
 function Invoke-TokenForgeBrowserAuthorization {
-    param($Request, [string]$Authority, [string]$LoginHint, [int]$TimeoutSeconds)
+    param($Request, [string]$Authority, [string]$LoginHint, [int]$TimeoutSeconds, [switch]$NoConsent)
     $published = [uri]$Request.RedirectUri
     if ($Request.Spa -or $published.Scheme -cne 'http' -or $published.Host -cne 'localhost' -or $published.AbsolutePath -cne '/' -or $published.Query -or $published.Fragment -or $published.UserInfo) {
         throw 'Browser authentication requires a published http://localhost root redirect for a public native client.'
@@ -24,7 +24,7 @@ function Invoke-TokenForgeBrowserAuthorization {
         $callback = "http://localhost:$port/"
         $query = @{
             client_id = $Request.ClientId; redirect_uri = $callback; scope = ($Request.OAuthScopes -join ' ')
-            response_type = 'code'; response_mode = 'query'; prompt = 'select_account'
+            response_type = 'code'; response_mode = 'query'; prompt = $(if ($NoConsent) { 'none' } else { 'select_account' })
             code_challenge = $challenge; code_challenge_method = 'S256'; state = $state
         }
         if ($LoginHint) { $query.login_hint = $LoginHint }
@@ -64,7 +64,10 @@ function Invoke-TokenForgeBrowserAuthorization {
                 $reply = [Text.Encoding]::ASCII.GetBytes("HTTP/1.1 $status`r`nContent-Type: text/plain`r`nCache-Control: no-store`r`nReferrer-Policy: no-referrer`r`nConnection: close`r`nContent-Length: $($body.Length)`r`n`r`n$body")
                 $stream.Write($reply,0,$reply.Length)
                 if (-not $valid) { continue }
-                if ($hasError) { throw (Get-TokenForgeIdentityFailure -Content $values['error_description'] -Fallback 'Browser authorization was declined. Identity response details suppressed.') }
+                if ($hasError) {
+                    $reason = if ($NoConsent -and $values['error'] -cin @('consent_required','interaction_required','login_required','account_selection_required')) { 'Silent browser authorization requires an existing session and authorization; no interactive fallback performed.' } else { 'Browser authorization was declined. Identity response details suppressed.' }
+                    throw (Get-TokenForgeIdentityFailure -Content $values['error_description'] -Fallback $reason)
+                }
                 return [pscustomobject]@{
                     Code = ConvertTo-SecureString $values['code'] -AsPlainText -Force
                     Verifier = ConvertTo-SecureString $verifier -AsPlainText -Force

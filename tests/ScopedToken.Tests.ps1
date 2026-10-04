@@ -76,6 +76,25 @@ Describe 'Single-command scoped tokens' {
   $issued.TokenClaims.Scopes=@('User.Read','Mail.Read')
   {Get-TokenForgeScopedToken @options -MaxAdditionalScopes 0 -MaxRedirects 1}|Should -Throw '*No candidate*'
  }
+ It 'tries broad discovered coverage when explicit issuance satisfies a zero-extra cap' {
+  $observation.ScpScopes=@('User.Read','Mail.Read')
+  $result=Get-TokenForgeScopedToken @options -MaxAdditionalScopes 0
+  $result.ObservedAdditionalScopeCount|Should -Be 0
+  $result.ConsentEvidence|Should -Be SilentAuthorizationSucceededForThisRequest
+  $result.Request.Scopes|Should -Be @('User.Read')
+ }
+ It 'enforces a separate bootstrap scope limit and disposes rejected secrets' {
+  $bootstrap.TokenClaims.Scopes=@('User.Read','Mail.Read')
+  {Get-TokenForgeScopedToken @options -MaxBootstrapAdditionalScopes 0}|Should -Throw '*bootstrap exceeds*'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 0
+  {[Net.NetworkCredential]::new('', $bootstrap.AccessToken).Password}|Should -Throw
+  {[Net.NetworkCredential]::new('', $bootstrap.RefreshToken).Password}|Should -Throw
+ }
+ It 'requires delegated User.Read in the bootstrap token before identity confirmation' {
+  $bootstrap.TokenClaims.Scopes=@('Mail.Read')
+  {Get-TokenForgeScopedToken @options}|Should -Throw '*delegated User.Read*'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 0
+ }
  It 'returns valid token with API 403 separately without fallback' {
   Mock Test-TokenForgeTokenAccess -ModuleName TokenForge {[pscustomobject]@{Status=403;Accepted=$false}}
   $result=Get-TokenForgeScopedToken @options -ApiUri https://graph.microsoft.com/v1.0/me
@@ -121,6 +140,7 @@ Describe 'Single-command scoped tokens' {
   $result=Get-TokenForgeScopedToken @options
   $result.Request.RedirectUri|Should -Be 'http://localhost'
   $result.Request.Spa|Should -BeFalse
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 2 -Exactly -ParameterFilter {$Browser -and $NoConsent}
  }
  It 'skips disabled ranked clients before consuming the candidate limit' {
   ($inventory.Applications|Where-Object AppId -eq $client).AccountEnabled=$false

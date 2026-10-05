@@ -85,12 +85,12 @@ configuration and private scope evidence still remain on disk.
    API scopes; OIDC scopes are excluded. Explicit profile creation can set broader caps.
 6. Save under a session revision check, replacing the selected record on rotation. Deleted,
    changed, or expired sessions cannot be resurrected by renewal. Preserve the original retention
-   deadline and login-confirmation time. Only explicit login starts a new retention window.
+   deadline and login-confirmation time. Only explicit login starts a new retention window and clears old cached credentials so a failed refresh can recover through the new session.
 7. If requested, perform one resource-bound GET API check. A 403 is separate authorization
    evidence and does not trigger wider scopes or another client. Cache hits rerun this check.
 
 JWT inspection is diagnostic, not signature validation. API checks establish only the tested
-operation. Local logout removes local credentials; it does not revoke the server session.
+operation. Local logout removes profile-owned caches; it does not revoke the server session. Callers must dispose retrieved credential copies and disconnect Graph SDK connections separately.
 SecureString and private files reduce accidental exposure; a process running as the same user
 can still read its own credentials. Encrypted vault plaintext necessarily exists transiently
 while unlocked; the process cache retains only SecureStrings and nonsecret metadata.

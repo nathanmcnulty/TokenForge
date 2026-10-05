@@ -169,4 +169,14 @@ Describe 'Named profile sessions and managed tokens' {
   {[Net.NetworkCredential]::new('', $issued.AccessToken).Password}|Should -Throw
  }
 
+ It 'explicit login clears stale persisted token credentials for renewal recovery' {
+  Remove-Item "$root/lab/profile.json"
+  $profile=New-TokenForgeProfile lab example.test -Root $root -Storage Passphrase -StatePath $profile.StatePath
+  $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie -VaultPassword $password
+  & (Get-Module TokenForge) {param($root,$password) Invoke-TokenForgeVaultTransaction "$root/lab/session.tfvault" $password -Mode Update -Update {param($vault) $vault.Sessions.lab.Tokens['synthetic-stale-record']=@{RefreshToken='synthetic-revoked'}}} $root $password
+  $loginToken=New-ProfileTestToken
+  $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie -VaultPassword $password
+  (Get-TokenForgeVault "$root/lab/session.tfvault" $password).Sessions[0].Tokens.Count|Should -Be 0
+ }
+
 }

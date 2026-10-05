@@ -77,7 +77,8 @@ function Connect-TokenForgeProfile {
                 $session.CreatedAt=if($old){$old.CreatedAt}else{$now.ToString('o')}
                 $session.Cookie=if($cookie){[Net.NetworkCredential]::new('', $cookie).Password}else{$null}
                 $session.CookieName=$CookieName
-                if($old){$session.Tokens=$old.Tokens}
+                # A deliberate new login must not keep an expired/revoked refresh record that would block recovery.
+                $session.Tokens=@{}
                 $vault.Sessions[$Name]=$session
             }
             $passwordCopy=$VaultPassword.Copy()

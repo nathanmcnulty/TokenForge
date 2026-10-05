@@ -14,10 +14,10 @@ python3 -c 'import secrets; print(secrets.token_urlsafe(32), end="")' | gnome-ke
 keyring_pid=$!
 # Wait for the test bus service, without reading or logging any password.
 for attempt in {1..100}; do
- if dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.NameHasOwner string:org.freedesktop.secrets | rg -q 'boolean true'; then break; fi
+ if dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.NameHasOwner string:org.freedesktop.secrets | grep -q 'boolean true'; then break; fi
  sleep 0.1
 done
-if ! dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.NameHasOwner string:org.freedesktop.secrets | rg -q 'boolean true'; then
+if ! dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.NameHasOwner string:org.freedesktop.secrets | grep -q 'boolean true'; then
  echo 'Synthetic Secret Service did not start.' >&2
  exit 1
 fi

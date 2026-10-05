@@ -1,6 +1,6 @@
 @{
     RootModule = 'TokenForge.psm1'
-    ModuleVersion = '0.9.0'
+    ModuleVersion = '0.10.0'
     GUID = 'bd810ddc-54dd-47e9-b318-134ff4b64f04'
     Author = 'Nathan McNulty'
     Description = 'Discover first-party Entra scope metadata and request scoped tokens from an authorized session.'

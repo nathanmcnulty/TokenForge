@@ -1,0 +1,56 @@
+name: Native CLI validation
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            runtime: linux-x64
+          - os: windows-latest
+            runtime: win-x64
+          - os: macos-latest
+            runtime: osx-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          dotnet-version: 10.0.401
+      - name: Restore locked dependencies and test the shared core
+        shell: pwsh
+        run: |
+          dotnet restore native/TokenForge.Core.Tests --locked-mode
+          if ($LASTEXITCODE) { throw 'Restore failed.' }
+          dotnet run --project native/TokenForge.Core.Tests --no-restore
+          if ($LASTEXITCODE) { throw 'Core tests failed.' }
+      - name: Publish the native executable
+        shell: pwsh
+        run: ./scripts/Build-TokenForgeNative.ps1 -Runtime '${{ matrix.runtime }}'
+      - name: Smoke-test packaged CLI
+        shell: pwsh
+        run: |
+          $exe = Join-Path './dist/native/${{ matrix.runtime }}' $(if ($IsWindows) { 'tokenforge.exe' } else { 'tokenforge' })
+          & $exe help
+          if ($LASTEXITCODE) { throw 'CLI help failed.' }
+          $root = Join-Path ([IO.Path]::GetTempPath()) ('TokenForge-native-cli-' + [guid]::NewGuid())
+          if ($IsMacOS -and $root.StartsWith('/var/')) { $root = '/private' + $root }
+          try {
+            & $exe profile create --profile smoke --tenant example.test --root $root --json
+            if ($LASTEXITCODE) { throw 'CLI create failed.' }
+            & $exe status --profile smoke --root $root --json
+            if ($LASTEXITCODE) { throw 'CLI status failed.' }
+          } finally { if (Test-Path $root) { Remove-Item $root -Recurse -Force } }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tokenforge-${{ matrix.runtime }}
+          path: dist/native/${{ matrix.runtime }}/
+          if-no-files-found: error
+          retention-days: 7

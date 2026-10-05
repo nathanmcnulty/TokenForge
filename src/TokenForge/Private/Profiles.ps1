@@ -57,15 +57,14 @@ function Copy-TokenForgeCredentialResult {
 function Assert-TokenForgeProfileToken {
     param($Token,$Profile,[string[]]$Scope,[string]$ClientId,[string]$ResourceId,[int]$MaxAdditionalScopes,[switch]$AllowExpired)
     $claims=Get-TokenForgeTokenClaims -AccessToken $Token.AccessToken
-    $audiences=@($ResourceId)
-    if($ResourceId -eq '00000003-0000-0000-c000-000000000000'){$audiences+=@('https://graph.microsoft.com')}
-    if($ResourceId -eq '797f4846-ba00-4fd7-ba43-dac1f8f63013'){$audiences+=@('https://management.azure.com','https://management.core.windows.net')}
-    if($claims.TenantFingerprint -ne $Profile.ExpectedTenantFingerprint -or $claims.PrincipalFingerprint -ne $Profile.ExpectedPrincipalFingerprint -or
-       $claims.ClientId -ne $ClientId -or -not $claims.Audience -or $claims.Audience.TrimEnd('/') -notin $audiences -or -not $claims.HasDelegatedScopeClaim -or
-       @($Scope|Where-Object {$claims.Scopes -cnotcontains $_}).Count){throw 'Token does not match the profile account, tenant, client, resource, or scopes.'}
-    if(-not $claims.ExpiresAt -or -not $Token.ExpiresAt -or (-not $AllowExpired -and ($claims.ExpiresAt -le [DateTimeOffset]::UtcNow.AddMinutes(2) -or ([DateTimeOffset]$Token.ExpiresAt) -le [DateTimeOffset]::UtcNow.AddMinutes(2)))){throw 'Token has unknown or insufficient remaining lifetime.'}
-    $extra=@($claims.Scopes|Where-Object {$_ -cnotin @('openid','profile','email','offline_access') -and $Scope -cnotcontains $_})
-    if($extra.Count -gt $MaxAdditionalScopes -or ($Token.PSObject.Properties['AdditionalScopes'] -and @($Token.AdditionalScopes).Count -gt $MaxAdditionalScopes)){throw 'Token exceeds the profile additional-scope policy.'}
+    $responseExtras=if($Token.PSObject.Properties['AdditionalScopes']){@($Token.AdditionalScopes).Count}else{0}
+    $jwtExpiry=if($claims.ExpiresAt){[Nullable[DateTimeOffset]]$claims.ExpiresAt}else{$null}
+    $responseExpiry=if($Token.ExpiresAt){[Nullable[DateTimeOffset]]$Token.ExpiresAt}else{$null}
+    try{
+        $null=[TokenForge.Core.V0100.TokenPolicy]::Validate($claims.TenantFingerprint,$claims.PrincipalFingerprint,$claims.ClientId,$claims.Audience,
+            $Profile.ExpectedTenantFingerprint,$Profile.ExpectedPrincipalFingerprint,$ClientId,$ResourceId,[string[]]$claims.Scopes,[string[]]$Scope,
+            $claims.HasDelegatedScopeClaim,$jwtExpiry,$responseExpiry,$MaxAdditionalScopes,$responseExtras,[bool]$AllowExpired,[DateTimeOffset]::UtcNow)
+    }catch{throw 'Token does not satisfy the profile identity, client, resource, scope, or lifetime policy.'}
     $claims
 }
 function Save-TokenForgeProfileToken {

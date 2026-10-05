@@ -16,7 +16,7 @@ try {
  foreach($name in @('tokenforge.ps1','Invoke-TokenForge.ps1','Invoke-TokenForgeInventory.ps1','Invoke-TokenForgeLiveComparison.ps1')) {Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination (Join-Path $stage 'scripts')}
  $null=New-Item -ItemType Directory -Path (Join-Path $stage 'docs')
  Get-ChildItem -LiteralPath (Join-Path $root 'docs') -File -Filter '*.md'|Copy-Item -Destination (Join-Path $stage 'docs')
- foreach($name in @('profile-workflow-validation-2026-10-04.json','live-validation-2026-10-02.json','browser-validation-2026-10-03.json','session-validation-2026-10-03.json','passkey-validation-2026-10-03.json','scope-workflow-validation-2026-10-04.json','preconsent-validation-2026-10-04.json','vault-validation-2026-10-04.json','signin-sweep-validation-2026-10-04.json','application-metadata-validation-2026-10-04.json')) {Copy-Item -LiteralPath (Join-Path $root "docs/$name") -Destination (Join-Path $stage 'docs')}
+ foreach($name in @('native-validation-2026-10-04.json','profile-workflow-validation-2026-10-04.json','live-validation-2026-10-02.json','browser-validation-2026-10-03.json','session-validation-2026-10-03.json','passkey-validation-2026-10-03.json','scope-workflow-validation-2026-10-04.json','preconsent-validation-2026-10-04.json','vault-validation-2026-10-04.json','signin-sweep-validation-2026-10-04.json','application-metadata-validation-2026-10-04.json')) {Copy-Item -LiteralPath (Join-Path $root "docs/$name") -Destination (Join-Path $stage 'docs')}
  $archive=Join-Path $OutputPath "TokenForge-$($manifest.Version).zip"
  Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $archive -Force
  $hash=(Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()

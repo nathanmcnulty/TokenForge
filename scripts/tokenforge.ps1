@@ -11,13 +11,18 @@ param(
  [string]$PasskeyPath,[string]$XdrModulePath,[switch]$Browser,[switch]$Interactive,
  [guid]$BootstrapClientId='038ddad9-5bbe-4f64-b0cd-12434d1e633b',
  [ValidateRange(0,8760)][int]$MaxAdditionalScopes=0,[ValidateRange(0,8760)][int]$MaxBootstrapAdditionalScopes=0,
- [uri]$ApiUri,[string]$GraphCommand,[switch]$Json
+ [uri]$ApiUri,[string]$GraphCommand,[switch]$PromptPassphrase,[switch]$Json
 )
 $ErrorActionPreference='Stop'
 $manifest=Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1'
 if(-not (Get-Module TokenForge)){Import-Module $manifest}
 $common=@{Name=$Profile;Root=$Root}
 try{
+ if($PromptPassphrase){
+  if($VaultPassword){throw 'Choose a provided passphrase or an interactive prompt.'}
+  $VaultPassword=Read-Host 'Vault passphrase' -AsSecureString
+ }
+ if($Scope -and $Scope.Count -eq 1 -and $Scope[0].Contains(',')){$Scope=@($Scope[0].Split(','))}
  $result=switch($Command){
   profile {
    switch($Operation){
@@ -59,4 +64,4 @@ try{
  if($Json){[pscustomobject]@{SchemaVersion=1;Succeeded=$false;Code='OperationFailed';Message='Operation failed. Use the module API for bounded diagnostic errors.'}|ConvertTo-Json -Compress}else{Write-Warning 'Operation failed. Use the module API for bounded diagnostic errors.'}
  $global:LASTEXITCODE=1
  if($MyInvocation.InvocationName -ne '.'){exit 1}
-}
+}finally{if($PromptPassphrase -and $VaultPassword){$VaultPassword.Dispose()}}

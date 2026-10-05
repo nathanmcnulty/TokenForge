@@ -6,7 +6,7 @@ try
 {
     if (args.Length == 0 || args[0] is "help" or "--help")
     {
-        Console.WriteLine("TokenForge: profile create/show, login, status, doctor, logout, scopes explain, token get, graph permissions; evidence import/export/plan/pending/checkpoint. Use --help in docs/native-cli.md. Authentication currently requires PowerShell 7.4+.");
+        Console.WriteLine("TokenForge: profile create/show, login, status, doctor, logout, scopes explain, token get, graph permissions; evidence import/export/plan/pending/checkpoint. See README.md beside this executable for examples. Authentication currently requires PowerShell 7.4+.");
         return 0;
     }
     if (args[0] == "evidence")

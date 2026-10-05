@@ -8,7 +8,7 @@ function Get-TokenForgeProfileToken {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][ValidatePattern('^[a-z][a-z0-9_-]{0,63}$')][string]$Name,
-        [string]$Root,[securestring]$VaultPassword,
+        [string]$Root,[securestring]$VaultPassword,[ValidateLength(0,320)][string]$LoginHint,
         [ValidateSet('graph','arm')][string]$Resource='graph',
         [guid]$ResourceId,
         [Parameter(Mandatory)][ValidateCount(1,64)][string[]]$Scope,
@@ -75,7 +75,7 @@ function Get-TokenForgeProfileToken {
         if(-not $token){
             $inventory=Get-Content -LiteralPath (Resolve-TokenForgeVaultPath (Join-Path $p.StatePath 'inventory.json')) -Raw|ConvertFrom-Json
             $database=Get-TokenForgeScopeDatabase -Path (Resolve-TokenForgeVaultPath (Join-Path $p.StatePath 'scopes.json'))
-            $auth=if($ownedCookie){@{EstsAuth=$ownedCookie;CookieName=$cookieName}}else{@{Browser=$true;NoConsent=$true}}
+            $auth=if($ownedCookie){@{EstsAuth=$ownedCookie;CookieName=$cookieName}}else{@{Browser=$true;NoConsent=$true;LoginHint=$LoginHint}}
             $coverage=@(Get-TokenForgeAssessmentCoverage -Database $database -ResourceId $ResourceId -Scope $Scope -TenantFingerprint $p.ExpectedTenantFingerprint -PrincipalFingerprint $p.ExpectedPrincipalFingerprint -MaxAgeHours $p.MaxAgeHours|Where-Object CoversAll)
             if(-not $coverage.Count){
                 $token=Request-TokenForgeProfileScope -Profile $p -Inventory $inventory -Database $database -DatabasePath (Join-Path $p.StatePath 'scopes.json') -ResourceId $ResourceId -Scope $Scope -Authentication $auth -MaxCandidates $MaxCandidates -MaxRedirects $MaxRedirects

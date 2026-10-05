@@ -1,0 +1,12 @@
+{
+ "SchemaVersion":1,
+ "ValidatedAt":"2026-10-04",
+ "Platform":"Linux",
+ "NativeCoreChecks":29,
+ "PowerShellTestsPassed":227,
+ "PowerShellPlatformSkips":1,
+ "NativeCli":{"Runtime":"linux-x64","SelfContained":true,"ProfileCreateSucceeded":true,"StatusSucceeded":true,"AuthenticationDependency":"PowerShell 7.4+"},
+ "Evidence":{"ImportedObservations":19473,"RoundtripObservations":19473,"RepeatedImportAdded":0,"MalformedImportRollsBack":true,"PrivatePermissionsChecked":true,"StableChunksAndCheckpointsChecked":true,"CredentialStore":false},
+ "SharedPolicyLiveProof":{"Accounts":["nora","secadmin"],"SameClientRenewalApiStatus":200,"AdditionalApiScopes":0,"RetentionPreserved":true,"ConfirmationTimePreserved":true,"GraphSdkReadSucceeded":true},
+ "Limitations":["OS keystore adapters are not implemented", "Native authentication still delegates to PowerShell", "SQLite is optional; CI discovery still uses JSON", "Windows/macOS authentication not live tested", "Native AOT and GUI remain separate milestones"]
+}

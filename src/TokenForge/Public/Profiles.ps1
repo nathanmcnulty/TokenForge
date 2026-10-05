@@ -54,7 +54,7 @@ function Get-TokenForgeProfileStatus {
         SessionState=if($session){if(([DateTimeOffset]$session.RetainUntil) -le [DateTimeOffset]::UtcNow){'RetentionExpired'}else{'Available'}}elseif($p.Storage -eq 'Passphrase' -and (Test-Path $record.VaultPath)){'Locked'}else{'LoginRequired'};
         RetainUntil=if($session){$session.RetainUntil}else{$null};CachedTokenCount=if($p.Storage -eq 'Memory' -and $context){$context.Tokens.Count}elseif($session){$session.Tokens.Count}else{0};
         MaxAdditionalScopes=$p.MaxAdditionalScopes;MaxBootstrapAdditionalScopes=$p.MaxBootstrapAdditionalScopes;
-        StatePath=$p.StatePath;CredentialSource=if($session -and $p.Storage -eq 'Passphrase'){if($session.HasCookie){'EncryptedEstsCookie'}else{'BrowserSsoRequiredForNewClients'}}elseif($context -and $context.Cookie){'ProcessEstsCookie'}else{'BrowserSsoRequiredForNewClients'};Evidence='LocalSessionMetadataNotServerValidity'}
+        StatePath=$p.StatePath;CredentialSource=if(-not $session){if($p.Storage -eq 'Passphrase' -and (Test-Path $record.VaultPath)){'UnknownUntilUnlocked'}else{'NoneUntilLogin'}}elseif($p.Storage -eq 'Passphrase'){if($session.HasCookie){'EncryptedEstsCookie'}else{'BrowserSsoRequiredForNewClients'}}elseif($context -and $context.Cookie){'ProcessEstsCookie'}else{'BrowserSsoRequiredForNewClients'};Evidence='LocalSessionMetadataNotServerValidity'}
 }
 function Test-TokenForgeProfile {
     [CmdletBinding()]

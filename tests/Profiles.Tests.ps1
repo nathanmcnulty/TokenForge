@@ -169,4 +169,25 @@ Describe 'Named profile sessions and managed tokens' {
   {[Net.NetworkCredential]::new('', $issued.AccessToken).Password}|Should -Throw
  }
 
+ It 'explicit login clears stale persisted token credentials for renewal recovery' {
+  Remove-Item "$root/lab/profile.json"
+  $profile=New-TokenForgeProfile lab example.test -Root $root -Storage Passphrase -StatePath $profile.StatePath
+  $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie -VaultPassword $password
+  & (Get-Module TokenForge) {param($root,$password) Invoke-TokenForgeVaultTransaction "$root/lab/session.tfvault" $password -Mode Update -Update {param($vault) $vault.Sessions.lab.Tokens['synthetic-stale-record']=@{RefreshToken='synthetic-revoked'}}} $root $password
+  $loginToken=New-ProfileTestToken
+  $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie -VaultPassword $password
+  (Get-TokenForgeVault "$root/lab/session.tfvault" $password).Sessions[0].Tokens.Count|Should -Be 0
+ }
+
+ It 'can validate hinted scopes absent from resource definitions using explicit issuance' {
+  $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie
+  Mock Get-TokenForgeAssessmentCoverage -ModuleName TokenForge {return @()}
+  Mock Get-TokenForgeScopeCandidates -ModuleName TokenForge {return [pscustomobject]@{ClientId='038ddad9-5bbe-4f64-b0cd-12434d1e633b';CandidateRank=2}}
+  $issued=New-ProfileTestToken -Scopes @('Internal.Read')
+  Mock Get-TokenForgeToken -ModuleName TokenForge {param($Request) $Request.Scopes|Should -Be @('Internal.Read');$Request.Source|Should -Be 'PublishedOrConfiguredHintNotProvenConsent';return $issued}
+  $result=Get-TokenForgeProfileToken lab -Root $root -Scope Internal.Read
+  $result.TokenClaims.Scopes|Should -Be @('Internal.Read')
+  $result.AccessToken.Dispose();$result.RefreshToken.Dispose()
+ }
+
 }

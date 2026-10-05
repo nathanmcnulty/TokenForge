@@ -109,3 +109,5 @@ CI runs the same tests on Windows, Linux, and macOS. Tests use synthetic credent
 Application IDs now accumulate in a persistent [`applications.json` catalog](docs/application-metadata.md), with supported attributes, provenance, observation dates, and change history. Scheduled discovery publishes public metadata and anonymous scope batches on `discovery-data`; local tenant metadata stays private.
 
 Named profiles and the simpler CLI are documented in [Profiles and CLI](docs/profiles-and-cli.md). The platform direction is documented in [Native architecture](docs/native-architecture.md).
+
+A native CLI and transactional evidence workspace are available; see [Native CLI](docs/native-cli.md). Authentication currently uses the packaged PowerShell module.

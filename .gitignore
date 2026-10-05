@@ -6,3 +6,9 @@ TestResults*.xml
 dist/
 *.tfvault
 *.tfvault.lock
+
+**/bin/
+**/obj/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

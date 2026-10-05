@@ -1,4 +1,5 @@
 Set-StrictMode -Version Latest
+if(-not ('TokenForge.Core.V0100.TokenPolicy' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot 'Core/TokenPolicy.cs')}
 
 $script:CatalogUrl = 'https://raw.githubusercontent.com/dirkjanm/ROADtools/master/roadtx/roadtools/roadtx/firstpartyscopes.json'
 $script:CatalogPath = if ($IsWindows) { Join-Path $env:LOCALAPPDATA 'TokenForge/catalog.json' } else { Join-Path $HOME '.cache/TokenForge/catalog.json' }

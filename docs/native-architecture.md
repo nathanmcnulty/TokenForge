@@ -2,7 +2,7 @@
 
 Use one shared .NET core with platform adapters, a CLI first, and a metadata-only visualization
 surface later. Do not maintain separate OAuth policy implementations for each operating system.
-The PowerShell workflow is the compatibility surface while code moves into the shared core.
+The PowerShell workflow is the compatibility surface while code moves into the shared core. The first extraction is implemented: shared issued-token policy, SQLite evidence import/export and checkpoints, and native CLI packages. See [Native CLI](native-cli.md) for current dependencies.
 
 The security boundary is a credential service that exposes scoped acquisition operations and
 metadata, not a general cookie jar export. Platform adapters protect a random vault encryption
@@ -17,7 +17,7 @@ Keep three interfaces small:
 - `IEvidenceStore`: transactional observations, sources, dates, request context, and checkpoints.
 - `ITokenAcquirer`: explicit acquisition/renewal with policy and cancellation; no raw-secret logs.
 
-SQLite should become the private evidence store with indices on namespace, resource, client,
+The optional SQLite workspace is implemented; integrating it as the primary discovery store is a separate migration. It provides a private evidence store with indices on namespace, resource, client,
 and observation time. Keep JSON as deterministic import/export and the public application catalog
 format. Freeze each discovery plan's membership, hash, and chunk assignments; resume from explicit
 terminal checkpoints. Failed probes do not erase the previous successful evidence's date.

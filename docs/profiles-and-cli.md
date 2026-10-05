@@ -32,7 +32,7 @@ explicit administrative operations; normal token requests do not register applic
 
 The default bootstrap client is the narrow client validated in this lab, not a guarantee for
 other tenants. Browser login needs an enabled, verified client with a published localhost
-callback. Configure `-BootstrapClientId` when creating the profile. Software-passkey profiles
+callback. Configure `-BootstrapClientId` when creating the profile. Use `-LoginHint` for browser login and token acquisition when multiple browser accounts exist; identity binding still controls the result. Software-passkey profiles
 also take `-PasskeyPath` and `-XdrModulePath`; they reuse the existing optional XDR adapter.
 
 ## CLI commands
@@ -80,17 +80,17 @@ configuration and private scope evidence still remain on disk.
 4. If no reusable credential exists, use fresh account observations. If none cover the scopes,
    try up to eight ownership-verified candidates supported by published hints or applicable tenant
    grants. These requests use explicit scopes and supported registered callbacks, with no consent,
-   `.default`, broad sweep, or registration fallback. Successful evidence is checkpointed privately.
+   `.default`, broad sweep, or registration fallback. Hinted scope names can be tried even when omitted from resource definitions; only a matching issued token confirms the request. Successful evidence is checkpointed privately.
 5. Validate the issued context, lifetime, and scope policy. The default permits zero additional
    API scopes; OIDC scopes are excluded. Explicit profile creation can set broader caps.
 6. Save under a session revision check, replacing the selected record on rotation. Deleted,
    changed, or expired sessions cannot be resurrected by renewal. Preserve the original retention
-   deadline and login-confirmation time. Only explicit login starts a new retention window.
+   deadline and login-confirmation time. Only explicit login starts a new retention window and clears old cached credentials so a failed refresh can recover through the new session.
 7. If requested, perform one resource-bound GET API check. A 403 is separate authorization
    evidence and does not trigger wider scopes or another client. Cache hits rerun this check.
 
 JWT inspection is diagnostic, not signature validation. API checks establish only the tested
-operation. Local logout removes local credentials; it does not revoke the server session.
+operation. Local logout removes profile-owned caches; it does not revoke the server session. Callers must dispose retrieved credential copies and disconnect Graph SDK connections separately.
 SecureString and private files reduce accidental exposure; a process running as the same user
 can still read its own credentials. Encrypted vault plaintext necessarily exists transiently
 while unlocked; the process cache retains only SecureStrings and nonsecret metadata.
@@ -115,3 +115,5 @@ disconnect and reconnect explicitly when changing scopes or renewing the SDK tok
 The SDK supports [`Connect-MgGraph -AccessToken`](https://github.com/microsoftgraph/msgraph-sdk-powershell/blob/main/docs/authentication.md).
 Its [context implementation](https://github.com/microsoftgraph/msgraph-sdk-powershell/blob/main/src/Authentication/Authentication/Cmdlets/GetMGContext.cs)
 returns the process-wide context, so runspaces do not provide independent account isolation.
+
+For teaching, the existing `Export-TokenForgeVaultView` produces an offline HTML view from whitelisted persisted-session metadata. It contains no cookie or token values and makes no network calls. See [Session vault](session-vault.md).

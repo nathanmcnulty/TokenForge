@@ -60,6 +60,10 @@ try{
  }
  if($Json){ConvertTo-Json -InputObject $result -Depth 15}else{$result}
  $global:LASTEXITCODE=0
+ if($Command -eq 'profile' -and $Operation -eq 'forget-key' -and $result -and -not $result.KeyRemoved){
+  $global:LASTEXITCODE=1
+  if($MyInvocation.InvocationName -ne '.'){exit 1}
+ }
 }catch{
  # Do not echo dependency exception messages or invocation lines that may contain credentials.
  if($Json){[pscustomobject]@{SchemaVersion=1;Succeeded=$false;Code='OperationFailed';Message='Operation failed. Use the module API for bounded diagnostic errors.'}|ConvertTo-Json -Compress}else{Write-Warning 'Operation failed. Use the module API for bounded diagnostic errors.'}

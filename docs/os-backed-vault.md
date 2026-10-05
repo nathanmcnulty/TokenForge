@@ -28,9 +28,9 @@ Login still requires a fresh verified tenant inventory; see [Profiles and CLI](p
 Profile creation writes configuration only. An explicit login creates a key when both the key
 and vault are absent. Existing keys are reused; a missing, malformed, unavailable, or locked
 key never triggers replacement of an existing vault. Supplied passphrases are rejected for
-OS-backed profiles. Status and doctor do not access or unlock the OS store. A new process can
-report `Locked` until an explicit login or token operation opens it; this is a passive local
-state, not a test of OS-store availability or server validity.
+OS-backed profiles. Status and doctor do not access or unlock the OS store. When no in-process login metadata is available, status reports `Locked` even if the OS store
+is unlocked or a previous token operation succeeded. This passive state is not a test of
+OS-store availability or server validity.
 
 On Linux, install your distribution's libsecret runtime and enable a compatible Secret Service
 in the user's desktop session. Authentication operations can trigger the store's unlock prompt.
@@ -48,7 +48,7 @@ Logout removes the local session and cached tokens while retaining the OS key fo
 explicit login. `profile forget-key` / `Remove-TokenForgeProfileKey` deletes the encrypted vault
 first, then the key, under profile and vault locks. It leaves profile configuration and evidence
 intact. If deletion cannot be confirmed, the result says `KeyRemoved: false` and directs you to
-retry. Linux verifies that matching locked or unlocked items are absent before reporting success.
+retry; the CLI preserves this result and exits with code 1. Linux verifies that matching locked or unlocked items are absent before reporting success.
 Neither operation revokes credentials at Microsoft.
 
 A random profile key ID and the absolute profile directory determine the key handle. Copying

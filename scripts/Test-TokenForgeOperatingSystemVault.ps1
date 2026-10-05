@@ -32,7 +32,9 @@ try{
         if($LASTEXITCODE -or ($lockResult -join '') -notmatch '/org/freedesktop/secrets/collection/login'){throw 'Synthetic collection locking failed.'}
         $partial=Remove-TokenForgeProfileKey fixture -Root $root
         if($partial.KeyRemoved){throw 'Locked-item deletion was incorrectly reported as successful.'}
-        Write-Output 'Synthetic locked-item deletion reports a retryable failure.'
+        $cliResult=& pwsh -NoProfile -File (Join-Path $PSScriptRoot 'tokenforge.ps1') -Command profile -Operation forget-key -Profile fixture -Root $root -Json
+        if($LASTEXITCODE -ne 1 -or ($cliResult|ConvertFrom-Json).KeyRemoved){throw 'CLI partial deletion must retain its metadata and return a failure exit code.'}
+        Write-Output 'Synthetic locked-item deletion reports a retryable failure and CLI exit code 1.' 
         $lockedFailure=$false
         try{$unexpected=& (Get-Module TokenForge) {param($record) Open-TokenForgeProfilePlatformKey $record -Create} $record; $unexpected.Dispose()}catch{$lockedFailure=$_.Exception.Message -match 'Operating-system vault key unavailable'}
         if(-not $lockedFailure){throw 'A locked synthetic key was replaced or unexpectedly unlocked.'}

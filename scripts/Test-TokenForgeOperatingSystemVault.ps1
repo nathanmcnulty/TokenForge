@@ -34,11 +34,11 @@ try{
         if($partial.KeyRemoved){throw 'Locked-item deletion was incorrectly reported as successful.'}
         $cliResult=& pwsh -NoProfile -File (Join-Path $PSScriptRoot 'tokenforge.ps1') -Command profile -Operation forget-key -Profile fixture -Root $root -Json
         if($LASTEXITCODE -ne 1 -or ($cliResult|ConvertFrom-Json).KeyRemoved){throw 'CLI partial deletion must retain its metadata and return a failure exit code.'}
-        Write-Output 'Synthetic locked-item deletion reports a retryable failure and CLI exit code 1.' 
+        Write-Output 'Synthetic locked-item deletion reports a retryable failure and CLI exit code 1.'
         $lockedFailure=$false
         try{$unexpected=& (Get-Module TokenForge) {param($record) Open-TokenForgeProfilePlatformKey $record -Create} $record; $unexpected.Dispose()}catch{$lockedFailure=$_.Exception.Message -match 'Operating-system vault key unavailable'}
         if(-not $lockedFailure){throw 'A locked synthetic key was replaced or unexpectedly unlocked.'}
-        Write-Output 'Synthetic locked-key acquisition fails without replacement.' 
+        Write-Output 'Synthetic locked-key acquisition fails without replacement.'
         # The isolated keyring fixture is deleted by the Linux harness after this process exits.
     }
 }finally{

@@ -3,6 +3,8 @@
 set -euo pipefail
 ulimit -c 0
 unset DISPLAY WAYLAND_DISPLAY
+# Service activation uses the bus environment, not just this shell environment.
+dbus-update-activation-environment DISPLAY= WAYLAND_DISPLAY=
 fixture=$(mktemp -d)
 export XDG_DATA_HOME="$fixture/data"
 export XDG_RUNTIME_DIR="$fixture/runtime"

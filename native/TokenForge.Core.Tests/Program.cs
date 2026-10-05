@@ -50,6 +50,35 @@ try
   File.SetUnixFileMode(path,UnixFileMode.UserRead|UnixFileMode.UserWrite);
   var link=Path.Combine(root,"linked.sqlite");File.CreateSymbolicLink(link,path);Reject(()=>{using var linked=new EvidenceStore(link);});
  }
- Console.WriteLine($"{count} native checks passed.");return 0;
+ Console.WriteLine($"{count} native checks passed.");
 }
 finally{Directory.Delete(root,true);}
+
+// Explicit synthetic integration checks: no tenant authentication or production credentials.
+if(args.Contains("--os-store"))
+{
+ var handle=Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+ var other=Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+ try
+ {
+  Reject(()=>TokenForge.Core.V0110.PlatformVaultKey.Open(handle,false));
+  using var first=TokenForge.Core.V0110.PlatformVaultKey.Open(handle,true);
+  using var reopened=TokenForge.Core.V0110.PlatformVaultKey.Open(handle,false);
+  using var duplicate=TokenForge.Core.V0110.PlatformVaultKey.Open(handle,true);
+  Check(first.Length==44 && reopened.Length==44);
+  Check(new System.Net.NetworkCredential("",first).Password==new System.Net.NetworkCredential("",reopened).Password);
+  Check(new System.Net.NetworkCredential("",first).Password==new System.Net.NetworkCredential("",duplicate).Password);
+  Reject(()=>TokenForge.Core.V0110.PlatformVaultKey.Open(other,false));
+  var write=typeof(TokenForge.Core.V0110.PlatformVaultKey).GetMethod("Write",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static)!;
+  write.Invoke(null,new object[]{handle,new string('!',44)});
+  Reject(()=>TokenForge.Core.V0110.PlatformVaultKey.Open(handle,true)); // Corruption cannot trigger replacement.
+  TokenForge.Core.V0110.PlatformVaultKey.Delete(handle);
+  Reject(()=>TokenForge.Core.V0110.PlatformVaultKey.Open(handle,false));
+  TokenForge.Core.V0110.PlatformVaultKey.Delete(handle); // Idempotent cleanup.
+  Console.WriteLine("Synthetic OS-store create/reopen/retain/corruption/delete checks passed.");
+ }
+ finally {TokenForge.Core.V0110.PlatformVaultKey.Delete(handle);}
+}
+Reject(()=>TokenForge.Core.V0110.PlatformVaultKey.Open("invalid",true));
+
+return 0;

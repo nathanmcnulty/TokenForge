@@ -117,3 +117,5 @@ Its [context implementation](https://github.com/microsoftgraph/msgraph-sdk-power
 returns the process-wide context, so runspaces do not provide independent account isolation.
 
 For teaching, the existing `Export-TokenForgeVaultView` produces an offline HTML view from whitelisted persisted-session metadata. It contains no cookie or token values and makes no network calls. See [Session vault](session-vault.md).
+
+Explicit Windows/Linux OS-backed profile storage is documented in [OS-backed vault](os-backed-vault.md).

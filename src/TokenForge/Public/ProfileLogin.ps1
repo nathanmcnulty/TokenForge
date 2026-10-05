@@ -16,12 +16,14 @@ function Connect-TokenForgeProfile {
     $record=Read-TokenForgeProfile $Name $Root;$p=$record.Configuration
     if($Browser -and $EstsAuth){throw 'Choose browser or ESTS authentication.'}
     if($Interactive -and -not $Browser){throw 'Interactive sign-in requires Browser.'}
+    if($p.Storage -eq 'OperatingSystem' -and $VaultPassword){throw 'OS-backed profiles do not accept a vault passphrase.'}
     if($p.Storage -eq 'Passphrase' -and -not $VaultPassword){throw 'Provide a vault passphrase for the persisted profile.'}
     $lock=Open-TokenForgeProfileOperation $record.Directory
-    $cookie=$null;$token=$null;$passwordCopy=$null
+    $cookie=$null;$token=$null;$passwordCopy=$null;$ownedPassword=$null
     try{
+        if($p.Storage -eq 'OperatingSystem'){$ownedPassword=Open-TokenForgeProfilePlatformKey $record -Create;$VaultPassword=$ownedPassword}
         $initialSessionRevision=$null
-        if($p.Storage -eq 'Passphrase' -and (Test-Path $record.VaultPath)){
+        if($p.Storage -ne 'Memory' -and (Test-Path $record.VaultPath)){
             $initialVault=Invoke-TokenForgeVaultTransaction $record.VaultPath $VaultPassword
             $initialSession=$initialVault.Sessions[$Name]
             if($initialSession){$initialSessionRevision=$initialSession.Revision}
@@ -66,7 +68,7 @@ function Connect-TokenForgeProfile {
         $token|Add-Member ConsentEvidence 'ProfileLoginGraphIdentityConfirmed' -Force
         $token|Add-Member ObservedAdditionalScopeCount $extra.Count -Force
         $session=@{TenantFingerprint=$claims.TenantFingerprint;PrincipalFingerprint=$claims.PrincipalFingerprint;RetainUntil=$now.AddHours($p.SessionRetentionHours).ToString('o');LastConfirmedAt=$now.ToString('o');Tokens=@{};Revision=[guid]::NewGuid().ToString()}
-        if($p.Storage -eq 'Passphrase'){
+        if($p.Storage -ne 'Memory'){
             if(-not (Test-Path $record.VaultPath)){$null=New-TokenForgeVault $record.VaultPath $VaultPassword}
             # Explicit login renews local retention. Existing different identities still cannot replace this name.
             Invoke-TokenForgeVaultTransaction $record.VaultPath $VaultPassword -Mode Update -Update {
@@ -81,9 +83,10 @@ function Connect-TokenForgeProfile {
                 $session.Tokens=@{}
                 $vault.Sessions[$Name]=$session
             }
-            $passwordCopy=$VaultPassword.Copy()
+            if($p.Storage -eq 'Passphrase'){$passwordCopy=$VaultPassword.Copy()}
         }
         Save-TokenForgeDocument -Document $p -Path $record.Path
+        if($p.Storage -eq 'OperatingSystem' -and $cookie){$cookie.Dispose();$cookie=$null}
         Clear-TokenForgeProfileContext $record.ContextKey
         $script:ProfileContexts[$record.ContextKey]=@{Cookie=$cookie;Password=$passwordCopy;Session=@{TenantFingerprint=$session.TenantFingerprint;PrincipalFingerprint=$session.PrincipalFingerprint;RetainUntil=$session.RetainUntil;LastConfirmedAt=$session.LastConfirmedAt;Revision=$session.Revision;Tokens=@{}};Tokens=@{};CookieName=$CookieName;Revision=$p.Revision;Browser=$useBrowser}
         $cookie=$null;$passwordCopy=$null
@@ -91,6 +94,6 @@ function Connect-TokenForgeProfile {
             BootstrapClientId=$p.BootstrapClientId;BootstrapAdditionalScopeCount=$extra.Count;Evidence='ProfileLoginGraphIdentityConfirmed'}
     }finally{
         if($token){$token.AccessToken.Dispose();if($token.RefreshToken){$token.RefreshToken.Dispose()}}
-        if($cookie){$cookie.Dispose()};if($passwordCopy){$passwordCopy.Dispose()};$payload=$null;$me=$null;$session=$null;$lock.Dispose()
+        if($ownedPassword){$ownedPassword.Dispose()};if($cookie){$cookie.Dispose()};if($passwordCopy){$passwordCopy.Dispose()};$payload=$null;$me=$null;$session=$null;$lock.Dispose()
     }
 }

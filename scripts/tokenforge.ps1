@@ -2,10 +2,10 @@
 [CmdletBinding()]
 param(
  [Parameter(Position=0,Mandatory)][ValidateSet('profile','login','logout','status','doctor','token','scopes','graph')][string]$Command,
- [Parameter(Position=1)][ValidateSet('create','show','get','explain','permissions','connect','disconnect')][string]$Operation,
+ [Parameter(Position=1)][ValidateSet('create','forget-key','show','get','explain','permissions','connect','disconnect')][string]$Operation,
  [ValidatePattern('^[a-z][a-z0-9_-]{0,63}$')][string]$Profile='default',
  [string]$Root,[string]$Tenant,[string]$StatePath,
- [ValidateSet('Memory','Passphrase')][string]$Storage='Memory',
+ [ValidateSet('Memory','Passphrase','OperatingSystem')][string]$Storage='Memory',
  [ValidateSet('graph','arm')][string]$Resource='graph',[string[]]$Scope,
  [securestring]$VaultPassword,[securestring]$EstsAuth,
  [string]$PasskeyPath,[string]$XdrModulePath,[ValidateLength(0,320)][string]$LoginHint,[switch]$Browser,[switch]$Interactive,
@@ -27,6 +27,7 @@ try{
   profile {
    switch($Operation){
     create {if(-not $Tenant){throw 'Tenant is required.'};New-TokenForgeProfile @common -Tenant $Tenant -StatePath $StatePath -Storage $Storage -BootstrapClientId $BootstrapClientId -MaxAdditionalScopes $MaxAdditionalScopes -MaxBootstrapAdditionalScopes $MaxBootstrapAdditionalScopes -PasskeyPath $PasskeyPath -XdrModulePath $XdrModulePath}
+    forget-key {Remove-TokenForgeProfileKey @common}
     show {Get-TokenForgeProfile @common}
     default {throw 'Use profile create or profile show.'}
    }

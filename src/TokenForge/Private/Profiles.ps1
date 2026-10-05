@@ -7,7 +7,7 @@ function Resolve-TokenForgeProfileRoot {
     Split-Path $marker -Parent
 }
 function Open-TokenForgeProfileOperation {
-    param([string]$Directory,[ValidateSet('.operation.lock','.writer.lock')][string]$Leaf='.operation.lock')
+    param([string]$Directory,[ValidateSet('.operation.lock','.writer.lock','session.tfvault.lock')][string]$Leaf='.operation.lock')
     $path=Resolve-TokenForgeVaultPath -Path (Join-Path $Directory $Leaf)
     if(-not (Test-Path -LiteralPath $path)){
         try{return Open-TokenForgeVaultFile -Path $path -Create}catch [IO.IOException]{}
@@ -22,8 +22,9 @@ function Read-TokenForgeProfile {
         if((Get-Item -LiteralPath $path).Length -gt 32768){throw 'Oversized profile.'}
         $p=Get-Content -LiteralPath $path -Raw|ConvertFrom-Json -AsHashtable -Depth 4
         $keys=@('Format','SchemaVersion','Name','Tenant','StatePath','Storage','BootstrapClientId','MaxAdditionalScopes','MaxBootstrapAdditionalScopes','MaxAgeHours','SessionRetentionHours','PasskeyPath','XdrModulePath','ExpectedTenantFingerprint','ExpectedPrincipalFingerprint','Revision','CreatedAt','UpdatedAt')
-        if($p.Keys.Count -ne $keys.Count -or @($p.Keys|Where-Object {$_ -cnotin $keys}).Count -or $p.Format -cne 'TokenForgeProfile' -or $p.SchemaVersion -ne 1 -or $p.Name -cne $Name){throw 'Invalid profile schema.'}
-        if($p.Tenant -isnot [string] -or $p.Tenant -notmatch '^[a-zA-Z0-9][a-zA-Z0-9.-]{0,252}$' -or $p.Tenant -in @('common','organizations','consumers') -or $p.Storage -cnotin @('Memory','Passphrase')){throw 'Invalid profile policy.'}
+        if($p.SchemaVersion -eq 2){$keys+='KeyId';if($p.Storage -cne 'OperatingSystem' -or $p.KeyId -isnot [string] -or $p.KeyId -cnotmatch '^[a-f0-9]{32}$' -or $p.KeyId -eq ('0'*32)){throw 'Invalid platform key policy.'}}
+        if($p.Keys.Count -ne $keys.Count -or @($p.Keys|Where-Object {$_ -cnotin $keys}).Count -or $p.Format -cne 'TokenForgeProfile' -or  $p.SchemaVersion -notin @(1,2) -or $p.Name -cne $Name){throw 'Invalid profile schema.'}
+        if($p.Tenant -isnot [string] -or $p.Tenant -notmatch '^[a-zA-Z0-9][a-zA-Z0-9.-]{0,252}$' -or $p.Tenant -in @('common','organizations','consumers') -or $p.Storage -cnotin @('Memory','Passphrase','OperatingSystem') -or ($p.Storage -eq 'OperatingSystem' -and $p.SchemaVersion -ne 2)){throw 'Invalid profile policy.'}
         foreach($key in @('StatePath','PasskeyPath','XdrModulePath')){if($p[$key] -isnot [string] -or $p[$key].Length -gt 4096){throw 'Invalid profile paths.'}}
         $id=[guid]::Empty
         foreach($key in @('BootstrapClientId','Revision')){if(-not [guid]::TryParse([string]$p[$key],[ref]$id) -or $id -eq [guid]::Empty){throw 'Invalid profile ID.'}}
@@ -135,4 +136,20 @@ function Request-TokenForgeProfileScope {
         }
     }
     throw 'No bounded candidate completed a matching explicit scope request. Inspect scope hints or run explicit discovery; no broad fallback was attempted.'
+}
+
+function Get-TokenForgeProfileKeyHandle {
+    param($Record)
+    # A moved profile is not an automatic key migration.
+    $directory=[IO.Path]::GetFullPath($Record.Directory)
+    if($IsWindows){$directory=$directory.ToLowerInvariant()}
+    Get-TokenForgeFingerprint ($directory+'|'+$Record.Configuration.KeyId)
+}
+function Open-TokenForgeProfilePlatformKey {
+    param($Record,[switch]$Create)
+    [TokenForge.Core.V0110.PlatformVaultKey]::Open((Get-TokenForgeProfileKeyHandle $Record), ($Create -and -not (Test-Path -LiteralPath $Record.VaultPath)))
+}
+function Remove-TokenForgeProfilePlatformKey {
+    param($Record)
+    [TokenForge.Core.V0110.PlatformVaultKey]::Delete((Get-TokenForgeProfileKeyHandle $Record))
 }

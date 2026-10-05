@@ -5,9 +5,8 @@ surface later. Do not maintain separate OAuth policy implementations for each op
 The PowerShell workflow is the compatibility surface while code moves into the shared core. The first extraction is implemented: shared issued-token policy, SQLite evidence import/export and checkpoints, and native CLI packages. See [Native CLI](native-cli.md) for current dependencies.
 
 The security boundary is a credential service that exposes scoped acquisition operations and
-metadata, not a general cookie jar export. Platform adapters protect a random vault encryption
-key; encrypted credential records remain account-, tenant-, and client-bound. Use Windows
-Credential Manager, modern macOS Keychain APIs, and Linux Secret Service. Require explicit
+metadata, not a general cookie jar export. Windows Credential Manager and Linux Secret Service adapters now protect a random vault password
+key; encrypted credential records remain account-, tenant-, and client-bound. The modern macOS Keychain adapter remains deferred until signed helper packaging. See [OS-backed vault](os-backed-vault.md). Require explicit
 passphrase storage when an OS store is unavailable; never silently fall back to plaintext.
 OS stores protect credentials at rest but do not isolate every process running as the user.
 

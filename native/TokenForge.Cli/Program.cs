@@ -4,10 +4,10 @@ using TokenForge.Core;
 
 try
 {
-    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.10.0",AuthenticationDependency="PowerShell 7.4+"}));return 0;}
+    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.11.0",AuthenticationDependency="PowerShell 7.4+"}));return 0;}
     if (args.Length == 0 || args[0] is "help" or "--help")
     {
-        Console.WriteLine("TokenForge: profile create/show, login, status, doctor, logout, scopes explain, token get, graph permissions; evidence import/export/plan/pending/checkpoint. See README.md beside this executable for examples. Authentication currently requires PowerShell 7.4+.");
+        Console.WriteLine("TokenForge: profile create/show/forget-key, login, status, doctor, logout, scopes explain, token get, graph permissions; evidence import/export/plan/pending/checkpoint. See README.md beside this executable for examples. Authentication currently requires PowerShell 7.4+.");
         return 0;
     }
     if (args[0] == "evidence")
@@ -47,7 +47,7 @@ try
         Console.WriteLine(JsonSerializer.Serialize(result)); return 0;
     }
     var commands = new HashSet<string> { "profile", "login", "logout", "status", "doctor", "token", "scopes", "graph" };
-    var operations = new HashSet<string> { "create", "show", "get", "explain", "permissions" };
+    var operations = new HashSet<string> { "create", "forget-key", "show", "get", "explain", "permissions" };
     if (!commands.Contains(args[0])) throw new InvalidOperationException();
     var script = Path.Combine(AppContext.BaseDirectory, "scripts", "tokenforge.ps1");
     if (!File.Exists(script)) throw new InvalidOperationException();

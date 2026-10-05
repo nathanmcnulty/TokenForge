@@ -1,0 +1,46 @@
+{
+  "SchemaVersion": 1,
+  "LocalValidationDate": "2026-10-04",
+  "Platform": "Linux",
+  "Storage": "LinuxSecretService",
+  "Scope": "User.Read",
+  "RenewalTrigger": "LocalExpiryMetadataChangedToExerciseRealSameClientRefresh",
+  "PowerShellTests": {
+    "Passed": 233,
+    "Skipped": 2
+  },
+  "SyntheticChecks": [
+    "CreateReopenRetain",
+    "MalformedKeyFailsClosed",
+    "DeleteAndIdempotentCleanup",
+    "MissingKeyDoesNotRecreateOrChangeCiphertext",
+    "LockedItemDeletionReportedAsFailure",
+    "LockedKeyDoesNotTriggerReplacement"
+  ],
+  "LiveAccounts": [
+    {
+      "AccountLabel": "nora",
+      "FreshApiStatus": 200,
+      "ReopenedProcessApiStatus": 200,
+      "RenewedApiStatus": 200,
+      "AdditionalApiScopes": 0,
+      "RetentionPreserved": true,
+      "IdentityConfirmationTimePreserved": true,
+      "GraphSdkReadSucceeded": true,
+      "VaultRemoved": true,
+      "KeyRemoved": true
+    },
+    {
+      "AccountLabel": "secadmin",
+      "FreshApiStatus": 200,
+      "ReopenedProcessApiStatus": 200,
+      "RenewedApiStatus": 200,
+      "AdditionalApiScopes": 0,
+      "RetentionPreserved": true,
+      "IdentityConfirmationTimePreserved": true,
+      "GraphSdkReadSucceeded": true,
+      "VaultRemoved": true,
+      "KeyRemoved": true
+    }
+  ]
+}

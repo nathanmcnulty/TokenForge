@@ -78,3 +78,5 @@ Offline CI builds and exercises host executables on Linux, Windows, and macOS. L
 remains Linux and the two lab accounts. Native AOT, OS-protected encryption keys, removal of the
 PowerShell authentication dependency, and a metadata visualization GUI remain separate milestones.
 See [native architecture](native-architecture.md) for their boundaries and validation gates.
+
+Explicit Windows/Linux OS-backed profile storage is documented in [OS-backed vault](os-backed-vault.md).

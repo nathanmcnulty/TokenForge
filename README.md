@@ -111,3 +111,5 @@ Application IDs now accumulate in a persistent [`applications.json` catalog](doc
 Named profiles and the simpler CLI are documented in [Profiles and CLI](docs/profiles-and-cli.md). The platform direction is documented in [Native architecture](docs/native-architecture.md).
 
 A native CLI and transactional evidence workspace are available; see [Native CLI](docs/native-cli.md). Authentication currently uses the packaged PowerShell module.
+
+Explicit Windows/Linux OS-backed profile storage is documented in [OS-backed vault](docs/os-backed-vault.md).

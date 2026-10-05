@@ -2,10 +2,10 @@
 [CmdletBinding()]
 param(
  [Parameter(Position=0,Mandatory)][ValidateSet('profile','login','logout','status','doctor','token','scopes','graph')][string]$Command,
- [Parameter(Position=1)][ValidateSet('create','show','get','explain','permissions','connect','disconnect')][string]$Operation,
+ [Parameter(Position=1)][ValidateSet('create','forget-key','show','get','explain','permissions','connect','disconnect')][string]$Operation,
  [ValidatePattern('^[a-z][a-z0-9_-]{0,63}$')][string]$Profile='default',
  [string]$Root,[string]$Tenant,[string]$StatePath,
- [ValidateSet('Memory','Passphrase')][string]$Storage='Memory',
+ [ValidateSet('Memory','Passphrase','OperatingSystem')][string]$Storage='Memory',
  [ValidateSet('graph','arm')][string]$Resource='graph',[string[]]$Scope,
  [securestring]$VaultPassword,[securestring]$EstsAuth,
  [string]$PasskeyPath,[string]$XdrModulePath,[ValidateLength(0,320)][string]$LoginHint,[switch]$Browser,[switch]$Interactive,
@@ -27,6 +27,7 @@ try{
   profile {
    switch($Operation){
     create {if(-not $Tenant){throw 'Tenant is required.'};New-TokenForgeProfile @common -Tenant $Tenant -StatePath $StatePath -Storage $Storage -BootstrapClientId $BootstrapClientId -MaxAdditionalScopes $MaxAdditionalScopes -MaxBootstrapAdditionalScopes $MaxBootstrapAdditionalScopes -PasskeyPath $PasskeyPath -XdrModulePath $XdrModulePath}
+    forget-key {Remove-TokenForgeProfileKey @common}
     show {Get-TokenForgeProfile @common}
     default {throw 'Use profile create or profile show.'}
    }
@@ -59,6 +60,10 @@ try{
  }
  if($Json){ConvertTo-Json -InputObject $result -Depth 15}else{$result}
  $global:LASTEXITCODE=0
+ if($Command -eq 'profile' -and $Operation -eq 'forget-key' -and $result -and -not $result.KeyRemoved){
+  $global:LASTEXITCODE=1
+  if($MyInvocation.InvocationName -ne '.'){exit 1}
+ }
 }catch{
  # Do not echo dependency exception messages or invocation lines that may contain credentials.
  if($Json){[pscustomobject]@{SchemaVersion=1;Succeeded=$false;Code='OperationFailed';Message='Operation failed. Use the module API for bounded diagnostic errors.'}|ConvertTo-Json -Compress}else{Write-Warning 'Operation failed. Use the module API for bounded diagnostic errors.'}

@@ -191,3 +191,53 @@ Describe 'Named profile sessions and managed tokens' {
  }
 
 }
+Describe 'OS-protected profile boundaries' {
+ BeforeEach {
+  $root=if($IsMacOS){($TestDrive -replace '^/var/','/private/var/')+'/os-profiles'}else{"$TestDrive/os-profiles"}
+  if(Test-Path $root){Remove-Item $root -Recurse -Force}
+  $password=ConvertTo-SecureString synthetic-platform-key -AsPlainText -Force
+ }
+ AfterEach {Remove-Module TokenForge;Import-Module "$PSScriptRoot/../src/TokenForge/TokenForge.psd1" -Force}
+ It 'fails closed on macOS until a signed helper exists' -Skip:(-not $IsMacOS) {
+  {New-TokenForgeProfile lab example.test -Root $root -Storage OperatingSystem}|Should -Throw '*supported on Windows and Linux*'
+ }
+ It 'does not read the OS store from create/status/doctor' -Skip:$IsMacOS {
+  Mock Open-TokenForgeProfilePlatformKey -ModuleName TokenForge {throw 'Must not unlock.'}
+  $p=New-TokenForgeProfile lab example.test -Root $root -Storage OperatingSystem
+  $p.SchemaVersion|Should -Be 2
+  $p.KeyId|Should -Match '^[a-f0-9]{32}$'
+  (Get-TokenForgeProfileStatus lab -Root $root).SessionState|Should -Be LoginRequired
+  $null=Test-TokenForgeProfile lab -Root $root
+  Should -Invoke Open-TokenForgeProfilePlatformKey -ModuleName TokenForge -Times 0
+ }
+ It 'rejects passphrases and injected/missing key IDs' -Skip:$IsMacOS {
+  $p=New-TokenForgeProfile lab example.test -Root $root -Storage OperatingSystem
+  {Get-TokenForgeProfileStatus lab -Root $root -VaultPassword $password}|Should -Throw '*do not accept*'
+  {Connect-TokenForgeProfile lab -Root $root -VaultPassword $password}|Should -Throw '*do not accept*'
+  $p=Get-Content "$root/lab/profile.json" -Raw|ConvertFrom-Json -AsHashtable
+  $p.Remove('KeyId');$p|ConvertTo-Json|Set-Content "$root/lab/profile.json"
+  {Get-TokenForgeProfile lab -Root $root}|Should -Throw '*cannot be read*'
+ }
+ It 'refuses new key creation when an encrypted vault exists' -Skip:$IsMacOS {
+  $p=New-TokenForgeProfile lab example.test -Root $root -Storage OperatingSystem
+  $null=New-TokenForgeVault "$root/lab/session.tfvault" $password
+  Mock Open-TokenForgeProfilePlatformKey -ModuleName TokenForge {throw 'OS store locked or key missing.'}
+  {Connect-TokenForgeProfile lab -Root $root}|Should -Throw '*locked or key missing*'
+  (Get-TokenForgeVault "$root/lab/session.tfvault" $password).Sessions.Count|Should -Be 0
+  Should -Invoke Open-TokenForgeProfilePlatformKey -ModuleName TokenForge -Times 1
+ }
+ It 'logout retains the OS key and forget reports a retryable deletion failure' -Skip:$IsMacOS {
+  $p=New-TokenForgeProfile lab example.test -Root $root -Storage OperatingSystem
+  $null=New-TokenForgeVault "$root/lab/session.tfvault" $password
+  Mock Open-TokenForgeProfilePlatformKey -ModuleName TokenForge {return $password.Copy()}
+  Mock Remove-TokenForgeProfilePlatformKey -ModuleName TokenForge {if(Test-Path "$root/lab/session.tfvault"){throw 'Deletion order wrong.'};throw 'Store unavailable.'}
+  (Disconnect-TokenForgeProfile lab -Root $root).Removed|Should -BeTrue
+  Should -Invoke Remove-TokenForgeProfilePlatformKey -ModuleName TokenForge -Times 0
+  $result=Remove-TokenForgeProfileKey lab -Root $root
+  $result.VaultRemoved|Should -BeTrue;$result.KeyRemoved|Should -BeFalse
+  Test-Path "$root/lab/session.tfvault"|Should -BeFalse
+  $result.NextStep|Should -Match 'retry'
+  Mock Remove-TokenForgeProfilePlatformKey -ModuleName TokenForge {}
+  (Remove-TokenForgeProfileKey lab -Root $root).KeyRemoved|Should -BeTrue
+ }
+}

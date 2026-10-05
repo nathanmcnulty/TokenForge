@@ -31,6 +31,18 @@ jobs:
           if ($LASTEXITCODE) { throw 'Restore failed.' }
           dotnet run --project native/TokenForge.Core.Tests --no-restore
           if ($LASTEXITCODE) { throw 'Core tests failed.' }
+      - name: Test Windows Credential Manager with disposable synthetic keys
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./scripts/Test-TokenForgeOperatingSystemVault.ps1
+      - name: Test Linux Secret Service in an isolated session
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gnome-keyring libsecret-1-0 dbus
+          dbus-run-session -- bash scripts/Test-TokenForgeSecretService.sh pwsh -NoProfile -File scripts/Test-TokenForgeOperatingSystemVault.ps1
       - name: Publish the native executable
         shell: pwsh
         run: ./scripts/Build-TokenForgeNative.ps1 -Runtime '${{ matrix.runtime }}'

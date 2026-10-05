@@ -26,13 +26,15 @@ function Get-TokenForgeProfileToken {
     $record=Read-TokenForgeProfile $Name $Root;$p=$record.Configuration
     if(-not $p.ExpectedTenantFingerprint -or -not $p.ExpectedPrincipalFingerprint){throw 'Log in to bind the profile account before requesting tokens.'}
     $lock=Open-TokenForgeProfileOperation $record.Directory
-    $token=$null;$savedToken=$null;$ownedCookie=$null;$returned=$false;$vault=$null;$session=$null
+    $token=$null;$savedToken=$null;$ownedCookie=$null;$ownedPassword=$null;$returned=$false;$vault=$null;$session=$null
     try{
         $context=$script:ProfileContexts[$record.ContextKey]
+        if($p.Storage -eq 'OperatingSystem' -and $VaultPassword){throw 'OS-backed profiles do not accept a vault passphrase.'}
         $password=if($VaultPassword){$VaultPassword}elseif($context){$context.Password}else{$null}
         $key=Get-TokenForgeFingerprint -Value ($ResourceId.ToString()+'|'+($Scope -join ' '))
         $entry=$null;$entryId=$null
-        if($p.Storage -eq 'Passphrase'){
+        if($p.Storage -ne 'Memory'){
+            if($p.Storage -eq 'OperatingSystem'){$ownedPassword=Open-TokenForgeProfilePlatformKey $record;$password=$ownedPassword}
             if(-not $password){throw 'Unlock the persisted profile with its vault passphrase.'}
             $vault=Invoke-TokenForgeVaultTransaction $record.VaultPath $password
             $session=$vault.Sessions[$Name]
@@ -91,7 +93,7 @@ function Get-TokenForgeProfileToken {
         $current=Read-TokenForgeProfile $Name $Root
         if((ConvertTo-Json $current.Configuration -Depth 4 -Compress) -cne (ConvertTo-Json $p -Depth 4 -Compress)){throw 'Profile changed during token acquisition; result discarded.'}
         if($token.Evidence -ne 'CachedVerifiedContextNotNewIssuance'){
-            if($p.Storage -eq 'Passphrase'){
+            if($p.Storage -ne 'Memory'){
                 $null=Save-TokenForgeProfileToken -Record $record -Password $password -SessionName $Name -ExpectedRevision $sessionRevision -Token $token -ReplaceTokenId $entryId
             }else{
                 if(-not [object]::ReferenceEquals($script:ProfileContexts[$record.ContextKey],$context) -or ([DateTimeOffset]$context.Session.RetainUntil) -le [DateTimeOffset]::UtcNow -or $context.Revision -ne $p.Revision -or $context.Session.Revision -ne $sessionRevision){throw 'Session changed during token acquisition.'}
@@ -106,7 +108,7 @@ function Get-TokenForgeProfileToken {
     }finally{
         if($savedToken){foreach($secret in @($savedToken.AccessToken,$savedToken.RefreshToken)){if($secret){$secret.Dispose()}}}
         if($token -and -not $returned){foreach($secret in @($token.AccessToken,$token.RefreshToken)){if($secret){$secret.Dispose()}}}
-        if($ownedCookie){$ownedCookie.Dispose()}
+        if($ownedCookie){$ownedCookie.Dispose()};if($ownedPassword){$ownedPassword.Dispose()}
         $vault=$null;$session=$null;$entry=$null;$entries=$null;$lock.Dispose()
     }
 }

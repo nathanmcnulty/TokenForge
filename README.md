@@ -89,7 +89,7 @@ try {
 
 `Update-TokenForgeCatalog -SourceUri <https-url> -Path <path>` downloads a compatible source and validates it before replacing the catalog. Pin the URL to an upstream commit for reproducible research. Snapshots retain the source URL, fetch time, and a SHA-256 of the loaded snapshot. The default URL follows the upstream branch; the hash is content provenance, not a commit ID or publisher signature. Refresh is explicit; the module never silently refreshes or falls back to stale data.
 
-No upstream dataset is committed here. ROADtools is MIT-licensed; upstream datasets retain their own terms. References: [EntraScopes](https://github.com/f-bader/entrascopes.com), [ROADtools dataset](https://github.com/dirkjanm/ROADtools/blob/master/roadtx/roadtools/roadtx/firstpartyscopes.json), [research-passkeys](https://github.com/nathanmcnulty/research-passkeys), [mcp-entrascopes](https://github.com/nathanmcnulty/mcp-entrascopes).
+Public discovery metadata is published on the `discovery-data` branch; private assessment state is excluded. ROADtools is MIT-licensed; upstream datasets retain their own terms. References: [EntraScopes](https://github.com/f-bader/entrascopes.com), [ROADtools dataset](https://github.com/dirkjanm/ROADtools/blob/master/roadtx/roadtools/roadtx/firstpartyscopes.json), [research-passkeys](https://github.com/nathanmcnulty/research-passkeys), [mcp-entrascopes](https://github.com/nathanmcnulty/mcp-entrascopes).
 
 ## Broader discovery and tenant inventory
 
@@ -107,3 +107,5 @@ Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force
 CI runs the same tests on Windows, Linux, and macOS. Tests use synthetic credentials and mock identity responses. No live cookies or tokens are required. Read [SECURITY.md](SECURITY.md), [architecture and roadmap](docs/architecture.md), and the [live validation procedure](docs/live-validation.md).
 
 Application IDs now accumulate in a persistent [`applications.json` catalog](docs/application-metadata.md), with supported attributes, provenance, observation dates, and change history. Scheduled discovery publishes public metadata and anonymous scope batches on `discovery-data`; local tenant metadata stays private.
+
+Named profiles and the simpler CLI are documented in [Profiles and CLI](docs/profiles-and-cli.md). The platform direction is documented in [Native architecture](docs/native-architecture.md).

@@ -1,0 +1,53 @@
+{
+  "SchemaVersion": 1,
+  "ValidatedAt": "2026-10-04",
+  "Platform": "Linux",
+  "CredentialOutput": false,
+  "SyntheticExpiryNote": "Encrypted-session renewal was triggered by changing only the local reported expiry of a real saved token; no server expiry was claimed.",
+  "Accounts": [
+    {
+      "Label": "nora",
+      "Login": "GraphIdentityConfirmed",
+      "FreshApiStatus": 200,
+      "CachedApiStatus": 200,
+      "RenewalApiStatus": 200,
+      "AdditionalApiScopes": 0,
+      "RetentionPreserved": true,
+      "IdentityConfirmationTimePreserved": true,
+      "SavedTokenCountAfterRenewal": 1,
+      "GraphSdkReadSucceeded": true
+    },
+    {
+      "Label": "secadmin",
+      "Login": "GraphIdentityConfirmed",
+      "FreshApiStatus": 200,
+      "CachedApiStatus": 200,
+      "RenewalApiStatus": 200,
+      "AdditionalApiScopes": 0,
+      "RetentionPreserved": true,
+      "IdentityConfirmationTimePreserved": true,
+      "SavedTokenCountAfterRenewal": 1,
+      "GraphSdkReadSucceeded": true
+    }
+  ],
+  "ClientId": "038ddad9-5bbe-4f64-b0cd-12434d1e633b",
+  "ResourceId": "00000003-0000-0000-c000-000000000000",
+  "RequestedScopes": [
+    "User.Read"
+  ],
+  "Limitations": [
+    "No live Windows or macOS authentication",
+    "No other tenant or guest-account proof",
+    "JWT inspection is not signature validation"
+  ],
+  "ColdCache": {
+    "Accounts": [
+      "nora",
+      "secadmin"
+    ],
+    "Evidence": "BoundedTargetedSilentExplicitScopeAcquisition",
+    "ApiStatus": 200,
+    "AdditionalApiScopes": 0,
+    "MaximumCandidateApplications": 8
+  }
+}

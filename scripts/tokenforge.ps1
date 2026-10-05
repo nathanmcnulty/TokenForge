@@ -8,7 +8,7 @@ param(
  [ValidateSet('Memory','Passphrase')][string]$Storage='Memory',
  [ValidateSet('graph','arm')][string]$Resource='graph',[string[]]$Scope,
  [securestring]$VaultPassword,[securestring]$EstsAuth,
- [string]$PasskeyPath,[string]$XdrModulePath,[switch]$Browser,[switch]$Interactive,
+ [string]$PasskeyPath,[string]$XdrModulePath,[ValidateLength(0,320)][string]$LoginHint,[switch]$Browser,[switch]$Interactive,
  [guid]$BootstrapClientId='038ddad9-5bbe-4f64-b0cd-12434d1e633b',
  [ValidateRange(0,8760)][int]$MaxAdditionalScopes=0,[ValidateRange(0,8760)][int]$MaxBootstrapAdditionalScopes=0,
  [uri]$ApiUri,[string]$GraphCommand,[switch]$PromptPassphrase,[switch]$Json
@@ -31,13 +31,13 @@ try{
     default {throw 'Use profile create or profile show.'}
    }
   }
-  login {Connect-TokenForgeProfile @common -VaultPassword $VaultPassword -EstsAuth $EstsAuth -Browser:$Browser -Interactive:$Interactive}
+  login {Connect-TokenForgeProfile @common -VaultPassword $VaultPassword -EstsAuth $EstsAuth -Browser:$Browser -Interactive:$Interactive -LoginHint $LoginHint}
   logout {Disconnect-TokenForgeProfile @common -VaultPassword $VaultPassword}
   status {Get-TokenForgeProfileStatus @common -VaultPassword $VaultPassword}
   doctor {Test-TokenForgeProfile @common -VaultPassword $VaultPassword}
   token {
    if($Operation -ne 'get' -or -not $Scope){throw 'Use token get -Scope with explicit API scopes.'}
-   $token=Get-TokenForgeProfileToken @common -VaultPassword $VaultPassword -Resource $Resource -Scope $Scope -ApiUri $ApiUri
+   $token=Get-TokenForgeProfileToken @common -VaultPassword $VaultPassword -Resource $Resource -Scope $Scope -ApiUri $ApiUri -LoginHint $LoginHint
    try{[pscustomobject]@{SchemaVersion=1;Profile=$Profile;ClientId=$token.Request.ClientId;ResourceId=$token.Request.ResourceId;RequestedScopes=@($token.Request.Scopes);IssuedScopes=@($token.TokenClaims.Scopes);ExpiresAt=$token.ExpiresAt;Evidence=$token.Evidence;ApiCheck=$token.ApiCheck;CredentialOutput=$false}}
    finally{$token.AccessToken.Dispose();if($token.RefreshToken){$token.RefreshToken.Dispose()}}
   }

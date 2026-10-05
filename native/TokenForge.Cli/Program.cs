@@ -4,6 +4,7 @@ using TokenForge.Core;
 
 try
 {
+    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.10.0",AuthenticationDependency="PowerShell 7.4+"}));return 0;}
     if (args.Length == 0 || args[0] is "help" or "--help")
     {
         Console.WriteLine("TokenForge: profile create/show, login, status, doctor, logout, scopes explain, token get, graph permissions; evidence import/export/plan/pending/checkpoint. See README.md beside this executable for examples. Authentication currently requires PowerShell 7.4+.");
@@ -58,7 +59,7 @@ try
         if (!operations.Contains(args[index])) throw new InvalidOperationException();
         start.ArgumentList.Add("-Operation"); start.ArgumentList.Add(args[index++]);
     }
-    var options = new Dictionary<string, string> { ["--profile"]="Profile", ["--root"]="Root", ["--tenant"]="Tenant", ["--state-path"]="StatePath", ["--storage"]="Storage", ["--resource"]="Resource", ["--scope"]="Scope", ["--passkey-path"]="PasskeyPath", ["--xdr-module-path"]="XdrModulePath", ["--bootstrap-client"]="BootstrapClientId", ["--max-extra-scopes"]="MaxAdditionalScopes", ["--max-bootstrap-extra-scopes"]="MaxBootstrapAdditionalScopes", ["--api-uri"]="ApiUri", ["--graph-command"]="GraphCommand" };
+    var options = new Dictionary<string, string> { ["--login-hint"]="LoginHint", ["--profile"]="Profile", ["--root"]="Root", ["--tenant"]="Tenant", ["--state-path"]="StatePath", ["--storage"]="Storage", ["--resource"]="Resource", ["--scope"]="Scope", ["--passkey-path"]="PasskeyPath", ["--xdr-module-path"]="XdrModulePath", ["--bootstrap-client"]="BootstrapClientId", ["--max-extra-scopes"]="MaxAdditionalScopes", ["--max-bootstrap-extra-scopes"]="MaxBootstrapAdditionalScopes", ["--api-uri"]="ApiUri", ["--graph-command"]="GraphCommand" };
     var flags = new Dictionary<string, string> { ["--json"]="Json", ["--browser"]="Browser", ["--interactive"]="Interactive", ["--prompt-passphrase"]="PromptPassphrase" };
     var seen = new HashSet<string>();
     while (index < args.Length)

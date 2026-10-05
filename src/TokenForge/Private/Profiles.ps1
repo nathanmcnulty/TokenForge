@@ -107,7 +107,10 @@ function Request-TokenForgeProfileScope {
         foreach($redirect in $redirects){
             $token=$null;$success=$false
             try{
-                $request=New-TokenForgeTenantRequest -Inventory $Inventory -ClientId $candidate.ClientId -ResourceId $ResourceId -Scope $Scope -RedirectUri $redirect -Tenant $Profile.Tenant -OfflineAccess
+                # Candidate eligibility was established from fresh verified inventory plus matching
+                # published/configured hints. Resource definitions can omit internal scope names.
+                $planning=[pscustomobject]@{Source='PublishedOrConfiguredHintNotProvenConsent';ContentSha256=$null;ResourceIdentifiers=@{};Applications=@([pscustomobject]@{ClientId=$app.AppId;Name=$app.Name;PublicClient=$app.PublicClient;Foci=$app.Foci;RedirectUris=$app.RedirectUris;PreferredRedirectUri=$app.PreferredRedirectUri;Grants=@([pscustomobject]@{ResourceId=$ResourceId.ToString();Scopes=$Scope})})}
+                $request=New-TokenForgeRequest -Catalog $planning -ClientId $candidate.ClientId -ResourceId $ResourceId -Scope $Scope -RedirectUri $redirect -Tenant $Profile.Tenant -OfflineAccess
                 $token=Get-TokenForgeToken -Request $request @Authentication
                 $claims=Assert-TokenForgeProfileToken $token $Profile $Scope $candidate.ClientId $ResourceId.ToString() $Profile.MaxAdditionalScopes
                 $token|Add-Member Request $request -Force

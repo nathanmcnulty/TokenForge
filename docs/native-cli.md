@@ -15,6 +15,8 @@ tokenforge token get --profile lab --resource graph --scope User.Read,Mail.Read 
 tokenforge logout --profile lab --prompt-passphrase
 ```
 
+Use `--login-hint user@example.onmicrosoft.com` for browser login or token acquisition when the browser has multiple accounts. The hint helps account selection; the bound profile fingerprints still enforce identity.
+
 Native profile creation defaults to explicit passphrase storage because each CLI invocation is
 its own process. The module still defaults to memory storage. Passphrases are read without echo
 by PowerShell, never passed in process arguments or environment variables. The native command

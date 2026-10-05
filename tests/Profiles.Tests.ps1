@@ -179,4 +179,15 @@ Describe 'Named profile sessions and managed tokens' {
   (Get-TokenForgeVault "$root/lab/session.tfvault" $password).Sessions[0].Tokens.Count|Should -Be 0
  }
 
+ It 'can validate hinted scopes absent from resource definitions using explicit issuance' {
+  $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie
+  Mock Get-TokenForgeAssessmentCoverage -ModuleName TokenForge {return @()}
+  Mock Get-TokenForgeScopeCandidates -ModuleName TokenForge {return [pscustomobject]@{ClientId='038ddad9-5bbe-4f64-b0cd-12434d1e633b';CandidateRank=2}}
+  $issued=New-ProfileTestToken -Scopes @('Internal.Read')
+  Mock Get-TokenForgeToken -ModuleName TokenForge {param($Request) $Request.Scopes|Should -Be @('Internal.Read');$Request.Source|Should -Be 'PublishedOrConfiguredHintNotProvenConsent';return $issued}
+  $result=Get-TokenForgeProfileToken lab -Root $root -Scope Internal.Read
+  $result.TokenClaims.Scopes|Should -Be @('Internal.Read')
+  $result.AccessToken.Dispose();$result.RefreshToken.Dispose()
+ }
+
 }

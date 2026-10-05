@@ -32,7 +32,7 @@ explicit administrative operations; normal token requests do not register applic
 
 The default bootstrap client is the narrow client validated in this lab, not a guarantee for
 other tenants. Browser login needs an enabled, verified client with a published localhost
-callback. Configure `-BootstrapClientId` when creating the profile. Software-passkey profiles
+callback. Configure `-BootstrapClientId` when creating the profile. Use `-LoginHint` for browser login and token acquisition when multiple browser accounts exist; identity binding still controls the result. Software-passkey profiles
 also take `-PasskeyPath` and `-XdrModulePath`; they reuse the existing optional XDR adapter.
 
 ## CLI commands
@@ -80,7 +80,7 @@ configuration and private scope evidence still remain on disk.
 4. If no reusable credential exists, use fresh account observations. If none cover the scopes,
    try up to eight ownership-verified candidates supported by published hints or applicable tenant
    grants. These requests use explicit scopes and supported registered callbacks, with no consent,
-   `.default`, broad sweep, or registration fallback. Successful evidence is checkpointed privately.
+   `.default`, broad sweep, or registration fallback. Hinted scope names can be tried even when omitted from resource definitions; only a matching issued token confirms the request. Successful evidence is checkpointed privately.
 5. Validate the issued context, lifetime, and scope policy. The default permits zero additional
    API scopes; OIDC scopes are excluded. Explicit profile creation can set broader caps.
 6. Save under a session revision check, replacing the selected record on rotation. Deleted,

@@ -1,0 +1,125 @@
+{
+  "SchemaVersion": 1,
+  "Observations": [
+    {
+      "ClientId": "aad98258-6bb0-44ed-a095-21506dfb68fe",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:14:24.8731302+00:00",
+      "Scopes": [
+        "email",
+        "GroupMember.Read.All",
+        "openid",
+        "PrintConnector.ReadWrite.All",
+        "Printer.FullControl.All",
+        "PrinterShare.ReadWrite.All",
+        "PrintJob.ReadBasic.All",
+        "profile",
+        "Reports.Read.All",
+        "User.Read",
+        "User.Read.All",
+        "User.ReadBasic.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "ab9b8c07-8f02-4f72-87fa-80105867a763",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:14:30.0899133+00:00",
+      "Scopes": [
+        "email",
+        "Files.Read",
+        "openid",
+        "profile",
+        "Sites.Read.All",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "aba285d5-d9f3-427b-a994-e9deb4567639",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:14:30.7319801+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "user_impersonation"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "aced0c89-3b79-49ab-b2f1-27b67d3f0054",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:14:44.6740444+00:00",
+      "Scopes": [
+        "Application.ReadWrite.All",
+        "CustomAuthenticationExtension.ReadWrite.All",
+        "DelegatedPermissionGrant.Read.All",
+        "email",
+        "EntitlementManagement.Read.All",
+        "EventListener.ReadWrite.All",
+        "IdentityProvider.ReadWrite.All",
+        "IdentityRiskEvent.Read.All",
+        "IdentityUserFlow.Read.All",
+        "IdentityUserFlow.ReadWrite.All",
+        "Insights-UserMetrics.Read.All",
+        "openid",
+        "Organization.ReadWrite.All",
+        "Policy.Read.All",
+        "Policy.ReadWrite.ApplicationConfiguration",
+        "Policy.ReadWrite.ConditionalAccess",
+        "profile",
+        "RiskPreventionProviders.ReadWrite.All",
+        "SignInIdentifier.ReadWrite.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "aebc6443-996d-45c2-90f0-388ff96faa56",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:15:04.3652026+00:00",
+      "Scopes": [
+        "EduCurricula.Read",
+        "EduRoster.ReadBasic",
+        "email",
+        "Mail.Send",
+        "openid",
+        "profile",
+        "Tasks.ReadWrite",
+        "User.Read",
+        "User.Read.All",
+        "User.ReadBasic.All",
+        "User.ReadWrite",
+        "WindowsUpdates.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "af124e86-4e96-495a-b70a-90f90ab96707",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:15:07.5256823+00:00",
+      "Scopes": [
+        "Contacts.Read",
+        "Content.Process.User",
+        "Directory.Read.All",
+        "email",
+        "Files.ReadWrite",
+        "Group.Read.All",
+        "openid",
+        "People.Read",
+        "profile",
+        "ProtectionScopes.Compute.User",
+        "Sites.Read.All",
+        "User.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    }
+  ],
+  "Disclaimer": "Observed scopes are session/tenant dependent, not universal consent or guaranteed API access."
+}

@@ -1,0 +1,139 @@
+{
+  "SchemaVersion": 1,
+  "Observations": [
+    {
+      "ClientId": "9d827643-d003-4cca-9dc8-71213a8f1644",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:14:33.6853847+00:00",
+      "Scopes": [
+        "email",
+        "GroupMember.Read.All",
+        "MailboxSettings.Read",
+        "openid",
+        "Organization.Read.All",
+        "People.Read",
+        "profile",
+        "User.Read.All",
+        "User.ReadBasic.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "9ea1ad79-fdb6-4f9a-8bc3-2b70f96e34c7",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:14:49.3152978+00:00",
+      "Scopes": [
+        "Calendars.Read",
+        "Calendars.Read.Shared",
+        "Channel.ReadBasic.All",
+        "Directory.Read.All",
+        "EduAssignments.Read",
+        "EduRoster.ReadBasic",
+        "email",
+        "Files.ReadWrite.All",
+        "Group.Read.All",
+        "openid",
+        "People.Read",
+        "Presence.Read.All",
+        "profile",
+        "Sites.Read.All",
+        "Sites.ReadWrite.All",
+        "Team.ReadBasic.All",
+        "User.Read",
+        "User.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "9ed4cd8c-9a98-405f-966b-38ab1b0c24a3",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:14:51.5594401+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "People.Read",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "9ee7b58d-f9db-45bc-ad7b-c2b97bbc3337",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:14:57.5645669+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "User.Read",
+        "User.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "a0e1e353-1a3e-42cf-a8ea-3a9746eec58c",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:15:23.6592398+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "a0fe4328-8965-437b-a350-cf71409d002f",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:15:29.4882552+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "a187e399-0c36-4b98-8f04-1edc167a0996",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:15:45.7668348+00:00",
+      "Scopes": [
+        "_B.AR",
+        "Calendars.Read",
+        "ChannelMessage.Read.All",
+        "Chat.Read",
+        "ChatMessage.Send",
+        "Contacts.Read",
+        "Directory.Read.All",
+        "email",
+        "Files.ReadWrite.All",
+        "FileStorageContainer.Selected",
+        "Group.Read.All",
+        "GroupMember.ReadWrite.All",
+        "InformationProtectionPolicy.Read",
+        "Mail.Send",
+        "openid",
+        "Organization.Read.All",
+        "People.Read",
+        "profile",
+        "RecordsManagement.Read.All",
+        "Sites.Read.All",
+        "Tasks.ReadWrite",
+        "User.Invite.All",
+        "User.Read",
+        "User.Read.All",
+        "User.ReadBasic.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    }
+  ],
+  "Disclaimer": "Observed scopes are session/tenant dependent, not universal consent or guaranteed API access."
+}

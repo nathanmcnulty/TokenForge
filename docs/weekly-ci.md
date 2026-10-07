@@ -34,6 +34,10 @@ Hard cancellation or runner loss can still discard the encrypted progress that h
 
 For a broader private maintenance workflow, use this same encrypted-artifact boundary for sanitized inventory/sign-in/registration metadata with short retention. Persistent authoritative history should live in a dedicated private store; artifacts are transport and recovery snapshots. Service-principal creation requires a separate explicit administrative stage and is never part of scheduled token research. The current weekly workflow neither registers apps nor grants consent.
 
+## Artifact storage
+
+Standard public runner execution is free, but [artifact storage has a separate plan allowance](https://docs.github.com/en/billing/concepts/product-billing/github-actions). Public transport artifacts use one-day retention and encrypted research recovery uses eight days. Native validation runs on all supported platforms, while binary artifacts publish only from main pushes with one-day retention, avoiding duplicate branch/PR package retention. Monitor aggregate artifact size when adding private snapshots; encryption does not reduce their storage cost.
+
 ## Manual controls
 
 Use workflow dispatch to choose 1–4 workers, Auto/Shallow/Deep mode, a bounded comma-separated Deep selection, or exhausted retry handling. A source or tenant change does not reorder a frozen recipe. A new UTC ISO week starts the next shallow recipe. Run reports before interpreting successful evidence as current or comprehensive.

@@ -164,5 +164,182 @@
     "SumWorkflowWallMinutes": 13.22,
     "ExactWorkerPartitionCoverageVerified": true,
     "PublicDataCommit": "dcbc554ba9deb0556a32680b45bf0a1dd287c2d0"
+  },
+  "MultiResource": {
+    "Date": "2026-10-07",
+    "Resources": [
+      "00000003-0000-0000-c000-000000000000",
+      "797f4846-ba00-4fd7-ba43-dac1f8f63013"
+    ],
+    "ModuleAccounts": [
+      {
+        "ConsentGranted": false,
+        "ResumeAddedRows": 0,
+        "FlowPlans": 8,
+        "ApiAuthorization": "NotEstablishedByFlowAttempts",
+        "FlowAttempts": 48,
+        "GraphIdentityVerified": true,
+        "EncryptedResumeAddedRows": 0,
+        "AssessedPairs": 8,
+        "CredentialsPersisted": false,
+        "ForeignContextRejected": true,
+        "EncryptedResumeAddedAttempts": 0,
+        "ResumeAddedAttempts": 0,
+        "EncryptedRoundtripVerified": true,
+        "Clients": 4,
+        "AnonymousExportVerified": true,
+        "ElapsedSeconds": 27.95,
+        "Resources": 2,
+        "Date": "2026-10-07",
+        "SignatureValidated": false,
+        "SuccessfulCells": 8,
+        "TerminalCells": 48,
+        "ByResource": {
+          "797f4846-ba00-4fd7-ba43-dac1f8f63013": {
+            "SuccessfulPairs": 1,
+            "OpaqueTokenPairs": 0,
+            "NoDelegatedScpPairs": 0,
+            "SuccessfulCells": 2,
+            "AssessedPairs": 4,
+            "FlowAttempts": 24
+          },
+          "00000003-0000-0000-c000-000000000000": {
+            "SuccessfulPairs": 3,
+            "OpaqueTokenPairs": 0,
+            "NoDelegatedScpPairs": 0,
+            "SuccessfulCells": 6,
+            "AssessedPairs": 4,
+            "FlowAttempts": 24
+          }
+        },
+        "Account": "nora"
+      },
+      {
+        "ElapsedSeconds": 83.07,
+        "EncryptedRoundtripVerified": true,
+        "Date": "2026-10-07",
+        "SignatureValidated": false,
+        "ForeignContextRejected": true,
+        "EncryptedResumeAddedRows": 0,
+        "ByResource": {
+          "797f4846-ba00-4fd7-ba43-dac1f8f63013": {
+            "FlowAttempts": 24,
+            "SuccessfulPairs": 2,
+            "NoDelegatedScpPairs": 0,
+            "SuccessfulCells": 4,
+            "OpaqueTokenPairs": 0,
+            "AssessedPairs": 4
+          },
+          "00000003-0000-0000-c000-000000000000": {
+            "FlowAttempts": 24,
+            "SuccessfulPairs": 4,
+            "NoDelegatedScpPairs": 0,
+            "SuccessfulCells": 8,
+            "OpaqueTokenPairs": 0,
+            "AssessedPairs": 4
+          }
+        },
+        "ResumeAddedAttempts": 0,
+        "EncryptedResumeAddedAttempts": 0,
+        "CredentialsPersisted": false,
+        "ConsentGranted": false,
+        "ApiAuthorization": "NotEstablishedByFlowAttempts",
+        "ResumeAddedRows": 0,
+        "Resources": 2,
+        "FlowAttempts": 48,
+        "Account": "secadmin",
+        "SuccessfulCells": 12,
+        "TerminalCells": 48,
+        "AssessedPairs": 8,
+        "AnonymousExportVerified": true,
+        "GraphIdentityVerified": true,
+        "Clients": 4,
+        "FlowPlans": 8
+      }
+    ],
+    "Scope": "Bounded local module, actual CI worker and publisher validation; hosted multi-resource execution not yet established",
+    "FullSuitePassed": 331,
+    "FullSuiteFailed": 0,
+    "FullSuiteSkipped": 2,
+    "FocusedTestsPassed": 36,
+    "WorkerAccounts": [
+      {
+        "Account": "nora",
+        "Assessed": 4,
+        "Successful": 3,
+        "AssessedPairs": 8,
+        "SuccessfulPairs": 4,
+        "ResourceCount": 2,
+        "MaxCallbacks": 4,
+        "ExactPartitionVerified": true,
+        "AllPlannedCellsTerminal": true,
+        "SignatureValidated": false,
+        "ApiAuthorization": "NotEstablishedByFlowAttempts",
+        "TerminalFlowAttempts": 66,
+        "ScopeRows": 8,
+        "Chunks": 2,
+        "ResumeAddedAttempts": 0,
+        "ResumeAddedScopeRows": 0,
+        "EncryptedCheckpointPassed": true,
+        "AnonymousExportPassed": true,
+        "CredentialsPersisted": false,
+        "ConsentGranted": false
+      },
+      {
+        "Account": "secadmin",
+        "Assessed": 4,
+        "Successful": 4,
+        "AssessedPairs": 8,
+        "SuccessfulPairs": 6,
+        "ResourceCount": 2,
+        "MaxCallbacks": 4,
+        "ExactPartitionVerified": true,
+        "AllPlannedCellsTerminal": true,
+        "SignatureValidated": false,
+        "ApiAuthorization": "NotEstablishedByFlowAttempts",
+        "TerminalFlowAttempts": 66,
+        "ScopeRows": 8,
+        "Chunks": 2,
+        "ResumeAddedAttempts": 0,
+        "ResumeAddedScopeRows": 0,
+        "EncryptedCheckpointPassed": true,
+        "AnonymousExportPassed": true,
+        "CredentialsPersisted": false,
+        "ConsentGranted": false
+      }
+    ],
+    "WorkerAuthentication": "One passkey-derived cookie per account reused for two local chunks; each worker bootstraps and verifies fresh identity and inventory",
+    "ResumedReceiptsMatchInitialCounts": true,
+    "PublisherAccounts": [
+      {
+        "Account": "nora",
+        "SchemaVersion": 3,
+        "Complete": true,
+        "AssessedApplications": 4,
+        "SuccessfulApplications": 3,
+        "SelectedPairs": 8,
+        "AssessedPairs": 8,
+        "SuccessfulPairs": 4,
+        "PendingBatches": 0,
+        "ExhaustedBatches": 0,
+        "PublicDataValidationPassed": true,
+        "RemainingScheduledWork": 0
+      },
+      {
+        "Account": "secadmin",
+        "SchemaVersion": 3,
+        "Complete": true,
+        "AssessedApplications": 4,
+        "SuccessfulApplications": 4,
+        "SelectedPairs": 8,
+        "AssessedPairs": 8,
+        "SuccessfulPairs": 6,
+        "PendingBatches": 0,
+        "ExhaustedBatches": 0,
+        "PublicDataValidationPassed": true,
+        "RemainingScheduledWork": 0
+      }
+    ],
+    "Review": "Sol approved implementation and evidence; resumed receipt checks added"
   }
 }

@@ -40,6 +40,7 @@ if($Action -eq 'Prepare'){
   $options=@{};if($AppId){$options.AppId=@($AppId|ForEach-Object ToString)}
   if($Mode -eq 'Deep'){
    $options.ChunkSize=25
+   $options.ResourceId=@('00000003-0000-0000-c000-000000000000','797f4846-ba00-4fd7-ba43-dac1f8f63013')
    if($AppId -and $AppId.Count -gt $DeepMaxApplications){throw 'Deep selection exceeds its independent weekly budget.'}
    if(-not $AppId){
     $prior=@{};if($state){foreach($app in $state.Recipe.Discovery.Applications){$prior[$app.AppId]=Get-TfCiHash $app}}
@@ -88,6 +89,7 @@ if($Action -eq 'Prepare'){
   if(Test-Path $result){foreach($file in Get-ChildItem $result -Force -Recurse){if($file.PSIsContainer -or $file.Name -notin $allowed -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'Unexpected worker output.'}}}
   $receiptPath=Join-Path $result receipt.json
   $receipt=if(Test-Path $receiptPath){Get-Content $receiptPath -Raw|ConvertFrom-Json -AsHashtable}else{[ordered]@{SchemaVersion=1;PlanId=$state.PlanId;Index=$index;Attempt=$state.Batches[$index].Attempts+1;Status='Failed';Assessed=0;Successful=0;DurationSeconds=0;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')}}
+  if($state.SchemaVersion -eq 2 -and -not(Test-Path $receiptPath)){$receipt.SchemaVersion=2;$receipt.AssessedPairs=0;$receipt.SuccessfulPairs=0}
   if($receipt.Index -ne $index){throw 'Wrong worker partition.'}
   # Validate receipt before consuming any anonymous evidence.
   Merge-TfCiReceipt $state $receipt
@@ -97,13 +99,16 @@ if($Action -eq 'Prepare'){
    $export=Get-Content $source -Raw|ConvertFrom-Json -AsHashtable
    Assert-TfCiScopeExport $export
    if($export.SchemaVersion -ne 1 -or $export.Disclaimer -cne 'Observed scopes are session/tenant dependent, not universal consent or guaranteed API access.' -or $export.Observations -isnot [array]){throw 'Invalid anonymous worker export.'}
+   $resources=@(Get-TfCiResources $state);$seenPairs=@{}
    foreach($row in $export.Observations){
     Assert-TfCiKeys $row @('ClientId','ResourceId','ObservedAt','Scopes','Evidence','SignatureValidated')
-    if($row.ClientId -notin $members -or $row.ResourceId -cne '00000003-0000-0000-c000-000000000000' -or $row.Evidence -cne 'AnonymousTenantTokenObservation' -or $row.SignatureValidated -isnot [bool] -or $row.SignatureValidated -or $row.Scopes -isnot [array] -or @($row.Scopes|Where-Object {$_ -isnot [string] -or $_ -notmatch '^[A-Za-z0-9_.-]{1,256}$'}).Count){throw 'Private or foreign anonymous observation.'}
+    if($row.ClientId -notin $members -or $row.ResourceId -cnotin $resources -or $row.Evidence -cne 'AnonymousTenantTokenObservation' -or $row.SignatureValidated -isnot [bool] -or $row.SignatureValidated -or $row.Scopes -isnot [array] -or @($row.Scopes|Where-Object {$_ -isnot [string] -or $_ -notmatch '^[A-Za-z0-9_.-]{1,256}$'}).Count){throw 'Private or foreign anonymous observation.'}
+    $pair=$row.ClientId+'/'+$row.ResourceId;if($seenPairs.ContainsKey($pair)){throw 'Duplicate anonymous worker pair.'};$seenPairs[$pair]=$true
     $observed=[DateTimeOffset]::Parse([string]$row.ObservedAt)
     if($observed -lt [DateTimeOffset]::Parse($state.Recipe.CreatedAt) -or $observed -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Stale or future worker observation.'}
    }
    if(@($export.Observations|ForEach-Object ClientId|Sort-Object -Unique).Count -ne $receipt.Successful){throw 'Success receipt does not match export.'}
+   if($state.SchemaVersion -eq 2 -and $export.Observations.Count -ne $receipt.SuccessfulPairs){throw 'Pair success receipt does not match export.'}
    $destination=Join-Path $DataPath ('scopes/chunk-{0:D4}.json' -f $index)
    # Preserve prior successful evidence, including IDs that moved between weekly chunks.
    $prior=if(Test-Path $destination){Get-Content $destination -Raw|ConvertFrom-Json -AsHashtable}else{@{Observations=@()}}
@@ -118,6 +123,7 @@ if($Action -eq 'Prepare'){
  if($env:GITHUB_STEP_SUMMARY){
   Add-Content $env:GITHUB_STEP_SUMMARY ('### Weekly '+$Mode+' coverage')
   Add-Content $env:GITHUB_STEP_SUMMARY "Source catalog: $($report.SourceCatalogApplications) IDs; selected: $($report.SelectedApplications); assessed: $($report.AssessedApplications); successful token observations: $($report.SuccessfulApplications). Selected-set completion: $($report.Complete). Pending batches: $($report.PendingBatches); exhausted: $($report.ExhaustedBatches)."
+  Add-Content $env:GITHUB_STEP_SUMMARY "Resource pairs: assessed $($report.AssessedPairs)/$($report.SelectedPairs); successful $($report.SuccessfulPairs), across $($report.ResourceIds.Count) resources. Successful apps count once even if multiple resources succeed."
   if($null -ne $report.DeepSelectionHistoryApplications){
    Add-Content $env:GITHUB_STEP_SUMMARY "Deep history: $($report.DeepSelectionHistoryApplications) public IDs selected; $($report.NeverDeepSelectedCallbackCandidates) callback candidates never selected. Selection history does not establish completed flow testing."
   }

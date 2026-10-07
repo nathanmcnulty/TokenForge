@@ -1,0 +1,36 @@
+{
+  "SchemaVersion": 1,
+  "Observations": [
+    {
+      "ClientId": "b743a22d-6705-4147-8670-d92fa515ee2b",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:25:36.9280778+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "ServicePrincipalEndpoint.Read.All",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "b910b879-6c07-48aa-9cfd-d1916f62130d",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:26:06.6346034+00:00",
+      "Scopes": [
+        "AppCatalog.Read.All",
+        "email",
+        "Files.Read",
+        "Files.Read.All",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    }
+  ],
+  "Disclaimer": "Observed scopes are session/tenant dependent, not universal consent or guaranteed API access."
+}

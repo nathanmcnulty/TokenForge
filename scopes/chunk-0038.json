@@ -1,0 +1,50 @@
+{
+  "SchemaVersion": 1,
+  "Observations": [
+    {
+      "ClientId": "b20d0d3a-dc90-485b-ad11-6031e769e221",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:25:33.4785953+00:00",
+      "Scopes": [
+        "Application.Read.All",
+        "Calendars.ReadWrite",
+        "Chat.Read",
+        "Contacts.Read",
+        "Directory.Read.All",
+        "email",
+        "Files.ReadWrite.All",
+        "OnlineMeetingArtifact.Read.All",
+        "OnlineMeetingTranscript.Read.All",
+        "openid",
+        "Presence.ReadWrite",
+        "profile",
+        "User.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "b26aadf8-566f-4478-926f-589f601d9c74",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:25:38.0930183+00:00",
+      "Scopes": [
+        "Contacts.Read",
+        "Content.Process.User",
+        "Directory.Read.All",
+        "email",
+        "Family.Read",
+        "Files.ReadWrite.All",
+        "Group.Read.All",
+        "openid",
+        "People.Read",
+        "profile",
+        "ProtectionScopes.Compute.User",
+        "Sites.Read.All",
+        "User.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    }
+  ],
+  "Disclaimer": "Observed scopes are session/tenant dependent, not universal consent or guaranteed API access."
+}

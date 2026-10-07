@@ -1,0 +1,119 @@
+{
+  "Date": "2026-10-07",
+  "PlanId": "9aff933cbc55ff40d40fc7d50644417908b3a6d442862756096c53aa1cfabf70",
+  "Week": "2026-W41",
+  "DataCommit": "7e43e722cdb5b43cd7fd86f353382d7f9c7a61cd",
+  "Applications": 5454,
+  "CompletedBatches": 55,
+  "SuccessfulApplications": 252,
+  "Complete": true,
+  "ExhaustedBatches": 0,
+  "RetriedBatches": 0,
+  "FrozenMembershipVerified": true,
+  "RecipeHashVerified": true,
+  "ExactWorkerPartitionCoverageVerified": true,
+  "SourceCommits": [
+    "14b86d0aac9f1fc5692c3407da2259d7bc673e3f",
+    "33569301ddc7c3ebe9429bc6618c65027f926cdc",
+    "43b1d24b48b7da0eb09dcb5294b783402a666b37",
+    "708c03b5695333ecf4ae76cde8025f0f5df10c56",
+    "ca3cff3296283b1787797908129435a70836096e"
+  ],
+  "BatchMedianSeconds": 87.859,
+  "BatchP95Seconds": 114.195,
+  "HostedRuns": [
+    37679738716,
+    37680608188,
+    37681528658,
+    37682064791,
+    37682080883,
+    37683775379,
+    37684588261,
+    37685542574,
+    37686417209,
+    37687771840,
+    37688952418,
+    37689762718,
+    37690541529,
+    37691227312,
+    37692003589
+  ],
+  "WorkerJobs": 55,
+  "TotalJobs": 85,
+  "RunnerMinutesByStage": {
+    "Worker": 107.2,
+    "Prepare": 19.88,
+    "Publish": 22.52
+  },
+  "TotalRunnerMinutes": 149.6,
+  "SumWorkflowWallMinutes": 78.28,
+  "ObservedCycleElapsedMinutes": 105.2,
+  "ElapsedIncludesManualDispatchGaps": true,
+  "AccountCoverage": "OneAccountGraphShallowAssessmentNotUniversalTokenSupport",
+  "TimingMethod": "Runner minutes sum completed_at minus started_at for successful jobs; workflow wall sums per-run earliest job start to latest job finish; elapsed spans run created_at to run updated_at.",
+  "HostedDeep": {
+    "SignatureValidated": false,
+    "CredentialsPersisted": false,
+    "Modes": {
+      "OAuth2V2PkceNative": {
+        "Attempts": 210,
+        "Succeeded": 58
+      },
+      "OAuth2V2Implicit": {
+        "Attempts": 210,
+        "Succeeded": 5
+      },
+      "OAuth2V1Implicit": {
+        "Attempts": 210,
+        "Succeeded": 5
+      },
+      "OAuth2V2PkceSpa": {
+        "Attempts": 137,
+        "Succeeded": 70
+      }
+    },
+    "ApiAuthorization": "NotEstablishedByFlowAttempts",
+    "AllPlannedCellsTerminal": true,
+    "EncryptedAccountBindingVerified": true,
+    "PlanId": "cc4e968e29cb56d55ce787fa884bffd29e72b31e3f8ba616611a57020cbcccd7",
+    "Date": "2026-10-07",
+    "CompleteSelectedDeepSet": true,
+    "TerminalCells": 767,
+    "MaxCallbacks": 4,
+    "FlowPlans": 100,
+    "FlowAttempts": 767,
+    "Outcomes": {
+      "Succeeded": 138,
+      "Failed": 629
+    },
+    "ClientsWithPlannedCells": 69,
+    "AttemptsByProtocol": {
+      "OAuth2V2Implicit": 210,
+      "OAuth2V2Pkce": 347,
+      "OAuth2V1Implicit": 210
+    },
+    "Assessed": 100,
+    "Chunks": 4,
+    "SourceCatalogApplications": 5454,
+    "SelectedApplications": 100,
+    "SuccessfulApplications": 46,
+    "RetriedBatches": 0,
+    "ExhaustedBatches": 0,
+    "BatchMedianSeconds": 149.759,
+    "BatchP95Seconds": 244.029,
+    "HostedRuns": [
+      37692624800,
+      37693322427
+    ],
+    "TotalJobs": 8,
+    "RunnerMinutesByStage": {
+      "Worker": 13.05,
+      "Prepare": 2.95,
+      "Publish": 2.57
+    },
+    "TotalRunnerMinutes": 18.57,
+    "SumWorkflowWallMinutes": 13.22,
+    "ExactWorkerPartitionCoverageVerified": true,
+    "PublicDataCommit": "dcbc554ba9deb0556a32680b45bf0a1dd287c2d0"
+  }
+}

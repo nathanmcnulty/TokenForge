@@ -1,0 +1,66 @@
+{
+  "SchemaVersion": 1,
+  "Observations": [
+    {
+      "ClientId": "4345a7b9-9a63-4910-a426-35363201d503",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:34:26.1932606+00:00",
+      "Scopes": [
+        "email",
+        "Notes.Create",
+        "Notes.ReadWrite",
+        "Notes.ReadWrite.All",
+        "openid",
+        "Organization.Read.All",
+        "People.Read",
+        "profile",
+        "SensitivityLabel.Read",
+        "Sites.Read.All",
+        "Sites.ReadWrite.All",
+        "User.Read",
+        "User.ReadBasic.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "44a02aaa-7145-4925-9dcd-79e6e1b94eff",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:35:13.1014402+00:00",
+      "Scopes": [
+        "Channel.ReadBasic.All",
+        "Chat.Read",
+        "email",
+        "GroupMember.Read.All",
+        "InformationProtectionPolicy.Read",
+        "OnlineMeetings.Read",
+        "openid",
+        "profile",
+        "Sites.Read.All",
+        "Team.ReadBasic.All",
+        "TeamMember.ReadWrite.All",
+        "TeamsAppInstallation.ReadWriteForTeam",
+        "TeamsTab.Create",
+        "User.Read",
+        "User.Read.All",
+        "User.ReadBasic.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "4536f486-82f7-4cfc-bfcc-6cf40d5ba55a",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:35:22.557824+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    }
+  ],
+  "Disclaimer": "Observed scopes are session/tenant dependent, not universal consent or guaranteed API access."
+}

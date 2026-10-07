@@ -1,0 +1,85 @@
+{
+  "SchemaVersion": 1,
+  "Observations": [
+    {
+      "ClientId": "3cf6df92-2745-4f6f-bbcf-19b59bcdb62a",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:34:09.1428413+00:00",
+      "Scopes": [
+        "DeviceManagementConfiguration.Read.All",
+        "DeviceManagementConfiguration.ReadWrite.All",
+        "Directory.Read.All",
+        "email",
+        "Group.Read.All",
+        "GroupMember.Read.All",
+        "openid",
+        "Organization.Read.All",
+        "profile",
+        "User.Read.All",
+        "User.ReadBasic.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "3dd3a51e-8d76-4cca-ac35-5537c1319211",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:34:18.8448227+00:00",
+      "Scopes": [
+        "CloudPC.Read.All",
+        "email",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "3e62f81e-590b-425b-9531-cad6683656cf",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:34:26.7270241+00:00",
+      "Scopes": [
+        "Channel.ReadBasic.All",
+        "ChannelMessage.Read.All",
+        "Chat.Create",
+        "Chat.Read",
+        "ChatMessage.Send",
+        "email",
+        "Files.Read.All",
+        "Group.Read.All",
+        "Mail.Read",
+        "openid",
+        "Organization.Read.All",
+        "People.Read",
+        "Presence.Read.All",
+        "profile",
+        "TeamMember.Read.All",
+        "TeamsAppInstallation.ReadWriteAndConsentForChat",
+        "TeamsAppInstallation.ReadWriteForChat",
+        "TeamworkAppSettings.Read.All",
+        "TeamworkTag.Read",
+        "User.Read",
+        "User.Read.All",
+        "User.ReadBasic.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "3ff8e6ba-7dc3-4e9e-ba40-ee12b60d6d48",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:35:08.0913288+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "User.Read",
+        "User.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    }
+  ],
+  "Disclaimer": "Observed scopes are session/tenant dependent, not universal consent or guaranteed API access."
+}

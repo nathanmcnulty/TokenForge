@@ -1,0 +1,69 @@
+{
+  "SchemaVersion": 1,
+  "Observations": [
+    {
+      "ClientId": "8c59ead7-d703-4a27-9e55-c96a0054c8d2",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:04:25.3468782+00:00",
+      "Scopes": [
+        "_A.AW",
+        "_A.CF",
+        "AccessReview.Read.All",
+        "AdministrativeUnit.Read.All",
+        "AgentIdentity.EnableDisable.All",
+        "AgentIdentity.Read.All",
+        "Application.Read.All",
+        "AuditLog.Read.All",
+        "BitlockerKey.Read.All",
+        "Contacts.Read",
+        "CrossTenantInformation.ReadBasic.All",
+        "CrossTenantUserProfileSharing.ReadWrite.All",
+        "DelegatedPermissionGrant.Read.All",
+        "Device.EnableDisableAccount.All",
+        "Device.Read.All",
+        "email",
+        "EntitlementManagement.Read.All",
+        "EntitlementMgmt-SubjectAccess.ReadWrite",
+        "Group.Read.All",
+        "Group.ReadWrite.All",
+        "GroupMember.Read.All",
+        "LifecyclePolicies-AgentId.Read.All",
+        "MailboxSettings.ReadWrite",
+        "openid",
+        "Organization.Read.All",
+        "Policy.Read.All",
+        "PrivilegedAssignmentSchedule.ReadWrite.AzureADGroup",
+        "PrivilegedEligibilitySchedule.Read.AzureADGroup",
+        "profile",
+        "ProfilePhoto.Read.All",
+        "RoleManagement.Read.Directory",
+        "RoleManagement.ReadWrite.Directory",
+        "User.Invite.All",
+        "User.Read.All",
+        "User.ReadBasic.All",
+        "User.ReadWrite",
+        "UserAuthenticationMethod-Policy.Read.All",
+        "UserAuthenticationMethod.Read",
+        "UserAuthMethod-Phone.ReadWrite.All",
+        "UserAuthMethod-QR.ReadWrite.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "8ec6bc83-69c8-4392-8f08-b3c986009232",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:04:49.0872409+00:00",
+      "Scopes": [
+        "email",
+        "Files.ReadWrite.All",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    }
+  ],
+  "Disclaimer": "Observed scopes are session/tenant dependent, not universal consent or guaranteed API access."
+}

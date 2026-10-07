@@ -6,10 +6,29 @@ function New-TokenForgeScopeDatabase {
 
 function Get-TokenForgeScopeDatabase {
     [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$Path)
-    if (-not (Test-Path -LiteralPath $Path)) { return New-TokenForgeScopeDatabase }
-    $database = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -ErrorAction Stop
-    if ($database.SchemaVersion -ne 1 -or -not $database.PSObject.Properties['Observations'] -or -not $database.PSObject.Properties['RegistrationAttempts']) { throw 'Unsupported scope database document.' }
+    param([Parameter(Mandatory)][string]$Path,[string]$NativeExecutablePath,[switch]$Latest,
+        [ValidatePattern('^[a-f0-9]{64}$')][string]$TenantFingerprint,
+        [ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,[guid]$ResourceId=[guid]::Empty)
+    if ($PrincipalFingerprint -and -not $TenantFingerprint) { throw 'Principal selection requires a tenant.' }
+    if ($Path.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)) {
+        $full=Resolve-TokenForgeVaultPath $Path -CreateDirectory
+        if (-not (Test-Path -LiteralPath $full)) { return New-TokenForgeScopeDatabase }
+        $document=Invoke-TokenForgeNativeEvidence $full export -Domain evidence -NativeExecutablePath $NativeExecutablePath -Latest:$Latest -TenantFingerprint $TenantFingerprint -PrincipalFingerprint $PrincipalFingerprint -ResourceId $ResourceId
+        $database=[pscustomobject]@{SchemaVersion=$document.SchemaVersion;UpdatedAt=$document.UpdatedAt;Observations=@($document.Observations|ForEach-Object {[pscustomobject]$_});RegistrationAttempts=@($document.RegistrationAttempts|ForEach-Object {[pscustomobject]$_})}
+    } else {
+        if (-not (Test-Path -LiteralPath $Path)) { return New-TokenForgeScopeDatabase }
+        if ((Get-Item -LiteralPath $Path).Length -gt 67108864) { throw 'Scope database exceeds portable JSON bounds.' }
+        $database = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -ErrorAction Stop
+        if ($database.SchemaVersion -ne 1 -or -not $database.PSObject.Properties['Observations'] -or -not $database.PSObject.Properties['RegistrationAttempts']) { throw 'Unsupported scope database document.' }
+        $database.Observations=@($database.Observations|Where-Object {(-not $TenantFingerprint -or $_.TenantFingerprint -eq $TenantFingerprint) -and (-not $PrincipalFingerprint -or $_.PrincipalFingerprint -eq $PrincipalFingerprint) -and ($ResourceId -eq [guid]::Empty -or $_.ResourceId -eq $ResourceId.ToString())}|Sort-Object -Stable {([DateTimeOffset]$_.ObservedAt).UtcDateTime})
+        $database.RegistrationAttempts=@($database.RegistrationAttempts|Where-Object {-not $TenantFingerprint -or $_.TenantFingerprint -eq $TenantFingerprint}|Sort-Object -Stable {([DateTimeOffset]$_.AttemptedAt).UtcDateTime})
+        if($Latest){
+            $rows=@{};foreach($row in $database.Observations){$rows["$($row.TenantFingerprint)/$($row.PrincipalFingerprint)/$($row.ClientId)/$($row.ResourceId)"]=$row};$database.Observations=@($rows.Values|Sort-Object ObservedAt)
+            $rows=@{};$cleanup=@{};foreach($row in $database.RegistrationAttempts){$key="$($row.TenantFingerprint)/$($row.AppId)";$rows[$key]=$row;if($row.Outcome -eq 'CleanupRequired'){$cleanup[$key]=$row}elseif($row.Outcome -eq 'CleanupResolved'){$cleanup.Remove($key)}};foreach($key in $cleanup.Keys){$rows[$key]=$cleanup[$key]};$database.RegistrationAttempts=@($rows.Values|Sort-Object AttemptedAt)
+        }
+    }
+    foreach($row in $database.Observations){if($row.ObservedAt -is [datetime]){$row.ObservedAt=$row.ObservedAt.ToUniversalTime().ToString('o')}}
+    foreach($row in $database.RegistrationAttempts){if($row.AttemptedAt -is [datetime]){$row.AttemptedAt=$row.AttemptedAt.ToUniversalTime().ToString('o')}}
     $database
 }
 
@@ -18,7 +37,7 @@ function Add-TokenForgeScopeObservation {
     Persist only an explicit whitelist of scope evidence; token objects are never serialized.
     #>
     [CmdletBinding()]
-    param([Parameter(Mandatory)]$Database, [Parameter(Mandatory)]$Observation, [string]$Path)
+    param([Parameter(Mandatory)]$Database, [Parameter(Mandatory)]$Observation, [string]$Path,[string]$NativeExecutablePath)
     $required = @('ClientId','ResourceId','Outcome','TenantFingerprint','PrincipalFingerprint','ObservedAt')
     foreach ($field in $required) { if (-not $Observation.PSObject.Properties[$field]) { throw "Observation is missing $field." } }
     foreach ($field in @('ClientId','ResourceId')) {
@@ -42,9 +61,13 @@ function Add-TokenForgeScopeObservation {
     }
     if ($clean.Contains('ErrorCodes')) { $clean.ErrorCodes = @($clean.ErrorCodes | Where-Object { [string]$_ -match '^[0-9]{4,9}$' } | Sort-Object -Unique) }
     $clean.SignatureValidated = $false
+    if ($Path -and $Path.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)) {
+        $checkpoint=New-TokenForgeScopeDatabase;$checkpoint.Observations=@([pscustomobject]$clean)
+        $null=Invoke-TokenForgeNativeEvidence $Path update -Document $checkpoint -Domain evidence -NativeExecutablePath $NativeExecutablePath
+    }
     $Database.Observations += [pscustomobject]$clean
     $Database.UpdatedAt = [DateTimeOffset]::UtcNow.ToString('o')
-    if ($Path) { Save-TokenForgeDocument -Document $Database -Path $Path }
+    if ($Path -and -not $Path.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)) { Save-TokenForgeDocument -Document $Database -Path $Path }
     $Database
 }
 
@@ -131,4 +154,16 @@ function Get-TokenForgeAssessmentCoverage {
         }
     }
     @($rows | Sort-Object @{ Expression = { $_.MissingScopes.Count } }, AdditionalScopeCount, ObservedApiScopeCount, ClientId)
+}
+
+function Import-TokenForgeScopeDatabase {
+    <# .SYNOPSIS
+    Import portable scope/registration history transactionally into a private SQLite store.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Path,[Parameter(Mandatory)][string]$InputPath,[string]$NativeExecutablePath)
+    if(-not $Path.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){throw 'Import destination must be a SQLite evidence database.'}
+    if(-not(Test-Path -LiteralPath $InputPath -PathType Leaf)){throw 'Import source does not exist.'}
+    $document=Get-TokenForgeScopeDatabase $InputPath -NativeExecutablePath $NativeExecutablePath
+    Invoke-TokenForgeNativeEvidence $Path import -Document $document -Domain evidence -NativeExecutablePath $NativeExecutablePath -SourcePath ($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($InputPath))
 }

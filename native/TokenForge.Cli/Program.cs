@@ -4,10 +4,10 @@ using TokenForge.Core;
 
 try
 {
-    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.14.0",AuthenticationDependency="PowerShell 7.4+"}));return 0;}
+    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.15.0",AuthenticationDependency="PowerShell 7.4+"}));return 0;}
     if (args.Length == 0 || args[0] is "help" or "--help")
     {
-        Console.WriteLine("TokenForge: profile create/show/forget-key, login, status, doctor, logout, scopes explain, token get, graph permissions; research report/export-flows; evidence import/export/plan/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Authentication currently requires PowerShell 7.4+.");
+        Console.WriteLine("TokenForge: profile create/show/forget-key, login, status, doctor, logout, scopes explain, token get, graph permissions; research report/export-flows; evidence import/update/export/plan/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Authentication currently requires PowerShell 7.4+.");
         return 0;
     }
     if (args[0] == "catalog")
@@ -71,8 +71,9 @@ try
     {
         if (args.Length < 4 || args[2] != "--database") throw new InvalidOperationException();
         var valid=args[1] switch {
-            "import" => args.Length==6 && args[4]=="--input",
-            "export" => args.Length==4 || (args.Length==5 && args[4]=="--public"),
+            "import" => (args.Length==6 || args.Length==8 && args[6]=="--source") && args[4]=="--input",
+            "update" => args.Length==6 && args[4]=="--input",
+            "export" => true,
             "plan" => args.Length==8 && args[4]=="--input" && args[6]=="--batch-size",
             "pending" => args.Length==6 && args[4]=="--plan",
             "checkpoint" => args.Length==10 && args[4]=="--plan" && args[6]=="--client" && args[8]=="--outcome",
@@ -83,13 +84,25 @@ try
         switch (args[1])
         {
             case "import":
-                if (args.Length != 6 || args[4] != "--input") throw new InvalidOperationException();
+            case "update":
+                if (args[4] != "--input") throw new InvalidOperationException();
                 var input = Path.GetFullPath(args[5]);
                 if (new FileInfo(input).Length > 64 * 1024 * 1024) throw new InvalidOperationException();
-                result = new { SchemaVersion = 1, Imported = store.Import(File.ReadAllText(input), input) }; break;
+                result = new { SchemaVersion = 1, Imported = store.Import(File.ReadAllText(input), args[1]=="update"?"PrimaryCheckpoint":args.Length==8?args[7]:input) }; break;
             case "export":
-                if (args.Length != 4 && !(args.Length == 5 && args[4] == "--public")) throw new InvalidOperationException();
-                Console.WriteLine(store.Export(args.Length == 5)); return 0;
+                var publicOnly=false;var latest=false;string? tenant=null,principal=null,resource=null;var evidenceFlags=new HashSet<string>();
+                for(var i=4;i<args.Length;i++){
+                    if(!evidenceFlags.Add(args[i]))throw new InvalidOperationException();
+                    switch(args[i]){
+                        case "--public":publicOnly=true;break;
+                        case "--latest":latest=true;break;
+                        case "--tenant":if(++i>=args.Length)throw new InvalidOperationException();tenant=args[i];break;
+                        case "--principal":if(++i>=args.Length)throw new InvalidOperationException();principal=args[i];break;
+                        case "--resource":if(++i>=args.Length)throw new InvalidOperationException();resource=args[i];break;
+                        default:throw new InvalidOperationException();
+                    }
+                }
+                Console.WriteLine(store.Export(publicOnly,latest,tenant,principal,resource)); return 0;
             case "plan":
                 if (args.Length != 8 || args[4] != "--input" || args[6] != "--batch-size" || new FileInfo(args[5]).Length > 8 * 1024 * 1024) throw new InvalidOperationException();
                 result = new { SchemaVersion = 1, PlanId = store.Plan(JsonSerializer.Deserialize<string[]>(File.ReadAllText(args[5]))!, int.Parse(args[7])) }; break;

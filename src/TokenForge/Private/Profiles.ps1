@@ -94,6 +94,7 @@ function Request-TokenForgeProfileScope {
     $resource=@($Inventory.Applications|Where-Object {$_.AppId -eq $ResourceId.ToString() -and $_.Registration -eq 'Present' -and $_.Ownership -eq 'VerifiedMicrosoftOwner' -and $_.AccountEnabled})
     if($resource.Count -ne 1){throw 'Enabled ownership-verified target resource required.'}
     $candidates=@(Get-TokenForgeScopeCandidates -Inventory $Inventory -Database $Database -ResourceId $ResourceId -Scope $Scope -PrincipalFingerprint $Profile.ExpectedPrincipalFingerprint -MaxAgeHours $Profile.MaxAgeHours|Where-Object CandidateRank -LE 2)
+    if($DatabasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){$null=Invoke-TokenForgeNativeEvidence $DatabasePath update -Document (New-TokenForgeScopeDatabase) -Domain evidence}
     $attempted=0
     foreach($candidate in $candidates){
         $app=@($Inventory.Applications|Where-Object AppId -eq $candidate.ClientId)[0]
@@ -121,7 +122,7 @@ function Request-TokenForgeProfileScope {
                 $stateLock=$null
                 try{
                     $stateLock=Open-TokenForgeProfileOperation -Directory (Split-Path $DatabasePath -Parent) -Leaf '.writer.lock'
-                    $latest=Get-TokenForgeScopeDatabase $DatabasePath
+                    $latest=if($DatabasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){$Database}else{Get-TokenForgeScopeDatabase $DatabasePath}
                     $null=Add-TokenForgeScopeObservation -Database $latest -Observation $observation -Path $DatabasePath
                 }catch{
                     $failure=[InvalidOperationException]::new('Scope acquisition succeeded but its checkpoint could not be saved; token discarded. Details suppressed.')

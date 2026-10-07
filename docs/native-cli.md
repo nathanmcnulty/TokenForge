@@ -90,3 +90,5 @@ Version 0.13 adds `flows import` and filtered `flows export`, plus individual tr
 ## Primary application catalog
 
 Version 0.14 adds `catalog import/update/export` and direct transactional application-ledger updates from the existing producers. Research reports prefer `applications.sqlite` when it exists, and accept `--metadata-path`. See [SQLite application catalog](sqlite-application-catalog.md) for migration, filtered views, provenance, publication guards, and remaining scope-history limits.
+
+Primary scope and registration checkpoints can use an existing `scopes.sqlite`. See [SQLite scope history](sqlite-scope-history.md) for migration, selected/latest reads, resume repair, and public exports.

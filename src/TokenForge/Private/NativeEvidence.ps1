@@ -1,6 +1,6 @@
 function Invoke-TokenForgeNativeEvidence {
     param([string]$Path,[ValidateSet('import','export','plan','attempt','update')][string]$Operation,
-        $Document,[string]$PlanFingerprint,[string]$NativeExecutablePath,[switch]$Latest,[string]$TenantFingerprint,[string]$PrincipalFingerprint,[ValidateSet('flows','catalog')][string]$Domain='flows',[guid]$AppId=[guid]::Empty,[switch]$CurrentOnly)
+        $Document,[string]$PlanFingerprint,[string]$NativeExecutablePath,[switch]$Latest,[string]$TenantFingerprint,[string]$PrincipalFingerprint,[ValidateSet('flows','catalog','evidence')][string]$Domain='flows',[guid]$AppId=[guid]::Empty,[switch]$CurrentOnly,[guid]$ResourceId=[guid]::Empty,[string]$SourcePath)
     $full=Resolve-TokenForgeVaultPath $Path -CreateDirectory
     if(-not $NativeExecutablePath){$NativeExecutablePath=Join-Path $script:ModuleRoot $(if($IsWindows){'../../tokenforge.exe'}else{'../../tokenforge'})}
     if(-not(Test-Path -LiteralPath $NativeExecutablePath -PathType Leaf)){throw 'SQLite metadata requires the native TokenForge executable. Supply NativeExecutablePath or use a native package.'}
@@ -15,10 +15,12 @@ function Invoke-TokenForgeNativeEvidence {
             try{$bytes=[Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $Document -Depth 32 -Compress));$stream.Write($bytes,0,$bytes.Length)}finally{$stream.Dispose()}
             $start.ArgumentList.Add('--input');$start.ArgumentList.Add($temporary)
         }
+        if($SourcePath){$start.ArgumentList.Add('--source');$start.ArgumentList.Add($SourcePath)}
         if($TenantFingerprint){$start.ArgumentList.Add('--tenant');$start.ArgumentList.Add($TenantFingerprint)}
         if($PrincipalFingerprint){$start.ArgumentList.Add('--principal');$start.ArgumentList.Add($PrincipalFingerprint)}
         if($PlanFingerprint){$start.ArgumentList.Add($(if($Operation -eq 'plan'){'--fingerprint'}else{'--plan'}));$start.ArgumentList.Add($PlanFingerprint)}
         if($AppId -ne [guid]::Empty){$start.ArgumentList.Add('--app');$start.ArgumentList.Add($AppId.ToString())}
+        if($ResourceId -ne [guid]::Empty){$start.ArgumentList.Add('--resource');$start.ArgumentList.Add($ResourceId.ToString())}
         if($CurrentOnly){$start.ArgumentList.Add('--current')}
         if($Latest){$start.ArgumentList.Add('--latest')}
         $process=[Diagnostics.Process]::Start($start)

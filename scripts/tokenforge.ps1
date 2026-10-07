@@ -48,7 +48,7 @@ try{
    $p=Get-TokenForgeProfile @common
    if(-not $p.ExpectedPrincipalFingerprint){throw 'Log in before selecting account-specific evidence.'}
    $id=if($Resource -eq 'graph'){'00000003-0000-0000-c000-000000000000'}else{'797f4846-ba00-4fd7-ba43-dac1f8f63013'}
-   Get-TokenForgeScopeCandidates -Inventory (Get-Content (Join-Path $p.StatePath inventory.json) -Raw|ConvertFrom-Json) -Database (Get-TokenForgeScopeDatabase (Join-Path $p.StatePath scopes.json)) -ResourceId $id -Scope $Scope -PrincipalFingerprint $p.ExpectedPrincipalFingerprint -MaxAgeHours $p.MaxAgeHours
+   Get-TokenForgeScopeCandidates -Inventory (Get-Content (Join-Path $p.StatePath inventory.json) -Raw|ConvertFrom-Json) -Database (Get-TokenForgeScopeDatabase (Join-Path $p.StatePath $(if(Test-Path (Join-Path $p.StatePath scopes.sqlite)){'scopes.sqlite'}else{'scopes.json'})) -Latest) -ResourceId $id -Scope $Scope -PrincipalFingerprint $p.ExpectedPrincipalFingerprint -MaxAgeHours $p.MaxAgeHours
   }
   research {
    $p=if($StatePath){$null}else{Get-TokenForgeProfile @common}

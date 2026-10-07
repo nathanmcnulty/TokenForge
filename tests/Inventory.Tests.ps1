@@ -138,6 +138,8 @@ Describe 'Tenant inventory' {
 
 Describe 'Service principal registration' {
     BeforeEach {
+        $registrationRoot=Join-Path ($TestDrive -replace '^/var/','/private/var/') ([guid]::NewGuid().ToString())
+        $null=Get-TokenForgeFlowEvidence (Join-Path $registrationRoot missing.json)
         $secret = ConvertTo-SecureString synthetic -AsPlainText -Force
         Mock Get-TokenForgeTokenClaims -ModuleName TokenForge { [pscustomobject]@{TenantFingerprint=('a'*64)} }
         $app = [pscustomobject]@{ AppId = $clientId; OwnerTenantId = $owner; Ownership = 'PublishedMicrosoftOwner' }
@@ -151,16 +153,16 @@ Describe 'Service principal registration' {
         $app | Add-Member Registration Missing
         $inventory = [pscustomobject]@{ Applications=@($app);TenantFingerprint=('a'*64) }
         Mock Register-TokenForgeApplication -ModuleName TokenForge { throw 'Graph request failed (HTTP 401); details suppressed.' }
-        { Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $secret -DatabasePath "$TestDrive/expired.json" -DelayMilliseconds 0 -Confirm:$false } | Should -Throw '*stopped*401*'
-        (Get-TokenForgeScopeDatabase -Path "$TestDrive/expired.json").RegistrationAttempts.Count | Should -Be 1
-        (Get-TokenForgeScopeDatabase -Path "$TestDrive/expired.json").RegistrationAttempts[0].HttpStatus | Should -Be 401
+        { Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $secret -DatabasePath "$registrationRoot/expired.json" -DelayMilliseconds 0 -Confirm:$false } | Should -Throw '*stopped*401*'
+        (Get-TokenForgeScopeDatabase -Path "$registrationRoot/expired.json").RegistrationAttempts.Count | Should -Be 1
+        (Get-TokenForgeScopeDatabase -Path "$registrationRoot/expired.json").RegistrationAttempts[0].HttpStatus | Should -Be 401
     }
     It 'continues bounded registration batches after checkpointed candidates' {
         $app | Add-Member Registration Missing
         $second=$app.PSObject.Copy();$second.AppId='22222222-2222-2222-2222-222222222222'
         $inventory=[pscustomobject]@{Applications=@($app,$second);TenantFingerprint=('a'*64)}
         Mock Register-TokenForgeApplication -ModuleName TokenForge { [pscustomobject]@{Outcome='Created'} }
-        $path="$TestDrive/register-bounded.json"
+        $path="$registrationRoot/register-bounded.json"
         @(Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $secret -DatabasePath $path -MaxApplications 1 -DelayMilliseconds 0 -Confirm:$false).Count | Should -Be 1
         @(Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $secret -DatabasePath $path -MaxApplications 1 -DelayMilliseconds 0 -Confirm:$false).Count | Should -Be 1
         (Get-TokenForgeScopeDatabase -Path $path).RegistrationAttempts.Count | Should -Be 2
@@ -200,7 +202,7 @@ Describe 'Service principal registration' {
         $inventory=[pscustomobject]@{Applications=@($app);TenantFingerprint=('a'*64)}
         Mock Invoke-TokenForgeGraph -ModuleName TokenForge { @{id='33333333-3333-3333-3333-333333333333';appId='11111111-1111-1111-1111-111111111111';appOwnerOrganizationId='44444444-4444-4444-4444-444444444444'} } -ParameterFilter {$Method -eq 'POST'}
         Mock Invoke-TokenForgeGraph -ModuleName TokenForge { throw 'Graph request failed (HTTP 403)' } -ParameterFilter {$Method -eq 'DELETE'}
-        $path="$TestDrive/cleanup.json"
+        $path="$registrationRoot/cleanup.json"
         { Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $secret -DatabasePath $path -DelayMilliseconds 0 -Confirm:$false } | Should -Throw '*cleanup*'
         $attempts=(Get-TokenForgeScopeDatabase -Path $path).RegistrationAttempts
         $attempts.Count | Should -Be 1

@@ -76,11 +76,12 @@ function Get-TokenForgeProfileToken {
         }
         if(-not $token){
             $inventory=Get-Content -LiteralPath (Resolve-TokenForgeVaultPath (Join-Path $p.StatePath 'inventory.json')) -Raw|ConvertFrom-Json
-            $database=Get-TokenForgeScopeDatabase -Path (Resolve-TokenForgeVaultPath (Join-Path $p.StatePath 'scopes.json'))
+            $scopePath=Join-Path $p.StatePath $(if(Test-Path (Join-Path $p.StatePath 'scopes.sqlite')){'scopes.sqlite'}else{'scopes.json'})
+            $database=Get-TokenForgeScopeDatabase -Path (Resolve-TokenForgeVaultPath $scopePath) -Latest -TenantFingerprint $p.ExpectedTenantFingerprint -PrincipalFingerprint $p.ExpectedPrincipalFingerprint -ResourceId $ResourceId
             $auth=if($ownedCookie){@{EstsAuth=$ownedCookie;CookieName=$cookieName}}else{@{Browser=$true;NoConsent=$true;LoginHint=$LoginHint}}
             $coverage=@(Get-TokenForgeAssessmentCoverage -Database $database -ResourceId $ResourceId -Scope $Scope -TenantFingerprint $p.ExpectedTenantFingerprint -PrincipalFingerprint $p.ExpectedPrincipalFingerprint -MaxAgeHours $p.MaxAgeHours|Where-Object CoversAll)
             if(-not $coverage.Count){
-                $token=Request-TokenForgeProfileScope -Profile $p -Inventory $inventory -Database $database -DatabasePath (Join-Path $p.StatePath 'scopes.json') -ResourceId $ResourceId -Scope $Scope -Authentication $auth -MaxCandidates $MaxCandidates -MaxRedirects $MaxRedirects
+                $token=Request-TokenForgeProfileScope -Profile $p -Inventory $inventory -Database $database -DatabasePath $scopePath -ResourceId $ResourceId -Scope $Scope -Authentication $auth -MaxCandidates $MaxCandidates -MaxRedirects $MaxRedirects
             }else{
                 $auth.Remove('NoConsent')
                 $token=Get-TokenForgeScopedToken -Inventory $inventory -Database $database -ResourceId $ResourceId -Scope $Scope @auth -Tenant $p.Tenant -BootstrapClientId $p.BootstrapClientId -MaxBootstrapAdditionalScopes $p.MaxBootstrapAdditionalScopes -MaxAdditionalScopes $p.MaxAdditionalScopes -MaxAgeHours $p.MaxAgeHours -MaxCandidates $MaxCandidates -MaxRedirects $MaxRedirects -OfflineAccess

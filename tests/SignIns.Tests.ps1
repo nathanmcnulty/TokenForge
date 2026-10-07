@@ -44,6 +44,8 @@ Describe 'Sign-in application extraction' {
 }
 Describe 'Explicit sign-in candidate registration' {
  BeforeEach {
+  $registrationRoot=Join-Path ($TestDrive -replace '^/var/','/private/var/') ([guid]::NewGuid().ToString())
+  $null=Get-TokenForgeFlowEvidence (Join-Path $registrationRoot missing.json)
   $app=[pscustomobject]@{AppId=$id;OwnerTenantId=$null;Ownership='Unverified';Registration='Missing';Sources=@([pscustomobject]@{Evidence='ObservedSignInNotOwnership'})}
   Mock Invoke-TokenForgeGraph -ModuleName TokenForge {param($Method)
    if($Method -eq 'POST'){@{appId=$id;id='33333333-3333-3333-3333-333333333333';appOwnerOrganizationId='f8cdef31-a31e-4b4a-93e4-5f571e91255a'}}else{$null}
@@ -56,14 +58,14 @@ Describe 'Explicit sign-in candidate registration' {
  }
  It 'registers only selected missing sign-in candidates and checkpoints ownership' {
   $i=[pscustomobject]@{TenantFingerprint=$fp;Applications=@($app)}
-  $result=@(Sync-TokenForgeApplicationRegistration $i $token "$TestDrive/signin-register.json" -ResolveSignInCandidates -DelayMilliseconds 0 -Confirm:$false)
+  $result=@(Sync-TokenForgeApplicationRegistration $i $token "$registrationRoot/signin-register.json" -ResolveSignInCandidates -DelayMilliseconds 0 -Confirm:$false)
   $result.Count|Should -Be 1;$result[0].Outcome|Should -Be Created
  }
  It 'rejects another tenant before registration calls or checkpoint writes' {
   $i=[pscustomobject]@{TenantFingerprint=('f'*64);Applications=@($app)}
-  {Sync-TokenForgeApplicationRegistration $i $token "$TestDrive/wrong-tenant.json" -ResolveSignInCandidates -Confirm:$false}|Should -Throw '*tenant*'
+  {Sync-TokenForgeApplicationRegistration $i $token "$registrationRoot/wrong-tenant.json" -ResolveSignInCandidates -Confirm:$false}|Should -Throw '*tenant*'
   Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 0
-  Test-Path "$TestDrive/wrong-tenant.json"|Should -BeFalse
+  Test-Path "$registrationRoot/wrong-tenant.json"|Should -BeFalse
  }
  It 'rolls back only a newly created exact candidate with a non-Microsoft owner' {
   Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{appId=$id;id='33333333-3333-3333-3333-333333333333';appOwnerOrganizationId='44444444-4444-4444-4444-444444444444'}} -ParameterFilter {$Method -eq 'POST'}
@@ -73,7 +75,7 @@ Describe 'Explicit sign-in candidate registration' {
  It 'stops and checkpoints ambiguous creation responses without deleting another principal' -TestCases @(@{Response=@{appId='44444444-4444-4444-4444-444444444444'}},@{Response=$null},@{Response=@{id='33333333-3333-3333-3333-333333333333'}}) {
   param($Response)
   Mock Invoke-TokenForgeGraph -ModuleName TokenForge {$Response} -ParameterFilter {$Method -eq 'POST'}
-  $i=[pscustomobject]@{TenantFingerprint=$fp;Applications=@($app)};$path="$TestDrive/ambiguous.json"
+  $i=[pscustomobject]@{TenantFingerprint=$fp;Applications=@($app)};$path="$registrationRoot/ambiguous.json"
   {Sync-TokenForgeApplicationRegistration $i $token $path -ResolveSignInCandidates -DelayMilliseconds 0 -Confirm:$false}|Should -Throw '*cleanup*'
   (Get-TokenForgeScopeDatabase $path).RegistrationAttempts[0].Outcome|Should -Be CleanupRequired
   Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 0 -ParameterFilter {$Method -eq 'DELETE'}

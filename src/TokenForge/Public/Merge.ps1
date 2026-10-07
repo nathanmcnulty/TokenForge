@@ -3,7 +3,7 @@ function Merge-TokenForgeScopeDatabase {
     Merge independent checkpoints into one whitelisted history, retaining namespaces and deduplicating identical records.
     #>
     [CmdletBinding()]
-    param([Parameter(Mandatory)][object[]]$Database, [string]$Path)
+    param([Parameter(Mandatory)][object[]]$Database, [string]$Path,[string]$NativeExecutablePath)
     $result = New-TokenForgeScopeDatabase
     $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
     foreach ($source in $Database) {
@@ -32,6 +32,6 @@ function Merge-TokenForgeScopeDatabase {
     }
     $result.Observations = @($result.Observations | Sort-Object ObservedAt)
     $result.RegistrationAttempts = @($result.RegistrationAttempts | Sort-Object AttemptedAt)
-    if ($Path) { Save-TokenForgeDocument -Document $result -Path $Path }
+    if ($Path) { if($Path.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){$null=Invoke-TokenForgeNativeEvidence $Path update -Document $result -Domain evidence -NativeExecutablePath $NativeExecutablePath}else{Save-TokenForgeDocument -Document $result -Path $Path} }
     $result
 }

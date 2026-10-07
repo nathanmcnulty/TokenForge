@@ -1,0 +1,53 @@
+{
+  "Date": "2026-10-07",
+  "ModuleVersion": "0.15.0",
+  "Accounts": [
+    {
+      "Account": "nora",
+      "LegacyObservations": 12,
+      "MigratedObservations": 12,
+      "RepeatedImport": 0,
+      "FreshProbeObservations": 4,
+      "SuccessfulProbeObservations": 3,
+      "TerminalFlowSlots": 12,
+      "ResumeObservations": 0,
+      "ResumeAddedObservations": 0,
+      "ResumeAddedAttempts": 0,
+      "ResumeMetadataRepairRows": 4,
+      "CurrentAccountObservations": 4,
+      "RegistrationOutcome": "AlreadyPresent",
+      "AnonymousExportPassed": true,
+      "TokensPersisted": false,
+      "ConsentGranted": false
+    },
+    {
+      "Account": "secadmin",
+      "LegacyObservations": 12,
+      "MigratedObservations": 12,
+      "RepeatedImport": 0,
+      "FreshProbeObservations": 4,
+      "SuccessfulProbeObservations": 4,
+      "TerminalFlowSlots": 12,
+      "ResumeObservations": 0,
+      "ResumeAddedObservations": 0,
+      "ResumeAddedAttempts": 0,
+      "ResumeMetadataRepairRows": 4,
+      "CurrentAccountObservations": 4,
+      "RegistrationOutcome": "AlreadyPresent",
+      "AnonymousExportPassed": true,
+      "TokensPersisted": false,
+      "ConsentGranted": false
+    }
+  ],
+  "PowerShellPassed": 260,
+  "PowerShellSkipped": 2,
+  "NativeChecks": 102,
+  "IndependentReview": "SolNoRemainingBlocker",
+  "Limitations": [
+    "Live authentication proof ran on Linux; other operating systems use synthetic CI fixtures",
+    "Bounded four-client proof does not classify every discovered app",
+    "Portable scope history remains capped at 64 MiB",
+    "Authentication still requires PowerShell"
+  ],
+  "EqualTimestampCleanupParityPassed": true
+}

@@ -13,7 +13,7 @@ non-Microsoft principals. Probe uses existing consent and stops at interactive p
 param(
  [Parameter(Mandatory)][ValidateSet('Discover','SignIns','Inventory','Register','Probe','Merge','Export','Report','ExportFlows')][string]$Action,
  [Parameter(Mandatory)][string]$StatePath,
- [string]$MetadataPath,[string]$FlowPath,[string]$NativeExecutablePath,[switch]$ExploreAllFlows,[switch]$SummaryOnly,
+ [string]$MetadataPath,[string]$DatabasePath,[string]$FlowPath,[string]$NativeExecutablePath,[switch]$ExploreAllFlows,[switch]$SummaryOnly,
  [securestring]$GraphToken,
  [securestring]$EstsAuth,
  [ValidateSet('ESTSAUTH','ESTSAUTHPERSISTENT')][string]$CookieName='ESTSAUTH',
@@ -40,7 +40,7 @@ $null=New-Item -ItemType Directory -Path $StatePath -Force
 if (-not $IsWindows) { [IO.File]::SetUnixFileMode($StatePath, ([IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite -bor [IO.UnixFileMode]::UserExecute)) }
 $discoveryPath=Join-Path $StatePath 'discovery.json'
 $inventoryPath=Join-Path $StatePath 'inventory.json'
-$databasePath=Join-Path $StatePath 'scopes.json'
+if(-not $DatabasePath){$DatabasePath=Join-Path $StatePath $(if(Test-Path (Join-Path $StatePath 'scopes.sqlite')){'scopes.sqlite'}else{'scopes.json'})}
 if(-not $FlowPath){$FlowPath=Join-Path $StatePath 'flows.json'}
 if(-not $MetadataPath){$MetadataPath=Join-Path $StatePath $(if(Test-Path (Join-Path $StatePath 'applications.sqlite')){'applications.sqlite'}else{'applications.json'})}
 $principalOptions=@{}
@@ -91,17 +91,17 @@ try {
    if(-not $EstsAuth){throw 'Probe requires EstsAuth.'}
    $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
    $plan=Get-TokenForgeProbePlan -Inventory $inventory -ClientId $ClientId -GraphOnly:$GraphOnly @principalOptions
-   $flowChanges=@{Plans=@{};Attempts=@{}}
-   try{Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $EstsAuth -CookieName $CookieName -Plan $plan -DatabasePath $databasePath -ClientId $ClientId @principalOptions -Tenant $Tenant -MaxApplications $MaxApplications -MaxRedirects $MaxRedirects -Refresh:$Refresh -FlowDatabasePath $FlowPath -ExploreAllFlows:$ExploreAllFlows -NativeExecutablePath $NativeExecutablePath -FlowChanges $flowChanges}finally{
-   if(Test-Path $databasePath){$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document (Get-TokenForgeScopeDatabase -Path $databasePath) -Kind ScopeObservations -NativeExecutablePath $NativeExecutablePath}
+   $flowChanges=@{Plans=@{};Attempts=@{}};$scopeChanges=@{}
+   try{Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $EstsAuth -CookieName $CookieName -Plan $plan -DatabasePath $databasePath -ClientId $ClientId @principalOptions -Tenant $Tenant -MaxApplications $MaxApplications -MaxRedirects $MaxRedirects -Refresh:$Refresh -FlowDatabasePath $FlowPath -ExploreAllFlows:$ExploreAllFlows -NativeExecutablePath $NativeExecutablePath -FlowChanges $flowChanges -ScopeChanges $scopeChanges}finally{
+   if($scopeChanges.Count){$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document @{SchemaVersion=1;UpdatedAt=[DateTimeOffset]::UtcNow.ToString('o');Observations=@($scopeChanges.Values)} -Kind ScopeObservations -NativeExecutablePath $NativeExecutablePath}
    if($flowChanges.Plans.Count){$changed=@{Format='TokenForgeFlowEvidence';SchemaVersion=1;UpdatedAt=[DateTimeOffset]::UtcNow.ToString('o');Plans=$flowChanges.Plans;Attempts=@($flowChanges.Attempts.Values)};$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $changed -Kind FlowAttempts -NativeExecutablePath $NativeExecutablePath}
    }
   }
   'Merge' {
    if (-not $InputDatabasePath) { throw 'Merge requires InputDatabasePath.' }
    foreach ($inputPath in $InputDatabasePath) { if (-not (Test-Path -LiteralPath $inputPath -PathType Leaf)) { throw 'A merge input file is missing.' } }
-   $sources=@($InputDatabasePath | ForEach-Object { Get-TokenForgeScopeDatabase -Path $_ })
-   $merged=Merge-TokenForgeScopeDatabase -Database $sources -Path $databasePath
+   $sources=@($InputDatabasePath | ForEach-Object { Get-TokenForgeScopeDatabase -Path $_ -NativeExecutablePath $NativeExecutablePath })
+   $merged=Merge-TokenForgeScopeDatabase -Database $sources -Path $databasePath -NativeExecutablePath $NativeExecutablePath
    $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $merged -Kind ScopeObservations -NativeExecutablePath $NativeExecutablePath
    $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $merged -Kind RegistrationAttempts -NativeExecutablePath $NativeExecutablePath
    $merged
@@ -114,7 +114,7 @@ try {
   'ExportFlows' {if(-not $ExportPath){throw 'ExportFlows requires ExportPath.'};Export-TokenForgeFlowEvidence $FlowPath -OutputPath $ExportPath -NativeExecutablePath $NativeExecutablePath}
   'Export' {
    if(-not $ExportPath){throw 'Export requires ExportPath.'}
-   Export-TokenForgeScopeDatabase -Database (Get-TokenForgeScopeDatabase -Path $databasePath) -Path $ExportPath
+   Export-TokenForgeScopeDatabase -Database (Get-TokenForgeScopeDatabase -Path $databasePath -NativeExecutablePath $NativeExecutablePath) -Path $ExportPath
   }
  }
 } finally {if($lock){$lock.Dispose()}}

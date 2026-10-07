@@ -15,7 +15,7 @@ function Invoke-TokenForgeScopeProbe {
         [object[]]$Plan,
         [ValidateSet('OAuth2V2Pkce','OAuth2V2Implicit','OAuth2V1Implicit')][string[]]$Protocols = @('OAuth2V2Pkce','OAuth2V2Implicit','OAuth2V1Implicit'),
         [Parameter(Mandatory)][string]$DatabasePath,
-        [string]$FlowDatabasePath,[switch]$ExploreAllFlows,[string]$NativeExecutablePath,[Collections.IDictionary]$FlowChanges,
+        [string]$FlowDatabasePath,[switch]$ExploreAllFlows,[string]$NativeExecutablePath,[Collections.IDictionary]$FlowChanges,[Collections.IDictionary]$ScopeChanges,
         [guid[]]$ClientId,
         [ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,
         [ValidateRange(1,100000)][int]$MaxApplications = 100000,
@@ -40,7 +40,10 @@ function Invoke-TokenForgeScopeProbe {
     try{
         if(-not(Test-Path $probeLockPath)){try{$probeLock=Open-TokenForgeVaultFile $probeLockPath -Create}catch [IO.IOException]{}}
         if(-not $probeLock){$probeLock=Open-TokenForgeVaultFile $probeLockPath}
-    $database = Get-TokenForgeScopeDatabase -Path $DatabasePath
+    if($DatabasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){
+        $null=Invoke-TokenForgeNativeEvidence $DatabasePath update -Document (New-TokenForgeScopeDatabase) -Domain evidence -NativeExecutablePath $NativeExecutablePath
+        $database=Get-TokenForgeScopeDatabase $DatabasePath -NativeExecutablePath $NativeExecutablePath -Latest -TenantFingerprint $Inventory.TenantFingerprint -PrincipalFingerprint $probePrincipal
+    }else{$database=Get-TokenForgeScopeDatabase $DatabasePath}
     if(-not $FlowDatabasePath){$FlowDatabasePath=$DatabasePath+'.flows.json'}
     $sqliteFlows=$FlowDatabasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)
     $flows=if($sqliteFlows){$null}else{Get-TokenForgeFlowEvidence $FlowDatabasePath}
@@ -110,7 +113,7 @@ function Invoke-TokenForgeScopeProbe {
                 }
             }
             $pairComplete=($flowPlan.Cells.Count -eq $previousKeys.Count -or (-not $ExploreAllFlows -and $previousSuccess.Count)) -and -not @($priorSlots.Values|Where-Object Outcome -eq 'Started').Count
-            if(-not $Refresh -and $flows.Plans.ContainsKey($planHash) -and $pairComplete -and $hasAggregate -and -not @($previousAttempts|Where-Object Outcome -eq 'ContextMismatch').Count){continue}
+            if(-not $Refresh -and $flows.Plans.ContainsKey($planHash) -and $pairComplete -and $hasAggregate -and -not @($previousAttempts|Where-Object Outcome -eq 'ContextMismatch').Count){if($null -ne $ScopeChanges){$ScopeChanges["$($app.AppId)/$resource"]=$aggregate[0]};continue}
             if(-not $processedThisApp){if($processedApplications -ge $MaxApplications){return};$processedApplications++;$processedThisApp=$true}
             $flows=Save-TokenForgeFlowEvidence $FlowDatabasePath -Plan $flowPlan -PlanFingerprint $planHash -ExistingDocument $flows -NativeExecutablePath $NativeExecutablePath -Changes $FlowChanges
             if ($app.Registration -eq 'Missing') { $observation.Outcome = 'MissingRegistration' }
@@ -213,7 +216,8 @@ function Invoke-TokenForgeScopeProbe {
             }
             if(-not $best.Count -and $latest.Count){$observation.ObservedAt=@($latest.Values|Sort-Object {([DateTimeOffset]$_.ObservedAt).UtcDateTime} -Descending)[0].ObservedAt}
             $observation.ElapsedSeconds = [math]::Round($watch.Elapsed.TotalSeconds,3)
-            $database = Add-TokenForgeScopeObservation -Database $database -Observation $observation -Path $DatabasePath
+            $database = Add-TokenForgeScopeObservation -Database $database -Observation $observation -Path $DatabasePath -NativeExecutablePath $NativeExecutablePath
+            if($null -ne $ScopeChanges){$ScopeChanges["$($observation.ClientId)/$($observation.ResourceId)"]=$observation}
             $observation
             if($observation.Outcome -eq 'ContextMismatch'){return}
             if ($DelayMilliseconds) { Start-Sleep -Milliseconds $DelayMilliseconds }
@@ -239,19 +243,31 @@ function Sync-TokenForgeApplicationRegistration {
         [switch]$ResolveSignInCandidates,
         [string]$MetadataPath,[string]$NativeExecutablePath
     )
-    if(-not $MetadataPath){$MetadataPath=Join-Path (Split-Path $DatabasePath -Parent) 'applications.json'}
     $context = Get-TokenForgeTokenClaims -AccessToken $GraphToken
     if (-not $context.TenantFingerprint -or $context.TenantFingerprint -ne $Inventory.TenantFingerprint) { throw 'Graph token tenant does not match registration inventory.' }
-    $database = Get-TokenForgeScopeDatabase -Path $DatabasePath
-    $completed = @{}
+    $registrationLock=$null
+    $registrationLockPath=Resolve-TokenForgeVaultPath ($DatabasePath+'.probe.lock') -CreateDirectory
+    try{
+    $registrationLock=if(Test-Path -LiteralPath $registrationLockPath){Open-TokenForgeVaultFile $registrationLockPath}else{Open-TokenForgeVaultFile $registrationLockPath -Create}
+    if(-not $MetadataPath){$MetadataPath=Join-Path (Split-Path $DatabasePath -Parent) 'applications.json'}
+    if($DatabasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){
+        if(-not $WhatIfPreference){$null=Invoke-TokenForgeNativeEvidence $DatabasePath update -Document (New-TokenForgeScopeDatabase) -Domain evidence -NativeExecutablePath $NativeExecutablePath}
+        $database=Get-TokenForgeScopeDatabase $DatabasePath -NativeExecutablePath $NativeExecutablePath -Latest -TenantFingerprint $Inventory.TenantFingerprint
+    }else{$database=Get-TokenForgeScopeDatabase $DatabasePath}
+    $completed = @{};$unresolvedCleanup=@{}
     foreach ($attempt in $database.RegistrationAttempts) {
-        if ($attempt.TenantFingerprint -eq $Inventory.TenantFingerprint) { $completed[$attempt.AppId] = $attempt.Outcome }
+        if ($attempt.TenantFingerprint -eq $Inventory.TenantFingerprint) { $completed[$attempt.AppId] = $attempt.Outcome; if($attempt.Outcome -eq 'CleanupRequired'){$unresolvedCleanup[$attempt.AppId]=$true}elseif($attempt.Outcome -eq 'CleanupResolved'){$unresolvedCleanup.Remove($attempt.AppId)} }
     }
-    if (@($completed.Values | Where-Object { $_ -eq 'CleanupRequired' }).Count) { throw 'Registration stopped by an unresolved ownership-cleanup checkpoint. Verify cleanup and append a CleanupResolved record before resuming.' }
+    foreach($id in @($completed.Keys)){if($completed[$id] -eq 'CleanupResolved'){$completed.Remove($id)}}
+    if ($unresolvedCleanup.Count) { throw 'Registration stopped by an unresolved ownership-cleanup checkpoint. Verify cleanup and append a CleanupResolved record before resuming.' }
     $apps = @($Inventory.Applications | Where-Object { $_.Registration -eq 'Missing' -and ($_.Ownership -eq 'PublishedMicrosoftOwner' -or ($ResolvePublishedCandidates -and @($_.Sources | Where-Object { $_.Evidence -in @('PublishedMetadata','PublishedResource','PublishedGraph','PublishedEntraDocs','PublishedLearn','PublishedGitHub') }).Count -gt 0) -or ($ResolveSignInCandidates -and @($_.Sources|Where-Object Evidence -eq 'ObservedSignInNotOwnership').Count -gt 0)) -and (-not $ClientId -or $_.AppId -in @($ClientId | ForEach-Object ToString)) } | Sort-Object AppId)
     $processedApplications = 0
     foreach ($app in $apps) {
-        if ($completed.ContainsKey($app.AppId) -and (-not $RetryFailures -or $completed[$app.AppId] -ne 'Failed')) { continue }
+        if ($completed.ContainsKey($app.AppId) -and (-not $RetryFailures -or $completed[$app.AppId] -ne 'Failed')) {
+            $saved=@($database.RegistrationAttempts|Where-Object {$_.AppId -eq $app.AppId -and $_.TenantFingerprint -eq $Inventory.TenantFingerprint}|Select-Object -Last 1)
+            if($saved.Count -and -not $WhatIfPreference){$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document @{UpdatedAt=$database.UpdatedAt;RegistrationAttempts=$saved} -Kind RegistrationAttempts -NativeExecutablePath $NativeExecutablePath}
+            continue
+        }
         if ($processedApplications -ge $MaxApplications) { break }
         $processedApplications++
         if (-not $PSCmdlet.ShouldProcess($app.AppId,'Register Microsoft-owned candidate without granting consent')) { continue }
@@ -261,11 +277,15 @@ function Sync-TokenForgeApplicationRegistration {
         $attempt = [pscustomobject]@{ AppId = $app.AppId; TenantFingerprint = $Inventory.TenantFingerprint; AttemptedAt = [DateTimeOffset]::UtcNow.ToString('o'); Outcome = $outcome; HttpStatus = $httpStatus }
         $database.RegistrationAttempts += $attempt
         $database.UpdatedAt = [DateTimeOffset]::UtcNow.ToString('o')
-        Save-TokenForgeDocument -Document $database -Path $DatabasePath
+        if($DatabasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){
+            $checkpoint=New-TokenForgeScopeDatabase;$checkpoint.RegistrationAttempts=@($attempt)
+            $null=Invoke-TokenForgeNativeEvidence $DatabasePath update -Document $checkpoint -Domain evidence -NativeExecutablePath $NativeExecutablePath
+        }else{Save-TokenForgeDocument -Document $database -Path $DatabasePath}
         $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document @{UpdatedAt=$database.UpdatedAt;RegistrationAttempts=@($attempt)} -Kind RegistrationAttempts -NativeExecutablePath $NativeExecutablePath
         $attempt
         if($httpStatus -in @(401,403)){throw "Registration stopped (HTTP $httpStatus); the failure was checkpointed before stopping."}
         if ($outcome -eq 'CleanupRequired') { throw 'Registration stopped because ownership cleanup is required; inspect the last application ID in RegistrationAttempts.' }
         if ($DelayMilliseconds) { Start-Sleep -Milliseconds $DelayMilliseconds }
     }
+    }finally{if($registrationLock){$registrationLock.Dispose()}}
 }

@@ -6,7 +6,7 @@ Four independently authenticated workers assess at most 100 published IDs each. 
 
 The coordinator chooses pending batches and failed batches with fewer than three attempts. Selection uses saved state, not GitHub run numbers. Failed or missing workers remain incomplete; an exhausted batch prevents a weekly complete claim. Manual `retry_exhausted` allows up to ten attempts. Each week starts a fresh shallow recipe and archives the prior aggregate report, including unfinished coverage. Late or repeated results cannot replace newer state: receipts bind the recipe, partition, and next attempt; publication checks the original data-branch parent and uses a normal fast-forward push.
 
-After the shallow recipe completes, Auto mode spends a separate deep budget: at most 100 public candidates per week, 25 per batch, at most two workers, up to four callbacks, and all three implemented delegated protocols. Changed published hints take priority, followed by apps with no recent successful scope evidence. Stale selections rotate past the previous deep selection. Deep work does not make the shallow report more complete. Explicit target IDs are allowed only for Deep and remain bounded by its budget. If public sources provide no usable deep selection, planning fails clearly rather than silently expanding the budget.
+After the shallow recipe completes, Auto mode spends a separate deep budget: at most 100 public candidates per week, 25 per batch, at most two workers, up to four callbacks, and all three implemented delegated protocols. Changed published hints take priority, followed by never-selected apps and then the oldest deep selections. A public last-selected-week ledger is independent of shallow token success, so successful clients can still receive deeper exploration. Selection history records scheduling, not completed assessment; interrupted work retries within its frozen week. Existing recipes retain their membership and plan hash when the ledger is added. Changed hints retain priority, so sustained changes exceeding the weekly budget can delay unchanged apps; selection history does not guarantee completion after interrupted weeks. Deep work does not make the shallow report more complete. Explicit target IDs are allowed only for Deep and remain bounded by its budget. If public sources provide no usable deep selection, planning fails clearly rather than silently expanding the budget.
 
 ## State and reports
 
@@ -15,7 +15,7 @@ The `discovery-data` branch must already be initialized. The publisher is the on
 Public outputs are:
 
 - `applications.json`: the validated public-source ledger.
-- `weekly-shallow.json` / `weekly-deep.json`: frozen public recipes and aggregate batch checkpoints.
+- `weekly-shallow.json` / `weekly-deep.json`: frozen public recipes and aggregate batch checkpoints; DeepSelectionHistory in the deep state records public app IDs and their last selected ISO weeks.
 - `coverage-shallow.json` / `coverage-deep.json`: completion, assessment/success counts, oldest/latest assessment dates, pending age, median/p95 batch duration, and estimated remaining runner seconds.
 - `reports/YYYY-Www-mode.json`: prior-week aggregate reports.
 - `scopes/chunk-NNNN.json`: validated anonymous successful scope evidence. Earlier successes retain their original observation dates after a new failure; old evidence does not become fresh merely because a batch completed.

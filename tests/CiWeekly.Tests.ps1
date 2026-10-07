@@ -52,6 +52,19 @@ Describe 'Frozen CI recipes and receipt completeness' {
   $expected=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($normalized))).ToLowerInvariant()
   (Get-TfCiHash $value)|Should -Be $expected
  }
+ It 'rejects private, malformed, future, and shallow selection history' {
+  $state=New-TfCiState $discovery -Mode Deep
+  $state.DeepSelectionHistory=@{}
+  foreach($id in $state.Recipe.AppIds){$state.DeepSelectionHistory[$id]=$state.Recipe.Week}
+  Assert-TfCiState $state
+  $state.DeepSelectionHistory['ffffffff-ffff-ffff-ffff-ffffffffffff']=$state.Recipe.Week
+  {Assert-TfCiState $state}|Should -Throw
+  $state.DeepSelectionHistory.Remove('ffffffff-ffff-ffff-ffff-ffffffffffff')
+  $id=$state.Recipe.AppIds[0]
+  foreach($week in @('2026-W00','2026-W54','9999-W01','tenant/account',@{AccessToken='secret'})){$state.DeepSelectionHistory[$id]=$week;{Assert-TfCiState $state}|Should -Throw}
+  $shallow=New-TfCiState $discovery;$shallow.DeepSelectionHistory=@{}
+  {Assert-TfCiState $shallow}|Should -Throw
+ }
  It 'uses the ISO year at a calendar boundary' {
   Get-TfCiWeek ([DateTimeOffset]'2027-01-01T00:00:00Z')|Should -Be '2026-W53'
  }
@@ -113,6 +126,65 @@ Describe 'Weekly publisher integration' {
   Mock Update-TokenForgeDiscovery {$noCallbacks}
   {& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep}|Should -Throw '*bounded deep selection*'
   Test-Path "$data/weekly-deep.json"|Should -BeFalse
+ }
+ It 'prioritizes never-selected flows even when shallow successes are fresh' {
+  $prior=New-TfCiState $discovery -Mode Deep -AppId @($discovery.Applications[0].AppId) -Now ([DateTimeOffset]::UtcNow.AddDays(-7))
+  $prior|ConvertTo-Json -Depth 100|Set-Content "$data/weekly-deep.json"
+  $null=New-Item -ItemType Directory "$data/scopes"
+  @{SchemaVersion=1;Observations=@($discovery.Applications|ForEach-Object {@{ClientId=$_.AppId;ResourceId='00000003-0000-0000-c000-000000000000';ObservedAt=[DateTimeOffset]::UtcNow.ToString('o');Scopes=@('User.Read');Evidence='AnonymousTenantTokenObservation';SignatureValidated=$false}});Disclaimer='Observed scopes are session/tenant dependent, not universal consent or guaranteed API access.'}|ConvertTo-Json -Depth 10|Set-Content "$data/scopes/chunk-0000.json"
+  $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep -DeepMaxApplications 1
+  $deep=Get-Content "$data/weekly-deep.json" -Raw|ConvertFrom-Json -AsHashtable
+  $deep.Recipe.AppIds[0]|Should -Not -Be $prior.Recipe.AppIds[0]
+  $deep.DeepSelectionHistory[$prior.Recipe.AppIds[0]]|Should -Be $prior.Recipe.Week
+  $deep.DeepSelectionHistory[$deep.Recipe.AppIds[0]]|Should -Be $deep.Recipe.Week
+ }
+ It 'migrates a current frozen selection without changing its hash or issuing more work' {
+  $prior=New-TfCiState $discovery -Mode Deep -AppId @($discovery.Applications[0].AppId)
+  foreach($batch in $prior.Batches){$batch.Status='Complete';$batch.Assessed=1;$batch.Attempts=1;$batch.ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')}
+  $prior|ConvertTo-Json -Depth 100|Set-Content "$data/weekly-deep.json"
+  $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep
+  $deep=Get-Content "$data/weekly-deep.json" -Raw|ConvertFrom-Json -AsHashtable
+  $deep.PlanId|Should -Be $prior.PlanId
+  ($deep.Recipe.AppIds -join ',')|Should -Be ($prior.Recipe.AppIds -join ',')
+  @((Get-Content "$bundle/request.json" -Raw|ConvertFrom-Json).Indices).Count|Should -Be 0
+  $deep.DeepSelectionHistory[$deep.Recipe.AppIds[0]]|Should -Be $deep.Recipe.Week
+ }
+ It 'selects oldest deep history after every candidate has been selected' {
+  $prior=New-TfCiState $discovery -Mode Deep -AppId @($discovery.Applications[0].AppId) -Now ([DateTimeOffset]::UtcNow.AddDays(-7))
+  $prior.DeepSelectionHistory=@{}
+  foreach($app in $discovery.Applications){$prior.DeepSelectionHistory[$app.AppId]=Get-TfCiWeek ([DateTimeOffset]::UtcNow.AddDays(-14))}
+  $prior.DeepSelectionHistory[$prior.Recipe.AppIds[0]]=$prior.Recipe.Week
+  $prior|ConvertTo-Json -Depth 100|Set-Content "$data/weekly-deep.json"
+  $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep -DeepMaxApplications 1
+  $deep=Get-Content "$data/weekly-deep.json" -Raw|ConvertFrom-Json -AsHashtable
+  $deep.Recipe.AppIds[0]|Should -Not -Be $prior.Recipe.AppIds[0]
+  $deep.DeepSelectionHistory.Count|Should -Be $discovery.Applications.Count
+ }
+ It 'prunes removed public IDs while preserving history of remaining apps' {
+  $prior=New-TfCiState $discovery -Mode Deep -Now ([DateTimeOffset]::UtcNow.AddDays(-7))
+  $prior.DeepSelectionHistory=@{}
+  foreach($id in $prior.Recipe.AppIds){$prior.DeepSelectionHistory[$id]=$prior.Recipe.Week}
+  $prior|ConvertTo-Json -Depth 100|Set-Content "$data/weekly-deep.json"
+  $reduced=$discovery|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable
+  $removed=$reduced.Applications[-1].AppId
+  $reduced.Applications=@($reduced.Applications|Where-Object AppId -ne $removed)
+  Mock Update-TokenForgeDiscovery {$reduced}
+  $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep -DeepMaxApplications 1
+  $deep=Get-Content "$data/weekly-deep.json" -Raw|ConvertFrom-Json -AsHashtable
+  $deep.DeepSelectionHistory.Contains($removed)|Should -BeFalse
+  $deep.DeepSelectionHistory.Count|Should -Be $reduced.Applications.Count
+ }
+ It 'keeps changed hints ahead of oldest history without using a GUID cursor' {
+  $prior=New-TfCiState $discovery -Mode Deep -AppId @($discovery.Applications[0].AppId) -Now ([DateTimeOffset]::UtcNow.AddDays(-7))
+  $prior.DeepSelectionHistory=@{}
+  foreach($app in $discovery.Applications){$prior.DeepSelectionHistory[$app.AppId]=$prior.Recipe.Week}
+  $prior|ConvertTo-Json -Depth 100|Set-Content "$data/weekly-deep.json"
+  $changed=$discovery|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable
+  $changed.Applications[-1].Name+=' changed'
+  Mock Update-TokenForgeDiscovery {$changed}
+  $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep -DeepMaxApplications 1
+  $deep=Get-Content "$data/weekly-deep.json" -Raw|ConvertFrom-Json -AsHashtable
+  $deep.Recipe.AppIds[0]|Should -Be $changed.Applications[-1].AppId
  }
  It 'records missing worker artifacts as failed work instead of claiming completion' {
   $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Shallow

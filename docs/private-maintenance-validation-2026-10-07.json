@@ -33,5 +33,16 @@
   "PowerShellPassed": 294,
   "PowerShellSkipped": 2,
   "WorkflowLint": "Passed",
-  "Review": "Sol: no shipping blocker"
+  "Review": "Sol: no shipping blocker",
+  "HostedValidation": {
+    "InitialRun": 37685631049,
+    "RestoreRun": 37685952513,
+    "CiphertextOnlyArtifact": true,
+    "ExpectedAccountContext": true,
+    "RestoredHistoryPreserved": true,
+    "CredentialsPersisted": false,
+    "Inventory": "Complete",
+    "InitialSignIns": "Forbidden",
+    "RestoreSignIns": "Skipped"
+  }
 }

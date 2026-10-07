@@ -69,6 +69,51 @@ Describe 'Frozen CI recipes and receipt completeness' {
   Get-TfCiWeek ([DateTimeOffset]'2027-01-01T00:00:00Z')|Should -Be '2026-W53'
  }
 }
+Describe 'Explicit weekly coverage labels' {
+ It 'separates source, selection, assessment, and token observations' {
+  $state=New-TfCiState $discovery -Mode Deep -AppId @($discovery.Applications[0].AppId)
+  $state.DeepSelectionHistory=@{$state.Recipe.AppIds[0]=$state.Recipe.Week}
+  $report=Get-TfCiReport $state
+  $report.SchemaVersion|Should -Be 2
+  $report.SourceCatalogApplications|Should -Be $discovery.Applications.Count
+  $report.SelectedApplications|Should -Be 1
+  $report.PublishedApplications|Should -Be 1
+  $report.AssessedApplications|Should -Be 0
+  $report.SuccessfulApplications|Should -Be 0
+  $report.DeepSelectionHistoryApplications|Should -Be 1
+  $report.NeverDeepSelectedCallbackCandidates|Should -Be @($discovery.Applications|Where-Object {$_.RedirectUris.Count -gt 0 -and $_.AppId -ne $state.Recipe.AppIds[0]}).Count
+  Assert-TfCiReport ($report|ConvertTo-Json -Depth 20|ConvertFrom-Json -AsHashtable)
+ }
+ It 'uses null history for shallow and legacy deep state' {
+  foreach($mode in @('Shallow','Deep')){
+   $report=Get-TfCiReport (New-TfCiState $discovery -Mode $mode)
+   $report.DeepSelectionHistoryApplications|Should -BeNullOrEmpty
+   $report.NeverDeepSelectedCallbackCandidates|Should -BeNullOrEmpty
+   Assert-TfCiReport $report
+  }
+ }
+ It 'accepts archived v1 reports and rejects contradictory or private v2 fields' {
+  $report=Get-TfCiReport (New-TfCiState $discovery)
+  $legacy=$report|ConvertTo-Json -Depth 20|ConvertFrom-Json -AsHashtable
+  foreach($field in @('SourceCatalogApplications','SelectedApplications','PublishedCallbackCandidates','DeepSelectionHistoryApplications','NeverDeepSelectedCallbackCandidates')){$legacy.Remove($field)}
+  $legacy.SchemaVersion=1;Assert-TfCiReport $legacy
+  foreach($change in @(@{SourceCatalogApplications=0},@{SelectedApplications=0},@{PublishedCallbackCandidates=0.5},@{DeepSelectionHistoryApplications=1;NeverDeepSelectedCallbackCandidates=0},@{AccessToken='private'},@{SuccessfulApplications=1},@{AssessedApplications=0.5},@{Complete=$true},@{TotalBatches=0})){
+   $bad=$report|ConvertTo-Json -Depth 20|ConvertFrom-Json -AsHashtable
+   foreach($key in $change.Keys){$bad[$key]=$change[$key]}
+   {Assert-TfCiReport $bad}|Should -Throw
+  }
+ }
+ It 'rejects impossible deep history counts or one-sided null history' {
+  $state=New-TfCiState $discovery -Mode Deep -AppId @($discovery.Applications[0].AppId)
+  $state.DeepSelectionHistory=@{$state.Recipe.AppIds[0]=$state.Recipe.Week}
+  $report=Get-TfCiReport $state
+  foreach($change in @(@{DeepSelectionHistoryApplications=0},@{NeverDeepSelectedCallbackCandidates=$report.SourceCatalogApplications},@{NeverDeepSelectedCallbackCandidates=$null},@{SourceCatalogApplications=100;PublishedCallbackCandidates=100;NeverDeepSelectedCallbackCandidates=0})){
+   $bad=$report|ConvertTo-Json -Depth 20|ConvertFrom-Json -AsHashtable
+   foreach($key in $change.Keys){$bad[$key]=$change[$key]}
+   {Assert-TfCiReport $bad}|Should -Throw
+  }
+ }
+}
 Describe 'Encrypted private checkpoints' {
  It 'authenticates data and account/plan/partition context' {
   $key=[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))

@@ -106,7 +106,37 @@ function Get-TfCiReport($State,[DateTimeOffset]$Now=[DateTimeOffset]::UtcNow) {
  $latest=if($complete.Count){@($complete|Sort-Object {([DateTimeOffset]$_.ObservedAt)})[-1].ObservedAt}else{$null}
  $median=if($durations.Count){$durations[[int][Math]::Floor(($durations.Count-1)/2)]}else{$null}
  $p95=if($durations.Count){$durations[[int][Math]::Ceiling($durations.Count*.95)-1]}else{$null}
- [ordered]@{SchemaVersion=1;Week=$State.Recipe.Week;Mode=$State.Recipe.Mode;GeneratedAt=$Now.ToUniversalTime().ToString('o');PublishedApplications=$State.Recipe.AppIds.Count;AssessedApplications=$assessed;SuccessfulApplications=$success;TotalBatches=$State.Batches.Count;CompletedBatches=$complete.Count;PendingBatches=$pending.Count;ExhaustedBatches=@($pending|Where-Object Attempts -ge 3).Count;Complete=($pending.Count -eq 0);OldestCompletedAssessmentAt=$oldest;LatestCompletedAssessmentAt=$latest;OldestPendingHours=$(if($pending.Count){[Math]::Round(($Now-[DateTimeOffset]::Parse($State.Recipe.CreatedAt)).TotalHours,2)}else{0});MedianBatchSeconds=$median;P95BatchSeconds=$p95;EstimatedRemainingRunnerSeconds=$(if($null -ne $median){$median*$pending.Count}else{$null});Evidence='AssessedForOneAccountNotUniversalSupport';SuccessfulScopeFreshness='InspectAnonymousObservationDates'}
+ $callbacks=@($State.Recipe.Discovery.Applications|Where-Object {$_.RedirectUris.Count -gt 0})
+ $hasHistory=$State.Recipe.Mode -eq 'Deep' -and $State.Contains('DeepSelectionHistory')
+ $historyCount=if($hasHistory){$State.DeepSelectionHistory.Count}else{$null}
+ $neverSelected=if($hasHistory){@($callbacks|Where-Object {-not $State.DeepSelectionHistory.Contains($_.AppId)}).Count}else{$null}
+ [ordered]@{
+  SchemaVersion=2
+  SourceCatalogApplications=$State.Recipe.Discovery.Applications.Count
+  SelectedApplications=$State.Recipe.AppIds.Count
+  PublishedCallbackCandidates=$callbacks.Count
+  DeepSelectionHistoryApplications=$historyCount
+  NeverDeepSelectedCallbackCandidates=$neverSelected
+  Week=$State.Recipe.Week
+  Mode=$State.Recipe.Mode
+  GeneratedAt=$Now.ToUniversalTime().ToString('o')
+  PublishedApplications=$State.Recipe.AppIds.Count
+  AssessedApplications=$assessed
+  SuccessfulApplications=$success
+  TotalBatches=$State.Batches.Count
+  CompletedBatches=$complete.Count
+  PendingBatches=$pending.Count
+  ExhaustedBatches=@($pending|Where-Object Attempts -ge 3).Count
+  Complete=($pending.Count -eq 0)
+  OldestCompletedAssessmentAt=$oldest
+  LatestCompletedAssessmentAt=$latest
+  OldestPendingHours=$(if($pending.Count){[Math]::Round(($Now-[DateTimeOffset]::Parse($State.Recipe.CreatedAt)).TotalHours,2)}else{0})
+  MedianBatchSeconds=$median
+  P95BatchSeconds=$p95
+  EstimatedRemainingRunnerSeconds=$(if($null -ne $median){$median*$pending.Count}else{$null})
+  Evidence='AssessedForOneAccountNotUniversalSupport'
+  SuccessfulScopeFreshness='InspectAnonymousObservationDates'
+ }
 }
 function Protect-TfCiCheckpoint([byte[]]$Plaintext,[string]$Key,[string]$Context) {
  if($Plaintext.Length -eq 0 -or $Plaintext.Length -gt 134217728){throw 'Checkpoint exceeds bound.'}
@@ -146,8 +176,10 @@ function Assert-TfCiPublicData([string]$Path){
  foreach($file in @(Get-ChildItem $Path -File -Filter 'weekly-*.json')){Assert-TfCiState (Get-Content $file.FullName -Raw|ConvertFrom-Json -AsHashtable)}
 }
 function Assert-TfCiReport($Report){
- Assert-TfCiKeys $Report @('SchemaVersion','Week','Mode','GeneratedAt','PublishedApplications','AssessedApplications','SuccessfulApplications','TotalBatches','CompletedBatches','PendingBatches','ExhaustedBatches','Complete','OldestCompletedAssessmentAt','LatestCompletedAssessmentAt','OldestPendingHours','MedianBatchSeconds','P95BatchSeconds','EstimatedRemainingRunnerSeconds','Evidence','SuccessfulScopeFreshness')
- if($Report.SchemaVersion -ne 1 -or $Report.Week -notmatch '^\d{4}-W\d{2}$' -or $Report.Mode -notin @('Shallow','Deep') -or $Report.GeneratedAt -isnot [string] -and $Report.GeneratedAt -isnot [datetime] -or $Report.Complete -isnot [bool] -or $Report.Evidence -cne 'AssessedForOneAccountNotUniversalSupport' -or $Report.SuccessfulScopeFreshness -cne 'InspectAnonymousObservationDates'){throw 'Invalid public coverage report.'}
+ $fields=@('SchemaVersion','Week','Mode','GeneratedAt','PublishedApplications','AssessedApplications','SuccessfulApplications','TotalBatches','CompletedBatches','PendingBatches','ExhaustedBatches','Complete','OldestCompletedAssessmentAt','LatestCompletedAssessmentAt','OldestPendingHours','MedianBatchSeconds','P95BatchSeconds','EstimatedRemainingRunnerSeconds','Evidence','SuccessfulScopeFreshness')
+ if($Report -is [Collections.IDictionary] -and $Report.SchemaVersion -eq 2){$fields+=@('SourceCatalogApplications','SelectedApplications','PublishedCallbackCandidates','DeepSelectionHistoryApplications','NeverDeepSelectedCallbackCandidates')}
+ Assert-TfCiKeys $Report $fields
+ if($Report.SchemaVersion -notin @(1,2) -or $Report.Week -notmatch '^\d{4}-W\d{2}$' -or $Report.Mode -notin @('Shallow','Deep') -or $Report.GeneratedAt -isnot [string] -and $Report.GeneratedAt -isnot [datetime] -or $Report.Complete -isnot [bool] -or $Report.Evidence -cne 'AssessedForOneAccountNotUniversalSupport' -or $Report.SuccessfulScopeFreshness -cne 'InspectAnonymousObservationDates'){throw 'Invalid public coverage report.'}
  $null=[DateTimeOffset]::Parse([string]$Report.GeneratedAt)
  foreach($field in @('OldestCompletedAssessmentAt','LatestCompletedAssessmentAt')){if($null -ne $Report[$field]){if($Report[$field] -isnot [string] -and $Report[$field] -isnot [datetime]){throw 'Invalid assessment date.'};$null=[DateTimeOffset]::Parse([string]$Report[$field])}}
  foreach($field in @('OldestPendingHours','PublishedApplications','AssessedApplications','SuccessfulApplications','TotalBatches','CompletedBatches','PendingBatches','ExhaustedBatches','MedianBatchSeconds','P95BatchSeconds','EstimatedRemainingRunnerSeconds')){
@@ -155,4 +187,19 @@ function Assert-TfCiReport($Report){
   if($null -eq $value -and $field -in @('MedianBatchSeconds','P95BatchSeconds','EstimatedRemainingRunnerSeconds')){continue}
   if($value -isnot [int] -and $value -isnot [long] -and $value -isnot [double] -and $value -isnot [decimal] -or $value -lt 0 -or -not [double]::IsFinite([double]$value)){throw 'Invalid public coverage numbers.'}
  }
+ if($Report.SuccessfulApplications -gt $Report.AssessedApplications -or $Report.AssessedApplications -gt $Report.PublishedApplications){throw 'Invalid coverage counts.'}
+ if($Report.SchemaVersion -eq 2){
+  foreach($field in @('PublishedApplications','AssessedApplications','SuccessfulApplications','TotalBatches','CompletedBatches','PendingBatches','ExhaustedBatches')){if($Report[$field] -isnot [int] -and $Report[$field] -isnot [long]){throw 'Invalid integer coverage counts.'}}
+  if($Report.CompletedBatches+$Report.PendingBatches -ne $Report.TotalBatches -or $Report.ExhaustedBatches -gt $Report.PendingBatches -or $Report.Complete -ne ($Report.PendingBatches -eq 0)){throw 'Invalid batch coverage.'}
+  foreach($field in @('SourceCatalogApplications','SelectedApplications','PublishedCallbackCandidates','DeepSelectionHistoryApplications','NeverDeepSelectedCallbackCandidates')){
+   $value=$Report[$field]
+   if($null -eq $value -and $field -in @('DeepSelectionHistoryApplications','NeverDeepSelectedCallbackCandidates')){continue}
+   if($value -isnot [int] -and $value -isnot [long] -or $value -lt 0 -or $value -gt 100000){throw 'Invalid selection coverage numbers.'}
+  }
+  if($Report.SelectedApplications -ne $Report.PublishedApplications -or $Report.SelectedApplications -gt $Report.SourceCatalogApplications -or $Report.PublishedCallbackCandidates -gt $Report.SourceCatalogApplications -or ($Report.Mode -eq 'Shallow' -and $Report.SelectedApplications -ne $Report.SourceCatalogApplications)){throw 'Invalid source and selection coverage.'}
+  $history=$Report.DeepSelectionHistoryApplications;$never=$Report.NeverDeepSelectedCallbackCandidates
+  if(($null -eq $history) -ne ($null -eq $never) -or ($Report.Mode -eq 'Shallow' -and $null -ne $history)){throw 'Invalid selection history coverage.'}
+  if($null -ne $history -and ($history -lt $Report.SelectedApplications -or $history -gt $Report.SourceCatalogApplications -or $never -gt $Report.PublishedCallbackCandidates -or $never -gt ($Report.SourceCatalogApplications-$history) -or $never -lt [Math]::Max(0,$Report.PublishedCallbackCandidates-$history))){throw 'Invalid deep selection coverage.'}
+ }
+
 }

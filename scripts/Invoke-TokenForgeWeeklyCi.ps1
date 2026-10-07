@@ -115,6 +115,12 @@ if($Action -eq 'Prepare'){
  }
  Save-CiJson $state $statePath
  $report=Get-TfCiReport $state;Save-CiJson $report (Join-Path $DataPath ('coverage-'+$Mode.ToLowerInvariant()+'.json'))
- if($env:GITHUB_STEP_SUMMARY){Add-Content $env:GITHUB_STEP_SUMMARY ('### Weekly '+$Mode+' coverage');Add-Content $env:GITHUB_STEP_SUMMARY "Assessed $($report.AssessedApplications)/$($report.PublishedApplications) apps; $($report.PendingBatches) batches pending; $($report.ExhaustedBatches) exhausted. Completion: $($report.Complete)."}
+ if($env:GITHUB_STEP_SUMMARY){
+  Add-Content $env:GITHUB_STEP_SUMMARY ('### Weekly '+$Mode+' coverage')
+  Add-Content $env:GITHUB_STEP_SUMMARY "Source catalog: $($report.SourceCatalogApplications) IDs; selected: $($report.SelectedApplications); assessed: $($report.AssessedApplications); successful token observations: $($report.SuccessfulApplications). Selected-set completion: $($report.Complete). Pending batches: $($report.PendingBatches); exhausted: $($report.ExhaustedBatches)."
+  if($null -ne $report.DeepSelectionHistoryApplications){
+   Add-Content $env:GITHUB_STEP_SUMMARY "Deep history: $($report.DeepSelectionHistoryApplications) public IDs selected; $($report.NeverDeepSelectedCallbackCandidates) callback candidates never selected. Selection history does not establish completed flow testing."
+  }
+ }
  $report
 }

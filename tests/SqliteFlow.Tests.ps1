@@ -35,6 +35,11 @@ Describe 'Native SQLite flow integration' -Skip:(-not $nativeAvailable) {
   @(Invoke-TokenForgeScopeProbe @probe -FlowChanges $changes).Count|Should -Be 0
   $changes.Attempts.Count|Should -Be 4
   Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 4
+  $ordered=& $native flows export --database $sqlite --latest --plan $hash --principal ('b'*64) --tenant ('a'*64)
+  $LASTEXITCODE|Should -Be 0
+  ($ordered|ConvertFrom-Json).Attempts.Count|Should -Be 4
+  $null=& $native flows export --database $sqlite --latest --latest 2>$null
+  $LASTEXITCODE|Should -Not -Be 0
   @(Get-ChildItem $root -Filter '*.flow-input.json').Count|Should -Be 0
  }
  It 'migrates legacy JSON idempotently and round trips through strict PowerShell validation' {

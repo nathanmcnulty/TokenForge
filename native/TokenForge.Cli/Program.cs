@@ -17,11 +17,11 @@ try
         if (operation == "export")
         {
             string? tenant = null; string? principal = null; string? plan = null; var latest = false;
-            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var flowOptionsSeen = new HashSet<string>(StringComparer.Ordinal);
             for (var flowIndex = 4; flowIndex < args.Length; flowIndex++)
             {
                 var option = args[flowIndex];
-                if (!seen.Add(option)) throw new InvalidOperationException();
+                if (!flowOptionsSeen.Add(option)) throw new InvalidOperationException();
                 if (option == "--latest") { latest = true; continue; }
                 if (flowIndex + 1 >= args.Length) throw new InvalidOperationException();
                 var value = args[++flowIndex];

@@ -34,7 +34,11 @@ function Assert-PublicScopeExports {
   }
  }
 }
-$state=Join-Path ([IO.Path]::GetTempPath()) ('TokenForge-ci-'+[guid]::NewGuid())
+$tempRoot=[IO.Path]::GetTempPath()
+# macOS exposes its system temporary path through /var -> /private/var.
+# Use the canonical system path; arbitrary linked private paths remain rejected.
+if($IsMacOS -and $tempRoot.StartsWith('/var/',[StringComparison]::Ordinal)){$tempRoot='/private'+$tempRoot}
+$state=Join-Path $tempRoot ('TokenForge-ci-'+[guid]::NewGuid())
 $cookie=$null;$graph=$null;$weekly=$null;$checkpointWatch=[Diagnostics.Stopwatch]::StartNew();$timer=[Diagnostics.Stopwatch]::StartNew()
 if($WeeklyStatePath){. (Join-Path $PSScriptRoot 'TokenForgeCiState.ps1');$weekly=Get-Content -LiteralPath $WeeklyStatePath -Raw|ConvertFrom-Json -AsHashtable;Assert-TfCiState $weekly;if($ChunkIndex -lt 0){throw 'A frozen worker requires ChunkIndex.'};$selected=@(Get-TfCiMembers $weekly $ChunkIndex);$receipt=[ordered]@{SchemaVersion=1;PlanId=$weekly.PlanId;Index=$ChunkIndex;Attempt=($weekly.Batches[$ChunkIndex].Attempts+1);Status='Failed';Assessed=0;Successful=0;DurationSeconds=0;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')}}
 try {

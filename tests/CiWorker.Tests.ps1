@@ -9,7 +9,7 @@ BeforeAll {
 Describe 'Actual weekly worker with synthetic identity transport' {
  BeforeEach {
   Mock Import-Module {}
-  $root=Join-Path $TestDrive ([guid]::NewGuid().ToString());$null=New-Item -ItemType Directory $root
+  $root=Join-Path ($TestDrive -replace '^/var/','/private/var/') ([guid]::NewGuid().ToString());$null=New-Item -ItemType Directory $root
   $state=New-TfCiState $discovery
   $state|ConvertTo-Json -Depth 100|Set-Content "$root/state.json"
   $inventory=[pscustomobject]@{CapturedAt=[DateTimeOffset]::UtcNow.ToString('o');TenantFingerprint=('a'*64);PrincipalFingerprint=('b'*64);DiscoveryCatalogHash=$discovery.CatalogContentSha256;TenantGrants=@();Applications=@($state.Recipe.AppIds|ForEach-Object {[pscustomobject]@{AppId=$_;Name='Synthetic';Registration='Present';Ownership='VerifiedMicrosoftOwner';AccountEnabled=$true;RedirectUris=@('https://login.microsoftonline.com/common/oauth2/nativeclient');PreferredRedirectUri='https://login.microsoftonline.com/common/oauth2/nativeclient';IdentifierUris=@();PublishedGrants=@();DelegatedScopeDefinitions=@()}})}

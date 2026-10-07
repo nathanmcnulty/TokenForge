@@ -20,6 +20,8 @@ Public outputs are:
 - `reports/YYYY-Www-mode.json`: prior-week aggregate reports.
 - `scopes/chunk-NNNN.json`: validated anonymous successful scope evidence. Earlier successes retain their original observation dates after a new failure; old evidence does not become fresh merely because a batch completed.
 
+Coverage schema v2 separates `SourceCatalogApplications` (the frozen source snapshot) from `SelectedApplications` (this week's recipe). `PublishedApplications` remains a compatibility alias for the selected count. `PublishedCallbackCandidates` counts source IDs with callback hints, not tenant eligibility. Deep reports also expose `DeepSelectionHistoryApplications` and `NeverDeepSelectedCallbackCandidates`; these are selection history, not completed flow coverage. Both are null for shallow reports or legacy deep state without a ledger. Readers still accept archived schema v1 reports. Assessment includes structural exclusions; successful token observations do not prove JWT signature validity or API authorization.
+
 Median/p95 estimates use completed batches in the current recipe, not an assumed constant cost per app. Pending age measures time since the recipe was created. Successful evidence freshness comes from the anonymous observations' dates. A green workflow may still report incomplete coverage, exhausted retries, or zero successful tokens. Completion means every frozen member was assessed, including structural exclusions.
 
 ## Private checkpoints and artifacts

@@ -201,7 +201,9 @@ public sealed class FlowEvidenceStore : IDisposable
     private static void ValidatePlan(string hash, JsonElement plan)
     {
         HashValue(hash);
-        Keys(plan, "TenantFingerprint PrincipalFingerprint ClientId ResourceId Tenant CatalogHash Eligibility ResourceAliases Cells PlannedAt");
+        var cohort=plan.TryGetProperty("CohortFingerprint",out var cohortValue);
+        Keys(plan, "TenantFingerprint PrincipalFingerprint ClientId ResourceId Tenant CatalogHash Eligibility ResourceAliases Cells PlannedAt"+(cohort?" CohortFingerprint":""));
+        if(cohort) HashValue(cohortValue.GetString()!);
         foreach (var field in new[] { "TenantFingerprint", "PrincipalFingerprint" }) HashValue(Text(plan, field));
         foreach (var field in new[] { "ClientId", "ResourceId" }) GuidValue(Text(plan, field));
         Date(plan, "PlannedAt");
@@ -223,6 +225,7 @@ public sealed class FlowEvidenceStore : IDisposable
         var parts = new List<string> { "FlowPolicy1" };
         foreach (var field in new[] { "TenantFingerprint", "PrincipalFingerprint", "ClientId", "ResourceId", "Tenant", "CatalogHash", "Eligibility" })
             parts.Add(plan.GetProperty(field).ValueKind == JsonValueKind.Null ? "" : Text(plan, field));
+        if(cohort) parts.Add("Cohort|"+cohortValue.GetString());
         parts.AddRange(aliases.Distinct(StringComparer.CurrentCultureIgnoreCase).OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)); parts.AddRange(cells.EnumerateArray().Select(Cell));
         if (Hash(string.Join("\n", parts)) != hash) throw Invalid();
     }

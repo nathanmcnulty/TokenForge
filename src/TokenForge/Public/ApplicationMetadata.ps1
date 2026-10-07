@@ -107,7 +107,7 @@ function Update-TokenForgeApplicationMetadata {
         SignIns {@('AppId','SignInCount','KnownInInventory','RegisteredMicrosoft','Evidence','ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts','AuthenticationMethodCounts','CredentialTypeCounts','IncomingTokenTypeCounts')}
         RegistrationAttempts {@('AppId','Outcome','HttpStatus')}
         FlowAttempts {@('AttemptKey','PlanFingerprint','Protocol','Spa','RedirectFingerprint','Outcome','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','NamespaceVerification','RequestVerification','SignatureValidated','ErrorCodes','ElapsedSeconds')}
-        ScopeObservations {@('ClientId','ResourceId','Outcome','Protocol','Spa','RequestedScopes','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','SignatureValidated','NamespaceVerification','RequestVerification','ErrorCodes','AttemptCount','ElapsedSeconds','RedirectFingerprint','CatalogHash')}
+        ScopeObservations {@('ClientId','ResourceId','Outcome','Protocol','Spa','RequestedScopes','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','SignatureValidated','NamespaceVerification','RequestVerification','ErrorCodes','AttemptCount','ElapsedSeconds','RedirectFingerprint','CatalogHash','PlanFingerprint')}
     }
     $stamp=if($Kind -eq 'Discovery'){$Document.FetchedAt}elseif($Kind -in @('ScopeObservations','RegistrationAttempts','FlowAttempts')){$Document.UpdatedAt}else{$Document.CapturedAt}
     $observed=([DateTimeOffset]$stamp).ToUniversalTime()

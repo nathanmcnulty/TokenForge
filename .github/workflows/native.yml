@@ -52,8 +52,8 @@ jobs:
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
           Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force -SkipPublisherCheck
           $env:TOKENFORGE_TEST_NATIVE = (Resolve-Path (Join-Path './dist/native/${{ matrix.runtime }}' $(if ($IsWindows) { 'tokenforge.exe' } else { 'tokenforge' }))).Path
-          $result = Invoke-Pester ./tests/SqliteFlow.Tests.ps1,./tests/SqliteCatalog.Tests.ps1,./tests/SqliteScope.Tests.ps1 -PassThru -Output Detailed
-          if ($result.FailedCount -or $result.PassedCount -ne 16) { throw 'SQLite metadata adapter tests failed.' }
+          $result = Invoke-Pester ./tests/SqliteFlow.Tests.ps1,./tests/SqliteCatalog.Tests.ps1,./tests/SqliteScope.Tests.ps1,./tests/ResearchCohort.Tests.ps1 -PassThru -Output Detailed
+          if ($result.FailedCount -or $result.PassedCount -ne 22) { throw 'SQLite metadata adapter tests failed.' }
       - name: Smoke-test packaged CLI
         shell: pwsh
         run: |

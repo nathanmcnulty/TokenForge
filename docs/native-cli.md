@@ -92,3 +92,5 @@ Version 0.13 adds `flows import` and filtered `flows export`, plus individual tr
 Version 0.14 adds `catalog import/update/export` and direct transactional application-ledger updates from the existing producers. Research reports prefer `applications.sqlite` when it exists, and accept `--metadata-path`. See [SQLite application catalog](sqlite-application-catalog.md) for migration, filtered views, provenance, publication guards, and remaining scope-history limits.
 
 Primary scope and registration checkpoints can use an existing `scopes.sqlite`. See [SQLite scope history](sqlite-scope-history.md) for migration, selected/latest reads, resume repair, and public exports.
+
+Version 0.16 connects [frozen research cohorts](research-cohorts.md) to the inventory CLI and adds native `evidence cohort/cohort-export`. Contextual run recipes preserve namespace and chunk membership; selected scope reads also accept `--flow-plan` and `--client`.

@@ -341,5 +341,29 @@
       }
     ],
     "Review": "Sol approved implementation and evidence; resumed receipt checks added"
+  },
+  "WeeklyCli": {
+    "Date": "2026-10-07",
+    "Command": "research weekly",
+    "InputDataCommit": "869d082",
+    "Input": "Local public discovery-data checkout",
+    "AuthenticationPerformed": false,
+    "ProfileRequired": false,
+    "CredentialsOutput": false,
+    "StateModified": false,
+    "PowerShellAndPackagedNativeCountsMatched": true,
+    "PackagedNativeElapsedSeconds": 21.98,
+    "ShallowAssessedApplications": 5454,
+    "ShallowSuccessfulPairs": 252,
+    "DeepAssessedApplications": 100,
+    "DeepSuccessfulPairs": 46,
+    "FullSuitePassed": 340,
+    "FullSuiteFailed": 0,
+    "FullSuitePlatformSkips": 2,
+    "PackagedWeeklyCasesPassed": 10,
+    "ExpandedNativeAdaptersPassed": 32,
+    "WorkflowLintPassed": true,
+    "PackageHelperIdentityVerified": true,
+    "Review": "Sol approved reader and requested future-recipe rejection and corrected expanded CI pass counts; both fixed"
   }
 }

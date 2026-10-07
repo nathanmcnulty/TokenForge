@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
  [Parameter(Position=0,Mandatory)][ValidateSet('profile','login','logout','status','doctor','token','scopes','graph','research')][string]$Command,
- [Parameter(Position=1)][ValidateSet('create','forget-key','show','get','explain','permissions','connect','disconnect','report','export-flows','backup')][string]$Operation,
+ [Parameter(Position=1)][ValidateSet('create','forget-key','show','get','explain','permissions','connect','disconnect','report','export-flows','backup','weekly')][string]$Operation,
  [ValidatePattern('^[a-z][a-z0-9_-]{0,63}$')][string]$Profile='default',
  [string]$SnapshotPath,[string]$BackupDirectory,[string]$Root,[string]$Tenant,[string]$StatePath,[string]$ExportPath,[string]$FlowPath,[string]$MetadataPath,[string]$NativeExecutablePath,[switch]$SummaryOnly,
  [ValidatePattern('^[a-f0-9]{64}$')][string]$TenantFingerprint,[ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,
@@ -19,7 +19,7 @@ $manifest=Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1'
 if(-not (Get-Module TokenForge)){Import-Module $manifest}
 $common=@{Name=$Profile;Root=$Root}
 try{
- if($Command -eq 'research' -and $Operation -eq 'backup' -and @($PSBoundParameters.Keys|Where-Object {$_ -in @('PromptPassphrase','VaultPassword','EstsAuth','PasskeyPath','XdrModulePath','Browser','Interactive','LoginHint')}).Count){throw 'Backup does not accept authentication options.'}
+ if($Command -eq 'research' -and $Operation -in @('backup','weekly') -and @($PSBoundParameters.Keys|Where-Object {$_ -in @('PromptPassphrase','VaultPassword','EstsAuth','PasskeyPath','XdrModulePath','Browser','Interactive','LoginHint')}).Count){throw 'Offline maintenance commands do not accept authentication options.'}
  if($PromptPassphrase){
   if($VaultPassword){throw 'Choose a provided passphrase or an interactive prompt.'}
   $VaultPassword=Read-Host 'Vault passphrase' -AsSecureString
@@ -52,6 +52,33 @@ try{
    Get-TokenForgeScopeCandidates -Inventory (Get-Content (Join-Path $p.StatePath inventory.json) -Raw|ConvertFrom-Json) -Database (Get-TokenForgeScopeDatabase (Join-Path $p.StatePath $(if(Test-Path (Join-Path $p.StatePath scopes.sqlite)){'scopes.sqlite'}else{'scopes.json'})) -Latest) -ResourceId $id -Scope $Scope -PrincipalFingerprint $p.ExpectedPrincipalFingerprint -MaxAgeHours $p.MaxAgeHours
   }
   research {
+   if($Operation -eq 'weekly'){
+    if(-not $StatePath -or -not (Test-Path -LiteralPath $StatePath -PathType Container)){throw 'Choose a public discovery-data directory with StatePath.'}
+    if((Get-Item -LiteralPath $StatePath -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Linked weekly data is not allowed.'}
+    . (Join-Path $PSScriptRoot 'TokenForgeCiState.ps1')
+    $week=Get-TfCiWeek
+    $reports=@(foreach($mode in @('Shallow','Deep')){
+     $path=Join-Path $StatePath ('weekly-'+$mode.ToLowerInvariant()+'.json')
+     if(-not (Test-Path -LiteralPath $path)){continue}
+     $file=Get-Item -LiteralPath $path -Force
+     if(($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -gt 134217728){throw 'Invalid frozen recipe file.'}
+     $state=Get-Content -LiteralPath $path -Raw|ConvertFrom-Json -AsHashtable
+     # Get-TfCiReport validates the complete frozen recipe once before deriving counts.
+     $report=Get-TfCiReport $state
+     if($state.Recipe.Mode -cne $mode){throw 'Weekly filename and recipe mode differ.'}
+     if($state.Recipe.Week -cgt $week -or [DateTimeOffset]::Parse($state.Recipe.CreatedAt) -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Weekly recipe is from the future.'}
+     Assert-TfCiReport $report
+     $report.PlanId=$state.PlanId
+     $report.CurrentWeek=$report.Week -ceq $week
+     $report.RemainingApplications=$report.SelectedApplications-$report.AssessedApplications
+     $report.RemainingPairs=$report.SelectedPairs-$report.AssessedPairs
+     $report.NextAction=if(-not $report.CurrentWeek){'Refresh the checkout and inspect the next scheduled weekly cycle.'}elseif($report.ExhaustedBatches){'Review exhausted batches; use the workflow retry_exhausted option after resolving failures.'}elseif($report.Complete){'This selected set is complete; inspect observation dates and the next weekly cycle.'}else{'Pending batches continue on scheduled runs; inspect failed worker status if progress stalls.'}
+     $report
+    })
+    if(-not $reports.Count){throw 'No frozen weekly recipes were found.'}
+    [pscustomobject]@{SchemaVersion=1;CurrentWeek=$week;Reports=$reports;Evidence='OfflineFrozenRecipesNotUniversalSupportOrApiAuthorization';CredentialOutput=$false}
+    break
+   }
    if($Operation -eq 'backup'){
     if(-not $SnapshotPath -or -not $BackupDirectory){throw 'Choose SnapshotPath and BackupDirectory.'}
     & (Join-Path $PSScriptRoot 'Export-TokenForgeMaintenanceBackup.ps1') -SnapshotPath $SnapshotPath -BackupDirectory $BackupDirectory
@@ -69,7 +96,7 @@ try{
      Get-TokenForgeResearchCoverage @options
     }
     export-flows {if(-not $ExportPath){throw 'Choose ExportPath.'};$selection=@{};if($TenantFingerprint){$selection.TenantFingerprint=$TenantFingerprint};if($PrincipalFingerprint){$selection.PrincipalFingerprint=$PrincipalFingerprint};Export-TokenForgeFlowEvidence $FlowPath -OutputPath $ExportPath -NativeExecutablePath $NativeExecutablePath @selection;[pscustomobject]@{SchemaVersion=1;Exported=$true;CredentialOutput=$false}}
-    default {throw 'Use research report, research export-flows, or research backup.'}
+    default {throw 'Use research report, research weekly, research export-flows, or research backup.'}
    }
   }
   graph {
@@ -81,7 +108,14 @@ try{
    }
   }
  }
- if($Json){ConvertTo-Json -InputObject $result -Depth 15}else{$result}
+ if($Json){ConvertTo-Json -InputObject $result -Depth 15}
+ elseif($Command -eq 'research' -and $Operation -eq 'weekly'){
+  foreach($report in $result.Reports){
+   "$($report.Mode) [$($report.Week)]: $($report.AssessedApplications)/$($report.SelectedApplications) applications assessed; $($report.AssessedPairs)/$($report.SelectedPairs) resource pairs assessed; $($report.SuccessfulApplications) apps / $($report.SuccessfulPairs) pairs succeeded."
+   "Remaining: $($report.RemainingApplications) applications / $($report.RemainingPairs) pairs; pending batches $($report.PendingBatches), exhausted $($report.ExhaustedBatches). $($report.NextAction)"
+  }
+  'Assessment includes structural exclusions. Successful token observations do not establish universal support or API authorization.'
+ }else{$result}
  $global:LASTEXITCODE=0
  if($Command -eq 'profile' -and $Operation -eq 'forget-key' -and $result -and -not $result.KeyRemoved){
   $global:LASTEXITCODE=1

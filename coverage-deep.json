@@ -1,0 +1,22 @@
+{
+  "SchemaVersion": 1,
+  "Week": "2026-W41",
+  "Mode": "Deep",
+  "GeneratedAt": "2026-10-07T21:59:58.8052183+00:00",
+  "PublishedApplications": 100,
+  "AssessedApplications": 50,
+  "SuccessfulApplications": 23,
+  "TotalBatches": 4,
+  "CompletedBatches": 2,
+  "PendingBatches": 2,
+  "ExhaustedBatches": 0,
+  "Complete": false,
+  "OldestCompletedAssessmentAt": "2026-10-07T21:58:12.0000000+00:00",
+  "LatestCompletedAssessmentAt": "2026-10-07T21:58:35.0000000+00:00",
+  "OldestPendingHours": 0.08,
+  "MedianBatchSeconds": 136.377,
+  "P95BatchSeconds": 153.171,
+  "EstimatedRemainingRunnerSeconds": 272.754,
+  "Evidence": "AssessedForOneAccountNotUniversalSupport",
+  "SuccessfulScopeFreshness": "InspectAnonymousObservationDates"
+}

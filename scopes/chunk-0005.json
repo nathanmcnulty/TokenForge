@@ -2,9 +2,141 @@
   "SchemaVersion": 1,
   "Observations": [
     {
+      "ClientId": "18e271e7-a818-46ad-8e73-07cb0ae64328",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:25:00.3925151+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "18ed3507-a475-4ccb-b669-d66bc9f2a36e",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:25:02.8100229+00:00",
+      "Scopes": [
+        "AdministrativeUnit.Read.All",
+        "AdministrativeUnit.ReadWrite.All",
+        "AgentCardManifest.Read.All",
+        "AgentCardManifest.ReadWrite.All",
+        "AgentCollection.Read.All",
+        "AgentCollection.Read.Global",
+        "AgentCollection.Read.Quarantined",
+        "AgentCollection.ReadWrite.All",
+        "AgentCollection.ReadWrite.Global",
+        "AgentCollection.ReadWrite.Quarantined",
+        "AgentIdentity.Create.All",
+        "AgentIdentity.EnableDisable.All",
+        "AgentIdentity.Read.All",
+        "AgentIdentity.ReadWrite.All",
+        "AgentIdentityBlueprint.Create",
+        "AgentIdentityBlueprint.ReadWrite.All",
+        "AgentIdentityBlueprintPrincipal.Create",
+        "AgentIdentityBlueprintPrincipal.EnableDisable.All",
+        "AgentIdentityBlueprintPrincipal.Read.All",
+        "AgentIdentityBlueprintPrincipal.ReadWrite.All",
+        "AgentInstance.Read.All",
+        "AgentInstance.ReadWrite.All",
+        "AppFederatedCredentialIssuers.ReadWrite.All",
+        "AppGalleryIntegrationRequest.ReadWrite",
+        "AppGalleryIntegrationRequest.ReadWriteArtifact.All",
+        "AppGalleryIntegrationRequest.ReadWriteScimTest.All",
+        "AppGalleryIntegrationRequest.ReadWriteSsoTest.All",
+        "Application.Read.All",
+        "Application.ReadWrite.All",
+        "AppRoleAssignment.ReadWrite.All",
+        "AuditLog.Read.All",
+        "CrossTenantInformation.ReadBasic.All",
+        "CustomSecAttributeAssignment.ReadWrite.All",
+        "CustomSecAttributeDefinition.ReadWrite.All",
+        "DelegatedPermissionGrant.ReadWrite.All",
+        "Domain.Read.All",
+        "email",
+        "IdentityProvider.ReadWrite.All",
+        "openid",
+        "Organization.ReadWrite.All",
+        "Policy.Read.All",
+        "Policy.ReadWrite.ApplicationConfiguration",
+        "Policy.ReadWrite.MobilityManagement",
+        "profile",
+        "RoleManagement.ReadWrite.Directory",
+        "User.Read",
+        "User.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "18fbca16-2224-45f6-85b0-f7bf2b39b3f3",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:25:04.5808135+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "19db86c3-b2b9-44cc-b339-36da233a3be2",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:25:15.6931145+00:00",
+      "Scopes": [
+        "AgentIdentity.Read.All",
+        "AuditLog.Read.All",
+        "CrossTenantInformation.ReadBasic.All",
+        "Directory.Read.All",
+        "email",
+        "openid",
+        "Organization.Read.All",
+        "OrganizationalBranding.Read.All",
+        "Policy.Read.All",
+        "profile",
+        "User.Read",
+        "User.RevokeSessions.All",
+        "UserAuthenticationMethod.Read",
+        "UserAuthenticationMethod.ReadWrite"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "19f7f505-34aa-44a4-9dcc-6a768854d2ea",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:25:22.6309685+00:00",
+      "Scopes": [
+        "Application.Read.All",
+        "email",
+        "openid",
+        "Organization.Read.All",
+        "profile"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "1a20851a-696e-4c7e-96f4-c282dfe48872",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:25:24.4604336+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
       "ClientId": "3cf6df92-2745-4f6f-bbcf-19b59bcdb62a",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-06T01:09:40.0000000+00:00",
+      "ObservedAt": "2026-10-06T01:09:40+00:00",
       "Scopes": [
         "DeviceManagementConfiguration.Read.All",
         "DeviceManagementConfiguration.ReadWrite.All",
@@ -24,7 +156,7 @@
     {
       "ClientId": "3dd3a51e-8d76-4cca-ac35-5537c1319211",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-06T01:09:47.0000000+00:00",
+      "ObservedAt": "2026-10-06T01:09:47+00:00",
       "Scopes": [
         "CloudPC.Read.All",
         "email",
@@ -38,7 +170,7 @@
     {
       "ClientId": "3e62f81e-590b-425b-9531-cad6683656cf",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-06T01:09:49.0000000+00:00",
+      "ObservedAt": "2026-10-06T01:09:49+00:00",
       "Scopes": [
         "Channel.ReadBasic.All",
         "ChannelMessage.Read.All",
@@ -69,7 +201,7 @@
     {
       "ClientId": "3ff8e6ba-7dc3-4e9e-ba40-ee12b60d6d48",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-06T01:10:11.0000000+00:00",
+      "ObservedAt": "2026-10-06T01:10:11+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -83,7 +215,7 @@
     {
       "ClientId": "4345a7b9-9a63-4910-a426-35363201d503",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-06T01:10:20.0000000+00:00",
+      "ObservedAt": "2026-10-06T01:10:20+00:00",
       "Scopes": [
         "email",
         "Notes.Create",
@@ -105,7 +237,7 @@
     {
       "ClientId": "44a02aaa-7145-4925-9dcd-79e6e1b94eff",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-06T01:10:38.0000000+00:00",
+      "ObservedAt": "2026-10-06T01:10:38+00:00",
       "Scopes": [
         "Channel.ReadBasic.All",
         "Chat.Read",
@@ -130,7 +262,7 @@
     {
       "ClientId": "4536f486-82f7-4cfc-bfcc-6cf40d5ba55a",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-06T01:10:41.0000000+00:00",
+      "ObservedAt": "2026-10-06T01:10:41+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -143,7 +275,7 @@
     {
       "ClientId": "46da2f7e-b5ef-422a-88d4-2a7f9de6a0b2",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-06T01:10:51.0000000+00:00",
+      "ObservedAt": "2026-10-06T01:10:51+00:00",
       "Scopes": [
         "email",
         "Group.Read.All",
@@ -160,7 +292,7 @@
     {
       "ClientId": "472dd75b-cdf2-42a0-9fec-b86cefca8135",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-06T01:10:55.0000000+00:00",
+      "ObservedAt": "2026-10-06T01:10:55+00:00",
       "Scopes": [
         "Channel.Create",
         "ChannelMember.ReadWrite.All",
@@ -179,7 +311,7 @@
     {
       "ClientId": "4765445b-32c6-49b0-83e6-1d93765276ca",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-06T01:11:00.0000000+00:00",
+      "ObservedAt": "2026-10-06T01:11:00+00:00",
       "Scopes": [
         "Calendars.Read",
         "Contacts.Read",
@@ -210,7 +342,7 @@
     {
       "ClientId": "47a4f6b2-25dc-4851-8524-fffe7360e8d4",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-06T01:11:08.0000000+00:00",
+      "ObservedAt": "2026-10-06T01:11:08+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -223,7 +355,7 @@
     {
       "ClientId": "4813382a-8fa7-425e-ab75-3b753aab3abb",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-06T01:11:12.0000000+00:00",
+      "ObservedAt": "2026-10-06T01:11:12+00:00",
       "Scopes": [
         "_A.AA",
         "_B.AC",
@@ -246,7 +378,7 @@
     {
       "ClientId": "4906f920-9f94-4f14-98aa-8456dd5f78a8",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-06T01:11:17.0000000+00:00",
+      "ObservedAt": "2026-10-06T01:11:17+00:00",
       "Scopes": [
         "email",
         "openid",

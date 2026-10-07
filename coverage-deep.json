@@ -1,5 +1,11 @@
 {
-  "SchemaVersion": 2,
+  "SchemaVersion": 3,
+  "ResourceIds": [
+    "00000003-0000-0000-c000-000000000000"
+  ],
+  "SelectedPairs": 100,
+  "AssessedPairs": 100,
+  "SuccessfulPairs": 46,
   "SourceCatalogApplications": 5454,
   "SelectedApplications": 100,
   "PublishedCallbackCandidates": 490,
@@ -7,7 +13,7 @@
   "NeverDeepSelectedCallbackCandidates": 390,
   "Week": "2026-W41",
   "Mode": "Deep",
-  "GeneratedAt": "2026-10-07T22:51:38.3903123+00:00",
+  "GeneratedAt": "2026-10-07T23:26:23.2842620+00:00",
   "PublishedApplications": 100,
   "AssessedApplications": 100,
   "SuccessfulApplications": 46,

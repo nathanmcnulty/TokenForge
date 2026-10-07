@@ -1,0 +1,40 @@
+{
+  "SchemaVersion": 1,
+  "Observations": [
+    {
+      "ClientId": "655db33f-4580-4e63-bad1-4618764badb9",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:48:52.1845315+00:00",
+      "Scopes": [
+        "_A.AA",
+        "Calendars.Read",
+        "ChannelMessage.Read.All",
+        "ChannelMessage.Send",
+        "Chat.ReadWrite",
+        "email",
+        "Files.Read.All",
+        "Files.ReadWrite",
+        "openid",
+        "Presence.Read.All",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "67ae0dc4-5f97-4c38-b132-65d38bbab8d1",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:49:35.0217013+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "user_impersonation"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    }
+  ],
+  "Disclaimer": "Observed scopes are session/tenant dependent, not universal consent or guaranteed API access."
+}

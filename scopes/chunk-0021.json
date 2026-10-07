@@ -1,0 +1,80 @@
+{
+  "SchemaVersion": 1,
+  "Observations": [
+    {
+      "ClientId": "60c8bde5-3167-4f92-8fdb-059f6176dc0f",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:48:48.3741612+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "user_impersonation"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "60f38cf4-a0bf-4fdf-b0b5-14d3131bc031",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:48:54.5772391+00:00",
+      "Scopes": [
+        "Application.ReadWrite.All",
+        "Channel.ReadBasic.All",
+        "email",
+        "Group.Read.All",
+        "openid",
+        "profile",
+        "Team.ReadBasic.All",
+        "User.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "618dd325-23f6-4b6f-8380-4df78026e39b",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:49:14.8058083+00:00",
+      "Scopes": [
+        "_B.AR",
+        "Application.Read.All",
+        "email",
+        "Group.Read.All",
+        "openid",
+        "Organization.Read.All",
+        "profile",
+        "User.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "6388acc4-795e-43a9-a320-33075c1eb83b",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:50:04.553453+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "63896e48-3d27-4ce2-9968-610b4af62c5d",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:50:05.91175+00:00",
+      "Scopes": [
+        "CloudPC.Read.All",
+        "email",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    }
+  ],
+  "Disclaimer": "Observed scopes are session/tenant dependent, not universal consent or guaranteed API access."
+}

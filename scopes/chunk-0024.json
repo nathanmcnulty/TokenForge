@@ -1,0 +1,48 @@
+{
+  "SchemaVersion": 1,
+  "Observations": [
+    {
+      "ClientId": "706247ff-cdd6-4957-8377-c65e91c8d532",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:49:12.9100638+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "PrinterShare.ReadBasic.All",
+        "PrintJob.ReadBasic",
+        "profile"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "71a7c376-13e6-4100-968e-92ce98c5d3d2",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:49:24.6818728+00:00",
+      "Scopes": [
+        "_A.AA",
+        "_B.AC",
+        "_C.AA",
+        "_F.AB",
+        "_H.AD",
+        "_L.AA",
+        "AppCatalog.Read.All",
+        "Calendars.ReadWrite",
+        "Channel.ReadBasic.All",
+        "email",
+        "MailboxSettings.ReadWrite",
+        "Member.Read.Hidden",
+        "openid",
+        "Organization.Read.All",
+        "People.Read",
+        "profile",
+        "user_impersonation",
+        "User.Read",
+        "User.ReadBasic.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    }
+  ],
+  "Disclaimer": "Observed scopes are session/tenant dependent, not universal consent or guaranteed API access."
+}

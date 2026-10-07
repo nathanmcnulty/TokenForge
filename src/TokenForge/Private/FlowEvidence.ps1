@@ -1,6 +1,7 @@
 function Get-TokenForgeFlowPlanHash {
     param($Plan)
     $parts=@('FlowPolicy1',$Plan.TenantFingerprint,$Plan.PrincipalFingerprint,$Plan.ClientId,$Plan.ResourceId,$Plan.Tenant,$Plan.CatalogHash,$Plan.Eligibility)
+    if($Plan.Contains('CohortFingerprint')){$parts+='Cohort|'+$Plan.CohortFingerprint}
     $parts+=@($Plan.ResourceAliases|Sort-Object -Unique)
     $parts+=@($Plan.Cells|ForEach-Object {$_.Protocol+'|'+[int]$_.Spa+'|'+$_.RedirectFingerprint})
     Get-TokenForgeFingerprint ($parts -join "`n")
@@ -17,7 +18,8 @@ function Assert-TokenForgeFlowDocument {
     foreach($id in $Document.Plans.Keys){
         $plan=$Document.Plans[$id]
         & $hash $id
-        & $checkKeys $plan @('TenantFingerprint','PrincipalFingerprint','ClientId','ResourceId','Tenant','CatalogHash','Eligibility','ResourceAliases','Cells','PlannedAt')
+        $planKeys=@('TenantFingerprint','PrincipalFingerprint','ClientId','ResourceId','Tenant','CatalogHash','Eligibility','ResourceAliases','Cells','PlannedAt');if($plan.Contains('CohortFingerprint')){$planKeys+='CohortFingerprint'; & $hash $plan.CohortFingerprint}
+        & $checkKeys $plan $planKeys
         foreach($field in @('TenantFingerprint','PrincipalFingerprint')){& $hash $plan[$field]}
         foreach($field in @('ClientId','ResourceId')){& $guid $plan[$field]}
         & $date $plan.PlannedAt

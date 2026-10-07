@@ -11,7 +11,7 @@ non-Microsoft principals. Probe uses existing consent and stops at interactive p
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
- [Parameter(Mandatory)][ValidateSet('Discover','SignIns','Inventory','Register','Probe','Merge','Export','Report','ExportFlows')][string]$Action,
+ [Parameter(Mandatory)][ValidateSet('Discover','SignIns','Inventory','Register','Probe','Merge','Export','Report','ExportFlows','NewCohort','ProbeChunk','CohortStatus')][string]$Action,
  [Parameter(Mandatory)][string]$StatePath,
  [string]$MetadataPath,[string]$DatabasePath,[string]$FlowPath,[string]$NativeExecutablePath,[switch]$ExploreAllFlows,[switch]$SummaryOnly,
  [securestring]$GraphToken,
@@ -32,7 +32,9 @@ param(
  [switch]$Refresh,
  [switch]$RetryFailures,
  [string[]]$InputDatabasePath,
- [string]$ExportPath
+ [string]$ExportPath,
+ [ValidatePattern('^[a-f0-9]{64}$')][string]$CohortId,
+ [ValidateRange(-1,100000)][int]$ChunkIndex=-1,[ValidateRange(1,1000)][int]$BatchSize=25
 )
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1') -Force
@@ -41,7 +43,7 @@ if (-not $IsWindows) { [IO.File]::SetUnixFileMode($StatePath, ([IO.UnixFileMode]
 $discoveryPath=Join-Path $StatePath 'discovery.json'
 $inventoryPath=Join-Path $StatePath 'inventory.json'
 if(-not $DatabasePath){$DatabasePath=Join-Path $StatePath $(if(Test-Path (Join-Path $StatePath 'scopes.sqlite')){'scopes.sqlite'}else{'scopes.json'})}
-if(-not $FlowPath){$FlowPath=Join-Path $StatePath 'flows.json'}
+if(-not $FlowPath){$FlowPath=Join-Path $StatePath $(if($Action -eq 'ProbeChunk' -or (Test-Path (Join-Path $StatePath 'flows.sqlite'))){'flows.sqlite'}else{'flows.json'})}
 if(-not $MetadataPath){$MetadataPath=Join-Path $StatePath $(if(Test-Path (Join-Path $StatePath 'applications.sqlite')){'applications.sqlite'}else{'applications.json'})}
 $principalOptions=@{}
 if ($PrincipalFingerprint) { $principalOptions.PrincipalFingerprint=$PrincipalFingerprint }
@@ -52,6 +54,20 @@ try {
  catch {throw 'State directory is already in use by another writer.'}
  if (-not $IsWindows) { [IO.File]::SetUnixFileMode((Join-Path $StatePath '.writer.lock'), ([IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite)) }
  switch ($Action) {
+  'NewCohort' {
+   $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
+   New-TokenForgeResearchCohort -Inventory $inventory -DatabasePath $DatabasePath -GraphOnly:$GraphOnly -ClientId $ClientId @principalOptions -BatchSize $BatchSize -MaxRedirects $MaxRedirects -ExploreAllFlows:$ExploreAllFlows -Tenant $Tenant -NativeExecutablePath $NativeExecutablePath -WhatIf:$WhatIfPreference -Confirm:$false
+  }
+  'CohortStatus' {
+   if(-not $CohortId){throw 'CohortStatus requires CohortId.'}
+   Get-TokenForgeResearchCohort $DatabasePath $CohortId -NativeExecutablePath $NativeExecutablePath
+  }
+  'ProbeChunk' {
+   if(-not $CohortId -or -not $EstsAuth){throw 'ProbeChunk requires CohortId and EstsAuth.'}
+   $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
+   if($PrincipalFingerprint){$cohort=Get-TokenForgeResearchCohort $DatabasePath $CohortId -NativeExecutablePath $NativeExecutablePath;if($PrincipalFingerprint -ne $cohort.Cohort.PrincipalFingerprint){throw 'Principal selection differs from the frozen cohort.'}}
+   Invoke-TokenForgeResearchChunk -Inventory $inventory -EstsAuth $EstsAuth -CookieName $CookieName -DatabasePath $DatabasePath -CohortId $CohortId -ChunkIndex $ChunkIndex -FlowDatabasePath $FlowPath -MetadataPath $MetadataPath -NativeExecutablePath $NativeExecutablePath -WhatIf:$WhatIfPreference -Confirm:$false
+  }
   'Discover' {Update-TokenForgeDiscovery -Path $discoveryPath -MetadataPath $MetadataPath -NativeExecutablePath $NativeExecutablePath}
   'SignIns' {
    if(-not $GraphToken){throw 'SignIns requires GraphToken.'}

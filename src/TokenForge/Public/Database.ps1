@@ -8,19 +8,19 @@ function Get-TokenForgeScopeDatabase {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$Path,[string]$NativeExecutablePath,[switch]$Latest,
         [ValidatePattern('^[a-f0-9]{64}$')][string]$TenantFingerprint,
-        [ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,[guid]$ResourceId=[guid]::Empty)
+        [ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,[guid]$ResourceId=[guid]::Empty,[guid]$ClientId=[guid]::Empty,[ValidatePattern('^[a-f0-9]{64}$')][string]$PlanFingerprint)
     if ($PrincipalFingerprint -and -not $TenantFingerprint) { throw 'Principal selection requires a tenant.' }
     if ($Path.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)) {
         $full=Resolve-TokenForgeVaultPath $Path -CreateDirectory
         if (-not (Test-Path -LiteralPath $full)) { return New-TokenForgeScopeDatabase }
-        $document=Invoke-TokenForgeNativeEvidence $full export -Domain evidence -NativeExecutablePath $NativeExecutablePath -Latest:$Latest -TenantFingerprint $TenantFingerprint -PrincipalFingerprint $PrincipalFingerprint -ResourceId $ResourceId
+        $document=Invoke-TokenForgeNativeEvidence $full export -Domain evidence -NativeExecutablePath $NativeExecutablePath -Latest:$Latest -TenantFingerprint $TenantFingerprint -PrincipalFingerprint $PrincipalFingerprint -ResourceId $ResourceId -ClientId $ClientId -FlowPlanFingerprint $PlanFingerprint
         $database=[pscustomobject]@{SchemaVersion=$document.SchemaVersion;UpdatedAt=$document.UpdatedAt;Observations=@($document.Observations|ForEach-Object {[pscustomobject]$_});RegistrationAttempts=@($document.RegistrationAttempts|ForEach-Object {[pscustomobject]$_})}
     } else {
         if (-not (Test-Path -LiteralPath $Path)) { return New-TokenForgeScopeDatabase }
         if ((Get-Item -LiteralPath $Path).Length -gt 67108864) { throw 'Scope database exceeds portable JSON bounds.' }
         $database = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -ErrorAction Stop
         if ($database.SchemaVersion -ne 1 -or -not $database.PSObject.Properties['Observations'] -or -not $database.PSObject.Properties['RegistrationAttempts']) { throw 'Unsupported scope database document.' }
-        $database.Observations=@($database.Observations|Where-Object {(-not $TenantFingerprint -or $_.TenantFingerprint -eq $TenantFingerprint) -and (-not $PrincipalFingerprint -or $_.PrincipalFingerprint -eq $PrincipalFingerprint) -and ($ResourceId -eq [guid]::Empty -or $_.ResourceId -eq $ResourceId.ToString())}|Sort-Object -Stable {([DateTimeOffset]$_.ObservedAt).UtcDateTime})
+        $database.Observations=@($database.Observations|Where-Object {(-not $TenantFingerprint -or $_.TenantFingerprint -eq $TenantFingerprint) -and (-not $PrincipalFingerprint -or $_.PrincipalFingerprint -eq $PrincipalFingerprint) -and ($ResourceId -eq [guid]::Empty -or $_.ResourceId -eq $ResourceId.ToString()) -and ($ClientId -eq [guid]::Empty -or $_.ClientId -eq $ClientId.ToString()) -and (-not $PlanFingerprint -or ($_.PSObject.Properties['PlanFingerprint'] -and $_.PlanFingerprint -eq $PlanFingerprint))}|Sort-Object -Stable {([DateTimeOffset]$_.ObservedAt).UtcDateTime})
         $database.RegistrationAttempts=@($database.RegistrationAttempts|Where-Object {-not $TenantFingerprint -or $_.TenantFingerprint -eq $TenantFingerprint}|Sort-Object -Stable {([DateTimeOffset]$_.AttemptedAt).UtcDateTime})
         if($Latest){
             $rows=@{};foreach($row in $database.Observations){$rows["$($row.TenantFingerprint)/$($row.PrincipalFingerprint)/$($row.ClientId)/$($row.ResourceId)"]=$row};$database.Observations=@($rows.Values|Sort-Object ObservedAt)
@@ -44,14 +44,14 @@ function Add-TokenForgeScopeObservation {
         $guid = [guid]::Empty
         if (-not [guid]::TryParse([string]$Observation.$field,[ref]$guid)) { throw 'Observation contains an invalid public application ID.' }
     }
-    foreach ($field in @('TenantFingerprint','PrincipalFingerprint')) {
-        if ($Observation.$field -and $Observation.$field -notmatch '^[a-f0-9]{64}$') { throw 'Observations must use fingerprints, not tenant or user IDs.' }
+    foreach ($field in @('TenantFingerprint','PrincipalFingerprint','PlanFingerprint')) {
+        if ($Observation.PSObject.Properties[$field] -and $Observation.$field -and $Observation.$field -notmatch '^[a-f0-9]{64}$') { throw 'Observations must use fingerprints, not tenant or user IDs.' }
     }
     if ($Observation.Outcome -notin @('Succeeded','NoDelegatedScp','OpaqueToken','Failed','NoRedirect','Disabled','MissingRegistration','OwnerMismatch','BrokerRequired','ContextMismatch')) { throw 'Invalid observation outcome.' }
     if ($Observation.PSObject.Properties['NamespaceVerification'] -and $Observation.NamespaceVerification -notin @('Matched','Mismatch','Unverifiable')) { throw 'Invalid namespace verification evidence.' }
     if ($Observation.PSObject.Properties['RequestVerification'] -and $Observation.RequestVerification -notin @('Matched','Mismatch','Unverifiable')) { throw 'Invalid request verification evidence.' }
     $clean = [ordered]@{}
-    foreach ($field in @('ClientId','ResourceId','Outcome','TenantFingerprint','PrincipalFingerprint','ObservedAt','Protocol','Spa','RedirectFingerprint','RequestedScopes','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','NamespaceVerification','RequestVerification','SignatureValidated','ErrorCodes','AttemptCount','ElapsedSeconds','CatalogHash')) {
+    foreach ($field in @('ClientId','ResourceId','Outcome','TenantFingerprint','PrincipalFingerprint','ObservedAt','Protocol','Spa','RedirectFingerprint','RequestedScopes','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','NamespaceVerification','RequestVerification','SignatureValidated','ErrorCodes','AttemptCount','ElapsedSeconds','CatalogHash','PlanFingerprint')) {
         if ($Observation.PSObject.Properties[$field]) { $clean[$field] = $Observation.$field }
     }
     foreach ($field in @('RequestedScopes','ResponseScopes','ScpScopes')) {

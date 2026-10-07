@@ -74,7 +74,7 @@ $token = Get-TokenForgeToken -Request $request -EstsAuth $cookie
 
 Claims inspection also returns private context fingerprints, never raw tenant/user claims. Readable JWT payloads are diagnostic evidence, with `SignatureValidated=false`. TokenForge does not validate Microsoft's access-token signatures or treat a decoded claim as proof of API acceptance. `Test-TokenForgeTokenAccess` performs a read-only Graph/ARM request and returns status without reading the response body. Test each assessment operation separately with the appropriate role and customer policy.
 
-`Export-TokenForgeScopeDatabase` strips tenant/principal fingerprints and exports successful public app/resource scope observations with matching client/resource evidence. Legacy observations require re-probing before export. Review exports before publication: observation dates and unusual combinations can still reveal context. Exported observations are anonymous tenant evidence, not universal preconsent. The repository remains private; no live database or upstream datasets are committed.
+`Export-TokenForgeScopeDatabase` strips tenant/principal fingerprints and exports successful public app/resource scope observations with matching client/resource evidence. Legacy observations require re-probing before export. Review exports before publication: observation dates and unusual combinations can still reveal context. Exported observations are anonymous tenant evidence, not universal preconsent. The repository is public. Private live databases and credential files stay outside Git; only explicit sanitized exports and validation reports are committed.
 
 ## Separate administrator and assessment sessions
 
@@ -86,7 +86,7 @@ $observer = Get-TokenForgeTokenClaims -AccessToken $assessmentGraphToken.AccessT
     -PrincipalFingerprint $observer.PrincipalFingerprint -Tenant $customerTenantId
 ```
 
-Use the customer's tenant authority when assessing a guest session. The default `organizations` authority may select the user's home tenant; a mismatching token is excluded from the assessment evidence. These fingerprint checks do not replace authentication or API role checks. A live alternate-user/guest proof requires another authorized account; the current live evidence uses one user and tenant.
+Use the customer's tenant authority when assessing a guest session. The default `organizations` authority may select the user's home tenant; a mismatching token is excluded from the assessment evidence. These fingerprint checks do not replace authentication or API role checks. Live proofs use Nora and secadmin in the lab tenant. Guest and other-tenant behavior still requires separate validation.
 
 ## Merge independently checkpointed batches
 
@@ -100,3 +100,5 @@ $combined = Merge-TokenForgeScopeDatabase -Database $sources -Path $combinedPath
 ```
 
 A merge of live checkpoint files is a snapshot of their progress, not proof that their scans completed. Save a final merged snapshot after the source workers finish, then compare it with the previous snapshot and export anonymous observations as needed.
+
+For current primary storage and frozen batch maintenance, see [SQLite application metadata](sqlite-application-catalog.md), [scope/registration history](sqlite-scope-history.md), and [research cohorts](research-cohorts.md).

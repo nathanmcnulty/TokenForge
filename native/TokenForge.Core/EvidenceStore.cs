@@ -8,7 +8,7 @@ namespace TokenForge.Core;
 public sealed class EvidenceStore : IDisposable
 {
     private readonly SqliteConnection connection;
-    private static readonly HashSet<string> Fields = new("ClientId ResourceId Outcome TenantFingerprint PrincipalFingerprint ObservedAt Protocol Spa RedirectFingerprint RequestedScopes ResponseScopes ScpScopes ClaimsReadable HasScpClaim NamespaceVerification RequestVerification SignatureValidated ErrorCodes AttemptCount ElapsedSeconds CatalogHash".Split(' '), StringComparer.Ordinal);
+    private static readonly HashSet<string> Fields = new("ClientId ResourceId Outcome TenantFingerprint PrincipalFingerprint ObservedAt Protocol Spa RedirectFingerprint RequestedScopes ResponseScopes ScpScopes ClaimsReadable HasScpClaim NamespaceVerification RequestVerification SignatureValidated ErrorCodes AttemptCount ElapsedSeconds CatalogHash PlanFingerprint".Split(' '), StringComparer.Ordinal);
     public EvidenceStore(string path, bool readOnly = false)
     {
         if(readOnly && !File.Exists(path)) throw new InvalidOperationException("Evidence database does not exist.");
@@ -87,7 +87,7 @@ public sealed class EvidenceStore : IDisposable
             clean[name] = name switch
             {
                 "ClientId" or "ResourceId" => GuidValue(value),
-                "TenantFingerprint" or "PrincipalFingerprint" or "RedirectFingerprint" or "CatalogHash" => Fingerprint(value),
+                "TenantFingerprint" or "PrincipalFingerprint" or "RedirectFingerprint" or "CatalogHash" or "PlanFingerprint" => Fingerprint(value),
                 "ObservedAt" => Date(value),
                 "Outcome" => Choice(value, "Succeeded NoDelegatedScp OpaqueToken Failed NoRedirect Disabled MissingRegistration OwnerMismatch BrokerRequired ContextMismatch"),
                 "Protocol" => Choice(value, "OAuth2V2Pkce OAuth2V2Implicit OAuth2V1Implicit"),
@@ -106,11 +106,13 @@ public sealed class EvidenceStore : IDisposable
         clean["SignatureValidated"] = false;
         return clean;
     }
-    public string Export(bool publicOnly = false, bool latest = false, string? tenant = null, string? principal = null, string? resource = null)
+    public string Export(bool publicOnly = false, bool latest = false, string? tenant = null, string? principal = null, string? resource = null, string? planFingerprint = null, string? client = null)
     {
         if(tenant!=null && !Regex.IsMatch(tenant,"\\A[a-f0-9]{64}\\z") || principal!=null && !Regex.IsMatch(principal,"\\A[a-f0-9]{64}\\z")) throw new InvalidOperationException("Invalid evidence namespace.");
         if(principal!=null && tenant==null) throw new InvalidOperationException("Principal selection requires a tenant.");
         if(resource!=null) resource=Guid.Parse(resource).ToString();
+        if(client!=null) client=Guid.Parse(client).ToString();
+        if(planFingerprint!=null) Fingerprint(JsonSerializer.SerializeToElement(planFingerprint));
         using var transaction = connection.BeginTransaction();
         var rows = new List<JsonElement>();
         long bytes=0;
@@ -118,9 +120,9 @@ public sealed class EvidenceStore : IDisposable
         using (var command = connection.CreateCommand())
         {
             command.Transaction = transaction;
-            var filter=" WHERE ($tenant IS NULL OR tenant=$tenant) AND ($principal IS NULL OR principal=$principal) AND ($resource IS NULL OR resource=$resource)";
+            var filter=" WHERE ($tenant IS NULL OR tenant=$tenant) AND ($principal IS NULL OR principal=$principal) AND ($resource IS NULL OR resource=$resource) AND ($client IS NULL OR client=$client) AND ($flowPlan IS NULL OR json_extract(payload,'$.PlanFingerprint')=$flowPlan)";
             command.CommandText=latest ? "SELECT id,tenant,principal,client,resource,observed,payload FROM (SELECT *,ROW_NUMBER() OVER(PARTITION BY tenant,principal,client,resource ORDER BY observed DESC,rowid DESC) AS rank FROM observations"+filter+") WHERE rank=1 ORDER BY observed,id;" : "SELECT id,tenant,principal,client,resource,observed,payload FROM observations"+filter+" ORDER BY observed,rowid;";
-            Add(command,"$tenant",tenant);Add(command,"$principal",principal);Add(command,"$resource",resource);
+            Add(command,"$tenant",tenant);Add(command,"$principal",principal);Add(command,"$resource",resource);Add(command,"$client",client);Add(command,"$flowPlan",planFingerprint);
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
@@ -154,29 +156,79 @@ public sealed class EvidenceStore : IDisposable
         using var command = connection.CreateCommand(); command.CommandText = "INSERT OR IGNORE INTO plans VALUES($id,$size,$payload);";
         Add(command, "$id", id); Add(command, "$size", batchSize); Add(command, "$payload", payload); command.ExecuteNonQuery(); return id;
     }
+    public string Cohort(string json,int batchSize)
+    {
+        if(batchSize<1 || batchSize>1000 || Encoding.UTF8.GetByteCount(json)>8*1024*1024)throw new InvalidOperationException("Invalid cohort bounds.");
+        using var document=JsonDocument.Parse(json,new JsonDocumentOptions{MaxDepth=8});
+        var payload=JsonSerializer.Serialize(CleanCohort(document.RootElement));
+        var id=Hash(batchSize+"|"+payload);
+        using var command=connection.CreateCommand();command.CommandText="INSERT OR IGNORE INTO plans VALUES($id,$size,$payload);";
+        Add(command,"$id",id);Add(command,"$size",batchSize);Add(command,"$payload",payload);command.ExecuteNonQuery();return id;
+    }
+    public string ExportCohort(string plan)
+    {
+        var (_,size,payload)=ReadPlan(plan);using var document=JsonDocument.Parse(payload);
+        if(document.RootElement.ValueKind!=JsonValueKind.Object)throw new InvalidOperationException("Legacy plan has no research context.");
+        return JsonSerializer.Serialize(new{Format="TokenForgeResearchCohortPlan",SchemaVersion=1,PlanId=plan,BatchSize=size,Cohort=document.RootElement});
+    }
+    private static SortedDictionary<string,object?> CleanCohort(JsonElement root)
+    {
+        var fields="Format SchemaVersion CreatedAt TenantFingerprint PrincipalFingerprint CatalogHash InventoryHash Authority Protocols MaxRedirects ExploreAllFlows Pairs".Split(' ');
+        if(root.ValueKind!=JsonValueKind.Object || root.EnumerateObject().Count()!=fields.Length || root.EnumerateObject().Select(x=>x.Name).Distinct(StringComparer.Ordinal).Count()!=fields.Length || root.EnumerateObject().Any(x=>!fields.Contains(x.Name,StringComparer.Ordinal)))throw new InvalidOperationException("Invalid cohort fields.");
+        if(root.GetProperty("Format").GetString()!="TokenForgeResearchCohort" || root.GetProperty("SchemaVersion").GetInt32()!=1)throw new InvalidOperationException("Invalid cohort format.");
+        var result=new SortedDictionary<string,object?>(StringComparer.Ordinal);
+        foreach(var field in fields){var value=root.GetProperty(field);result[field]=field switch{
+            "Format"=>"TokenForgeResearchCohort","SchemaVersion"=>1,"CreatedAt"=>Date(value),
+            "TenantFingerprint" or "PrincipalFingerprint" or "InventoryHash"=>Fingerprint(value)??throw new InvalidOperationException("Missing cohort context."),
+            "CatalogHash"=>Fingerprint(value),"ExploreAllFlows"=>value.GetBoolean(),
+            "MaxRedirects"=>value.GetInt32() is >=1 and <=1000 ? value.GetInt32():throw new InvalidOperationException("Invalid redirect bound."),
+            "Authority"=>value.GetString() is string authority && Regex.IsMatch(authority,"\\A[A-Za-z0-9][A-Za-z0-9.-]{0,252}\\z") ? authority.ToLowerInvariant():throw new InvalidOperationException("Invalid cohort authority."),
+            "Protocols"=>value.EnumerateArray().Select(x=>Choice(x,"OAuth2V2Pkce OAuth2V2Implicit OAuth2V1Implicit")).Distinct(StringComparer.Ordinal).ToArray(),
+            "Pairs"=>CleanPairs(value),_=>throw new InvalidOperationException("Invalid cohort field.")};}
+        if(((string[])result["Protocols"]!).Length is <1 or >3)throw new InvalidOperationException("Invalid cohort protocols.");
+        return result;
+    }
+    private static object[] CleanPairs(JsonElement rows)
+    {
+        if(rows.ValueKind!=JsonValueKind.Array || rows.GetArrayLength() is <1 or >100000)throw new InvalidOperationException("Invalid cohort pairs.");
+        var pairs=new SortedDictionary<string,object>(StringComparer.Ordinal);
+        foreach(var row in rows.EnumerateArray()){
+            if(row.ValueKind!=JsonValueKind.Object || row.EnumerateObject().Count()!=2 || !row.TryGetProperty("ClientId",out var client) || !row.TryGetProperty("ResourceId",out var resource))throw new InvalidOperationException("Invalid cohort pair.");
+            var c=GuidValue(client);var r=GuidValue(resource);if(c==Guid.Empty.ToString() || r==Guid.Empty.ToString())throw new InvalidOperationException("Empty cohort application ID.");
+            pairs[c+"/"+r]=new{ClientId=c,ResourceId=r};
+        }
+        return pairs.Values.ToArray();
+    }
     public string Pending(string plan)
     {
-        var (members, size) = ReadPlan(plan); var completed = new HashSet<string>();
-        using var command = connection.CreateCommand(); command.CommandText = "SELECT client FROM checkpoints WHERE plan=$plan;"; Add(command, "$plan", plan);
-        using var reader = command.ExecuteReader(); while (reader.Read()) completed.Add(reader.GetString(0));
+        var (members, size, _) = ReadPlan(plan); var memberSet=members.ToHashSet(StringComparer.Ordinal);var completed = new HashSet<string>();
+        using var command = connection.CreateCommand(); command.CommandText = "SELECT client,outcome,completed FROM checkpoints WHERE plan=$plan;"; Add(command, "$plan", plan);
+        using var reader = command.ExecuteReader(); while (reader.Read()){
+            var client=reader.GetString(0);var outcome=reader.GetString(1);var date=reader.GetString(2);
+            if(!memberSet.Contains(client) || outcome is not ("Succeeded" or "Failed" or "NoRedirect" or "Disabled" or "MissingRegistration" or "OwnerMismatch" or "BrokerRequired" or "ContextMismatch" or "OpaqueToken" or "NoDelegatedScp") || Date(JsonSerializer.SerializeToElement(date))!=date)throw new InvalidOperationException("Invalid stored checkpoint.");
+            completed.Add(client);
+        }
         return JsonSerializer.Serialize(members.Select((client, index) => new { ClientId = client, Chunk = index / size, Completed = completed.Contains(client) }).Where(x=>!x.Completed));
     }
     public void Complete(string plan, string client, string outcome)
     {
-        client = Guid.Parse(client).ToString(); var (members, _) = ReadPlan(plan);
+        client = Guid.Parse(client).ToString(); var (members, _, _) = ReadPlan(plan);
         if (!members.Contains(client, StringComparer.Ordinal) || outcome is not ("Succeeded" or "Failed" or "NoRedirect" or "Disabled" or "MissingRegistration" or "OwnerMismatch" or "BrokerRequired" or "ContextMismatch" or "OpaqueToken" or "NoDelegatedScp")) throw new InvalidOperationException("Invalid checkpoint.");
         using var command = connection.CreateCommand(); command.CommandText = "INSERT INTO checkpoints VALUES($plan,$client,$outcome,$date) ON CONFLICT(plan,client) DO UPDATE SET outcome=excluded.outcome,completed=excluded.completed;";
         Add(command, "$plan", plan); Add(command, "$client", client); Add(command, "$outcome", outcome); Add(command, "$date", DateTimeOffset.UtcNow.ToString("o")); command.ExecuteNonQuery();
     }
-    private (string[], int) ReadPlan(string id)
+    private (string[], int, string) ReadPlan(string id)
     {
         using var command = connection.CreateCommand(); command.CommandText = "SELECT payload,batch_size FROM plans WHERE id=$id;"; Add(command, "$id", id);
         using var reader = command.ExecuteReader(); if (!reader.Read()) throw new InvalidOperationException("Unknown plan.");
         var payload=reader.GetString(0);var size=reader.GetInt32(1);
         if(payload.Length>8*1024*1024 || size<1 || size>1000) throw new InvalidOperationException("Invalid stored plan.");
-        var members=JsonSerializer.Deserialize<string[]>(payload)!;
-        if(members.Length>100000 || members.Any(x=>!Guid.TryParse(x,out var value) || value==Guid.Empty || value.ToString()!=x) || !members.SequenceEqual(members.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)) || Hash(size+"|"+JsonSerializer.Serialize(members))!=id) throw new InvalidOperationException("Invalid stored plan.");
-        return (members,size);
+        using var document=JsonDocument.Parse(payload,new JsonDocumentOptions{MaxDepth=8});
+        string[] members;string canonical;
+        if(document.RootElement.ValueKind==JsonValueKind.Array){members=JsonSerializer.Deserialize<string[]>(payload)!;canonical=JsonSerializer.Serialize(members);}
+        else{canonical=JsonSerializer.Serialize(CleanCohort(document.RootElement));using var clean=JsonDocument.Parse(canonical);members=clean.RootElement.GetProperty("Pairs").EnumerateArray().Select(x=>x.GetProperty("ClientId").GetString()!).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();}
+        if(members.Length>100000 || members.Any(x=>!Guid.TryParse(x,out var value) || value==Guid.Empty || value.ToString()!=x) || !members.SequenceEqual(members.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)) || Hash(size+"|"+canonical)!=id) throw new InvalidOperationException("Invalid stored plan.");
+        return (members,size,canonical);
     }
     private static SortedDictionary<string,object?> CleanRegistration(JsonElement row)
     {

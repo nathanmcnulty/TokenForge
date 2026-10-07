@@ -20,7 +20,7 @@ public sealed class ApplicationCatalogStore : IDisposable
         ["Inventory"]="AppId Name PublishedName ServicePrincipalType PreferredSingleSignOnMode LoginUrl LogoutUrl Homepage Registration Ownership OwnerTenantId AccountEnabled AssignmentRequired SignInAudience PublicClient Foci RedirectUris TenantRedirectUris PreferredRedirectUri PublishedGrants DelegatedScopeDefinitions AppRoleDefinitions IdentifierUris IsResourceCandidate",
         ["SignIns"]="AppId SignInCount KnownInInventory RegisteredMicrosoft Evidence ProtocolCounts ClientTypeCounts EventTypeCounts ResourceCounts OutcomeCounts AuthenticationMethodCounts CredentialTypeCounts IncomingTokenTypeCounts",
         ["RegistrationAttempts"]="AppId Outcome HttpStatus",
-        ["ScopeObservations"]="ClientId ResourceId Outcome Protocol Spa RequestedScopes ResponseScopes ScpScopes ClaimsReadable HasScpClaim SignatureValidated NamespaceVerification RequestVerification ErrorCodes AttemptCount ElapsedSeconds RedirectFingerprint CatalogHash",
+        ["ScopeObservations"]="ClientId ResourceId Outcome Protocol Spa RequestedScopes ResponseScopes ScpScopes ClaimsReadable HasScpClaim SignatureValidated NamespaceVerification RequestVerification ErrorCodes AttemptCount ElapsedSeconds RedirectFingerprint CatalogHash PlanFingerprint",
         ["FlowAttempts"]="AttemptKey PlanFingerprint Protocol Spa RedirectFingerprint Outcome ResponseScopes ScpScopes ClaimsReadable HasScpClaim NamespaceVerification RequestVerification SignatureValidated ErrorCodes ElapsedSeconds"
     };
     public ApplicationCatalogStore(string path, bool readOnly = false)

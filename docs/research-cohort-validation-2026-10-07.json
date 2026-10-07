@@ -1,0 +1,56 @@
+{
+  "Date": "2026-10-07",
+  "ModuleVersion": "0.16.0",
+  "Accounts": [
+    {
+      "Account": "nora",
+      "Clients": 4,
+      "FrozenPairs": 4,
+      "Chunks": 2,
+      "PendingAfterMetadataFailure": 4,
+      "RepairNewObservations": 0,
+      "RepairAddedAttempts": 0,
+      "RepairAddedScopeRows": 0,
+      "CompletedClients": 4,
+      "CompletedResumeObservations": 0,
+      "ExplicitResumeObservations": 0,
+      "FreshTerminalFlowSlots": 12,
+      "SuccessfulFlowSlots": 3,
+      "CurrentScopeObservations": 4,
+      "ResearchReportPassed": true,
+      "AnonymousExportPassed": true,
+      "TokensPersisted": false,
+      "ConsentGranted": false
+    },
+    {
+      "Account": "secadmin",
+      "Clients": 4,
+      "FrozenPairs": 4,
+      "Chunks": 2,
+      "PendingAfterMetadataFailure": 4,
+      "RepairNewObservations": 0,
+      "RepairAddedAttempts": 0,
+      "RepairAddedScopeRows": 0,
+      "CompletedClients": 4,
+      "CompletedResumeObservations": 0,
+      "ExplicitResumeObservations": 0,
+      "FreshTerminalFlowSlots": 12,
+      "SuccessfulFlowSlots": 4,
+      "CurrentScopeObservations": 4,
+      "ResearchReportPassed": true,
+      "AnonymousExportPassed": true,
+      "TokensPersisted": false,
+      "ConsentGranted": false
+    }
+  ],
+  "PowerShellPassed": 266,
+  "PowerShellSkipped": 2,
+  "NativeChecks": 117,
+  "IndependentReview": "SolNoRemainingBlocker",
+  "Limitations": [
+    "Bounded four-client live proof on Linux; other operating systems use synthetic CI fixtures",
+    "Cohort recipes capped at 8 MiB and 100000 resource pairs",
+    "Only three delegated OAuth protocols actively probed",
+    "Private application snapshots and namespace metadata remain outside Git"
+  ]
+}

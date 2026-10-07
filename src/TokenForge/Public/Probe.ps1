@@ -15,7 +15,7 @@ function Invoke-TokenForgeScopeProbe {
         [object[]]$Plan,
         [ValidateSet('OAuth2V2Pkce','OAuth2V2Implicit','OAuth2V1Implicit')][string[]]$Protocols = @('OAuth2V2Pkce','OAuth2V2Implicit','OAuth2V1Implicit'),
         [Parameter(Mandatory)][string]$DatabasePath,
-        [string]$FlowDatabasePath,[switch]$ExploreAllFlows,[string]$NativeExecutablePath,[Collections.IDictionary]$FlowChanges,[Collections.IDictionary]$ScopeChanges,
+        [string]$FlowDatabasePath,[switch]$ExploreAllFlows,[string]$NativeExecutablePath,[Collections.IDictionary]$FlowChanges,[Collections.IDictionary]$ScopeChanges,[ValidatePattern('^[a-f0-9]{64}$')][string]$CohortFingerprint,
         [guid[]]$ClientId,
         [ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,
         [ValidateRange(1,100000)][int]$MaxApplications = 100000,
@@ -87,6 +87,7 @@ function Invoke-TokenForgeScopeProbe {
                 if(-not $slots.Count){$eligibility='InvalidRedirectHints'}
             }
             $flowPlan=@{TenantFingerprint=$Inventory.TenantFingerprint;PrincipalFingerprint=$probePrincipal;ClientId=$app.AppId;ResourceId=$resource.ToString();Tenant=$Tenant;CatalogHash=if($Inventory.DiscoveryCatalogHash -match '^[a-f0-9]{64}$'){$Inventory.DiscoveryCatalogHash}else{$null};Eligibility=$eligibility;ResourceAliases=$aliases;Cells=@($slots);PlannedAt=[DateTimeOffset]::UtcNow.ToString('o')}
+            if($CohortFingerprint){$flowPlan.CohortFingerprint=$CohortFingerprint}
             $planHash=Get-TokenForgeFlowPlanHash $flowPlan
             if($sqliteFlows){$flows=Get-TokenForgeFlowEvidence $FlowDatabasePath -PlanFingerprint $planHash -NativeExecutablePath $NativeExecutablePath}
             if($null -ne $FlowChanges -and $flows.Plans.ContainsKey($planHash)){
@@ -98,7 +99,9 @@ function Invoke-TokenForgeScopeProbe {
             $previousAttempts=@($priorSlots.Values|Where-Object Outcome -ne 'Started')
             $previousKeys=@($previousAttempts|ForEach-Object {$_.AttemptKey}|Sort-Object -Unique)
             $previousSuccess=@($previousAttempts|Where-Object Outcome -in @('Succeeded','OpaqueToken','NoDelegatedScp'))
-            $aggregate=@($database.Observations|Where-Object {$_.ClientId -eq $app.AppId -and $_.ResourceId -eq $resource.ToString() -and $_.TenantFingerprint -eq $Inventory.TenantFingerprint -and $_.PrincipalFingerprint -eq $probePrincipal}|Sort-Object {([DateTimeOffset]$_.ObservedAt).UtcDateTime} -Descending|Select-Object -First 1)
+            $aggregateDatabase=$database
+            if($CohortFingerprint){$aggregateDatabase=Get-TokenForgeScopeDatabase $DatabasePath -NativeExecutablePath $NativeExecutablePath -Latest -TenantFingerprint $Inventory.TenantFingerprint -PrincipalFingerprint $probePrincipal -ClientId $app.AppId -ResourceId $resource -PlanFingerprint $planHash}
+            $aggregate=@($aggregateDatabase.Observations|Where-Object {$_.ClientId -eq $app.AppId -and $_.ResourceId -eq $resource.ToString() -and $_.TenantFingerprint -eq $Inventory.TenantFingerprint -and $_.PrincipalFingerprint -eq $probePrincipal}|Sort-Object {([DateTimeOffset]$_.ObservedAt).UtcDateTime} -Descending|Select-Object -First 1)
             $bestPrior=@($previousSuccess|Sort-Object @{Expression={if($_.Outcome -eq 'Succeeded'){0}else{1}}},@{Expression={([DateTimeOffset]$_.ObservedAt).UtcDateTime};Descending=$true}|Select-Object -First 1)
             $hasAggregate=$false
             if($aggregate.Count){
@@ -215,6 +218,7 @@ function Invoke-TokenForgeScopeProbe {
                 $observation|Add-Member RedirectFingerprint $best[0].RedirectFingerprint -Force
             }
             if(-not $best.Count -and $latest.Count){$observation.ObservedAt=@($latest.Values|Sort-Object {([DateTimeOffset]$_.ObservedAt).UtcDateTime} -Descending)[0].ObservedAt}
+            $observation|Add-Member PlanFingerprint $planHash -Force
             $observation.ElapsedSeconds = [math]::Round($watch.Elapsed.TotalSeconds,3)
             $database = Add-TokenForgeScopeObservation -Database $database -Observation $observation -Path $DatabasePath -NativeExecutablePath $NativeExecutablePath
             if($null -ne $ScopeChanges){$ScopeChanges["$($observation.ClientId)/$($observation.ResourceId)"]=$observation}

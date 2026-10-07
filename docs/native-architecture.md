@@ -19,7 +19,7 @@ Keep three interfaces small:
 SQLite now supports primary application-ledger updates, individual flow checkpoints, and individual scope/registration checkpoints. JSON remains the portable compatibility format; profiles and inventory runners use an existing migrated SQLite scope store. It provides a private evidence store with indices on namespace, resource, client,
 and observation time. Keep JSON as deterministic import/export and the public application catalog
 format. Freeze each discovery plan's membership, hash, and chunk assignments; resume from explicit
-terminal checkpoints. Failed probes do not erase the previous successful evidence's date.
+terminal checkpoints. Version 0.16 connects those frozen [research cohorts](research-cohorts.md) to chunk execution and metadata repair. Failed probes do not erase the previous successful evidence's date.
 
 Build self-contained .NET executables per OS and architecture. Evaluate Native AOT after the
 browser, interop, storage, and PowerShell handoff paths pass integration tests; self-contained

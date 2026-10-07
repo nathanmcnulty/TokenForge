@@ -13,6 +13,8 @@ TokenForge tracks application IDs across public datasets, tenant inventory, sign
 
 The three implemented probe protocols are authorization code with PKCE, OAuth v2 implicit, and OAuth v1 implicit. Published broker callbacks are hints; TokenForge does not actively test broker/PRT, device code, password, SAML, or application-only flows in this matrix. Sign-in protocols may provide independent evidence about these other modes. The collector requests expanded enum members: newer logs can distinguish authorization code with/without PKCE, implicit modes, broker grants, and other protocols. A generic `oAuth2` value alone cannot make that distinction. See Microsoft's [signIn schema](https://learn.microsoft.com/graph/api/resources/signIn?view=graph-rest-beta).
 
+For frozen membership and deterministic resumable chunks, use [research cohorts](research-cohorts.md).
+
 ## Run a bounded exhaustive batch
 
 In a dedicated PowerShell session, supply the existing secure cookie and verified inventory. Start with a small selection; exhaustive probing can make many requests.

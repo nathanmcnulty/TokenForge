@@ -46,14 +46,14 @@ jobs:
       - name: Publish the native executable
         shell: pwsh
         run: ./scripts/Build-TokenForgeNative.ps1 -Runtime '${{ matrix.runtime }}'
-      - name: Validate SQLite flow adapter with synthetic evidence
+      - name: Validate SQLite flow and catalog adapters with synthetic evidence
         shell: pwsh
         run: |
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
           Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force -SkipPublisherCheck
           $env:TOKENFORGE_TEST_NATIVE = (Resolve-Path (Join-Path './dist/native/${{ matrix.runtime }}' $(if ($IsWindows) { 'tokenforge.exe' } else { 'tokenforge' }))).Path
-          $result = Invoke-Pester ./tests/SqliteFlow.Tests.ps1 -PassThru -Output Detailed
-          if ($result.FailedCount -or $result.PassedCount -ne 3) { throw 'SQLite flow adapter tests failed.' }
+          $result = Invoke-Pester ./tests/SqliteFlow.Tests.ps1,./tests/SqliteCatalog.Tests.ps1 -PassThru -Output Detailed
+          if ($result.FailedCount -or $result.PassedCount -ne 10) { throw 'SQLite metadata adapter tests failed.' }
       - name: Smoke-test packaged CLI
         shell: pwsh
         run: |

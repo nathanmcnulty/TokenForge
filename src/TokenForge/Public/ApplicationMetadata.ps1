@@ -3,11 +3,17 @@ function Get-TokenForgeApplicationMetadata {
     Read the persistent application metadata catalog; it contains no authentication credentials.
     #>
     [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$Path,[switch]$PublicOnly)
+    param([Parameter(Mandatory)][string]$Path,[switch]$PublicOnly,[string]$NativeExecutablePath,[guid]$AppId=[guid]::Empty,[switch]$CurrentOnly)
     try {
-        $file=Get-Item -LiteralPath $Path -ErrorAction Stop
-        if($file.PSIsContainer -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -gt 134217728){throw 'Invalid metadata file.'}
-        $document=Get-Content -LiteralPath $Path -Raw|ConvertFrom-Json -AsHashtable -Depth 100 -ErrorAction Stop
+        if($Path.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){
+            # Public validation always sees the complete ledger before any projection.
+            $selection=@{};if(-not $PublicOnly){if($AppId -ne [guid]::Empty){$selection.AppId=$AppId};$selection.CurrentOnly=$CurrentOnly}
+            $document=Invoke-TokenForgeNativeEvidence $Path export -Domain catalog -NativeExecutablePath $NativeExecutablePath @selection
+        }else{
+            $file=Get-Item -LiteralPath $Path -ErrorAction Stop
+            if($file.PSIsContainer -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -gt 134217728){throw 'Invalid metadata file.'}
+            $document=Get-Content -LiteralPath $Path -Raw|ConvertFrom-Json -AsHashtable -Depth 100 -ErrorAction Stop
+        }
         # PowerShell 7.4 parses ISO dates as DateTime; normalize them back to UTC text.
         $normalizeDates={param($value)
             if($value -is [Collections.IDictionary]){foreach($key in @($value.Keys)){if($value[$key] -is [datetime]){$value[$key]=([DateTimeOffset]$value[$key].ToUniversalTime()).ToString('o')}else{& $normalizeDates $value[$key]}}}
@@ -75,6 +81,8 @@ function Get-TokenForgeApplicationMetadata {
                 foreach($snapshot in $run.SourceSnapshots){& $keys $snapshot @('Location','Sha256','HashKind')}
             }
         }
+        if($AppId -ne [guid]::Empty){$selected=@{};if($document.Applications.Contains($AppId.ToString())){$selected[$AppId.ToString()]=$document.Applications[$AppId.ToString()]};$document.Applications=$selected}
+        if($CurrentOnly){foreach($app in $document.Applications.Values){foreach($record in $app.Records.Values){$record.PreviousVersions=@()}}}
         $document
     }catch{throw 'Application metadata cannot be read; check format, size, and file access. Details suppressed.'}
 }
@@ -90,7 +98,7 @@ function Update-TokenForgeApplicationMetadata {
     param(
         [Parameter(Mandatory)][string]$Path,
         [Parameter(Mandatory)]$Document,
-        [Parameter(Mandatory)][ValidateSet('Discovery','Inventory','SignIns','ScopeObservations','RegistrationAttempts','FlowAttempts')][string]$Kind
+        [Parameter(Mandatory)][ValidateSet('Discovery','Inventory','SignIns','ScopeObservations','RegistrationAttempts','FlowAttempts')][string]$Kind,[string]$NativeExecutablePath
     )
     if($Kind -eq 'FlowAttempts'){Assert-TokenForgeFlowDocument $Document}
     $columns=switch($Kind){
@@ -111,7 +119,8 @@ function Update-TokenForgeApplicationMetadata {
     if($Kind -eq 'SignIns' -and $Document.Enumeration -ne 'Complete'){throw 'Incomplete sign-in discovery cannot update application metadata.'}
     $rows=if($Kind -eq 'RegistrationAttempts'){@($Document.RegistrationAttempts|Sort-Object {([DateTimeOffset]$_.AttemptedAt)})}elseif($Kind -eq 'FlowAttempts'){@($Document.Attempts|Sort-Object {([DateTimeOffset]$_.ObservedAt)})}elseif($Kind -eq 'ScopeObservations'){@($Document.Observations|Sort-Object {([DateTimeOffset]$_.ObservedAt)})}else{@($Document.Applications)}
     $full=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
-    $null=New-Item -ItemType Directory -Path (Split-Path $full) -Force
+    $sqlite=$full.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)
+    if($sqlite){$full=Resolve-TokenForgeVaultPath $full -CreateDirectory}else{$null=New-Item -ItemType Directory -Path (Split-Path $full) -Force}
     $lock=$null
     try {
         foreach($part in @($full,"$full.lock")){
@@ -122,7 +131,8 @@ function Update-TokenForgeApplicationMetadata {
         if(-not $IsWindows){$options.UnixCreateMode=[IO.UnixFileMode]384}
         try{$lock=[IO.FileStream]::new("$full.lock",$options)}catch{throw 'Application metadata is already in use or unavailable.'}
         $now=[DateTimeOffset]::UtcNow.ToString('o')
-        $catalog=if(Test-Path -LiteralPath $full){Get-TokenForgeApplicationMetadata $full}else{@{Format='TokenForgeApplicationMetadata';SchemaVersion=1;CreatedAt=$now;UpdatedAt=$now;Applications=@{};Origins=@{};Runs=@()}}
+        $changes=[Collections.Generic.List[object]]::new()
+        $catalog=if($sqlite){$null}elseif(Test-Path -LiteralPath $full){Get-TokenForgeApplicationMetadata $full}else{@{Format='TokenForgeApplicationMetadata';SchemaVersion=1;CreatedAt=$now;UpdatedAt=$now;Applications=@{};Origins=@{};Runs=@()}}
         $runId=[guid]::NewGuid().ToString();$seen=@{};$affectedOrigins=@{};$count=0;$emptyIds=0
         foreach($row in $rows){
             $rawId=if($Kind -in @('ScopeObservations','FlowAttempts')){$row.ClientId}else{$row.AppId};$id=[guid]::Empty
@@ -192,7 +202,12 @@ function Update-TokenForgeApplicationMetadata {
             }
             $sources=@(if($Kind -in @('Discovery','Inventory')){@($row.Sources|ForEach-Object {[ordered]@{Name=$_.Name;Location=if($_.PSObject.Properties['Location'] -or ($_ -is [Collections.IDictionary] -and $_.Contains('Location'))){$_.Location}else{$null};Evidence=$_.Evidence}})}else{@([ordered]@{Name=$Kind;Location=if($Kind -eq 'SignIns'){'https://graph.microsoft.com/beta/auditLogs/signIns'}elseif($Kind -eq 'FlowAttempts'){'LocalFlowEvidence'}else{'LocalScopeDatabase'};Evidence=if($Kind -eq 'SignIns'){'ObservedSignInNotOwnership'}elseif($Kind -eq 'RegistrationAttempts'){'RegistrationAttemptNotConsent'}elseif($Kind -eq 'FlowAttempts'){'DiagnosticFlowAttempt'}else{'DiagnosticScopeObservation'}})})
             if($Kind -eq 'Inventory'){$sources+= [ordered]@{Name='TenantServicePrincipals';Location='https://graph.microsoft.com/v1.0/servicePrincipals';Evidence='TenantMetadataSnapshot'}}
-            $hash=Get-TokenForgeFingerprint -Value (ConvertTo-Json -InputObject ([ordered]@{Attributes=$attributes;Sources=$sources}) -Depth 100 -Compress)
+            $hashInput=ConvertTo-Json -InputObject ([ordered]@{Attributes=$attributes;Sources=$sources}) -Depth 100 -Compress
+            $hash=Get-TokenForgeFingerprint -Value $hashInput
+            if($sqlite){
+                $changes.Add(@{AppId=$appId;HashInput=$hashInput;Record=@{Kind=$Kind;TenantFingerprint=$rowTenant;PrincipalFingerprint=$principal;ResourceId=$resource;FirstSeenAt=$date.ToString('o');LastSeenAt=$date.ToString('o');PresentInLatestRun=$true;CurrentVersionFirstSeenAt=$date.ToString('o');Attributes=$attributes;Sources=$sources;ContentSha256=$hash;PreviousVersions=@()}})
+                $count++;continue
+            }
             if(-not $catalog.Applications.Contains($appId)){$catalog.Applications[$appId]=@{AppId=$appId;FirstSeenAt=$date.ToString('o');LastSeenAt=$date.ToString('o');Records=@{}}}
             $app=$catalog.Applications[$appId]
             if($date -lt [DateTimeOffset]::Parse($app.FirstSeenAt)){$app.FirstSeenAt=$date.ToString('o')}
@@ -210,7 +225,7 @@ function Update-TokenForgeApplicationMetadata {
             $seen["$origin|$appId"]=$true;$affectedOrigins[$origin]=$true;$count++
         }
         # Complete snapshots can mark absence. Scope databases can be partial/batched, so do not mark their unseen pairs absent.
-        if($Kind -notin @('ScopeObservations','RegistrationAttempts','FlowAttempts')){
+        if(-not $sqlite -and $Kind -notin @('ScopeObservations','RegistrationAttempts','FlowAttempts')){
             $origin=@($Kind,$tenant,$null,$null) -join '/';$affectedOrigins[$origin]=$true
             $previous=$catalog.Origins[$origin]
             if(-not $previous -or $observed -ge [DateTimeOffset]::Parse($previous.LastObservedAt)){
@@ -224,9 +239,21 @@ function Update-TokenForgeApplicationMetadata {
         $run=@{Id=$runId;Kind=$Kind;ObservedAt=$observed.ToString('o');RecordedAt=$now;ApplicationRecordCount=$count;IgnoredEmptyAppIdCount=$emptyIds;TenantFingerprint=$tenant}
         if($Kind -eq 'Discovery'){$run.SourceSnapshots=@($Document.SourceSnapshots|ForEach-Object {[ordered]@{Location=$_.Location;Sha256=$_.Sha256;HashKind=$_.HashKind}})}
         if($Kind -eq 'SignIns'){$run.Window=@{Since=$Document.Since;Until=$Document.Until;EventTypes=@($Document.EventTypes)}}
+        if($sqlite){return Invoke-TokenForgeNativeEvidence $full update -Domain catalog -Document @{Format='TokenForgeCatalogUpdate';SchemaVersion=1;Run=$run;Rows=$changes.ToArray()} -NativeExecutablePath $NativeExecutablePath}
         $catalog.Runs+= $run;$catalog.UpdatedAt=$now
         if([Text.Encoding]::UTF8.GetByteCount((ConvertTo-Json -InputObject $catalog -Depth 100)) -gt 134217728){throw 'Application metadata exceeds the 128 MiB limit; archive history before retrying.'}
         Save-TokenForgeDocument -Document $catalog -Path $full
         [pscustomobject]@{Updated=$true;ApplicationCount=$catalog.Applications.Count;RunCount=$catalog.Runs.Count;Kind=$Kind}
     }finally{if($lock){$lock.Dispose()}}
+}
+
+function Import-TokenForgeApplicationMetadata {
+    <# .SYNOPSIS
+    Transactionally migrate a compatible JSON application ledger into private SQLite storage.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Path,[Parameter(Mandatory)][string]$InputPath,[string]$NativeExecutablePath)
+    if(-not $Path.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){throw 'Choose a .sqlite catalog destination.'}
+    $document=Get-TokenForgeApplicationMetadata $InputPath -NativeExecutablePath $NativeExecutablePath
+    Invoke-TokenForgeNativeEvidence $Path import -Domain catalog -Document $document -NativeExecutablePath $NativeExecutablePath
 }

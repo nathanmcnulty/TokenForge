@@ -66,8 +66,8 @@ function Save-TokenForgeFlowEvidence {
         if($Attempt){$db.Attempts=@($db.Attempts|Where-Object AttemptId -ne $Attempt.AttemptId)+@($Attempt)}
         $db.UpdatedAt=[DateTimeOffset]::UtcNow.ToString('o')
         Assert-TokenForgeFlowDocument $db
-        if($Plan){$null=Invoke-TokenForgeNativeFlow $full plan -Document $Plan -PlanFingerprint $PlanFingerprint -NativeExecutablePath $NativeExecutablePath}
-        if($Attempt){$null=Invoke-TokenForgeNativeFlow $full attempt -Document $Attempt -NativeExecutablePath $NativeExecutablePath}
+        if($Plan){$null=Invoke-TokenForgeNativeEvidence $full plan -Document $Plan -PlanFingerprint $PlanFingerprint -NativeExecutablePath $NativeExecutablePath}
+        if($Attempt){$null=Invoke-TokenForgeNativeEvidence $full attempt -Document $Attempt -NativeExecutablePath $NativeExecutablePath}
         Add-TokenForgeFlowChanges $Changes $Plan $PlanFingerprint $Attempt
         return $db
     }

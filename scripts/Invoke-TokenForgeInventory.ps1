@@ -42,7 +42,7 @@ $discoveryPath=Join-Path $StatePath 'discovery.json'
 $inventoryPath=Join-Path $StatePath 'inventory.json'
 $databasePath=Join-Path $StatePath 'scopes.json'
 if(-not $FlowPath){$FlowPath=Join-Path $StatePath 'flows.json'}
-if(-not $MetadataPath){$MetadataPath=Join-Path $StatePath 'applications.json'}
+if(-not $MetadataPath){$MetadataPath=Join-Path $StatePath $(if(Test-Path (Join-Path $StatePath 'applications.sqlite')){'applications.sqlite'}else{'applications.json'})}
 $principalOptions=@{}
 if ($PrincipalFingerprint) { $principalOptions.PrincipalFingerprint=$PrincipalFingerprint }
 # Prevent checkpoint loss from overlapping writers, including a second CLI process.
@@ -52,7 +52,7 @@ try {
  catch {throw 'State directory is already in use by another writer.'}
  if (-not $IsWindows) { [IO.File]::SetUnixFileMode((Join-Path $StatePath '.writer.lock'), ([IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite)) }
  switch ($Action) {
-  'Discover' {Update-TokenForgeDiscovery -Path $discoveryPath -MetadataPath $MetadataPath}
+  'Discover' {Update-TokenForgeDiscovery -Path $discoveryPath -MetadataPath $MetadataPath -NativeExecutablePath $NativeExecutablePath}
   'SignIns' {
    if(-not $GraphToken){throw 'SignIns requires GraphToken.'}
    $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
@@ -70,7 +70,7 @@ try {
     Save-TokenForgeDocument -Document $report -Path $reportPath
     Save-TokenForgeDocument -Document $discovery -Path $discoveryPath
    } $report $discovery (Join-Path $StatePath 'signin-applications.json') $discoveryPath
-   $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $report -Kind SignIns
+   $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $report -Kind SignIns -NativeExecutablePath $NativeExecutablePath
    $report
   }
   'Inventory' {
@@ -79,13 +79,13 @@ try {
    $inventory=Get-TokenForgeTenantInventory -GraphToken $GraphToken -Discovery $discovery
    $inventory|ConvertTo-Json -Depth 100|Set-Content -LiteralPath $inventoryPath -Encoding utf8
    if (-not $IsWindows) { [IO.File]::SetUnixFileMode($inventoryPath, ([IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite)) }
-   $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $inventory -Kind Inventory
+   $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $inventory -Kind Inventory -NativeExecutablePath $NativeExecutablePath
    $inventory
   }
   'Register' {
    if(-not $GraphToken){throw 'Register requires GraphToken.'}
    $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
-   Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $GraphToken -DatabasePath $databasePath -ClientId $ClientId -MaxApplications $MaxApplications -ResolvePublishedCandidates:$ResolvePublishedCandidates -ResolveSignInCandidates:$ResolveSignInCandidates -RetryFailures:$RetryFailures -MetadataPath $MetadataPath -WhatIf:$WhatIfPreference
+   Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $GraphToken -DatabasePath $databasePath -ClientId $ClientId -MaxApplications $MaxApplications -ResolvePublishedCandidates:$ResolvePublishedCandidates -ResolveSignInCandidates:$ResolveSignInCandidates -RetryFailures:$RetryFailures -MetadataPath $MetadataPath -NativeExecutablePath $NativeExecutablePath -WhatIf:$WhatIfPreference
   }
   'Probe' {
    if(-not $EstsAuth){throw 'Probe requires EstsAuth.'}
@@ -93,8 +93,8 @@ try {
    $plan=Get-TokenForgeProbePlan -Inventory $inventory -ClientId $ClientId -GraphOnly:$GraphOnly @principalOptions
    $flowChanges=@{Plans=@{};Attempts=@{}}
    try{Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $EstsAuth -CookieName $CookieName -Plan $plan -DatabasePath $databasePath -ClientId $ClientId @principalOptions -Tenant $Tenant -MaxApplications $MaxApplications -MaxRedirects $MaxRedirects -Refresh:$Refresh -FlowDatabasePath $FlowPath -ExploreAllFlows:$ExploreAllFlows -NativeExecutablePath $NativeExecutablePath -FlowChanges $flowChanges}finally{
-   if(Test-Path $databasePath){$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document (Get-TokenForgeScopeDatabase -Path $databasePath) -Kind ScopeObservations}
-   if($flowChanges.Plans.Count){$changed=@{Format='TokenForgeFlowEvidence';SchemaVersion=1;UpdatedAt=[DateTimeOffset]::UtcNow.ToString('o');Plans=$flowChanges.Plans;Attempts=@($flowChanges.Attempts.Values)};$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $changed -Kind FlowAttempts}
+   if(Test-Path $databasePath){$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document (Get-TokenForgeScopeDatabase -Path $databasePath) -Kind ScopeObservations -NativeExecutablePath $NativeExecutablePath}
+   if($flowChanges.Plans.Count){$changed=@{Format='TokenForgeFlowEvidence';SchemaVersion=1;UpdatedAt=[DateTimeOffset]::UtcNow.ToString('o');Plans=$flowChanges.Plans;Attempts=@($flowChanges.Attempts.Values)};$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $changed -Kind FlowAttempts -NativeExecutablePath $NativeExecutablePath}
    }
   }
   'Merge' {
@@ -102,8 +102,8 @@ try {
    foreach ($inputPath in $InputDatabasePath) { if (-not (Test-Path -LiteralPath $inputPath -PathType Leaf)) { throw 'A merge input file is missing.' } }
    $sources=@($InputDatabasePath | ForEach-Object { Get-TokenForgeScopeDatabase -Path $_ })
    $merged=Merge-TokenForgeScopeDatabase -Database $sources -Path $databasePath
-   $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $merged -Kind ScopeObservations
-   $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $merged -Kind RegistrationAttempts
+   $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $merged -Kind ScopeObservations -NativeExecutablePath $NativeExecutablePath
+   $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $merged -Kind RegistrationAttempts -NativeExecutablePath $NativeExecutablePath
    $merged
   }
   'Report' {

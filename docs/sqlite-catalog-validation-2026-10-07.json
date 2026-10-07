@@ -1,0 +1,57 @@
+{
+  "Date": "2026-10-07",
+  "ModuleVersion": "0.14.0",
+  "Accounts": [
+    {
+      "Account": "nora",
+      "LegacyApplications": 5521,
+      "MigratedApplications": 5521,
+      "RecordsPreserved": 5538,
+      "HistoricalVersionsPreserved": 13,
+      "LegacyRuns": 5,
+      "ImportedRuns": 5,
+      "RepeatedImportRuns": 0,
+      "ImportSeconds": 10.47,
+      "CurrentReadSeconds": 7.77,
+      "CurrentViewApplications": 5521,
+      "PackagedReportPassed": true,
+      "TerminalFlowSlots": 12,
+      "RefreshedDiscoveryApplications": 5454,
+      "CatalogApplicationsAfterRefresh": 5521,
+      "AllMetadataHashesAndDatesMatched": true,
+      "CredentialsUsed": false,
+      "PrivateMetadataPublished": false
+    },
+    {
+      "Account": "secadmin",
+      "LegacyApplications": 5536,
+      "MigratedApplications": 5536,
+      "RecordsPreserved": 5780,
+      "HistoricalVersionsPreserved": 184,
+      "LegacyRuns": 7,
+      "ImportedRuns": 7,
+      "RepeatedImportRuns": 0,
+      "ImportSeconds": 12.2,
+      "CurrentReadSeconds": 10.34,
+      "CurrentViewApplications": 5536,
+      "PackagedReportPassed": true,
+      "TerminalFlowSlots": 12,
+      "RefreshedDiscoveryApplications": 5454,
+      "CatalogApplicationsAfterRefresh": 5536,
+      "AllMetadataHashesAndDatesMatched": true,
+      "CredentialsUsed": false,
+      "PrivateMetadataPublished": false
+    }
+  ],
+  "PowerShellPassed": 254,
+  "PowerShellSkipped": 2,
+  "NativeChecks": 88,
+  "IndependentReview": "SolNoRemainingBlocker",
+  "Scope": "FullExistingPrivateCatalogMigrationAndPublicSourceRefreshNoAuthentication",
+  "Limitations": [
+    "Live storage proof ran on Linux; other OS behavior tested with synthetic CI fixtures",
+    "Scope/registration primary history still uses JSON",
+    "Current JSON exports remain capped at 128 MiB",
+    "No authentication or new token issuance in this catalog proof"
+  ]
+}

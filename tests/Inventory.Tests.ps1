@@ -126,6 +126,7 @@ Describe 'Tenant inventory' {
         $app.Name | Should -Be 'Tenant fixture'
         $app.PreferredSingleSignOnMode | Should -Be oidc
         $app.ServicePrincipalType | Should -Be Application
+        ($app.TenantRedirectUris -is [array]) | Should -BeTrue
         $app.LoginUrl | Should -Be 'https://example.test/login'
         ($inventory | ConvertTo-Json -Depth 30) | Should -Not -Match 'synthetic-tenant|synthetic-user|private-client-object|private-resource-object'
     }

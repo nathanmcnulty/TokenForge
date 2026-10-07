@@ -237,7 +237,7 @@ function Sync-TokenForgeApplicationRegistration {
         [switch]$RetryFailures,
         [switch]$ResolvePublishedCandidates,
         [switch]$ResolveSignInCandidates,
-        [string]$MetadataPath
+        [string]$MetadataPath,[string]$NativeExecutablePath
     )
     if(-not $MetadataPath){$MetadataPath=Join-Path (Split-Path $DatabasePath -Parent) 'applications.json'}
     $context = Get-TokenForgeTokenClaims -AccessToken $GraphToken
@@ -262,7 +262,7 @@ function Sync-TokenForgeApplicationRegistration {
         $database.RegistrationAttempts += $attempt
         $database.UpdatedAt = [DateTimeOffset]::UtcNow.ToString('o')
         Save-TokenForgeDocument -Document $database -Path $DatabasePath
-        $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document @{UpdatedAt=$database.UpdatedAt;RegistrationAttempts=@($attempt)} -Kind RegistrationAttempts
+        $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document @{UpdatedAt=$database.UpdatedAt;RegistrationAttempts=@($attempt)} -Kind RegistrationAttempts -NativeExecutablePath $NativeExecutablePath
         $attempt
         if($httpStatus -in @(401,403)){throw "Registration stopped (HTTP $httpStatus); the failure was checkpointed before stopping."}
         if ($outcome -eq 'CleanupRequired') { throw 'Registration stopped because ownership cleanup is required; inspect the last application ID in RegistrationAttempts.' }

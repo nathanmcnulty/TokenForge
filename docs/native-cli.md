@@ -80,3 +80,5 @@ PowerShell authentication dependency, and a metadata visualization GUI remain se
 See [native architecture](native-architecture.md) for their boundaries and validation gates.
 
 Explicit Windows/Linux OS-backed profile storage is documented in [OS-backed vault](os-backed-vault.md).
+
+Offline `research report` and `research export-flows` commands are available through the packaged PowerShell adapter; see [Application research catalog](research-catalog.md).

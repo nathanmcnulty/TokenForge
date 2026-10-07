@@ -11,9 +11,9 @@ non-Microsoft principals. Probe uses existing consent and stops at interactive p
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
- [Parameter(Mandatory)][ValidateSet('Discover','SignIns','Inventory','Register','Probe','Merge','Export')][string]$Action,
+ [Parameter(Mandatory)][ValidateSet('Discover','SignIns','Inventory','Register','Probe','Merge','Export','Report','ExportFlows')][string]$Action,
  [Parameter(Mandatory)][string]$StatePath,
- [string]$MetadataPath,
+ [string]$MetadataPath,[string]$FlowPath,[switch]$ExploreAllFlows,[switch]$SummaryOnly,
  [securestring]$GraphToken,
  [securestring]$EstsAuth,
  [ValidateSet('ESTSAUTH','ESTSAUTHPERSISTENT')][string]$CookieName='ESTSAUTH',
@@ -41,6 +41,7 @@ if (-not $IsWindows) { [IO.File]::SetUnixFileMode($StatePath, ([IO.UnixFileMode]
 $discoveryPath=Join-Path $StatePath 'discovery.json'
 $inventoryPath=Join-Path $StatePath 'inventory.json'
 $databasePath=Join-Path $StatePath 'scopes.json'
+if(-not $FlowPath){$FlowPath=Join-Path $StatePath 'flows.json'}
 if(-not $MetadataPath){$MetadataPath=Join-Path $StatePath 'applications.json'}
 $principalOptions=@{}
 if ($PrincipalFingerprint) { $principalOptions.PrincipalFingerprint=$PrincipalFingerprint }
@@ -84,14 +85,16 @@ try {
   'Register' {
    if(-not $GraphToken){throw 'Register requires GraphToken.'}
    $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
-   Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $GraphToken -DatabasePath $databasePath -ClientId $ClientId -MaxApplications $MaxApplications -ResolvePublishedCandidates:$ResolvePublishedCandidates -ResolveSignInCandidates:$ResolveSignInCandidates -RetryFailures:$RetryFailures -WhatIf:$WhatIfPreference
+   Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $GraphToken -DatabasePath $databasePath -ClientId $ClientId -MaxApplications $MaxApplications -ResolvePublishedCandidates:$ResolvePublishedCandidates -ResolveSignInCandidates:$ResolveSignInCandidates -RetryFailures:$RetryFailures -MetadataPath $MetadataPath -WhatIf:$WhatIfPreference
   }
   'Probe' {
    if(-not $EstsAuth){throw 'Probe requires EstsAuth.'}
    $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
    $plan=Get-TokenForgeProbePlan -Inventory $inventory -ClientId $ClientId -GraphOnly:$GraphOnly @principalOptions
-   Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $EstsAuth -CookieName $CookieName -Plan $plan -DatabasePath $databasePath -ClientId $ClientId @principalOptions -Tenant $Tenant -MaxApplications $MaxApplications -MaxRedirects $MaxRedirects -Refresh:$Refresh
-   $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document (Get-TokenForgeScopeDatabase -Path $databasePath) -Kind ScopeObservations
+   try{Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $EstsAuth -CookieName $CookieName -Plan $plan -DatabasePath $databasePath -ClientId $ClientId @principalOptions -Tenant $Tenant -MaxApplications $MaxApplications -MaxRedirects $MaxRedirects -Refresh:$Refresh -FlowDatabasePath $FlowPath -ExploreAllFlows:$ExploreAllFlows}finally{
+   if(Test-Path $databasePath){$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document (Get-TokenForgeScopeDatabase -Path $databasePath) -Kind ScopeObservations}
+   if(Test-Path $FlowPath){$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document (Get-TokenForgeFlowEvidence $FlowPath) -Kind FlowAttempts}
+   }
   }
   'Merge' {
    if (-not $InputDatabasePath) { throw 'Merge requires InputDatabasePath.' }
@@ -99,8 +102,15 @@ try {
    $sources=@($InputDatabasePath | ForEach-Object { Get-TokenForgeScopeDatabase -Path $_ })
    $merged=Merge-TokenForgeScopeDatabase -Database $sources -Path $databasePath
    $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $merged -Kind ScopeObservations
+   $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $merged -Kind RegistrationAttempts
    $merged
   }
+  'Report' {
+   $options=@{MetadataPath=$MetadataPath;FlowPath=$FlowPath;SummaryOnly=$SummaryOnly}
+   if($PrincipalFingerprint){$inventory=Get-Content $inventoryPath -Raw|ConvertFrom-Json;$options.TenantFingerprint=$inventory.TenantFingerprint;$options.PrincipalFingerprint=$PrincipalFingerprint}
+   Get-TokenForgeResearchCoverage @options
+  }
+  'ExportFlows' {if(-not $ExportPath){throw 'ExportFlows requires ExportPath.'};Export-TokenForgeFlowEvidence $FlowPath -OutputPath $ExportPath}
   'Export' {
    if(-not $ExportPath){throw 'Export requires ExportPath.'}
    Export-TokenForgeScopeDatabase -Database (Get-TokenForgeScopeDatabase -Path $databasePath) -Path $ExportPath

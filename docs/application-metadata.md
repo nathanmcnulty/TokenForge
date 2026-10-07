@@ -1,6 +1,6 @@
 # Application metadata and scheduled discovery
 
-Every successful `Discover` run now merges its results into `applications.json` next to `discovery.json`. The inventory CLI also updates that file after `Inventory`, `SignIns`, `Probe`, and `Merge`. Override the location with `-MetadataPath`. Existing state continues to work: the first run creates the catalog. It does not automatically import older files.
+Every successful `Discover` run now merges its results into `applications.json` next to `discovery.json`. The inventory CLI also updates that file after `Inventory`, `SignIns`, `Register`, `Probe`, and `Merge`. Override the location with `-MetadataPath`. Existing state continues to work: the first run creates the catalog. It does not automatically import older files.
 
 ```powershell
 ./scripts/Invoke-TokenForgeInventory.ps1 -Action Discover -StatePath $state
@@ -33,3 +33,5 @@ Public-only catalog validation rejects mixed private origins, unexpected fields,
 Use `public_only=true` to refresh public sources without authenticating. Concurrent data writers are serialized, pushes do not force, and failed stages do not publish partial runs. Dataset terms remain those of the upstream publishers. The data branch retains run/history growth; archive or rotate it as needed.
 
 Anonymous scope batches retain earlier successful client/resource observations when a later batch fails. Their original observation dates remain visible; old success does not establish current availability. Hidden files, nested directories, and unexpected scope-export paths are rejected before publication.
+
+For per-attempt flow evidence, registration history, richer sign-in summaries, and coverage categories, see [Application research catalog](research-catalog.md).

@@ -1,10 +1,11 @@
 #Requires -Version 7.4
 [CmdletBinding()]
 param(
- [Parameter(Position=0,Mandatory)][ValidateSet('profile','login','logout','status','doctor','token','scopes','graph')][string]$Command,
- [Parameter(Position=1)][ValidateSet('create','forget-key','show','get','explain','permissions','connect','disconnect')][string]$Operation,
+ [Parameter(Position=0,Mandatory)][ValidateSet('profile','login','logout','status','doctor','token','scopes','graph','research')][string]$Command,
+ [Parameter(Position=1)][ValidateSet('create','forget-key','show','get','explain','permissions','connect','disconnect','report','export-flows')][string]$Operation,
  [ValidatePattern('^[a-z][a-z0-9_-]{0,63}$')][string]$Profile='default',
- [string]$Root,[string]$Tenant,[string]$StatePath,
+ [string]$Root,[string]$Tenant,[string]$StatePath,[string]$ExportPath,[switch]$SummaryOnly,
+ [ValidatePattern('^[a-f0-9]{64}$')][string]$TenantFingerprint,[ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,
  [ValidateSet('Memory','Passphrase','OperatingSystem')][string]$Storage='Memory',
  [ValidateSet('graph','arm')][string]$Resource='graph',[string[]]$Scope,
  [securestring]$VaultPassword,[securestring]$EstsAuth,
@@ -48,6 +49,20 @@ try{
    if(-not $p.ExpectedPrincipalFingerprint){throw 'Log in before selecting account-specific evidence.'}
    $id=if($Resource -eq 'graph'){'00000003-0000-0000-c000-000000000000'}else{'797f4846-ba00-4fd7-ba43-dac1f8f63013'}
    Get-TokenForgeScopeCandidates -Inventory (Get-Content (Join-Path $p.StatePath inventory.json) -Raw|ConvertFrom-Json) -Database (Get-TokenForgeScopeDatabase (Join-Path $p.StatePath scopes.json)) -ResourceId $id -Scope $Scope -PrincipalFingerprint $p.ExpectedPrincipalFingerprint -MaxAgeHours $p.MaxAgeHours
+  }
+  research {
+   $p=if($StatePath){$null}else{Get-TokenForgeProfile @common}
+   $state=if($StatePath){$StatePath}else{$p.StatePath}
+   switch($Operation){
+    report {
+     $options=@{MetadataPath=(Join-Path $state applications.json);FlowPath=(Join-Path $state flows.json);SummaryOnly=$SummaryOnly}
+     if($TenantFingerprint -or $PrincipalFingerprint){$options.TenantFingerprint=$TenantFingerprint;$options.PrincipalFingerprint=$PrincipalFingerprint}
+     elseif($p -and $p.ExpectedPrincipalFingerprint){$options.TenantFingerprint=$p.ExpectedTenantFingerprint;$options.PrincipalFingerprint=$p.ExpectedPrincipalFingerprint}
+     Get-TokenForgeResearchCoverage @options
+    }
+    export-flows {if(-not $ExportPath){throw 'Choose ExportPath.'};Export-TokenForgeFlowEvidence (Join-Path $state flows.json) -OutputPath $ExportPath;[pscustomobject]@{SchemaVersion=1;Exported=$true;CredentialOutput=$false}}
+    default {throw 'Use research report or research export-flows.'}
+   }
   }
   graph {
    switch($Operation){

@@ -113,3 +113,5 @@ Named profiles and the simpler CLI are documented in [Profiles and CLI](docs/pro
 A native CLI and transactional evidence workspace are available; see [Native CLI](docs/native-cli.md). Authentication currently uses the packaged PowerShell module.
 
 Explicit Windows/Linux OS-backed profile storage is documented in [OS-backed vault](docs/os-backed-vault.md).
+
+Research categorization, individual flow attempts, and exhaustive bounded probing are documented in [Application research catalog](docs/research-catalog.md).

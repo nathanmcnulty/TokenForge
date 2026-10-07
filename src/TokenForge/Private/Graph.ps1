@@ -5,7 +5,8 @@ function Invoke-TokenForgeGraph {
         [Parameter(Mandatory)][uri]$Uri,
         [ValidateSet('GET','POST','DELETE')][string]$Method = 'GET',
         [hashtable]$Body,
-        [switch]$AllowNotFound
+        [switch]$AllowNotFound,
+        [switch]$IncludeUnknownEnumMembers
     )
     if ($Uri.Scheme -ne 'https' -or $Uri.Host -ne 'graph.microsoft.com' -or $Uri.Port -ne 443 -or $Uri.UserInfo -or $Uri.Fragment -or $Uri.AbsolutePath -notmatch '^/(v1\.0|beta)/') { throw 'Graph URI is outside the supported boundary.' }
     $handler = [Net.Http.HttpClientHandler]::new(); $handler.AllowAutoRedirect = $false
@@ -16,6 +17,7 @@ function Invoke-TokenForgeGraph {
             $response = $null
             try {
                 $request.Headers.Authorization = [Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', [Net.NetworkCredential]::new('', $AccessToken).Password)
+                if($IncludeUnknownEnumMembers){$null=$request.Headers.TryAddWithoutValidation('Prefer','include-unknown-enum-members')}
                 if ($Body) { $request.Content = [Net.Http.StringContent]::new(($Body | ConvertTo-Json -Depth 20 -Compress), [Text.Encoding]::UTF8, 'application/json') }
                 try { $response = $client.SendAsync($request).GetAwaiter().GetResult() } catch { throw 'Graph transport failed; details suppressed.' }
                 $status = [int]$response.StatusCode

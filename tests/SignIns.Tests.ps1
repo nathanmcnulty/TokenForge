@@ -20,7 +20,7 @@ Describe 'Sign-in application extraction' {
   $r.Applications[0].SignInCount|Should -Be 2;$r.Applications[0].RegisteredMicrosoft|Should -BeTrue
   $r.Applications[1].KnownInInventory|Should -BeFalse
   ($r|ConvertTo-Json -Depth 8)|Should -Not -Match 'private-user|private-ip|userPrincipalName|ipAddress'
-  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -ParameterFilter {$Uri.Query -notmatch '\$select' -and [uri]::UnescapeDataString($Uri.Query) -match 'nonInteractiveUser'}
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -ParameterFilter {$Uri.Query -match '\$select=appId,resourceId,authenticationProtocol' -and [uri]::UnescapeDataString($Uri.Query) -match 'nonInteractiveUser'}
  }
  It 'fails rather than returning partial discovery at the paging limit' {
   {Get-TokenForgeSignInApplications $token $inventory -MaxPages 1}|Should -Throw '*page limit*'
@@ -97,5 +97,21 @@ Describe 'Sign-in CLI discovery persistence' {
   $candidate.Ownership|Should -Be Unverified
   @($candidate.Sources|Where-Object Evidence -eq 'ObservedSignInNotOwnership').Count|Should -Be 1
   (Get-Content (Join-Path $state signin-applications.json) -Raw)|Should -Not -Match 'private-user|private-ip'
+ }
+}
+Describe 'Bounded sign-in protocol summaries' {
+ It 'retains expanded enums but suppresses unknown text and raw failure details' {
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {
+   @{value=@(@{appId=$id;resourceId='00000003-0000-0000-c000-000000000000';authenticationProtocol='authorizationCodeWithPkce';clientAppUsed='Browser';signInEventTypes=@('interactiveUser');status=@{errorCode=0}},@{appId=$id;authenticationProtocol='private-protocol';clientAppUsed='private-client';signInEventTypes=@('private-event');status=@{errorCode=65001;failureReason='private-failure'}})}
+  }
+  $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@()}
+  $r=Get-TokenForgeSignInApplications $token $inventory
+  @($r.Applications[0].ProtocolCounts|Where-Object Value -eq authorizationCodeWithPkce).Count|Should -Be 1
+  @($r.Applications[0].OutcomeCounts|Where-Object Value -eq Failed)[0].Count|Should -Be 1
+  ($r|ConvertTo-Json -Depth 8)|Should -Not -Match 'private-protocol|private-client|private-event|private-failure'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -ParameterFilter {$IncludeUnknownEnumMembers}
+  $null=Update-TokenForgeApplicationMetadata "$TestDrive/protocols.json" $r SignIns
+  $r.Applications[0].ProtocolCounts[0].Value='private-injected'
+  {Update-TokenForgeApplicationMetadata "$TestDrive/protocols.json" $r SignIns}|Should -Throw '*summary value*'
  }
 }

@@ -83,3 +83,18 @@ The [sanitized validation report](weekly-ci-validation-2026-10-07.json) includes
 Actual local CI worker execution then assessed the same four applications in two chunks per account using the production four-callback recipe. Each account produced eight active scope summaries and 66 terminal flow attempts. Nora completed three successful applications and four successful resource pairs; secadmin completed four and six, respectively. Encrypted checkpoint resumes added no attempts or rows, and resumed receipts preserved completion and all counters. Each account's two local chunks reused one passkey-derived cookie; every worker still performed fresh identity and inventory bootstrap. Hosted workers authenticate independently. This local execution is separate from the earlier hosted Graph-only cycle.
 
 The local publisher accepted both accounts' live receipts and anonymous exports, emitted valid schema v3 reports with eight assessed pairs each, and left no pending work. Successful pairs were four for Nora and six for secadmin. The complete public-data allowlist validation passed; only aggregate results from these private proofs are included in the repository.
+
+## Inspect weekly progress offline
+
+Use a local checkout of the public `discovery-data` branch:
+
+```text
+tokenforge research weekly --state-path /path/to/discovery-data
+tokenforge research weekly --state-path /path/to/discovery-data --json
+```
+
+The PowerShell entry point is `./scripts/tokenforge.ps1 research weekly -StatePath /path/to/discovery-data -Json`. No profile or login is required. The command reads the two frozen weekly recipe files, validates their hashes and coverage, and recomputes reports rather than relying on cached report files. It writes no files. Unrelated checkout files are not inspected or endorsed by this command.
+
+Reports distinguish source catalog, selected applications, successful applications, and app/resource pairs. They include remaining applications/pairs, pending/exhausted batches, observation dates, and next-step guidance. An older recipe is marked `CurrentWeek=false`; refresh the checkout and inspect scheduling before assuming the current week has run. Future-week recipes and creation times more than five minutes ahead are rejected. Assessment includes structural exclusions, and successful token observations do not establish universal support or API authorization. The packaged native command uses its PowerShell adapter, so PowerShell 7.4+ is required.
+
+Validation on 2026-10-07 matched the published snapshot through both entry points: 5,454 shallow assessments with 252 successful pairs, and 100 deep assessments with 46 successful pairs. The final packaged native read took 21.98 seconds on this Linux machine; this is one observed runtime, not a platform guarantee. All ten packaged weekly CLI cases and 32 expanded native adapter cases passed. The stable full suite passed 340 tests with two platform skips. See the [sanitized report](weekly-ci-validation-2026-10-07.json).

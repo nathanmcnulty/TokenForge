@@ -98,3 +98,16 @@ Version 0.16 connects [frozen research cohorts](research-cohorts.md) to the inve
 ## Encrypted maintenance backups
 
 `tokenforge research backup --snapshot-path <maintenance.sealed> --backup-directory <private-directory> --json` saves an immutable ciphertext copy without loading an authentication profile. It requires the bundled PowerShell adapter and reports byte identity separately from authentication. See [private maintenance](private-maintenance.md) for key custody and restoration.
+
+## Inspect weekly progress offline
+
+Use a local checkout of the public `discovery-data` branch:
+
+```text
+tokenforge research weekly --state-path /path/to/discovery-data
+tokenforge research weekly --state-path /path/to/discovery-data --json
+```
+
+The PowerShell entry point is `./scripts/tokenforge.ps1 research weekly -StatePath /path/to/discovery-data -Json`. No profile or login is required. The command reads the two frozen weekly recipe files, validates their hashes and coverage, and recomputes reports rather than relying on cached report files. It writes no files. Unrelated checkout files are not inspected or endorsed by this command.
+
+Reports distinguish source catalog, selected applications, successful applications, and app/resource pairs. They include remaining applications/pairs, pending/exhausted batches, observation dates, and next-step guidance. An older recipe is marked `CurrentWeek=false`; refresh the checkout and inspect scheduling before assuming the current week has run. Future-week recipes and creation times more than five minutes ahead are rejected. Assessment includes structural exclusions, and successful token observations do not establish universal support or API authorization. The packaged native command uses its PowerShell adapter, so PowerShell 7.4+ is required.

@@ -51,13 +51,25 @@ function New-TfCiState($Discovery,[int]$ChunkSize=100,[string]$Mode='Shallow',[D
  [ordered]@{SchemaVersion=1;PlanId=Get-TfCiHash $recipe;Recipe=$recipe;Batches=$batches}
 }
 function Assert-TfCiState($State) {
- Assert-TfCiKeys $State @('SchemaVersion','PlanId','Recipe','Batches')
+ $fields=@('SchemaVersion','PlanId','Recipe','Batches');if($State -is [Collections.IDictionary] -and $State.Contains('DeepSelectionHistory')){$fields+='DeepSelectionHistory'}
+ Assert-TfCiKeys $State $fields
  Assert-TfCiKeys $State.Recipe @('SchemaVersion','Week','CreatedAt','Mode','ChunkSize','MaxRedirects','AppIds','Discovery')
  $recipe=$State.Recipe;Assert-TfCiDiscovery $recipe.Discovery
  if($State.SchemaVersion -ne 1 -or $recipe.SchemaVersion -ne 1 -or $State.PlanId -cne (Get-TfCiHash $recipe) -or $recipe.Week -notmatch '^\d{4}-W\d{2}$' -or $recipe.Mode -notin @('Shallow','Deep') -or $recipe.ChunkSize -lt 1 -or $recipe.ChunkSize -gt 200 -or $recipe.MaxRedirects -ne $(if($recipe.Mode -eq 'Deep'){4}else{2})){throw 'Invalid frozen CI recipe.'}
  $published=@($recipe.Discovery.Applications|ForEach-Object AppId)
  if($recipe.AppIds -isnot [array] -or -not $recipe.AppIds.Count -or @($recipe.AppIds|Sort-Object -Unique).Count -ne $recipe.AppIds.Count -or @($recipe.AppIds|Where-Object {$_ -notin $published}).Count -or ($recipe.AppIds -join '/') -cne (@($recipe.AppIds|Sort-Object) -join '/')){throw 'Invalid frozen membership.'}
  if($recipe.Mode -eq 'Shallow' -and $recipe.AppIds.Count -ne $published.Count){throw 'Incomplete public shallow membership.'}
+ if($State.Contains('DeepSelectionHistory')){
+  $history=$State.DeepSelectionHistory
+  if($recipe.Mode -ne 'Deep' -or $history -isnot [Collections.IDictionary] -or $history.Count -gt $published.Count){throw 'Invalid deep selection history.'}
+  foreach($id in $history.Keys){
+   $week=$history[$id]
+   if($id -cnotin $published -or $week -isnot [string] -or $week -notmatch '^([0-9]{4})-W([0-9]{2})$'){throw 'Invalid public deep selection history.'}
+   $year=[int]$Matches[1];$number=[int]$Matches[2]
+   if($year -lt 1 -or $number -lt 1 -or $number -gt [Globalization.ISOWeek]::GetWeeksInYear($year) -or $week -cgt $recipe.Week){throw 'Invalid deep selection week.'}
+  }
+  foreach($id in $recipe.AppIds){if(-not $history.Contains($id) -or $history[$id] -cne $recipe.Week){throw 'Missing current deep selection history.'}}
+ }
  if($State.Batches -isnot [array] -or $State.Batches.Count -ne [Math]::Ceiling($recipe.AppIds.Count/$recipe.ChunkSize)){throw 'Invalid batch count.'}
  $index=0
  foreach($batch in $State.Batches){

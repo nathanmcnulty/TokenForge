@@ -27,6 +27,12 @@ if($Action -eq 'Prepare'){
  $null=Get-TokenForgeApplicationMetadata $metadata -PublicOnly
  $state=if(Test-Path $statePath){Get-Content $statePath -Raw|ConvertFrom-Json -AsHashtable}else{$null}
  if($state){Assert-TfCiState $state}
+ # History records public selection, not issuance or completed assessment.
+ $history=@{}
+ if($Mode -eq 'Deep' -and $state){
+  if($state.Contains('DeepSelectionHistory')){foreach($id in $state.DeepSelectionHistory.Keys){$history[$id]=$state.DeepSelectionHistory[$id]}}
+  foreach($id in $state.Recipe.AppIds){$history[$id]=$state.Recipe.Week}
+ }
  if(-not $state -or $state.Recipe.Week -ne (Get-TfCiWeek)){
   if($state){$archive=Join-Path $DataPath reports;$null=New-Item -ItemType Directory $archive -Force;Save-CiJson (Get-TfCiReport $state) (Join-Path $archive ($state.Recipe.Week+'-'+$Mode.ToLowerInvariant()+'.json'))}
   # Freeze only public discovery, never eligible tenant membership.
@@ -36,21 +42,26 @@ if($Action -eq 'Prepare'){
    $options.ChunkSize=25
    if($AppId -and $AppId.Count -gt $DeepMaxApplications){throw 'Deep selection exceeds its independent weekly budget.'}
    if(-not $AppId){
-    $lastSuccess=@{};foreach($file in @(Get-ChildItem (Join-Path $DataPath scopes) -File -ErrorAction SilentlyContinue)){foreach($row in (Get-Content $file.FullName -Raw|ConvertFrom-Json).Observations){$date=[DateTimeOffset]$row.ObservedAt;if(-not $lastSuccess.ContainsKey($row.ClientId) -or $date -gt $lastSuccess[$row.ClientId]){$lastSuccess[$row.ClientId]=$date}}}
     $prior=@{};if($state){foreach($app in $state.Recipe.Discovery.Applications){$prior[$app.AppId]=Get-TfCiHash $app}}
     $candidates=@($public.Applications|Where-Object {$_.RedirectUris.Count -gt 0}|Sort-Object AppId)
     $changed=@($candidates|Where-Object {-not $prior.ContainsKey($_.AppId) -or $prior[$_.AppId] -cne (Get-TfCiHash $_)}|ForEach-Object AppId)
-    $stale=@($candidates|Where-Object {-not $lastSuccess.ContainsKey($_.AppId) -or $lastSuccess[$_.AppId] -lt [DateTimeOffset]::UtcNow.AddDays(-30)}|ForEach-Object AppId)
-    $lastId=if($state){@($state.Recipe.AppIds|Sort-Object)[-1]}else{''}
-    $rotated=@(@($stale|Where-Object {$_ -gt $lastId})+@($stale|Where-Object {$_ -le $lastId}))
+    # Shallow successes do not establish coverage of other flows. Select
+    # changed hints first, then never-selected and oldest selected candidates.
+    $rotated=@($candidates|Sort-Object @{Expression={if($history.ContainsKey($_.AppId)){$history[$_.AppId]}else{''}}},AppId|ForEach-Object AppId)
     $selection=[Collections.Generic.List[string]]::new();foreach($id in @($changed)+@($rotated)){if(-not $selection.Contains($id)){$selection.Add($id)};if($selection.Count -ge $DeepMaxApplications){break}}
-    if(-not $selection.Count){$selection.AddRange([string[]]@($candidates|Select-Object -First $DeepMaxApplications|ForEach-Object AppId))}
     $options.AppId=@($selection)
    }
   }
   if($Mode -eq 'Deep' -and (-not $options.AppId.Count -or $options.AppId.Count -gt $DeepMaxApplications)){throw 'No bounded deep selection is available; inspect public callback hints.'}
   $state=New-TfCiState $public -Mode $Mode @options
  }elseif($AppId){throw 'An existing weekly recipe cannot change membership.'}
+ if($Mode -eq 'Deep'){
+  $published=@($state.Recipe.Discovery.Applications|ForEach-Object AppId)
+  foreach($id in @($history.Keys)){if($id -cnotin $published){$history.Remove($id)}}
+  foreach($id in $state.Recipe.AppIds){$history[$id]=$state.Recipe.Week}
+  $state.DeepSelectionHistory=$history
+  Assert-TfCiState $state
+ }
  $selection=@(Get-TfCiWork $state -Workers $(if($Mode -eq 'Deep'){[Math]::Min(2,$Workers)}else{$Workers}) -MaxAttempts $(if($RetryExhausted){10}else{3}))
  Save-CiJson $state $statePath
  Save-CiJson $state (Join-Path $BundlePath state.json)

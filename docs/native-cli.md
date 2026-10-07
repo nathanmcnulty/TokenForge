@@ -94,3 +94,7 @@ Version 0.14 adds `catalog import/update/export` and direct transactional applic
 Primary scope and registration checkpoints can use an existing `scopes.sqlite`. See [SQLite scope history](sqlite-scope-history.md) for migration, selected/latest reads, resume repair, and public exports.
 
 Version 0.16 connects [frozen research cohorts](research-cohorts.md) to the inventory CLI and adds native `evidence cohort/cohort-export`. Contextual run recipes preserve namespace and chunk membership; selected scope reads also accept `--flow-plan` and `--client`.
+
+## Encrypted maintenance backups
+
+`tokenforge research backup --snapshot-path <maintenance.sealed> --backup-directory <private-directory> --json` saves an immutable ciphertext copy without loading an authentication profile. It requires the bundled PowerShell adapter and reports byte identity separately from authentication. See [private maintenance](private-maintenance.md) for key custody and restoration.

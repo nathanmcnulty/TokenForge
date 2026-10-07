@@ -2,9 +2,9 @@
 [CmdletBinding()]
 param(
  [Parameter(Position=0,Mandatory)][ValidateSet('profile','login','logout','status','doctor','token','scopes','graph','research')][string]$Command,
- [Parameter(Position=1)][ValidateSet('create','forget-key','show','get','explain','permissions','connect','disconnect','report','export-flows')][string]$Operation,
+ [Parameter(Position=1)][ValidateSet('create','forget-key','show','get','explain','permissions','connect','disconnect','report','export-flows','backup')][string]$Operation,
  [ValidatePattern('^[a-z][a-z0-9_-]{0,63}$')][string]$Profile='default',
- [string]$Root,[string]$Tenant,[string]$StatePath,[string]$ExportPath,[string]$FlowPath,[string]$MetadataPath,[string]$NativeExecutablePath,[switch]$SummaryOnly,
+ [string]$SnapshotPath,[string]$BackupDirectory,[string]$Root,[string]$Tenant,[string]$StatePath,[string]$ExportPath,[string]$FlowPath,[string]$MetadataPath,[string]$NativeExecutablePath,[switch]$SummaryOnly,
  [ValidatePattern('^[a-f0-9]{64}$')][string]$TenantFingerprint,[ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,
  [ValidateSet('Memory','Passphrase','OperatingSystem')][string]$Storage='Memory',
  [ValidateSet('graph','arm')][string]$Resource='graph',[string[]]$Scope,
@@ -19,6 +19,7 @@ $manifest=Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1'
 if(-not (Get-Module TokenForge)){Import-Module $manifest}
 $common=@{Name=$Profile;Root=$Root}
 try{
+ if($Command -eq 'research' -and $Operation -eq 'backup' -and @($PSBoundParameters.Keys|Where-Object {$_ -in @('PromptPassphrase','VaultPassword','EstsAuth','PasskeyPath','XdrModulePath','Browser','Interactive','LoginHint')}).Count){throw 'Backup does not accept authentication options.'}
  if($PromptPassphrase){
   if($VaultPassword){throw 'Choose a provided passphrase or an interactive prompt.'}
   $VaultPassword=Read-Host 'Vault passphrase' -AsSecureString
@@ -51,6 +52,11 @@ try{
    Get-TokenForgeScopeCandidates -Inventory (Get-Content (Join-Path $p.StatePath inventory.json) -Raw|ConvertFrom-Json) -Database (Get-TokenForgeScopeDatabase (Join-Path $p.StatePath $(if(Test-Path (Join-Path $p.StatePath scopes.sqlite)){'scopes.sqlite'}else{'scopes.json'})) -Latest) -ResourceId $id -Scope $Scope -PrincipalFingerprint $p.ExpectedPrincipalFingerprint -MaxAgeHours $p.MaxAgeHours
   }
   research {
+   if($Operation -eq 'backup'){
+    if(-not $SnapshotPath -or -not $BackupDirectory){throw 'Choose SnapshotPath and BackupDirectory.'}
+    & (Join-Path $PSScriptRoot 'Export-TokenForgeMaintenanceBackup.ps1') -SnapshotPath $SnapshotPath -BackupDirectory $BackupDirectory
+    break
+   }
    $p=if($StatePath){$null}else{Get-TokenForgeProfile @common}
    $state=if($StatePath){$StatePath}else{$p.StatePath}
    if(-not $FlowPath){$FlowPath=Join-Path $state $(if(Test-Path (Join-Path $state 'flows.sqlite')){'flows.sqlite'}else{'flows.json'})}
@@ -63,7 +69,7 @@ try{
      Get-TokenForgeResearchCoverage @options
     }
     export-flows {if(-not $ExportPath){throw 'Choose ExportPath.'};$selection=@{};if($TenantFingerprint){$selection.TenantFingerprint=$TenantFingerprint};if($PrincipalFingerprint){$selection.PrincipalFingerprint=$PrincipalFingerprint};Export-TokenForgeFlowEvidence $FlowPath -OutputPath $ExportPath -NativeExecutablePath $NativeExecutablePath @selection;[pscustomobject]@{SchemaVersion=1;Exported=$true;CredentialOutput=$false}}
-    default {throw 'Use research report or research export-flows.'}
+    default {throw 'Use research report, research export-flows, or research backup.'}
    }
   }
   graph {

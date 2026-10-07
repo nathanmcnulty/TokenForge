@@ -26,6 +26,23 @@ Describe 'Immutable encrypted maintenance backups' {
   {Unprotect-TfCiCheckpoint $saved $key 'wrong-account'}|Should -Throw '*authentication failed*'
   $null=& $module {param($p) Resolve-TokenForgeVaultPath $p} $result.BackupPath
  }
+ It 'backs up through the CLI without requiring an authentication profile' {
+  $profileRoot=Join-Path $root missing-profiles
+  $json=& pwsh -NoProfile -File "$PSScriptRoot/../scripts/tokenforge.ps1" -Command research -Operation backup -SnapshotPath $source -BackupDirectory $destination -Root $profileRoot -Json
+  $LASTEXITCODE|Should -Be 0
+  $result=$json|ConvertFrom-Json
+  $result.Saved|Should -BeTrue
+  $result.Authenticated|Should -BeFalse
+  Test-Path $profileRoot|Should -BeFalse
+ }
+ It 'rejects authentication prompts before reading credentials or writing backups' {
+  Mock Read-Host {throw 'Unexpected credential prompt.'}
+  $promptResult=. "$PSScriptRoot/../scripts/tokenforge.ps1" -Command research -Operation backup -SnapshotPath $source -BackupDirectory $destination -PromptPassphrase -Json
+  $LASTEXITCODE|Should -Be 1
+  ($promptResult|ConvertFrom-Json).Code|Should -Be 'OperationFailed'
+  Should -Invoke Read-Host -Exactly -Times 0
+  Test-Path $destination|Should -BeFalse
+ }
  It 'deduplicates identical snapshots without changing the existing backup' {
   $first=& $scriptPath -SnapshotPath $source -BackupDirectory $destination
   $created=(Get-Item $first.BackupPath).LastWriteTimeUtc

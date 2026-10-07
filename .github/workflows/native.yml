@@ -67,6 +67,15 @@ jobs:
             if ($LASTEXITCODE) { throw 'CLI create failed.' }
             & $exe status --profile smoke --root $root --json
             if ($LASTEXITCODE) { throw 'CLI status failed.' }
+            $snapshot = Join-Path $root 'maintenance snapshot.sealed'
+            $cipher = [byte[]]::new(32); $cipher[0] = 1
+            [IO.File]::WriteAllBytes($snapshot, $cipher)
+            if (-not $IsWindows) { [IO.File]::SetUnixFileMode($snapshot, [IO.UnixFileMode]384) }
+            $backupJson = & $exe research backup --snapshot-path $snapshot --backup-directory (Join-Path $root 'backup copies') --json
+            if ($LASTEXITCODE) { throw 'CLI ciphertext backup failed.' }
+            $backup = $backupJson | ConvertFrom-Json
+            if (-not $backup.Saved -or $backup.Authenticated -or $backup.Bytes -ne 32) { throw 'CLI backup status failed.' }
+            if ((Get-FileHash $backup.BackupPath).Hash -cne (Get-FileHash $snapshot).Hash) { throw 'CLI backup byte identity failed.' }
             $state = Join-Path $root 'research'
             $null = New-Item -ItemType Directory $state
             if (-not $IsWindows) { [IO.File]::SetUnixFileMode($state, [IO.UnixFileMode]448) }

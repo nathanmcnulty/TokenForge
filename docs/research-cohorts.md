@@ -27,7 +27,7 @@ $cohort = & $runner -Action NewCohort -StatePath $state -DatabasePath $database 
 
 Cohort creation and execution support `-WhatIf`; it suppresses recipe/checkpoint writes and token requests. The runner may still create its private directory and operation lock.
 
-The runner uses an existing `scopes.sqlite` automatically. For a new directory, explicitly supply `-DatabasePath` on NewCohort. Detailed cohort checkpoints default to `flows.sqlite`. Application metadata uses the existing SQLite catalog when present, otherwise its compatible JSON ledger. `-MetadataPath` and `-FlowPath` choose other private output paths.
+The runner uses an existing `scopes.sqlite` automatically. For a new directory, explicitly supply `-DatabasePath` on NewCohort. Detailed cohort checkpoints default to `flows.sqlite`; subsequent Report and ExportFlows actions select that existing store automatically. Application metadata uses the existing SQLite catalog when present, otherwise its compatible JSON ledger. `-MetadataPath` and `-FlowPath` choose other private output paths.
 
 ## Resume and refresh
 

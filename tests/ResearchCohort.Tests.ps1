@@ -62,11 +62,19 @@ Describe 'Frozen namespace-bound research cohorts' -Skip:(-not $nativeAvailable)
   Test-Path $path|Should -BeFalse
   Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 0
  }
- It 'runs cohort creation and status through the inventory CLI' {
+ It 'runs cohort creation and status and reads SQLite evidence through default CLI report and export' {
+  $observed=New-TokenForgeResearchCohort @create
+  $null=Invoke-TokenForgeResearchChunk $inventory $secret $path $observed.PlanId -MetadataPath $metadata -NativeExecutablePath $native -DelayMilliseconds 0
   $inventory|ConvertTo-Json -Depth 24|Set-Content (Join-Path $root inventory.json)
   if(-not $IsWindows){[IO.File]::SetUnixFileMode((Join-Path $root inventory.json),[IO.UnixFileMode]384)}
   $cohort=& "$PSScriptRoot/../scripts/Invoke-TokenForgeInventory.ps1" -Action NewCohort -StatePath $root -DatabasePath $path -GraphOnly -BatchSize 1 -NativeExecutablePath $native
   $status=& "$PSScriptRoot/../scripts/Invoke-TokenForgeInventory.ps1" -Action CohortStatus -StatePath $root -CohortId $cohort.PlanId -NativeExecutablePath $native
   $status.Pending.Count|Should -Be 2
+  $report=& "$PSScriptRoot/../scripts/Invoke-TokenForgeInventory.ps1" -Action Report -StatePath $root -PrincipalFingerprint ('b'*64) -NativeExecutablePath $native
+  $report.TerminalSlots|Should -Be 1
+  $report.ApplicationsWithObservedSuccess|Should -Be 1
+  $export=Join-Path $root anonymous-flows.json
+  $null=& "$PSScriptRoot/../scripts/Invoke-TokenForgeInventory.ps1" -Action ExportFlows -StatePath $root -ExportPath $export -NativeExecutablePath $native
+  @((Get-Content $export -Raw|ConvertFrom-Json).Observations).Count|Should -Be 1
  }
 }

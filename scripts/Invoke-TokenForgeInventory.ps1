@@ -43,7 +43,7 @@ if (-not $IsWindows) { [IO.File]::SetUnixFileMode($StatePath, ([IO.UnixFileMode]
 $discoveryPath=Join-Path $StatePath 'discovery.json'
 $inventoryPath=Join-Path $StatePath 'inventory.json'
 if(-not $DatabasePath){$DatabasePath=Join-Path $StatePath $(if(Test-Path (Join-Path $StatePath 'scopes.sqlite')){'scopes.sqlite'}else{'scopes.json'})}
-if(-not $FlowPath){$FlowPath=Join-Path $StatePath $(if($Action -eq 'ProbeChunk'){'flows.sqlite'}else{'flows.json'})}
+if(-not $FlowPath){$FlowPath=Join-Path $StatePath $(if($Action -eq 'ProbeChunk' -or (Test-Path (Join-Path $StatePath 'flows.sqlite'))){'flows.sqlite'}else{'flows.json'})}
 if(-not $MetadataPath){$MetadataPath=Join-Path $StatePath $(if(Test-Path (Join-Path $StatePath 'applications.sqlite')){'applications.sqlite'}else{'applications.json'})}
 $principalOptions=@{}
 if ($PrincipalFingerprint) { $principalOptions.PrincipalFingerprint=$PrincipalFingerprint }

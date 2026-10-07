@@ -84,3 +84,23 @@ jobs:
           path: dist/native/${{ matrix.runtime }}/
           if-no-files-found: error
           retention-days: 1
+          overwrite: true
+  artifact-retention:
+    concurrency:
+      group: native-artifact-retention
+      cancel-in-progress: false
+    needs: native
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Keep latest main packages and remove superseded native builds
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/Remove-TokenForgeNativeArtifacts.ps1 -Repository $env:GITHUB_REPOSITORY -CurrentRunId ([long]$env:GITHUB_RUN_ID) -Confirm:$false

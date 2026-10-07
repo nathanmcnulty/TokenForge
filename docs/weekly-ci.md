@@ -47,3 +47,9 @@ Authentication remains PowerShell-based. The scheduled matrix is Graph-only and 
 ## Bounded validation on 2026-10-07
 
 The [sanitized report](weekly-ci-validation-2026-10-07.json) covers local worker execution with Nora and secadmin. Each assessed four clients across two chunks with deeper callback/protocol exploration, producing 33 terminal flow attempts and four scope rows. Nora had three successful client/resource observations; secadmin had four. Encrypted checkpoint resumes added no attempts or scope rows. Anonymous export validation passed; no credentials or consent were persisted. A public-source planning pass froze 5,454 IDs into 55 chunks. Hosted runs 37679738716 and 37680608188 subsequently verified worker artifact transport and one-writer publication, reaching 600 assessed IDs across six completed batches. Full-catalog completion remains a separate reportable result in `coverage-shallow.json`.
+
+## Native build artifact retention
+
+After a successful main-branch native matrix, an isolated cleanup job keeps Linux, Windows, and macOS packages from the newest coherent successful main build. Cleanup jobs serialize. The script verifies the originating workflow and exact package names, enumerates all artifact pages before deleting, and leaves unfinished runs and newer artifacts untouched. A missing current package stops cleanup. Research checkpoints and private maintenance snapshots are excluded. Native packages also expire after one day; they are CI outputs, not durable releases.
+
+For a local preview, run `./scripts/Remove-TokenForgeNativeArtifacts.ps1 -Repository nathanmcnulty/TokenForge -WhatIf`. Omit `-WhatIf` to apply the bounded cleanup. `CurrentRunId` is reserved for CI after all native matrix jobs succeed.

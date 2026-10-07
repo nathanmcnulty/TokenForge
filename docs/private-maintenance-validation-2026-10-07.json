@@ -1,0 +1,37 @@
+{
+  "Date": "2026-10-07",
+  "Scope": "Bounded local private maintenance and encrypted restore; not hosted transport or universal account authorization",
+  "Accounts": [
+    {
+      "Account": "nora",
+      "Inventory": "Complete",
+      "SignIns": "Forbidden",
+      "Grants": "Complete",
+      "Status": "Partial",
+      "ResumeHistoryPreserved": true,
+      "EncryptedCheckpointPassed": true,
+      "CredentialsPersisted": false,
+      "RegistrationPerformed": false,
+      "ConsentGranted": false
+    },
+    {
+      "Account": "secadmin",
+      "Inventory": "Complete",
+      "SignIns": "Complete",
+      "Grants": "Complete",
+      "Status": "Complete",
+      "ResumeHistoryPreserved": true,
+      "EncryptedCheckpointPassed": true,
+      "CredentialsPersisted": false,
+      "RegistrationPerformed": false,
+      "ConsentGranted": false
+    }
+  ],
+  "SignInWindowDays": 1,
+  "SecadminPageBudget": 50,
+  "InitialFivePageBound": "Correctly refused complete enumeration",
+  "PowerShellPassed": 294,
+  "PowerShellSkipped": 2,
+  "WorkflowLint": "Passed",
+  "Review": "Sol: no shipping blocker"
+}

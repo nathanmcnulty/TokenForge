@@ -35,6 +35,23 @@ Describe 'Frozen CI recipes and receipt completeness' {
   {Merge-TfCiReceipt $state $receipt}|Should -Throw
   {New-TfCiState $discovery -ChunkSize 0}|Should -Throw
  }
+ It 'orders newly created and restored batches by attempts and numeric index' {
+  $many=$discovery|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable
+  $many.Applications=@(1..55|ForEach-Object {$app=$discovery.Applications[0]|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable;$app.AppId=('f0000000-0000-0000-0000-{0:D12}' -f $_);$app})
+  $state=New-TfCiState $many -ChunkSize 1
+  (@(Get-TfCiWork $state 4) -join ',')|Should -Be '0,1,2,3'
+  $round=$state|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable
+  (@(Get-TfCiWork $round 4) -join ',')|Should -Be '0,1,2,3'
+ }
+ It 'hashes UTC instants independently of parsed host-local DateTime values' {
+  $value=[ordered]@{SchemaVersion=1;CreatedAt='2026-10-07T20:09:09.9021780+00:00';Nested=@{FetchedAt='2026-10-07T20:08:00+00:00'}}
+  $round=$value|ConvertTo-Json -Compress|ConvertFrom-Json -AsHashtable
+  (Get-TfCiHash $round)|Should -Be (Get-TfCiHash $value)
+  # Same representation produced by the original algorithm on a UTC runner.
+  $normalized='{"SchemaVersion":1,"CreatedAt":"2026-10-07T20:09:09.902178+00:00","Nested":{"FetchedAt":"2026-10-07T20:08:00+00:00"}}'
+  $expected=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($normalized))).ToLowerInvariant()
+  (Get-TfCiHash $value)|Should -Be $expected
+ }
  It 'uses the ISO year at a calendar boundary' {
   Get-TfCiWeek ([DateTimeOffset]'2027-01-01T00:00:00Z')|Should -Be '2026-W53'
  }

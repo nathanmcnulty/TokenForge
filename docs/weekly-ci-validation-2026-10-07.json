@@ -39,5 +39,11 @@
   "PowerShellPassed": 282,
   "PowerShellSkipped": 2,
   "PublisherLiveReceiptsPassed": true,
-  "NativeChecksPassed": 117
+  "NativeChecksPassed": 117,
+  "HostedWorkerPublisherPassed": true,
+  "HostedValidationRuns": [
+    37679738716,
+    37680608188
+  ],
+  "FullCatalogCycle": "In progress; inspect discovery-data coverage-shallow.json"
 }

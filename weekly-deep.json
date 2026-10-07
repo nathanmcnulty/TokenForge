@@ -217500,7 +217500,7 @@
       "Assessed": 25,
       "Successful": 12,
       "DurationSeconds": 136.377,
-      "ObservedAt": "2026-10-07T21:58:12.0000000+00:00"
+      "ObservedAt": "2026-10-07T21:58:12+00:00"
     },
     {
       "Index": 1,
@@ -217509,25 +217509,25 @@
       "Assessed": 25,
       "Successful": 11,
       "DurationSeconds": 153.171,
-      "ObservedAt": "2026-10-07T21:58:35.0000000+00:00"
+      "ObservedAt": "2026-10-07T21:58:35+00:00"
     },
     {
       "Index": 2,
-      "Status": "Pending",
-      "Attempts": 0,
-      "Assessed": 0,
-      "Successful": 0,
-      "DurationSeconds": 0,
-      "ObservedAt": null
+      "Status": "Complete",
+      "Attempts": 1,
+      "Assessed": 25,
+      "Successful": 11,
+      "DurationSeconds": 149.759,
+      "ObservedAt": "2026-10-07T22:05:18.0000000+00:00"
     },
     {
       "Index": 3,
-      "Status": "Pending",
-      "Attempts": 0,
-      "Assessed": 0,
-      "Successful": 0,
-      "DurationSeconds": 0,
-      "ObservedAt": null
+      "Status": "Complete",
+      "Attempts": 1,
+      "Assessed": 25,
+      "Successful": 12,
+      "DurationSeconds": 244.029,
+      "ObservedAt": "2026-10-07T22:06:49.0000000+00:00"
     }
   ]
 }

@@ -55,6 +55,16 @@
     "HostedArtifactIncluded": true,
     "KeyStoredWithBackup": false,
     "CiphertextByteIdentity": true,
-    "DuplicateCopyReused": true
+    "DuplicateCopyReused": true,
+    "CliValidation": {
+      "PathsWithSpaces": true,
+      "CiphertextByteIdentity": true,
+      "Date": "2026-10-07",
+      "AuthenticationProfileCreated": false,
+      "CredentialPrompted": false,
+      "PackagedPowerShell": true,
+      "AccountsVerified": 2,
+      "NativeLinux": true
+    }
   }
 }

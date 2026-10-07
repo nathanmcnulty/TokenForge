@@ -49,3 +49,12 @@ After downloading `maintenance.sealed` into a private local directory, save an i
 The command also ships in the PowerShell CLI ZIP. It creates private backup storage when needed, rejects links and broadly accessible source or destination directories, and uses the ciphertext SHA-256 as the filename. Identical snapshots reuse the existing file; corrupt or different bytes at that filename cause failure. `-WhatIf` reads no snapshot and writes nothing. No key, passkey, cookie, or decrypted metadata is needed or copied.
 
 The hash checks copied bytes; it does not authenticate the encrypted payload. The output explicitly reports `Authenticated=false`. Restoration currently requires a repository checkout; its CI scripts are not included in the CLI ZIP. Restore a saved `.sealed` file through `Invoke-TokenForgeCiMaintenance.ps1 -CheckpointInputPath <backup-file>` with the original separately protected key and expected account context. Restoration verifies AES-GCM authentication and fresh account identity before using history; a wrong key or account fails. Keep periodic copies on an independently protected backup medium and keep the key separately. A local copy alone does not protect against loss of the same disk, and the command deliberately does not upload keys or select an external storage provider.
+
+The same copy is available through both CLI entry points without an authentication profile:
+
+```powershell
+./scripts/tokenforge.ps1 research backup -SnapshotPath /private/path/maintenance.sealed -BackupDirectory /private/path/maintenance-backups -Json
+tokenforge research backup --snapshot-path /private/path/maintenance.sealed --backup-directory /private/path/maintenance-backups --json
+```
+
+The native CLI uses its bundled PowerShell adapter for this command, so PowerShell 7.4+ remains required. The backup command handles ciphertext only and performs no login or token request.

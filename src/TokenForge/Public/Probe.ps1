@@ -21,7 +21,7 @@ function Invoke-TokenForgeScopeProbe {
         [ValidateRange(1,100000)][int]$MaxApplications = 100000,
         [ValidateRange(1,1000)][int]$MaxRedirects = 8,
         [ValidateRange(0,60000)][int]$DelayMilliseconds = 250,
-        [switch]$Refresh,
+        [switch]$Refresh,[switch]$StopOnTransientFailure,[scriptblock]$CheckpointAction,
         [string]$Tenant = 'organizations'
     )
     $Protocols=@($Protocols|Select-Object -Unique)
@@ -151,8 +151,10 @@ function Invoke-TokenForgeScopeProbe {
                             continue
                         }
                         $started=[DateTimeOffset]::UtcNow.ToString('o')
+                        $transientFailure=$false
                         $flowAttempt=@{AttemptId=[guid]::NewGuid().ToString();PlanFingerprint=$planHash;AttemptKey=$attemptKey;ClientId=$app.AppId;ResourceId=$resource.ToString();TenantFingerprint=$Inventory.TenantFingerprint;PrincipalFingerprint=$probePrincipal;StartedAt=$started;ObservedAt=$started;Protocol=$attempt.Protocol;Spa=[bool]$spa;RedirectFingerprint=$redirectHash;Outcome='Started';ResponseScopes=@();ScpScopes=@();ClaimsReadable=$false;HasScpClaim=$false;NamespaceVerification='Unverifiable';RequestVerification='Unverifiable';SignatureValidated=$false;ErrorCodes=@();ElapsedSeconds=0}
                         $flows=Save-TokenForgeFlowEvidence $FlowDatabasePath -Attempt $flowAttempt -ExistingDocument $flows -NativeExecutablePath $NativeExecutablePath -Changes $FlowChanges
+                        if($CheckpointAction){& $CheckpointAction}
                         $attemptWatch=[Diagnostics.Stopwatch]::StartNew()
                         $observation.AttemptCount++
                         if($observation.Outcome -notin @('Succeeded','OpaqueToken','NoDelegatedScp')){$observation.Protocol = $attempt.Protocol;$observation.Spa = $spa}
@@ -193,9 +195,10 @@ function Invoke-TokenForgeScopeProbe {
                             if($flowAttempt.Outcome -eq 'Succeeded' -and ($flowAttempt.NamespaceVerification -ne 'Matched' -or $flowAttempt.RequestVerification -ne 'Matched')){$flowAttempt.Outcome='NoDelegatedScp';$observation.Outcome='NoDelegatedScp'}
                             if(-not $ExploreAllFlows){break}
                         } catch {
+                            $transientFailure=$StopOnTransientFailure -and ($_.Exception.Message -match '\bHTTP (429|5[0-9]{2})\b|Identity transport failed or timed out')
                             $observation.ErrorCodes = @(@($observation.ErrorCodes) + @([regex]::Matches($_.Exception.Message,'\bAADSTS([0-9]{4,9})\b') | ForEach-Object { $_.Groups[1].Value }) | Sort-Object -Unique)
                             $flowAttempt.ErrorCodes=@([regex]::Matches($_.Exception.Message,'\bAADSTS([0-9]{4,9})\b')|ForEach-Object {$_.Groups[1].Value}|Sort-Object -Unique|Select-Object -First 16)
-                            $flowAttempt.Outcome='Failed'
+                            $flowAttempt.Outcome=if($transientFailure){'Started'}else{'Failed'}
                         } finally {
                             $flowAttempt.ObservedAt=[DateTimeOffset]::UtcNow.ToString('o');$flowAttempt.ElapsedSeconds=[math]::Round($attemptWatch.Elapsed.TotalSeconds,3)
                             # Persistence errors stop the sweep; no additional issuance after a failed checkpoint.
@@ -203,7 +206,9 @@ function Invoke-TokenForgeScopeProbe {
                             if ($token) { $token.AccessToken.Dispose(); if ($token.RefreshToken) { $token.RefreshToken.Dispose() } }
                             $token = $null
                             }
+                            if($CheckpointAction){& $CheckpointAction}
                         }
+                        if($transientFailure){throw 'A transient identity failure interrupted this flow; resume its checkpoint later.'}
                         if ($DelayMilliseconds) { Start-Sleep -Milliseconds $DelayMilliseconds }
                     }
                     if ($observation.Outcome -eq 'ContextMismatch' -or (-not $ExploreAllFlows -and $observation.Outcome -in @('Succeeded','OpaqueToken','NoDelegatedScp'))) { break }

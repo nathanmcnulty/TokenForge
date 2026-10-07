@@ -54,3 +54,5 @@ Recipes are bounded to 8 MiB and 100,000 resource pairs; split unusually large m
 ## Validation
 
 The [sanitized live report](research-cohort-validation-2026-10-07.json) covers Nora and secadmin through the inventory CLI. Each froze four client/resource pairs into two chunks, produced 12 new terminal flow slots, and completed all four clients. An injected metadata failure left all clients pending; recovery added no token attempts or scope rows. Completed and explicit chunk resumes returned no new observations. Nora had three successful flow slots and secadmin four. Private reports and anonymous exports passed. No tokens were persisted or consent granted. Local regressions also cover older-cohort repair after a newer run, account isolation, changed/stale snapshots, mismatched issuance, WhatIf, corrupt plans, and legacy plan compatibility.
+
+The [weekly CI controller](weekly-ci.md) uses a separate public-source recipe and encrypted private checkpoints so scheduled research can resume without publishing tenant cohort membership.

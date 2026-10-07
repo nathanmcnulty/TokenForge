@@ -1,0 +1,109 @@
+#Requires -Version 7.4
+[CmdletBinding()]
+param(
+ [Parameter(Mandatory)][ValidateSet('Prepare','Publish')][string]$Action,
+ [Parameter(Mandatory)][string]$DataPath,[Parameter(Mandatory)][string]$BundlePath,
+ [ValidateRange(1,4)][int]$Workers=4,[ValidateSet('Auto','Shallow','Deep')][string]$Mode='Auto',
+ [ValidateRange(1,100)][int]$DeepMaxApplications=100,
+ [guid[]]$AppId,[switch]$RetryExhausted
+)
+$ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot 'TokenForgeCiState.ps1')
+Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1') -Force
+function Save-CiJson($Value,[string]$Path){$temp=$Path+'.'+[guid]::NewGuid()+'.tmp';try{$Value|ConvertTo-Json -Depth 100|Set-Content $temp;Move-Item -LiteralPath $temp -Destination $Path -Force}finally{if(Test-Path $temp){Remove-Item $temp -Force}}}
+$null=New-Item -ItemType Directory $DataPath,$BundlePath,(Join-Path $DataPath reports) -Force
+Assert-TfCiPublicData $DataPath
+if($Mode -eq 'Auto'){
+ $shallowPath=Join-Path $DataPath weekly-shallow.json
+ $shallow=if(Test-Path $shallowPath){Get-Content $shallowPath -Raw|ConvertFrom-Json -AsHashtable}else{$null}
+ $Mode=if($shallow -and $shallow.Recipe.Week -eq (Get-TfCiWeek) -and (Get-TfCiReport $shallow).Complete){'Deep'}else{'Shallow'}
+}
+if($AppId -and $Mode -ne 'Deep'){throw 'Targeted IDs are available only for Deep; weekly shallow coverage must include the full public catalog.'}
+$statePath=Join-Path $DataPath ('weekly-'+$Mode.ToLowerInvariant()+'.json')
+if($Action -eq 'Prepare'){
+ $metadata=Join-Path $DataPath applications.json
+ if(Test-Path $metadata){$null=Get-TokenForgeApplicationMetadata $metadata -PublicOnly}
+ $discovery=Update-TokenForgeDiscovery -Path (Join-Path $BundlePath discovery.json) -MetadataPath $metadata
+ $null=Get-TokenForgeApplicationMetadata $metadata -PublicOnly
+ $state=if(Test-Path $statePath){Get-Content $statePath -Raw|ConvertFrom-Json -AsHashtable}else{$null}
+ if($state){Assert-TfCiState $state}
+ if(-not $state -or $state.Recipe.Week -ne (Get-TfCiWeek)){
+  if($state){$archive=Join-Path $DataPath reports;$null=New-Item -ItemType Directory $archive -Force;Save-CiJson (Get-TfCiReport $state) (Join-Path $archive ($state.Recipe.Week+'-'+$Mode.ToLowerInvariant()+'.json'))}
+  # Freeze only public discovery, never eligible tenant membership.
+  $public=$discovery|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable
+  $options=@{};if($AppId){$options.AppId=@($AppId|ForEach-Object ToString)}
+  if($Mode -eq 'Deep'){
+   $options.ChunkSize=25
+   if($AppId -and $AppId.Count -gt $DeepMaxApplications){throw 'Deep selection exceeds its independent weekly budget.'}
+   if(-not $AppId){
+    $lastSuccess=@{};foreach($file in @(Get-ChildItem (Join-Path $DataPath scopes) -File -ErrorAction SilentlyContinue)){foreach($row in (Get-Content $file.FullName -Raw|ConvertFrom-Json).Observations){$date=[DateTimeOffset]$row.ObservedAt;if(-not $lastSuccess.ContainsKey($row.ClientId) -or $date -gt $lastSuccess[$row.ClientId]){$lastSuccess[$row.ClientId]=$date}}}
+    $prior=@{};if($state){foreach($app in $state.Recipe.Discovery.Applications){$prior[$app.AppId]=Get-TfCiHash $app}}
+    $candidates=@($public.Applications|Where-Object {$_.RedirectUris.Count -gt 0}|Sort-Object AppId)
+    $changed=@($candidates|Where-Object {-not $prior.ContainsKey($_.AppId) -or $prior[$_.AppId] -cne (Get-TfCiHash $_)}|ForEach-Object AppId)
+    $stale=@($candidates|Where-Object {-not $lastSuccess.ContainsKey($_.AppId) -or $lastSuccess[$_.AppId] -lt [DateTimeOffset]::UtcNow.AddDays(-30)}|ForEach-Object AppId)
+    $lastId=if($state){@($state.Recipe.AppIds|Sort-Object)[-1]}else{''}
+    $rotated=@(@($stale|Where-Object {$_ -gt $lastId})+@($stale|Where-Object {$_ -le $lastId}))
+    $selection=[Collections.Generic.List[string]]::new();foreach($id in @($changed)+@($rotated)){if(-not $selection.Contains($id)){$selection.Add($id)};if($selection.Count -ge $DeepMaxApplications){break}}
+    if(-not $selection.Count){$selection.AddRange([string[]]@($candidates|Select-Object -First $DeepMaxApplications|ForEach-Object AppId))}
+    $options.AppId=@($selection)
+   }
+  }
+  if($Mode -eq 'Deep' -and (-not $options.AppId.Count -or $options.AppId.Count -gt $DeepMaxApplications)){throw 'No bounded deep selection is available; inspect public callback hints.'}
+  $state=New-TfCiState $public -Mode $Mode @options
+ }elseif($AppId){throw 'An existing weekly recipe cannot change membership.'}
+ $selection=@(Get-TfCiWork $state -Workers $(if($Mode -eq 'Deep'){[Math]::Min(2,$Workers)}else{$Workers}) -MaxAttempts $(if($RetryExhausted){10}else{3}))
+ Save-CiJson $state $statePath
+ Save-CiJson $state (Join-Path $BundlePath state.json)
+ $base=git -C $DataPath rev-parse HEAD 2>$null;if($LASTEXITCODE -ne 0){throw 'Weekly CI requires an initialized data branch.'}
+ Save-CiJson @{SchemaVersion=1;PlanId=$state.PlanId;Mode=$Mode;Indices=$selection;BaseCommit=[string]$base} (Join-Path $BundlePath request.json)
+ Save-CiJson (Get-TfCiReport $state) (Join-Path $DataPath ('coverage-'+$Mode.ToLowerInvariant()+'.json'))
+ $matrix=@{include=@($selection|ForEach-Object {@{index=$_;plan=$state.PlanId}})}|ConvertTo-Json -Compress
+ if($env:GITHUB_OUTPUT){Add-Content $env:GITHUB_OUTPUT "matrix=$matrix";Add-Content $env:GITHUB_OUTPUT "mode=$Mode";Add-Content $env:GITHUB_OUTPUT "has_work=$([bool]$selection.Count)"}
+ Get-TfCiReport $state
+}else{
+ $null=Get-TokenForgeApplicationMetadata (Join-Path $DataPath applications.json) -PublicOnly
+ $state=Get-Content (Join-Path $BundlePath state.json) -Raw|ConvertFrom-Json -AsHashtable;Assert-TfCiState $state
+ $current=Get-Content $statePath -Raw|ConvertFrom-Json -AsHashtable;Assert-TfCiState $current
+ if((Get-TfCiHash $state) -cne (Get-TfCiHash $current)){throw 'Publisher state changed after planning.'}
+ $request=Get-Content (Join-Path $BundlePath request.json) -Raw|ConvertFrom-Json -AsHashtable
+ Assert-TfCiKeys $request @('SchemaVersion','PlanId','Mode','Indices','BaseCommit')
+ if($request.BaseCommit -notmatch '^[a-f0-9]{40}$'){throw 'Invalid data parent.'}
+ if($request.SchemaVersion -ne 1 -or $request.PlanId -cne $state.PlanId -or $request.Mode -cne $Mode -or @($request.Indices|Sort-Object -Unique).Count -ne $request.Indices.Count -or $request.Indices.Count -gt 4){throw 'Invalid publication request.'}
+ $allowed=@('receipt.json','scopes.json')
+ $null=New-Item -ItemType Directory (Join-Path $DataPath scopes) -Force
+ foreach($index in $request.Indices){
+  $members=@(Get-TfCiMembers $state $index)
+  $result=Join-Path $BundlePath ('result-'+$index)
+  if(Test-Path $result){foreach($file in Get-ChildItem $result -Force -Recurse){if($file.PSIsContainer -or $file.Name -notin $allowed -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'Unexpected worker output.'}}}
+  $receiptPath=Join-Path $result receipt.json
+  $receipt=if(Test-Path $receiptPath){Get-Content $receiptPath -Raw|ConvertFrom-Json -AsHashtable}else{[ordered]@{SchemaVersion=1;PlanId=$state.PlanId;Index=$index;Attempt=$state.Batches[$index].Attempts+1;Status='Failed';Assessed=0;Successful=0;DurationSeconds=0;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')}}
+  if($receipt.Index -ne $index){throw 'Wrong worker partition.'}
+  # Validate receipt before consuming any anonymous evidence.
+  Merge-TfCiReceipt $state $receipt
+  if($receipt.Status -eq 'Complete'){
+   $source=Join-Path $result scopes.json
+   if(-not(Test-Path $source)){throw 'Complete worker omitted its scope export.'}
+   $export=Get-Content $source -Raw|ConvertFrom-Json -AsHashtable
+   Assert-TfCiScopeExport $export
+   if($export.SchemaVersion -ne 1 -or $export.Disclaimer -cne 'Observed scopes are session/tenant dependent, not universal consent or guaranteed API access.' -or $export.Observations -isnot [array]){throw 'Invalid anonymous worker export.'}
+   foreach($row in $export.Observations){
+    Assert-TfCiKeys $row @('ClientId','ResourceId','ObservedAt','Scopes','Evidence','SignatureValidated')
+    if($row.ClientId -notin $members -or $row.ResourceId -cne '00000003-0000-0000-c000-000000000000' -or $row.Evidence -cne 'AnonymousTenantTokenObservation' -or $row.SignatureValidated -isnot [bool] -or $row.SignatureValidated -or $row.Scopes -isnot [array] -or @($row.Scopes|Where-Object {$_ -isnot [string] -or $_ -notmatch '^[A-Za-z0-9_.-]{1,256}$'}).Count){throw 'Private or foreign anonymous observation.'}
+    $observed=[DateTimeOffset]::Parse([string]$row.ObservedAt)
+    if($observed -lt [DateTimeOffset]::Parse($state.Recipe.CreatedAt) -or $observed -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Stale or future worker observation.'}
+   }
+   if(@($export.Observations|ForEach-Object ClientId|Sort-Object -Unique).Count -ne $receipt.Successful){throw 'Success receipt does not match export.'}
+   $destination=Join-Path $DataPath ('scopes/chunk-{0:D4}.json' -f $index)
+   # Preserve prior successful evidence, including IDs that moved between weekly chunks.
+   $prior=if(Test-Path $destination){Get-Content $destination -Raw|ConvertFrom-Json -AsHashtable}else{@{Observations=@()}}
+   if(Test-Path $destination){Assert-TfCiScopeExport $prior}
+   $latest=@{};foreach($row in @(@($prior.Observations)+@($export.Observations)|Sort-Object {([DateTimeOffset]$_.ObservedAt)})){$latest[$row.ClientId+'/'+$row.ResourceId]=$row}
+   $export.Observations=@($latest.Values|Sort-Object ClientId,ResourceId)
+   Save-CiJson $export $destination
+  }
+ }
+ Save-CiJson $state $statePath
+ $report=Get-TfCiReport $state;Save-CiJson $report (Join-Path $DataPath ('coverage-'+$Mode.ToLowerInvariant()+'.json'))
+ if($env:GITHUB_STEP_SUMMARY){Add-Content $env:GITHUB_STEP_SUMMARY ('### Weekly '+$Mode+' coverage');Add-Content $env:GITHUB_STEP_SUMMARY "Assessed $($report.AssessedApplications)/$($report.PublishedApplications) apps; $($report.PendingBatches) batches pending; $($report.ExhaustedBatches) exhausted. Completion: $($report.Complete)."}
+ $report
+}

@@ -1,0 +1,95 @@
+{
+  "SchemaVersion": 1,
+  "Observations": [
+    {
+      "ClientId": "ee90a17f-1cb7-4909-be27-dfc2dcc4dc15",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:44:09.8482094+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "eea619ad-603a-4b03-a386-860fcc7410d1",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:44:12.962362+00:00",
+      "Scopes": [
+        "Calendars.Read",
+        "Calendars.ReadWrite.Shared",
+        "Chat.ReadWrite",
+        "Contacts.Read",
+        "email",
+        "Files.ReadWrite.All",
+        "Group.Read.All",
+        "InformationProtectionPolicy.Read",
+        "OnlineMeetings.Read",
+        "openid",
+        "People.Read",
+        "Presence.Read.All",
+        "profile",
+        "Sites.ReadWrite.All",
+        "User.Read",
+        "User.Read.All",
+        "User.ReadBasic.All",
+        "User.ReadWrite"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "ef47e344-4bff-4e28-87da-6551a21ffbe0",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:44:17.170532+00:00",
+      "Scopes": [
+        "_A.AA",
+        "_B.AC",
+        "_C.AA",
+        "_E.AA",
+        "_F.AB",
+        "_G.AA",
+        "_H.AD",
+        "_J.AB",
+        "_L.AA",
+        "Calendars.Read",
+        "Calendars.Read.Shared",
+        "EduAssignments.Read",
+        "EduRoster.ReadBasic",
+        "email",
+        "GroupMember.Read.All",
+        "openid",
+        "Presence.Read.All",
+        "profile",
+        "User.Read",
+        "User.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "f05ff7c9-f75a-4acd-a3b5-f4b6a870245d",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T21:44:23.2875386+00:00",
+      "Scopes": [
+        "Contacts.Read",
+        "Directory.Read.All",
+        "email",
+        "Group.Read.All",
+        "Member.Read.Hidden",
+        "openid",
+        "Organization.Read.All",
+        "People.Read",
+        "profile",
+        "Sites.Read.All",
+        "User.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    }
+  ],
+  "Disclaimer": "Observed scopes are session/tenant dependent, not universal consent or guaranteed API access."
+}

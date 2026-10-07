@@ -35,3 +35,17 @@ Recipe hashes now normalize parsed dates to UTC offsets, so a plan created on a 
 ## Bounded validation on 2026-10-07
 
 The [sanitized report](private-maintenance-validation-2026-10-07.json) covers encrypted maintenance and restored-history proofs with both Nora and secadmin. Nora completed inventory and grant reads while sign-in access was forbidden. Secadmin completed a one-day sign-in read with a 50-page cap; the initial five-page limit correctly refused incomplete enumeration. Neither proof registered applications, granted consent, or persisted credentials. Hosted runs [37685631049](https://github.com/nathanmcnulty/TokenForge/actions/runs/37685631049) and [37685952513](https://github.com/nathanmcnulty/TokenForge/actions/runs/37685952513) subsequently passed initial snapshot upload and encrypted restoration. Downloaded artifacts verified the expected account context, preserved catalog history, and contained no credential fields.
+
+## Keeping a durable local backup
+
+After downloading `maintenance.sealed` into a private local directory, save an immutable copy outside the repository:
+
+```powershell
+./scripts/Export-TokenForgeMaintenanceBackup.ps1 `
+  -SnapshotPath /private/path/maintenance.sealed `
+  -BackupDirectory /private/path/maintenance-backups
+```
+
+The command also ships in the PowerShell CLI ZIP. It creates private backup storage when needed, rejects links and broadly accessible source or destination directories, and uses the ciphertext SHA-256 as the filename. Identical snapshots reuse the existing file; corrupt or different bytes at that filename cause failure. `-WhatIf` reads no snapshot and writes nothing. No key, passkey, cookie, or decrypted metadata is needed or copied.
+
+The hash checks copied bytes; it does not authenticate the encrypted payload. The output explicitly reports `Authenticated=false`. Restoration currently requires a repository checkout; its CI scripts are not included in the CLI ZIP. Restore a saved `.sealed` file through `Invoke-TokenForgeCiMaintenance.ps1 -CheckpointInputPath <backup-file>` with the original separately protected key and expected account context. Restoration verifies AES-GCM authentication and fresh account identity before using history; a wrong key or account fails. Keep periodic copies on an independently protected backup medium and keep the key separately. A local copy alone does not protect against loss of the same disk, and the command deliberately does not upload keys or select an external storage provider.

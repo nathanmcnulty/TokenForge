@@ -44,5 +44,17 @@
     "Inventory": "Complete",
     "InitialSignIns": "Forbidden",
     "RestoreSignIns": "Skipped"
+  },
+  "BackupValidation": {
+    "ExpectedAccountDecryption": true,
+    "CredentialsPersisted": false,
+    "WrongAccountRejected": true,
+    "SnapshotsVerified": 3,
+    "Date": "2026-10-07",
+    "AccountsVerified": 2,
+    "HostedArtifactIncluded": true,
+    "KeyStoredWithBackup": false,
+    "CiphertextByteIdentity": true,
+    "DuplicateCopyReused": true
   }
 }

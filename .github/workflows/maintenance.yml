@@ -1,0 +1,72 @@
+name: Private metadata maintenance
+on:
+  schedule:
+    - cron: '47 5 * * 1'
+  workflow_dispatch:
+    inputs:
+      skip_signins:
+        description: 'Refresh inventory without reading sign-in logs'
+        type: boolean
+        default: false
+      sign_in_days:
+        description: 'Bounded sign-in window in days (1-31)'
+        default: '7'
+      max_pages:
+        description: 'Sign-in page budget (1-1000)'
+        default: '20'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: private-maintenance-writer
+  cancel-in-progress: false
+jobs:
+  maintain:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Restore encrypted metadata snapshot
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory "$env:RUNNER_TEMP/maintenance" | Out-Null
+          ./scripts/Get-TokenForgeCiCheckpoint.ps1 -Maintenance -OutputPath "$env:RUNNER_TEMP/maintenance/prior.sealed"
+      - name: Sign in with Nora's software passkey
+        id: login
+        uses: nathanmcnulty/action-passkey-login@d443b0d18fe3a9cf162811bd67a67b9dec77a7e7
+        with:
+          confirm-application: 'true'
+          expected-client-id: '04b07795-8ddb-461a-bbee-02f9e1bf7b46'
+          credential-id: ${{ secrets.NORA_PASSKEY_CREDENTIAL_ID }}
+          user-handle: ${{ secrets.NORA_PASSKEY_USER_HANDLE }}
+          private-key: ${{ secrets.NORA_PASSKEY_PRIVATE_KEY }}
+          user-principal-name: ${{ secrets.NORA_PASSKEY_UPN }}
+      - name: Refresh private metadata without tenant changes
+        shell: pwsh
+        env:
+          TOKENFORGE_ESTS_COOKIE: ${{ steps.login.outputs.auth-cookie }}
+          TOKENFORGE_COOKIE_NAME: ${{ steps.login.outputs.cookie-name }}
+          TOKENFORGE_TENANT_FINGERPRINT: ${{ secrets.NORA_TENANT_FINGERPRINT }}
+          TOKENFORGE_PRINCIPAL_FINGERPRINT: ${{ secrets.NORA_PRINCIPAL_FINGERPRINT }}
+          TOKENFORGE_CHECKPOINT_KEY: ${{ secrets.TOKENFORGE_CHECKPOINT_KEY }}
+          AUTHENTICATED: ${{ steps.login.outputs.authenticated }}
+          SKIP_SIGNINS: ${{ inputs.skip_signins }}
+          SIGN_IN_DAYS: ${{ inputs.sign_in_days || '7' }}
+          MAX_PAGES: ${{ inputs.max_pages || '20' }}
+        run: |
+          if($env:AUTHENTICATED -ne 'true'){throw 'Verified authentication is required.'}
+          ./scripts/Invoke-TokenForgeCiMaintenance.ps1 -CheckpointPath "$env:RUNNER_TEMP/maintenance/maintenance.sealed" -CheckpointInputPath "$env:RUNNER_TEMP/maintenance/prior.sealed" -SkipSignIns:($env:SKIP_SIGNINS -eq 'true') -SignInDays ([int]$env:SIGN_IN_DAYS) -MaxPages ([int]$env:MAX_PAGES)
+      - name: Save encrypted metadata recovery snapshot
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: maintenance-snapshot-v1
+          path: ${{ runner.temp }}/maintenance/maintenance.sealed
+          overwrite: true
+          retention-days: 15
+          if-no-files-found: ignore

@@ -115,3 +115,5 @@ A native CLI and transactional evidence workspace are available; see [Native CLI
 Explicit Windows/Linux OS-backed profile storage is documented in [OS-backed vault](docs/os-backed-vault.md).
 
 Research categorization, individual flow attempts, and exhaustive bounded probing are documented in [Application research catalog](docs/research-catalog.md).
+
+[Weekly research CI](docs/weekly-ci.md) tracks frozen public-catalog coverage; [private maintenance](docs/private-maintenance.md) refreshes tenant metadata into encrypted recovery snapshots.

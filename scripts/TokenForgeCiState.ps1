@@ -2,8 +2,15 @@
 Set-StrictMode -Version Latest
 function Get-TfCiHash($Value) {
  $json=ConvertTo-Json -InputObject $Value -Depth 100 -Compress
- # Normalize PowerShell's automatic ISO-date conversion before hashing.
- $json=$json|ConvertFrom-Json -AsHashtable|ConvertTo-Json -Depth 100 -Compress
+ # Date parsing uses the host time zone. Convert parsed dates to UTC offsets
+ # before hashing so the frozen recipe verifies on every platform/time zone.
+ # DateTimeOffset emits the same +00:00 representation as existing UTC CI hashes.
+ $parsed=$json|ConvertFrom-Json -AsHashtable -NoEnumerate
+ $normalize={param($value)
+  if($value -is [Collections.IDictionary]){foreach($key in @($value.Keys)){if($value[$key] -is [datetime]){$value[$key]=[DateTimeOffset]$value[$key].ToUniversalTime()}else{& $normalize $value[$key]}}}
+  elseif($value -is [array]){for($i=0;$i -lt $value.Count;$i++){if($value[$i] -is [datetime]){$value[$i]=[DateTimeOffset]$value[$i].ToUniversalTime()}else{& $normalize $value[$i]}}}
+ }; if($parsed -is [datetime]){$parsed=[DateTimeOffset]$parsed.ToUniversalTime()}else{& $normalize $parsed}
+ $json=ConvertTo-Json -InputObject $parsed -Depth 100 -Compress
  [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($json))).ToLowerInvariant()
 }
 function Assert-TfCiKeys($Value,[string[]]$Keys) {
@@ -66,7 +73,7 @@ function Get-TfCiMembers($State,[int]$Index) {
 function Get-TfCiWork($State,[int]$Workers=4,[int]$MaxAttempts=3) {
  Assert-TfCiState $State
  if($Workers -lt 1 -or $Workers -gt 4 -or $MaxAttempts -lt 1 -or $MaxAttempts -gt 10){throw 'Invalid worker bounds.'}
- @($State.Batches|Where-Object {$_.Status -ne 'Complete' -and $_.Attempts -lt $MaxAttempts}|Sort-Object Attempts,Index|Select-Object -First $Workers|ForEach-Object Index)
+ @($State.Batches|Where-Object {$_.Status -ne 'Complete' -and $_.Attempts -lt $MaxAttempts}|Sort-Object {[int]$_.Attempts},{[int]$_.Index}|Select-Object -First $Workers|ForEach-Object Index)
 }
 function Merge-TfCiReceipt($State,$Receipt) {
  Assert-TfCiState $State

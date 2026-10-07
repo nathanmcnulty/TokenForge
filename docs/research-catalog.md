@@ -1,6 +1,6 @@
 # Application research catalog
 
-TokenForge tracks application IDs across public datasets, tenant inventory, sign-ins, registration attempts, and token probes. `applications.json` is the persistent metadata ledger. It records supported attributes, source, observation dates, and changes. This ledger is diagnostic: registration and token acquisition still require independently verified tenant metadata.
+TokenForge tracks application IDs across public datasets, tenant inventory, sign-ins, registration attempts, and token probes. `applications.json` is the portable metadata ledger; version 0.14 adds a [primary SQLite application catalog](sqlite-application-catalog.md) for private maintenance. It records supported attributes, source, observation dates, and changes. This ledger is diagnostic: registration and token acquisition still require independently verified tenant metadata.
 
 ## The research loop
 
@@ -64,7 +64,7 @@ Rerunning an exact completed plan makes no new token requests. Missing scope sum
 
 Flow evidence paths enforce private permissions and reject links. On Unix use a mode-0700 parent and mode-0600 files; Windows uses the existing private-path ACL checks. Local application metadata contains private correlation fingerprints and is unencrypted. Keep assessment directories outside Git and encrypted at rest as appropriate. Public-only catalog validation rejects all tenant, sign-in, registration, scope, and flow origins, including history. The anonymous flow export includes only public application/resource IDs, protocol, SPA flag, and observed scopes, without namespaces, plan IDs, callback hashes, or timestamps.
 
-JSON files have a 128 MiB limit and use locked atomic writes. Version 0.13 adds opt-in [SQLite flow checkpointing](sqlite-flow-evidence.md): individual transactional writes, current-plan resume reads, selected-account latest-slot reports, and bounded metadata updates. The application ledger and scope summaries still use JSON; split and archive those histories as needed. Native scope/registration SQLite import/export remains separate. The public scheduled workflow remains bounded first-success sampling and publishes only its existing anonymous scope schema; it does not register applications or collect private sign-ins.
+JSON files have a 128 MiB limit and use locked atomic writes. Version 0.13 adds opt-in [SQLite flow checkpointing](sqlite-flow-evidence.md): individual transactional writes, current-plan resume reads, selected-account latest-slot reports, and bounded metadata updates. The application ledger can now use transactional SQLite updates and current-only reads. Scope summaries still use JSON; split and archive those histories as needed. Native scope/registration SQLite import/export remains separate. The public scheduled workflow remains bounded first-success sampling and publishes only its existing anonymous scope schema; it does not register applications or collect private sign-ins.
 
 ## Validation on 2026-10-06
 

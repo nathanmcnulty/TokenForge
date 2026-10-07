@@ -74,7 +74,7 @@ function Update-TokenForgeDiscovery {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$Path,
-        [string]$MetadataPath,
+        [string]$MetadataPath,[string]$NativeExecutablePath,
         [uri]$ScopesUri = $script:CatalogUrl,
         [uri]$MicrosoftAppsUri = 'https://raw.githubusercontent.com/merill/microsoft-info/main/_info/MicrosoftApps.json',
         [uri]$ResourcesUri = 'https://raw.githubusercontent.com/f-bader/entrascopes.com/main/resources.json'
@@ -88,8 +88,8 @@ function Update-TokenForgeDiscovery {
         $apps = Invoke-RestMethod -Uri $MicrosoftAppsUri -TimeoutSec 30 -ErrorAction Stop
         $resources = Invoke-RestMethod -Uri $ResourcesUri -TimeoutSec 30 -ErrorAction Stop
         $discovery = Get-TokenForgeDiscovery -Catalog $catalog -MicrosoftApps $apps -Resources $resources -MicrosoftAppsSource $MicrosoftAppsUri.AbsoluteUri -ResourcesSource $ResourcesUri.AbsoluteUri
-        if(-not $MetadataPath){$MetadataPath=Join-Path (Split-Path ($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)) -Parent) 'applications.json'}
-        $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $discovery -Kind Discovery
+        if(-not $MetadataPath){$parent=Split-Path ($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)) -Parent;$MetadataPath=Join-Path $parent $(if(Test-Path (Join-Path $parent 'applications.sqlite')){'applications.sqlite'}else{'applications.json'})}
+        $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $discovery -Kind Discovery -NativeExecutablePath $NativeExecutablePath
         Save-TokenForgeDocument -Document $discovery -Path $Path
         $discovery
     } finally { Remove-Item -LiteralPath $catalogPath -Force -ErrorAction SilentlyContinue }

@@ -9,7 +9,7 @@ function Get-TokenForgeFlowEvidence {
     if(-not(Test-Path -LiteralPath $full)){return @{Format='TokenForgeFlowEvidence';SchemaVersion=1;UpdatedAt=[DateTimeOffset]::UtcNow.ToString('o');Plans=@{};Attempts=@()}}
     try{
         if($full.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){
-            $db=Invoke-TokenForgeNativeFlow $full export -NativeExecutablePath $NativeExecutablePath -PlanFingerprint $PlanFingerprint -Latest:($Latest -or [bool]$PlanFingerprint) -TenantFingerprint $TenantFingerprint -PrincipalFingerprint $PrincipalFingerprint
+            $db=Invoke-TokenForgeNativeEvidence $full export -NativeExecutablePath $NativeExecutablePath -PlanFingerprint $PlanFingerprint -Latest:($Latest -or [bool]$PlanFingerprint) -TenantFingerprint $TenantFingerprint -PrincipalFingerprint $PrincipalFingerprint
         }else{
         if((Get-Item -LiteralPath $full).Length -gt 134217728){throw 'Oversized flow evidence.'}
         $db=Get-Content -LiteralPath $full -Raw|ConvertFrom-Json -AsHashtable -Depth 12
@@ -52,5 +52,5 @@ function Import-TokenForgeFlowEvidence {
     param([Parameter(Mandatory)][string]$Path,[Parameter(Mandatory)][string]$InputPath,[string]$NativeExecutablePath)
     if(-not $Path.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){throw 'Choose a .sqlite destination.'}
     $db=Get-TokenForgeFlowEvidence $InputPath -NativeExecutablePath $NativeExecutablePath
-    Invoke-TokenForgeNativeFlow $Path import -Document $db -NativeExecutablePath $NativeExecutablePath
+    Invoke-TokenForgeNativeEvidence $Path import -Document $db -NativeExecutablePath $NativeExecutablePath
 }

@@ -82,5 +82,6 @@ if(args.Contains("--os-store"))
 Reject(()=>TokenForge.Core.V0110.PlatformVaultKey.Open("invalid",true));
 
 FlowEvidenceTests.Run(Check, Reject);
-Console.WriteLine($"{count} native checks passed, including flow evidence transactions and resume.");
+ApplicationCatalogTests.Run(Check,Reject);
+Console.WriteLine($"{count} native checks passed, including flow and application catalog transactions.");
 return 0;

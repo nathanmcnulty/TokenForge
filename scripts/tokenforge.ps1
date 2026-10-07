@@ -4,7 +4,7 @@ param(
  [Parameter(Position=0,Mandatory)][ValidateSet('profile','login','logout','status','doctor','token','scopes','graph','research')][string]$Command,
  [Parameter(Position=1)][ValidateSet('create','forget-key','show','get','explain','permissions','connect','disconnect','report','export-flows')][string]$Operation,
  [ValidatePattern('^[a-z][a-z0-9_-]{0,63}$')][string]$Profile='default',
- [string]$Root,[string]$Tenant,[string]$StatePath,[string]$ExportPath,[string]$FlowPath,[string]$NativeExecutablePath,[switch]$SummaryOnly,
+ [string]$Root,[string]$Tenant,[string]$StatePath,[string]$ExportPath,[string]$FlowPath,[string]$MetadataPath,[string]$NativeExecutablePath,[switch]$SummaryOnly,
  [ValidatePattern('^[a-f0-9]{64}$')][string]$TenantFingerprint,[ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,
  [ValidateSet('Memory','Passphrase','OperatingSystem')][string]$Storage='Memory',
  [ValidateSet('graph','arm')][string]$Resource='graph',[string[]]$Scope,
@@ -56,7 +56,8 @@ try{
    if(-not $FlowPath){$FlowPath=Join-Path $state $(if(Test-Path (Join-Path $state 'flows.sqlite')){'flows.sqlite'}else{'flows.json'})}
    switch($Operation){
     report {
-     $options=@{MetadataPath=(Join-Path $state applications.json);FlowPath=$FlowPath;NativeExecutablePath=$NativeExecutablePath;SummaryOnly=$SummaryOnly}
+     $metadata=if($MetadataPath){$MetadataPath}elseif(Test-Path (Join-Path $state applications.sqlite)){Join-Path $state applications.sqlite}else{Join-Path $state applications.json}
+     $options=@{MetadataPath=$metadata;FlowPath=$FlowPath;NativeExecutablePath=$NativeExecutablePath;SummaryOnly=$SummaryOnly}
      if($TenantFingerprint -or $PrincipalFingerprint){$options.TenantFingerprint=$TenantFingerprint;$options.PrincipalFingerprint=$PrincipalFingerprint}
      elseif($p -and $p.ExpectedPrincipalFingerprint){$options.TenantFingerprint=$p.ExpectedTenantFingerprint;$options.PrincipalFingerprint=$p.ExpectedPrincipalFingerprint}
      Get-TokenForgeResearchCoverage @options

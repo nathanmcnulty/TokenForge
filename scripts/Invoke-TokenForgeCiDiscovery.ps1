@@ -41,6 +41,7 @@ if($IsMacOS -and $tempRoot.StartsWith('/var/',[StringComparison]::Ordinal)){$tem
 $state=Join-Path $tempRoot ('TokenForge-ci-'+[guid]::NewGuid())
 $cookie=$null;$graph=$null;$weekly=$null;$checkpointWatch=[Diagnostics.Stopwatch]::StartNew();$timer=[Diagnostics.Stopwatch]::StartNew()
 if($WeeklyStatePath){. (Join-Path $PSScriptRoot 'TokenForgeCiState.ps1');$weekly=Get-Content -LiteralPath $WeeklyStatePath -Raw|ConvertFrom-Json -AsHashtable;Assert-TfCiState $weekly;if($ChunkIndex -lt 0){throw 'A frozen worker requires ChunkIndex.'};$selected=@(Get-TfCiMembers $weekly $ChunkIndex);$receipt=[ordered]@{SchemaVersion=1;PlanId=$weekly.PlanId;Index=$ChunkIndex;Attempt=($weekly.Batches[$ChunkIndex].Attempts+1);Status='Failed';Assessed=0;Successful=0;DurationSeconds=0;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')}}
+if($weekly -and $weekly.SchemaVersion -eq 2){$receipt.SchemaVersion=2;$receipt.AssessedPairs=0;$receipt.SuccessfulPairs=0}
 try {
  $null=New-Item -ItemType Directory -Path $state
  if(-not $IsWindows){[IO.File]::SetUnixFileMode($state,[IO.UnixFileMode]448)}
@@ -76,7 +77,11 @@ try {
   try{$saved=[Text.Encoding]::UTF8.GetString($bytes)|ConvertFrom-Json -AsHashtable;Assert-TfCiKeys $saved @('Scopes','Flows');$saved.Scopes|ConvertTo-Json -Depth 100|Set-Content $databasePath;$saved.Flows|ConvertTo-Json -Depth 100|Set-Content $flowPath}
   finally{[Security.Cryptography.CryptographicOperations]::ZeroMemory($bytes)}
   if(-not $IsWindows){[IO.File]::SetUnixFileMode($databasePath,[IO.UnixFileMode]384);[IO.File]::SetUnixFileMode($flowPath,[IO.UnixFileMode]384)}
-  $null=Get-TokenForgeScopeDatabase $databasePath;$null=Get-TokenForgeFlowEvidence $flowPath
+  $savedScopes=Get-TokenForgeScopeDatabase $databasePath;$savedFlows=Get-TokenForgeFlowEvidence $flowPath
+  $resources=@(Get-TfCiResources $weekly)
+  foreach($row in $savedScopes.Observations){if($row.ClientId -notin $selected -or $row.ResourceId -cnotin $resources -or $row.TenantFingerprint -cne $env:TOKENFORGE_TENANT_FINGERPRINT -or $row.PrincipalFingerprint -cne $env:TOKENFORGE_PRINCIPAL_FINGERPRINT){throw 'Foreign scope checkpoint context.'}}
+  foreach($plan in $savedFlows.Plans.Values){if($plan.ClientId -notin $selected -or $plan.ResourceId -cnotin $resources -or $plan.TenantFingerprint -cne $env:TOKENFORGE_TENANT_FINGERPRINT -or $plan.PrincipalFingerprint -cne $env:TOKENFORGE_PRINCIPAL_FINGERPRINT -or $plan.CohortFingerprint -cne $weekly.PlanId){throw 'Foreign flow checkpoint context.'}}
+
  }
  function Save-WorkerCheckpoint {
   if(-not $CheckpointPath){return}
@@ -88,7 +93,8 @@ try {
   $checkpointWatch.Restart()
  }
  $options=@{Inventory=$inventory;EstsAuth=$cookie;CookieName=$env:TOKENFORGE_COOKIE_NAME;DatabasePath=$databasePath;ClientId=$selected;Tenant='organizations';MaxApplications=$selected.Count;MaxRedirects=2}
- if($weekly){$options.ResourceId=[guid]'00000003-0000-0000-c000-000000000000';$options.FlowDatabasePath=$flowPath;$options.CohortFingerprint=$weekly.PlanId;$options.MaxRedirects=$weekly.Recipe.MaxRedirects;$options.ExploreAllFlows=$weekly.Recipe.Mode -eq 'Deep';$options.StopOnTransientFailure=$true;$options.CheckpointAction={if($checkpointWatch.Elapsed.TotalSeconds -ge $CheckpointIntervalSeconds){Save-WorkerCheckpoint};if($timer.Elapsed.TotalSeconds -ge 2400){Save-WorkerCheckpoint;throw 'Worker time budget reached; resume encrypted checkpoints.'}}}
+ $scopeChanges=@{}
+ if($weekly){$options.ScopeChanges=$scopeChanges;$options.ResourceId=[guid[]]@(Get-TfCiResources $weekly);$options.FlowDatabasePath=$flowPath;$options.CohortFingerprint=$weekly.PlanId;$options.MaxRedirects=$weekly.Recipe.MaxRedirects;$options.ExploreAllFlows=$weekly.Recipe.Mode -eq 'Deep';$options.StopOnTransientFailure=$true;$options.CheckpointAction={if($checkpointWatch.Elapsed.TotalSeconds -ge $CheckpointIntervalSeconds){Save-WorkerCheckpoint};if($timer.Elapsed.TotalSeconds -ge 2400){Save-WorkerCheckpoint;throw 'Worker time budget reached; resume encrypted checkpoints.'}}}
  else{$options.Plan=Get-TokenForgeProbePlan -Inventory $inventory -ClientId $selected -GraphOnly}
  $outcomes=@{}
  Invoke-TokenForgeScopeProbe @options|ForEach-Object {
@@ -98,9 +104,18 @@ try {
  }
  if($weekly){
   $current=Get-TokenForgeScopeDatabase $databasePath -Latest -TenantFingerprint $env:TOKENFORGE_TENANT_FINGERPRINT -PrincipalFingerprint $env:TOKENFORGE_PRINCIPAL_FINGERPRINT
-  $rows=@($current.Observations|Where-Object {$_.ClientId -in $selected -and $_.ResourceId -eq '00000003-0000-0000-c000-000000000000'})
-  if($rows.Count -ne $selected.Count -or @($rows|Where-Object Outcome -eq ContextMismatch).Count){throw 'Frozen assessment coverage is incomplete.'}
-  $receipt.Status='Complete';$receipt.Assessed=$rows.Count;$receipt.Successful=@($rows|Where-Object Outcome -eq Succeeded).Count
+  # ScopeChanges contains only the active per-pair plan summaries, including
+  # completed resumes. Old plans in the checkpoint cannot fill missing pairs.
+  $resources=@(Get-TfCiResources $weekly);$rows=@($scopeChanges.Values);$pairs=@{}
+  foreach($row in $rows){
+   if($row.ClientId -notin $selected -or $row.ResourceId -cnotin $resources -or $row.TenantFingerprint -cne $env:TOKENFORGE_TENANT_FINGERPRINT -or $row.PrincipalFingerprint -cne $env:TOKENFORGE_PRINCIPAL_FINGERPRINT -or $row.Outcome -eq 'ContextMismatch'){throw 'Foreign active assessment pair.'}
+   $pair=$row.ClientId+'/'+$row.ResourceId;if($pairs.ContainsKey($pair)){throw 'Duplicate active assessment pair.'};$pairs[$pair]=$true
+  }
+  if($pairs.Count -ne $selected.Count*$resources.Count){throw 'Frozen assessment pair coverage is incomplete.'}
+  $success=@($rows|Where-Object Outcome -eq Succeeded)
+  $receipt.Status='Complete';$receipt.Assessed=$selected.Count;$receipt.Successful=@($success|ForEach-Object ClientId|Sort-Object -Unique).Count
+  if($weekly.SchemaVersion -eq 2){$receipt.AssessedPairs=$rows.Count;$receipt.SuccessfulPairs=$success.Count}
+
  }
  $exportDirectory=Join-Path $DataPath 'scopes'
  $null=New-Item -ItemType Directory -Path $exportDirectory -Force
@@ -119,7 +134,7 @@ try {
  if(-not $weekly){$null=Get-TokenForgeApplicationMetadata $metadata -PublicOnly}
  [pscustomobject]@{Applications=$discovery.Applications.Count;EligibleApplications=$ids.Count;ChunkIndex=$index;ChunkCount=$chunkCount;Selected=$selected.Count;Outcomes=$outcomes}
 } catch {
- if($weekly){$receipt.Status='Failed';$receipt.Assessed=0;$receipt.Successful=0}
+ if($weekly){$receipt.Status='Failed';$receipt.Assessed=0;$receipt.Successful=0;if($weekly.SchemaVersion -eq 2){$receipt.AssessedPairs=0;$receipt.SuccessfulPairs=0}}
  # Do not allow external action/identity response bodies into the runner log.
  throw 'CI discovery failed. No private state is published; inspect bounded action status and rerun.'
  } finally {
@@ -127,7 +142,7 @@ try {
  if($weekly){
   $receipt.DurationSeconds=[Math]::Round($timer.Elapsed.TotalSeconds,3);$receipt.ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')
   if($CheckpointPath -and (Test-Path (Join-Path $state 'flows.json'))){
-   try{Save-WorkerCheckpoint}catch{$receipt.Status='Failed';$receipt.Assessed=0;$receipt.Successful=0}
+   try{Save-WorkerCheckpoint}catch{$receipt.Status='Failed';$receipt.Assessed=0;$receipt.Successful=0;if($weekly.SchemaVersion -eq 2){$receipt.AssessedPairs=0;$receipt.SuccessfulPairs=0}}
   }
   if($ReceiptPath){$receipt|ConvertTo-Json -Depth 20|Set-Content -LiteralPath $ReceiptPath}
  }

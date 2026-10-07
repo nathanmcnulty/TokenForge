@@ -55,6 +55,53 @@ Describe 'Actual weekly worker with synthetic identity transport' {
   (Get-Content "$root/receipt.json" -Raw|ConvertFrom-Json).Successful|Should -Be 0
   @((Get-Content "$root/public/scopes/chunk-0000.json" -Raw|ConvertFrom-Json).Observations).Count|Should -Be 0
  }
+ It 'assesses both resources and resumes their completed cells without issuance' {
+  $state=New-TfCiState $discovery -Mode Deep -ResourceId @('00000003-0000-0000-c000-000000000000','797f4846-ba00-4fd7-ba43-dac1f8f63013')
+  $state|ConvertTo-Json -Depth 100|Set-Content "$root/state.json"
+  $null=& $runner @options
+  $receipt=Get-Content "$root/receipt.json" -Raw|ConvertFrom-Json
+  $receipt.SchemaVersion|Should -Be 2
+  $receipt.Assessed|Should -Be 2;$receipt.Successful|Should -Be 2
+  $receipt.AssessedPairs|Should -Be 4;$receipt.SuccessfulPairs|Should -Be 4
+  $context="$('a'*64)/$('b'*64)/$($state.PlanId)/0"
+  $plain=Unprotect-TfCiCheckpoint ([IO.File]::ReadAllBytes("$root/checkpoint.sealed")) $env:TOKENFORGE_CHECKPOINT_KEY $context
+  try{$saved=[Text.Encoding]::UTF8.GetString($plain)|ConvertFrom-Json;@($saved.Scopes.Observations).Count|Should -Be 4}finally{[Security.Cryptography.CryptographicOperations]::ZeroMemory($plain)}
+  $env:TOKENFORGE_ESTS_COOKIE='synthetic-cookie'
+  $null=& $runner @options -CheckpointInputPath "$root/checkpoint.sealed"
+  Should -Invoke Get-TokenForgeToken -Times 2
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 12
+ }
+ It 'records ARM success and Graph failure as one successful app per client' {
+  $state=New-TfCiState $discovery -Mode Deep -ResourceId @('00000003-0000-0000-c000-000000000000','797f4846-ba00-4fd7-ba43-dac1f8f63013')
+  $state|ConvertTo-Json -Depth 100|Set-Content "$root/state.json"
+  Mock Get-TokenForgeToken -ModuleName TokenForge {throw 'Token request failed (AADSTS65001). Details suppressed.'} -ParameterFilter {$Request.ResourceId -eq '00000003-0000-0000-c000-000000000000'}
+  $null=& $runner @options
+  $receipt=Get-Content "$root/receipt.json" -Raw|ConvertFrom-Json
+  $receipt.Status|Should -Be Complete
+  $receipt.Assessed|Should -Be 2;$receipt.Successful|Should -Be 2
+  $receipt.AssessedPairs|Should -Be 4;$receipt.SuccessfulPairs|Should -Be 2
+ }
+ It 'cannot complete a missing resource pair using stale summaries' {
+  $state=New-TfCiState $discovery -Mode Deep -ResourceId @('00000003-0000-0000-c000-000000000000','797f4846-ba00-4fd7-ba43-dac1f8f63013')
+  $state|ConvertTo-Json -Depth 100|Set-Content "$root/state.json"
+  $null=& $runner @options
+  Mock Invoke-TokenForgeScopeProbe {}
+  $env:TOKENFORGE_ESTS_COOKIE='synthetic-cookie'
+  {& $runner @options -CheckpointInputPath "$root/checkpoint.sealed"}|Should -Throw '*No private state*'
+  (Get-Content "$root/receipt.json" -Raw|ConvertFrom-Json).Status|Should -Be Failed
+ }
+ It 'rejects an authenticated checkpoint containing an unplanned resource' {
+  $null=& $runner @options
+  $context="$('a'*64)/$('b'*64)/$($state.PlanId)/0"
+  $plain=Unprotect-TfCiCheckpoint ([IO.File]::ReadAllBytes("$root/checkpoint.sealed")) $env:TOKENFORGE_CHECKPOINT_KEY $context
+  try{$saved=[Text.Encoding]::UTF8.GetString($plain)|ConvertFrom-Json -AsHashtable}finally{[Security.Cryptography.CryptographicOperations]::ZeroMemory($plain)}
+  $saved.Scopes.Observations[0].ResourceId='797f4846-ba00-4fd7-ba43-dac1f8f63013'
+  $bytes=[Text.Encoding]::UTF8.GetBytes(($saved|ConvertTo-Json -Depth 100 -Compress))
+  try{[IO.File]::WriteAllBytes("$root/checkpoint.sealed",(Protect-TfCiCheckpoint $bytes $env:TOKENFORGE_CHECKPOINT_KEY $context))}finally{[Security.Cryptography.CryptographicOperations]::ZeroMemory($bytes)}
+  $env:TOKENFORGE_ESTS_COOKIE='synthetic-cookie'
+  {& $runner @options -CheckpointInputPath "$root/checkpoint.sealed"}|Should -Throw '*No private state*'
+  (Get-Content "$root/receipt.json" -Raw|ConvertFrom-Json).Status|Should -Be Failed
+ }
  It 'clears credentials and plaintext state even when receipt writing fails' {
   $before=@(Get-ChildItem ([IO.Path]::GetTempPath()) -Directory -Filter TokenForge-ci-*|ForEach-Object FullName)
   $options.ReceiptPath="$root/absent/receipt.json"

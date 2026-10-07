@@ -37,25 +37,37 @@ function Assert-TfCiDiscovery($Discovery) {
   foreach($grant in $app.Grants){Assert-TfCiKeys $grant @('ResourceId','Scopes');$resource=[guid]::Empty;if(-not [guid]::TryParse($grant.ResourceId,[ref]$resource) -or $grant.Scopes -isnot [array] -or @($grant.Scopes|Where-Object {$_ -isnot [string] -or $_ -notmatch '^[A-Za-z0-9_.-]{1,256}$'}).Count){throw 'Invalid public scope hints.'}}
  }
 }
-function New-TfCiState($Discovery,[int]$ChunkSize=100,[string]$Mode='Shallow',[DateTimeOffset]$Now=[DateTimeOffset]::UtcNow,[string[]]$AppId=@()) {
+function New-TfCiState($Discovery,[int]$ChunkSize=100,[string]$Mode='Shallow',[DateTimeOffset]$Now=[DateTimeOffset]::UtcNow,[string[]]$AppId=@(),[ValidateSet('00000003-0000-0000-c000-000000000000','797f4846-ba00-4fd7-ba43-dac1f8f63013')][string[]]$ResourceId=@()) {
  Assert-TfCiDiscovery $Discovery
  if($ChunkSize -lt 1 -or $ChunkSize -gt 200 -or $Mode -notin @('Shallow','Deep')){throw 'Invalid CI recipe bounds.'}
  $ids=@($Discovery.Applications|ForEach-Object AppId|Sort-Object -Unique)
  if($AppId.Count -and $Mode -ne 'Deep'){throw 'Shallow cohorts require all published IDs.'}
  if($AppId.Count){if(@($AppId|Where-Object {$_ -notin $ids}).Count){throw 'CI selection contains unpublished IDs.'};$ids=@($AppId|Sort-Object -Unique)}
  if(-not $ids.Count){throw 'Empty discovery cannot define a weekly cohort.'}
- $recipe=[ordered]@{SchemaVersion=1;Week=Get-TfCiWeek $Now;CreatedAt=$Now.ToUniversalTime().ToString('o');Mode=$Mode;ChunkSize=$ChunkSize;MaxRedirects=$(if($Mode -eq 'Deep'){4}else{2});AppIds=$ids;Discovery=$Discovery}
+ $version=if($ResourceId.Count){2}else{1}
+ if($version -eq 2 -and $Mode -ne 'Deep'){throw 'Explicit CI resources are available only for deep recipes.'}
+ $recipe=[ordered]@{SchemaVersion=$version;Week=Get-TfCiWeek $Now;CreatedAt=$Now.ToUniversalTime().ToString('o');Mode=$Mode;ChunkSize=$ChunkSize;MaxRedirects=$(if($Mode -eq 'Deep'){4}else{2});AppIds=$ids;Discovery=$Discovery}
+ if($version -eq 2){$recipe.ResourceIds=@($ResourceId|ForEach-Object ToLowerInvariant|Sort-Object -Unique)}
  $batches=@(for($index=0;$index -lt [Math]::Ceiling($ids.Count/$ChunkSize);$index++){
-  [ordered]@{Index=$index;Status='Pending';Attempts=0;Assessed=0;Successful=0;DurationSeconds=0;ObservedAt=$null}
+  $batch=[ordered]@{Index=$index;Status='Pending';Attempts=0;Assessed=0;Successful=0;DurationSeconds=0;ObservedAt=$null}
+  if($version -eq 2){$batch.AssessedPairs=0;$batch.SuccessfulPairs=0}
+  $batch
  })
- [ordered]@{SchemaVersion=1;PlanId=Get-TfCiHash $recipe;Recipe=$recipe;Batches=$batches}
+ [ordered]@{SchemaVersion=$version;PlanId=Get-TfCiHash $recipe;Recipe=$recipe;Batches=$batches}
+}
+# One compatibility boundary shared by planning, workers, publication and reports.
+function Get-TfCiResources($State) {
+ if($State.SchemaVersion -eq 2){@($State.Recipe.ResourceIds)}else{'00000003-0000-0000-c000-000000000000'}
 }
 function Assert-TfCiState($State) {
  $fields=@('SchemaVersion','PlanId','Recipe','Batches');if($State -is [Collections.IDictionary] -and $State.Contains('DeepSelectionHistory')){$fields+='DeepSelectionHistory'}
  Assert-TfCiKeys $State $fields
- Assert-TfCiKeys $State.Recipe @('SchemaVersion','Week','CreatedAt','Mode','ChunkSize','MaxRedirects','AppIds','Discovery')
+ $recipeFields=@('SchemaVersion','Week','CreatedAt','Mode','ChunkSize','MaxRedirects','AppIds','Discovery');if($State.SchemaVersion -eq 2){$recipeFields+='ResourceIds'}
+ Assert-TfCiKeys $State.Recipe $recipeFields
  $recipe=$State.Recipe;Assert-TfCiDiscovery $recipe.Discovery
- if($State.SchemaVersion -ne 1 -or $recipe.SchemaVersion -ne 1 -or $State.PlanId -cne (Get-TfCiHash $recipe) -or $recipe.Week -notmatch '^\d{4}-W\d{2}$' -or $recipe.Mode -notin @('Shallow','Deep') -or $recipe.ChunkSize -lt 1 -or $recipe.ChunkSize -gt 200 -or $recipe.MaxRedirects -ne $(if($recipe.Mode -eq 'Deep'){4}else{2})){throw 'Invalid frozen CI recipe.'}
+ if($State.SchemaVersion -notin @(1,2) -or $recipe.SchemaVersion -ne $State.SchemaVersion -or $State.PlanId -cne (Get-TfCiHash $recipe) -or $recipe.Week -notmatch '^\d{4}-W\d{2}$' -or $recipe.Mode -notin @('Shallow','Deep') -or $recipe.ChunkSize -lt 1 -or $recipe.ChunkSize -gt 200 -or $recipe.MaxRedirects -ne $(if($recipe.Mode -eq 'Deep'){4}else{2})){throw 'Invalid frozen CI recipe.'}
+ $resources=@(Get-TfCiResources $State)
+ if($State.SchemaVersion -eq 2 -and ($recipe.Mode -cne 'Deep' -or $recipe.ResourceIds -isnot [array] -or $resources.Count -lt 1 -or $resources.Count -gt 2 -or @($resources|Where-Object {$_ -isnot [string] -or $_ -cnotin @('00000003-0000-0000-c000-000000000000','797f4846-ba00-4fd7-ba43-dac1f8f63013')}).Count -or ($resources -join '/') -cne (@($resources|Sort-Object -Unique) -join '/'))){throw 'Invalid frozen resource membership.'}
  $published=@($recipe.Discovery.Applications|ForEach-Object AppId)
  if($recipe.AppIds -isnot [array] -or -not $recipe.AppIds.Count -or @($recipe.AppIds|Sort-Object -Unique).Count -ne $recipe.AppIds.Count -or @($recipe.AppIds|Where-Object {$_ -notin $published}).Count -or ($recipe.AppIds -join '/') -cne (@($recipe.AppIds|Sort-Object) -join '/')){throw 'Invalid frozen membership.'}
  if($recipe.Mode -eq 'Shallow' -and $recipe.AppIds.Count -ne $published.Count){throw 'Incomplete public shallow membership.'}
@@ -73,8 +85,13 @@ function Assert-TfCiState($State) {
  if($State.Batches -isnot [array] -or $State.Batches.Count -ne [Math]::Ceiling($recipe.AppIds.Count/$recipe.ChunkSize)){throw 'Invalid batch count.'}
  $index=0
  foreach($batch in $State.Batches){
-  Assert-TfCiKeys $batch @('Index','Status','Attempts','Assessed','Successful','DurationSeconds','ObservedAt')
+  $batchFields=@('Index','Status','Attempts','Assessed','Successful','DurationSeconds','ObservedAt');if($State.SchemaVersion -eq 2){$batchFields+=@('AssessedPairs','SuccessfulPairs')}
+  Assert-TfCiKeys $batch $batchFields
   $count=@(Get-TfCiMembers $State $index).Count
+  if($State.SchemaVersion -eq 2){
+   foreach($field in @('Assessed','Successful','AssessedPairs','SuccessfulPairs')){if($batch[$field] -isnot [int] -and $batch[$field] -isnot [long]){throw 'Invalid resource checkpoint counts.'}}
+   if($batch.AssessedPairs -ne $batch.Assessed*$resources.Count -or $batch.SuccessfulPairs -lt $batch.Successful -or $batch.SuccessfulPairs -gt $batch.Successful*$resources.Count -or $batch.SuccessfulPairs -gt $batch.AssessedPairs){throw 'Invalid resource checkpoint coverage.'}
+  }
   if($batch.Index -ne $index -or $batch.Status -notin @('Pending','Failed','Complete') -or $batch.Attempts -lt 0 -or $batch.Assessed -lt 0 -or $batch.Assessed -gt $count -or $batch.Successful -lt 0 -or $batch.Successful -gt $batch.Assessed -or $batch.DurationSeconds -lt 0 -or ($batch.Status -eq 'Complete' -and $batch.Assessed -ne $count)){throw 'Invalid CI checkpoint.'};$index++
  }
 }
@@ -89,19 +106,28 @@ function Get-TfCiWork($State,[int]$Workers=4,[int]$MaxAttempts=3) {
 }
 function Merge-TfCiReceipt($State,$Receipt) {
  Assert-TfCiState $State
- Assert-TfCiKeys $Receipt @('SchemaVersion','PlanId','Index','Attempt','Status','Assessed','Successful','DurationSeconds','ObservedAt')
+ $fields=@('SchemaVersion','PlanId','Index','Attempt','Status','Assessed','Successful','DurationSeconds','ObservedAt');if($State.SchemaVersion -eq 2){$fields+=@('AssessedPairs','SuccessfulPairs')}
+ Assert-TfCiKeys $Receipt $fields
  $index=$Receipt.Index;$ids=@(Get-TfCiMembers $State $index)
  $batch=$State.Batches[$index]
- if($Receipt.SchemaVersion -ne 1 -or $Receipt.PlanId -cne $State.PlanId -or $Receipt.Attempt -ne ($batch.Attempts+1) -or $Receipt.Status -notin @('Failed','Complete') -or $Receipt.Assessed -lt 0 -or $Receipt.Assessed -gt $ids.Count -or $Receipt.Successful -lt 0 -or $Receipt.Successful -gt $Receipt.Assessed -or $Receipt.DurationSeconds -lt 0 -or $Receipt.DurationSeconds -gt 3600 -or ($Receipt.Status -eq 'Complete' -and $Receipt.Assessed -ne $ids.Count) -or $batch.Status -eq 'Complete'){throw 'Mismatched or invalid batch receipt.'}
+ if($Receipt.SchemaVersion -ne $State.SchemaVersion -or $Receipt.PlanId -cne $State.PlanId -or $Receipt.Attempt -ne ($batch.Attempts+1) -or $Receipt.Status -notin @('Failed','Complete') -or $Receipt.Assessed -lt 0 -or $Receipt.Assessed -gt $ids.Count -or $Receipt.Successful -lt 0 -or $Receipt.Successful -gt $Receipt.Assessed -or $Receipt.DurationSeconds -lt 0 -or $Receipt.DurationSeconds -gt 3600 -or ($Receipt.Status -eq 'Complete' -and $Receipt.Assessed -ne $ids.Count) -or $batch.Status -eq 'Complete'){throw 'Mismatched or invalid batch receipt.'}
+ if($State.SchemaVersion -eq 2){
+  $resources=@(Get-TfCiResources $State)
+  foreach($field in @('Assessed','Successful','AssessedPairs','SuccessfulPairs')){if($Receipt[$field] -isnot [int] -and $Receipt[$field] -isnot [long]){throw 'Invalid resource receipt counts.'}}
+  if($Receipt.AssessedPairs -ne $Receipt.Assessed*$resources.Count -or $Receipt.SuccessfulPairs -lt $Receipt.Successful -or $Receipt.SuccessfulPairs -gt $Receipt.Successful*$resources.Count -or $Receipt.SuccessfulPairs -gt $Receipt.AssessedPairs){throw 'Invalid resource receipt coverage.'}
+ }
  $date=[DateTimeOffset]::Parse($Receipt.ObservedAt)
  if($date -lt [DateTimeOffset]::Parse($State.Recipe.CreatedAt) -or $date -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Invalid receipt observation date.'}
  $State.Batches[$index]=[ordered]@{Index=$index;Status=$Receipt.Status;Attempts=$Receipt.Attempt;Assessed=$Receipt.Assessed;Successful=$Receipt.Successful;DurationSeconds=$Receipt.DurationSeconds;ObservedAt=$date.ToUniversalTime().ToString('o')}
+ if($State.SchemaVersion -eq 2){$State.Batches[$index].AssessedPairs=$Receipt.AssessedPairs;$State.Batches[$index].SuccessfulPairs=$Receipt.SuccessfulPairs}
 }
 function Get-TfCiReport($State,[DateTimeOffset]$Now=[DateTimeOffset]::UtcNow) {
  Assert-TfCiState $State
  $complete=@($State.Batches|Where-Object Status -eq Complete);$durations=@($complete|ForEach-Object DurationSeconds|Sort-Object)
  $pending=@($State.Batches|Where-Object Status -ne Complete)
- $assessed=0;$success=0;foreach($batch in $complete){$assessed+=$batch.Assessed;$success+=$batch.Successful}
+ $assessed=0;$success=0;$assessedPairs=0;$successfulPairs=0
+ foreach($batch in $complete){$assessed+=$batch.Assessed;$success+=$batch.Successful;if($State.SchemaVersion -eq 2){$assessedPairs+=$batch.AssessedPairs;$successfulPairs+=$batch.SuccessfulPairs}else{$assessedPairs+=$batch.Assessed;$successfulPairs+=$batch.Successful}}
+ $resources=@(Get-TfCiResources $State)
  $oldest=if($complete.Count){@($complete|Sort-Object {([DateTimeOffset]$_.ObservedAt)})[0].ObservedAt}else{$null}
  $latest=if($complete.Count){@($complete|Sort-Object {([DateTimeOffset]$_.ObservedAt)})[-1].ObservedAt}else{$null}
  $median=if($durations.Count){$durations[[int][Math]::Floor(($durations.Count-1)/2)]}else{$null}
@@ -111,7 +137,11 @@ function Get-TfCiReport($State,[DateTimeOffset]$Now=[DateTimeOffset]::UtcNow) {
  $historyCount=if($hasHistory){$State.DeepSelectionHistory.Count}else{$null}
  $neverSelected=if($hasHistory){@($callbacks|Where-Object {-not $State.DeepSelectionHistory.Contains($_.AppId)}).Count}else{$null}
  [ordered]@{
-  SchemaVersion=2
+  SchemaVersion=3
+  ResourceIds=$resources
+  SelectedPairs=$State.Recipe.AppIds.Count*$resources.Count
+  AssessedPairs=$assessedPairs
+  SuccessfulPairs=$successfulPairs
   SourceCatalogApplications=$State.Recipe.Discovery.Applications.Count
   SelectedApplications=$State.Recipe.AppIds.Count
   PublishedCallbackCandidates=$callbacks.Count
@@ -177,9 +207,10 @@ function Assert-TfCiPublicData([string]$Path){
 }
 function Assert-TfCiReport($Report){
  $fields=@('SchemaVersion','Week','Mode','GeneratedAt','PublishedApplications','AssessedApplications','SuccessfulApplications','TotalBatches','CompletedBatches','PendingBatches','ExhaustedBatches','Complete','OldestCompletedAssessmentAt','LatestCompletedAssessmentAt','OldestPendingHours','MedianBatchSeconds','P95BatchSeconds','EstimatedRemainingRunnerSeconds','Evidence','SuccessfulScopeFreshness')
- if($Report -is [Collections.IDictionary] -and $Report.SchemaVersion -eq 2){$fields+=@('SourceCatalogApplications','SelectedApplications','PublishedCallbackCandidates','DeepSelectionHistoryApplications','NeverDeepSelectedCallbackCandidates')}
+ if($Report -is [Collections.IDictionary] -and $Report.SchemaVersion -in @(2,3)){$fields+=@('SourceCatalogApplications','SelectedApplications','PublishedCallbackCandidates','DeepSelectionHistoryApplications','NeverDeepSelectedCallbackCandidates')}
+ if($Report -is [Collections.IDictionary] -and $Report.SchemaVersion -eq 3){$fields+=@('ResourceIds','SelectedPairs','AssessedPairs','SuccessfulPairs')}
  Assert-TfCiKeys $Report $fields
- if($Report.SchemaVersion -notin @(1,2) -or $Report.Week -notmatch '^\d{4}-W\d{2}$' -or $Report.Mode -notin @('Shallow','Deep') -or $Report.GeneratedAt -isnot [string] -and $Report.GeneratedAt -isnot [datetime] -or $Report.Complete -isnot [bool] -or $Report.Evidence -cne 'AssessedForOneAccountNotUniversalSupport' -or $Report.SuccessfulScopeFreshness -cne 'InspectAnonymousObservationDates'){throw 'Invalid public coverage report.'}
+ if($Report.SchemaVersion -notin @(1,2,3) -or $Report.Week -notmatch '^\d{4}-W\d{2}$' -or $Report.Mode -notin @('Shallow','Deep') -or $Report.GeneratedAt -isnot [string] -and $Report.GeneratedAt -isnot [datetime] -or $Report.Complete -isnot [bool] -or $Report.Evidence -cne 'AssessedForOneAccountNotUniversalSupport' -or $Report.SuccessfulScopeFreshness -cne 'InspectAnonymousObservationDates'){throw 'Invalid public coverage report.'}
  $null=[DateTimeOffset]::Parse([string]$Report.GeneratedAt)
  foreach($field in @('OldestCompletedAssessmentAt','LatestCompletedAssessmentAt')){if($null -ne $Report[$field]){if($Report[$field] -isnot [string] -and $Report[$field] -isnot [datetime]){throw 'Invalid assessment date.'};$null=[DateTimeOffset]::Parse([string]$Report[$field])}}
  foreach($field in @('OldestPendingHours','PublishedApplications','AssessedApplications','SuccessfulApplications','TotalBatches','CompletedBatches','PendingBatches','ExhaustedBatches','MedianBatchSeconds','P95BatchSeconds','EstimatedRemainingRunnerSeconds')){
@@ -188,7 +219,7 @@ function Assert-TfCiReport($Report){
   if($value -isnot [int] -and $value -isnot [long] -and $value -isnot [double] -and $value -isnot [decimal] -or $value -lt 0 -or -not [double]::IsFinite([double]$value)){throw 'Invalid public coverage numbers.'}
  }
  if($Report.SuccessfulApplications -gt $Report.AssessedApplications -or $Report.AssessedApplications -gt $Report.PublishedApplications){throw 'Invalid coverage counts.'}
- if($Report.SchemaVersion -eq 2){
+ if($Report.SchemaVersion -in @(2,3)){
   foreach($field in @('PublishedApplications','AssessedApplications','SuccessfulApplications','TotalBatches','CompletedBatches','PendingBatches','ExhaustedBatches')){if($Report[$field] -isnot [int] -and $Report[$field] -isnot [long]){throw 'Invalid integer coverage counts.'}}
   if($Report.CompletedBatches+$Report.PendingBatches -ne $Report.TotalBatches -or $Report.ExhaustedBatches -gt $Report.PendingBatches -or $Report.Complete -ne ($Report.PendingBatches -eq 0)){throw 'Invalid batch coverage.'}
   foreach($field in @('SourceCatalogApplications','SelectedApplications','PublishedCallbackCandidates','DeepSelectionHistoryApplications','NeverDeepSelectedCallbackCandidates')){
@@ -200,6 +231,13 @@ function Assert-TfCiReport($Report){
   $history=$Report.DeepSelectionHistoryApplications;$never=$Report.NeverDeepSelectedCallbackCandidates
   if(($null -eq $history) -ne ($null -eq $never) -or ($Report.Mode -eq 'Shallow' -and $null -ne $history)){throw 'Invalid selection history coverage.'}
   if($null -ne $history -and ($history -lt $Report.SelectedApplications -or $history -gt $Report.SourceCatalogApplications -or $never -gt $Report.PublishedCallbackCandidates -or $never -gt ($Report.SourceCatalogApplications-$history) -or $never -lt [Math]::Max(0,$Report.PublishedCallbackCandidates-$history))){throw 'Invalid deep selection coverage.'}
+ }
+
+ if($Report.SchemaVersion -eq 3){
+  if($Report.ResourceIds -isnot [array] -or $Report.ResourceIds.Count -lt 1 -or $Report.ResourceIds.Count -gt 2 -or @($Report.ResourceIds|Where-Object {$_ -isnot [string] -or $_ -cnotin @('00000003-0000-0000-c000-000000000000','797f4846-ba00-4fd7-ba43-dac1f8f63013')}).Count -or ($Report.ResourceIds -join '/') -cne (@($Report.ResourceIds|Sort-Object -Unique) -join '/') -or ($Report.Mode -eq 'Shallow' -and ($Report.ResourceIds -join '/') -cne '00000003-0000-0000-c000-000000000000')){throw 'Invalid report resource membership.'}
+  foreach($field in @('SelectedPairs','AssessedPairs','SuccessfulPairs')){if($Report[$field] -isnot [int] -and $Report[$field] -isnot [long] -or $Report[$field] -lt 0 -or $Report[$field] -gt 200000){throw 'Invalid report pair counts.'}}
+  $count=$Report.ResourceIds.Count
+  if($Report.SelectedPairs -ne $Report.SelectedApplications*$count -or $Report.AssessedPairs -ne $Report.AssessedApplications*$count -or $Report.SuccessfulPairs -lt $Report.SuccessfulApplications -or $Report.SuccessfulPairs -gt $Report.SuccessfulApplications*$count -or $Report.SuccessfulPairs -gt $Report.AssessedPairs){throw 'Invalid report pair coverage.'}
  }
 
 }

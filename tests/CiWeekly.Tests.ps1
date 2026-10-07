@@ -74,7 +74,7 @@ Describe 'Explicit weekly coverage labels' {
   $state=New-TfCiState $discovery -Mode Deep -AppId @($discovery.Applications[0].AppId)
   $state.DeepSelectionHistory=@{$state.Recipe.AppIds[0]=$state.Recipe.Week}
   $report=Get-TfCiReport $state
-  $report.SchemaVersion|Should -Be 2
+  $report.SchemaVersion|Should -Be 3
   $report.SourceCatalogApplications|Should -Be $discovery.Applications.Count
   $report.SelectedApplications|Should -Be 1
   $report.PublishedApplications|Should -Be 1
@@ -95,7 +95,7 @@ Describe 'Explicit weekly coverage labels' {
  It 'accepts archived v1 reports and rejects contradictory or private v2 fields' {
   $report=Get-TfCiReport (New-TfCiState $discovery)
   $legacy=$report|ConvertTo-Json -Depth 20|ConvertFrom-Json -AsHashtable
-  foreach($field in @('SourceCatalogApplications','SelectedApplications','PublishedCallbackCandidates','DeepSelectionHistoryApplications','NeverDeepSelectedCallbackCandidates')){$legacy.Remove($field)}
+  foreach($field in @('ResourceIds','SelectedPairs','AssessedPairs','SuccessfulPairs','SourceCatalogApplications','SelectedApplications','PublishedCallbackCandidates','DeepSelectionHistoryApplications','NeverDeepSelectedCallbackCandidates')){$legacy.Remove($field)}
   $legacy.SchemaVersion=1;Assert-TfCiReport $legacy
   foreach($change in @(@{SourceCatalogApplications=0},@{SelectedApplications=0},@{PublishedCallbackCandidates=0.5},@{DeepSelectionHistoryApplications=1;NeverDeepSelectedCallbackCandidates=0},@{AccessToken='private'},@{SuccessfulApplications=1},@{AssessedApplications=0.5},@{Complete=$true},@{TotalBatches=0})){
    $bad=$report|ConvertTo-Json -Depth 20|ConvertFrom-Json -AsHashtable
@@ -112,6 +112,43 @@ Describe 'Explicit weekly coverage labels' {
    foreach($key in $change.Keys){$bad[$key]=$change[$key]}
    {Assert-TfCiReport $bad}|Should -Throw
   }
+ }
+}
+Describe 'Frozen multi-resource deep recipes' {
+ BeforeEach {$resources=@('00000003-0000-0000-c000-000000000000','797f4846-ba00-4fd7-ba43-dac1f8f63013')}
+ It 'keeps legacy Graph recipes unchanged and hashes explicit resource membership' {
+  $legacy=New-TfCiState $discovery -Mode Deep
+  $legacy.SchemaVersion|Should -Be 1
+  $legacy.Recipe.Contains('ResourceIds')|Should -BeFalse
+  @(Get-TfCiResources $legacy).Count|Should -Be 1
+  $multi=New-TfCiState $discovery -Mode Deep -ResourceId $resources
+  Assert-TfCiState $multi
+  $multi.SchemaVersion|Should -Be 2
+  $multi.PlanId|Should -Not -Be $legacy.PlanId
+  $multi.Recipe.ResourceIds.Count|Should -Be 2
+  $multi.Recipe.ResourceIds=@($resources[0])
+  {Assert-TfCiState $multi}|Should -Throw
+  {New-TfCiState $discovery -ResourceId $resources}|Should -Throw
+  {New-TfCiState $discovery -Mode Deep -ResourceId @('ffffffff-ffff-ffff-ffff-ffffffffffff')}|Should -Throw
+ }
+ It 'counts each app once and requires both pairs before complete coverage' {
+  $state=New-TfCiState $discovery -Mode Deep -AppId @($discovery.Applications[0].AppId) -ResourceId $resources
+  $receipt=@{SchemaVersion=2;PlanId=$state.PlanId;Index=0;Attempt=1;Status='Complete';Assessed=1;Successful=1;AssessedPairs=2;SuccessfulPairs=1;DurationSeconds=10;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')}
+  $receipt.AssessedPairs=1;{Merge-TfCiReceipt $state $receipt}|Should -Throw
+  $receipt.AssessedPairs=2;Merge-TfCiReceipt $state $receipt
+  $report=Get-TfCiReport $state
+  $report.AssessedApplications|Should -Be 1
+  $report.SuccessfulApplications|Should -Be 1
+  $report.AssessedPairs|Should -Be 2
+  $report.SuccessfulPairs|Should -Be 1
+  $report.SelectedPairs|Should -Be 2
+  Assert-TfCiReport $report
+  $report.SuccessfulPairs=0;{Assert-TfCiReport $report}|Should -Throw
+ }
+ It 'accepts archived v2 coverage without inferring pair counts' {
+  $report=Get-TfCiReport (New-TfCiState $discovery)
+  foreach($field in @('ResourceIds','SelectedPairs','AssessedPairs','SuccessfulPairs')){$report.Remove($field)}
+  $report.SchemaVersion=2;Assert-TfCiReport $report
  }
 }
 Describe 'Encrypted private checkpoints' {
@@ -230,6 +267,30 @@ Describe 'Weekly publisher integration' {
   $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep -DeepMaxApplications 1
   $deep=Get-Content "$data/weekly-deep.json" -Raw|ConvertFrom-Json -AsHashtable
   $deep.Recipe.AppIds[0]|Should -Be $changed.Applications[-1].AppId
+ }
+ It 'publishes multi-resource successes once per app and rejects duplicate or foreign pairs' {
+  $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep -DeepMaxApplications 1
+  $state=Get-Content "$bundle/state.json" -Raw|ConvertFrom-Json -AsHashtable
+  $out=Join-Path $bundle result-0;$null=New-Item -ItemType Directory $out
+  $receipt=@{SchemaVersion=2;PlanId=$state.PlanId;Index=0;Attempt=1;Status='Complete';Assessed=1;Successful=1;AssessedPairs=2;SuccessfulPairs=2;DurationSeconds=10;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')}
+  $receipt|ConvertTo-Json|Set-Content "$out/receipt.json"
+  $rows=@($state.Recipe.ResourceIds|ForEach-Object {@{ClientId=$state.Recipe.AppIds[0];ResourceId=$_;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o');Scopes=@('User.Read');Evidence='AnonymousTenantTokenObservation';SignatureValidated=$false}})
+  $export=@{SchemaVersion=1;Observations=$rows;Disclaimer='Observed scopes are session/tenant dependent, not universal consent or guaranteed API access.'}
+  $export.Observations=@($rows[0],$rows[0]);$export|ConvertTo-Json -Depth 10|Set-Content "$out/scopes.json"
+  {& $runner -Action Publish -DataPath $data -BundlePath $bundle -Mode Deep}|Should -Throw '*Duplicate*'
+  $export.Observations=$rows;$export.Observations[1].ResourceId='ffffffff-ffff-ffff-ffff-ffffffffffff';$export|ConvertTo-Json -Depth 10|Set-Content "$out/scopes.json"
+  {& $runner -Action Publish -DataPath $data -BundlePath $bundle -Mode Deep}|Should -Throw '*foreign*'
+  $export.Observations[1].ResourceId=$state.Recipe.ResourceIds[1];$export|ConvertTo-Json -Depth 10|Set-Content "$out/scopes.json"
+  $report=& $runner -Action Publish -DataPath $data -BundlePath $bundle -Mode Deep
+  $report.SuccessfulApplications|Should -Be 1;$report.SuccessfulPairs|Should -Be 2
+  $report.AssessedApplications|Should -Be 1;$report.AssessedPairs|Should -Be 2
+ }
+ It 'records a missing multi-resource worker as retryable failure with zero pair counts' {
+  $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep -DeepMaxApplications 1
+  $report=& $runner -Action Publish -DataPath $data -BundlePath $bundle -Mode Deep
+  $report.Complete|Should -BeFalse;$report.AssessedPairs|Should -Be 0
+  $state=Get-Content "$data/weekly-deep.json" -Raw|ConvertFrom-Json -AsHashtable
+  $state.Batches[0].Status|Should -Be Failed;$state.Batches[0].Attempts|Should -Be 1
  }
  It 'records missing worker artifacts as failed work instead of claiming completion' {
   $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Shallow

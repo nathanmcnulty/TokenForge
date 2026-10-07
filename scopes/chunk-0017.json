@@ -1,0 +1,76 @@
+{
+  "SchemaVersion": 1,
+  "Observations": [
+    {
+      "ClientId": "4e514f29-41ca-409b-bf52-e774670e54ec",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:41:54.5203001+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "4ec7f63c-188f-4433-9253-ccbe3021125f",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:41:57.535043+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "ServicePrincipalEndpoint.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "4f547b5f-c3f7-4d2c-a14f-0f8f1286d7d5",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:42:01.5425109+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "User.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "4fb5cc57-dbbc-4cdc-9595-748adff5f414",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:42:06.6554991+00:00",
+      "Scopes": [
+        "CloudPC.Read.All",
+        "email",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "51f81489-12ee-4a9e-aaae-a2591f45987d",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:42:40.9218212+00:00",
+      "Scopes": [
+        "Application.Read.All",
+        "email",
+        "Group.Read.All",
+        "Member.Read.Hidden",
+        "openid",
+        "Organization.Read.All",
+        "profile",
+        "RoleManagement.Read.Directory"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    }
+  ],
+  "Disclaimer": "Observed scopes are session/tenant dependent, not universal consent or guaranteed API access."
+}

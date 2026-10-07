@@ -222971,7 +222971,7 @@
       "Assessed": 100,
       "Successful": 4,
       "DurationSeconds": 109.806,
-      "ObservedAt": "2026-10-07T20:35:28.0000000+00:00"
+      "ObservedAt": "2026-10-07T20:35:28+00:00"
     },
     {
       "Index": 14,
@@ -222980,7 +222980,7 @@
       "Assessed": 100,
       "Successful": 3,
       "DurationSeconds": 107.159,
-      "ObservedAt": "2026-10-07T20:35:36.0000000+00:00"
+      "ObservedAt": "2026-10-07T20:35:36+00:00"
     },
     {
       "Index": 15,
@@ -222989,7 +222989,7 @@
       "Assessed": 100,
       "Successful": 6,
       "DurationSeconds": 100.543,
-      "ObservedAt": "2026-10-07T20:35:29.0000000+00:00"
+      "ObservedAt": "2026-10-07T20:35:29+00:00"
     },
     {
       "Index": 16,
@@ -222998,43 +222998,43 @@
       "Assessed": 100,
       "Successful": 5,
       "DurationSeconds": 103.855,
-      "ObservedAt": "2026-10-07T20:35:49.0000000+00:00"
+      "ObservedAt": "2026-10-07T20:35:49+00:00"
     },
     {
       "Index": 17,
-      "Status": "Pending",
-      "Attempts": 0,
-      "Assessed": 0,
-      "Successful": 0,
-      "DurationSeconds": 0,
-      "ObservedAt": null
+      "Status": "Complete",
+      "Attempts": 1,
+      "Assessed": 100,
+      "Successful": 5,
+      "DurationSeconds": 80.883,
+      "ObservedAt": "2026-10-07T20:42:49.0000000+00:00"
     },
     {
       "Index": 18,
-      "Status": "Pending",
-      "Attempts": 0,
-      "Assessed": 0,
-      "Successful": 0,
-      "DurationSeconds": 0,
-      "ObservedAt": null
+      "Status": "Complete",
+      "Attempts": 1,
+      "Assessed": 100,
+      "Successful": 5,
+      "DurationSeconds": 89.254,
+      "ObservedAt": "2026-10-07T20:42:49.0000000+00:00"
     },
     {
       "Index": 19,
-      "Status": "Pending",
-      "Attempts": 0,
-      "Assessed": 0,
-      "Successful": 0,
-      "DurationSeconds": 0,
-      "ObservedAt": null
+      "Status": "Complete",
+      "Attempts": 1,
+      "Assessed": 100,
+      "Successful": 8,
+      "DurationSeconds": 85.935,
+      "ObservedAt": "2026-10-07T20:43:09.0000000+00:00"
     },
     {
       "Index": 20,
-      "Status": "Pending",
-      "Attempts": 0,
-      "Assessed": 0,
-      "Successful": 0,
-      "DurationSeconds": 0,
-      "ObservedAt": null
+      "Status": "Complete",
+      "Attempts": 1,
+      "Assessed": 100,
+      "Successful": 5,
+      "DurationSeconds": 95.296,
+      "ObservedAt": "2026-10-07T20:43:00.0000000+00:00"
     },
     {
       "Index": 21,

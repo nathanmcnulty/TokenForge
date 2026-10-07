@@ -1,0 +1,43 @@
+{
+  "Date": "2026-10-07",
+  "Scope": "Bounded local weekly-worker proof; not full catalog or GitHub artifact transport",
+  "Accounts": [
+    {
+      "Account": "nora",
+      "Assessed": 4,
+      "Successful": 3,
+      "TerminalFlowAttempts": 33,
+      "ScopeRows": 4,
+      "Chunks": 2,
+      "ResumeAddedAttempts": 0,
+      "ResumeAddedScopeRows": 0,
+      "EncryptedCheckpointPassed": true,
+      "AnonymousExportPassed": true,
+      "CredentialsPersisted": false,
+      "ConsentGranted": false
+    },
+    {
+      "Account": "secadmin",
+      "Assessed": 4,
+      "Successful": 4,
+      "TerminalFlowAttempts": 33,
+      "ScopeRows": 4,
+      "Chunks": 2,
+      "ResumeAddedAttempts": 0,
+      "ResumeAddedScopeRows": 0,
+      "EncryptedCheckpointPassed": true,
+      "AnonymousExportPassed": true,
+      "CredentialsPersisted": false,
+      "ConsentGranted": false
+    }
+  ],
+  "PublicPlannerApplications": 5454,
+  "PublicPlannerChunks": 55,
+  "ScopedTestsPassed": 30,
+  "WorkflowLint": "Passed",
+  "Review": "Sol: no remaining code blocker; outdated documentation corrected",
+  "PowerShellPassed": 282,
+  "PowerShellSkipped": 2,
+  "PublisherLiveReceiptsPassed": true,
+  "NativeChecksPassed": 117
+}

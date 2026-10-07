@@ -4,31 +4,38 @@ on:
     - cron: '23 */6 * * *'
   workflow_dispatch:
     inputs:
-      chunk_index:
-        description: 'Chunk index (-1 rotates automatically)'
-        default: '-1'
+      workers:
+        description: 'Independent workers (1-4)'
+        default: '4'
         required: true
-      chunk_size:
-        description: 'Applications per batch (1-200)'
-        default: '100'
-        required: true
-      public_only:
-        description: 'Refresh published metadata without login or probing'
+      mode:
+        description: 'Separate weekly sampling or bounded deeper research'
+        type: choice
+        options: [Auto, Shallow, Deep]
+        default: Auto
+      app_ids:
+        description: 'Optional comma-separated published IDs for a new deep recipe'
+        default: ''
+      retry_exhausted:
+        description: 'Allow up to ten attempts instead of three'
         type: boolean
         default: false
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: discovery-data-writer
   cancel-in-progress: false
 jobs:
-  discover:
-    # No PR trigger: code with access to Nora credentials runs only from main.
+  prepare:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 15
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      has_work: ${{ steps.plan.outputs.has_work }}
+      mode: ${{ steps.plan.outputs.mode }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
       - name: Load public data branch
@@ -42,20 +49,82 @@ jobs:
           Set-Location $data
           git init --quiet
           git remote add origin "https://github.com/$env:GITHUB_REPOSITORY.git"
-          $branch=gh api "repos/$env:GITHUB_REPOSITORY/branches/discovery-data" --silent 2>$null
+          gh api "repos/$env:GITHUB_REPOSITORY/branches/discovery-data" --silent 2>$null
           if($LASTEXITCODE -eq 0){
             git fetch --depth=1 origin discovery-data
             if($LASTEXITCODE -ne 0){throw 'Data fetch failed.'}
             git checkout --quiet -B discovery-data FETCH_HEAD
           }else{
-            # Confirm repository access before treating a missing branch as first run.
             gh api "repos/$env:GITHUB_REPOSITORY" --silent
             if($LASTEXITCODE -ne 0){throw 'Repository access failed.'}
             git checkout --quiet --orphan discovery-data
           }
-      - name: Sign in with Nora's software passkey
+      - name: Freeze membership and select pending or failed work
+        id: plan
+        shell: pwsh
+        env:
+          WORKERS: ${{ inputs.workers || '4' }}
+          MODE: ${{ inputs.mode || 'Auto' }}
+          APP_IDS: ${{ inputs.app_ids }}
+          RETRY_EXHAUSTED: ${{ inputs.retry_exhausted }}
+        run: |
+          $options=@{}
+          if($env:APP_IDS){$options.AppId=@($env:APP_IDS.Split(',')|ForEach-Object {[guid]$_.Trim()})}
+          ./scripts/Invoke-TokenForgeWeeklyCi.ps1 -Action Prepare -DataPath "$env:RUNNER_TEMP/discovery-data" -BundlePath "$env:RUNNER_TEMP/plan" -Workers ([int]$env:WORKERS) -Mode $env:MODE -RetryExhausted:($env:RETRY_EXHAUSTED -eq 'true') @options
+      - name: Upload public recipe
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: weekly-plan
+          path: |
+            ${{ runner.temp }}/plan/state.json
+            ${{ runner.temp }}/plan/request.json
+          overwrite: true
+          retention-days: 8
+          if-no-files-found: error
+      - name: Upload prepared public data
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: prepared-data
+          path: |
+            ${{ runner.temp }}/discovery-data/applications.json
+            ${{ runner.temp }}/discovery-data/weekly-*.json
+            ${{ runner.temp }}/discovery-data/coverage-*.json
+            ${{ runner.temp }}/discovery-data/reports/*.json
+            ${{ runner.temp }}/discovery-data/scopes/*.json
+          overwrite: true
+          retention-days: 1
+          if-no-files-found: error
+  worker:
+    needs: prepare
+    if: needs.prepare.outputs.has_work == 'True'
+    permissions:
+      contents: read
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: weekly-plan
+          path: ${{ runner.temp }}/plan
+      - name: Prepare isolated outputs and recover encrypted checkpoints
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLAN: ${{ matrix.plan }}
+          INDEX: ${{ matrix.index }}
+        run: |
+          New-Item -ItemType Directory "$env:RUNNER_TEMP/result","$env:RUNNER_TEMP/private" | Out-Null
+          ./scripts/Get-TokenForgeCiCheckpoint.ps1 -PlanId $env:PLAN -Index ([int]$env:INDEX) -OutputPath "$env:RUNNER_TEMP/private/prior.sealed"
+      - name: Sign in independently with Nora's software passkey
         id: login
-        if: inputs.public_only != true
         uses: nathanmcnulty/action-passkey-login@d443b0d18fe3a9cf162811bd67a67b9dec77a7e7
         with:
           confirm-application: 'true'
@@ -64,42 +133,97 @@ jobs:
           user-handle: ${{ secrets.NORA_PASSKEY_USER_HANDLE }}
           private-key: ${{ secrets.NORA_PASSKEY_PRIVATE_KEY }}
           user-principal-name: ${{ secrets.NORA_PASSKEY_UPN }}
-      - name: Discover and probe a bounded batch
+      - name: Assess frozen batch using existing authorization
         shell: pwsh
         env:
           TOKENFORGE_ESTS_COOKIE: ${{ steps.login.outputs.auth-cookie }}
           TOKENFORGE_COOKIE_NAME: ${{ steps.login.outputs.cookie-name }}
           TOKENFORGE_TENANT_FINGERPRINT: ${{ secrets.NORA_TENANT_FINGERPRINT }}
           TOKENFORGE_PRINCIPAL_FINGERPRINT: ${{ secrets.NORA_PRINCIPAL_FINGERPRINT }}
+          TOKENFORGE_CHECKPOINT_KEY: ${{ secrets.TOKENFORGE_CHECKPOINT_KEY }}
           AUTHENTICATED: ${{ steps.login.outputs.authenticated }}
-          PUBLIC_ONLY: ${{ inputs.public_only }}
-          CHUNK_INDEX: ${{ inputs.chunk_index || '-1' }}
-          CHUNK_SIZE: ${{ inputs.chunk_size || '100' }}
+          INDEX: ${{ matrix.index }}
         run: |
-          $publicOnly=$env:PUBLIC_ONLY -eq 'true'
-          if(-not $publicOnly -and $env:AUTHENTICATED -ne 'true'){throw 'Passkey authentication was not verified.'}
-          ./scripts/Invoke-TokenForgeCiDiscovery.ps1 -DataPath (Join-Path $env:RUNNER_TEMP 'discovery-data') -ChunkIndex ([int]$env:CHUNK_INDEX) -ChunkSize ([int]$env:CHUNK_SIZE) -RunNumber ([int]$env:GITHUB_RUN_NUMBER) -PublicOnly:$publicOnly
-      - name: Commit public metadata
+          if($env:AUTHENTICATED -ne 'true' -or -not $env:TOKENFORGE_CHECKPOINT_KEY){throw 'Verified authentication and a checkpoint key are required.'}
+          ./scripts/Invoke-TokenForgeCiDiscovery.ps1 -DataPath "$env:RUNNER_TEMP/anonymous" -WeeklyStatePath "$env:RUNNER_TEMP/plan/state.json" -ChunkIndex ([int]$env:INDEX) -ReceiptPath "$env:RUNNER_TEMP/result/receipt.json" -CheckpointPath "$env:RUNNER_TEMP/private/checkpoint.sealed" -CheckpointInputPath "$env:RUNNER_TEMP/private/prior.sealed"
+          Copy-Item (Join-Path "$env:RUNNER_TEMP/anonymous/scopes" ('chunk-{0:D4}.json' -f [int]$env:INDEX)) "$env:RUNNER_TEMP/result/scopes.json"
+      - name: Save encrypted diagnostic checkpoint
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: checkpoint-${{ matrix.plan }}-${{ matrix.index }}
+          path: ${{ runner.temp }}/private/checkpoint.sealed
+          overwrite: true
+          retention-days: 8
+          if-no-files-found: ignore
+      - name: Upload public receipt and anonymous scope evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: result-${{ matrix.index }}
+          path: ${{ runner.temp }}/result/*.json
+          overwrite: true
+          retention-days: 1
+          if-no-files-found: ignore
+  publish:
+    needs: [prepare, worker]
+    if: always() && needs.prepare.result == 'success'
+    permissions:
+      contents: write
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: prepared-data
+          path: ${{ runner.temp }}/discovery-data
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: weekly-plan
+          path: ${{ runner.temp }}/plan
+      - name: Download any completed worker outputs
+        if: needs.prepare.outputs.has_work == 'True'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $ErrorActionPreference='Stop'
-          Set-Location (Join-Path $env:RUNNER_TEMP 'discovery-data')
-          # Allowlist public outputs only; private inventory and checkpoints never enter this tree.
-          git add -- applications.json
-          if(Test-Path scopes){
-            foreach($file in Get-ChildItem -LiteralPath scopes -File -Force){
-              if($file.Name -notmatch '^chunk-[0-9]{4,6}\.json$'){throw 'Unexpected scope export path.'}
-              git add -- $file.FullName
-              if($LASTEXITCODE -ne 0){throw 'Scope staging failed.'}
-            }
+          $artifacts=(gh api "repos/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID/artifacts?per_page=100"|ConvertFrom-Json).artifacts
+          if($LASTEXITCODE -ne 0){throw 'Worker artifact lookup failed.'}
+          foreach($artifact in @($artifacts|Where-Object name -Match '^result-[0-9]+$')){
+            gh run download $env:GITHUB_RUN_ID --repo $env:GITHUB_REPOSITORY --name $artifact.name --dir (Join-Path "$env:RUNNER_TEMP/plan" $artifact.name)
+            if($LASTEXITCODE -ne 0){throw 'Worker download failed.'}
           }
+      - name: Validate receipts and publish one coherent update
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ needs.prepare.outputs.mode }}
+        run: |
+          $ErrorActionPreference='Stop'
+          ./scripts/Invoke-TokenForgeWeeklyCi.ps1 -Action Publish -DataPath "$env:RUNNER_TEMP/discovery-data" -BundlePath "$env:RUNNER_TEMP/plan" -Mode $env:MODE
+          Set-Location "$env:RUNNER_TEMP/discovery-data"
+          git init --quiet
+          git remote add origin "https://github.com/$env:GITHUB_REPOSITORY.git"
+          git fetch --depth=1 origin discovery-data
+          if($LASTEXITCODE -ne 0){throw 'Data branch fetch failed.'}
+          $expected=(Get-Content "$env:RUNNER_TEMP/plan/request.json" -Raw|ConvertFrom-Json).BaseCommit
+          $actual=git rev-parse FETCH_HEAD
+          if($actual -cne $expected){throw 'Data branch advanced; rerun the coordinator before publishing.'}
+          # Retain the fetched parent while preserving validated files for this run.
+          git reset --mixed FETCH_HEAD
+          if($LASTEXITCODE -ne 0){throw 'Data parent setup failed.'}
+          git checkout -b discovery-data
+          git add -- applications.json weekly-*.json coverage-*.json reports scopes
+          if($LASTEXITCODE -ne 0){throw 'Public staging failed.'}
           git diff --cached --quiet
           if($LASTEXITCODE -eq 0){exit 0}
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'Refresh public application metadata and anonymous scope batch'
+          git commit -m 'Refresh frozen weekly research coverage and anonymous scope evidence'
           if($LASTEXITCODE -ne 0){throw 'Data commit failed.'}
           $env:GIT_CONFIG_COUNT='1'
           $env:GIT_CONFIG_KEY_0='http.https://github.com/.extraheader'

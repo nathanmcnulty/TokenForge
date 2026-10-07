@@ -46,6 +46,16 @@ Describe 'Exact flow evidence and coverage' {
   $report=Get-TokenForgeResearchCoverage $metadata -FlowPath $flowPath -TenantFingerprint ('a'*64) -PrincipalFingerprint ('b'*64)
   $report.Applications[0].FlowCoverage[0].FailedSlots|Should -Be 2
  }
+ It 'leaves recognizable transient identity failures resumable and retries only the interrupted slot' {
+  Mock Get-TokenForgeToken -ModuleName TokenForge {throw 'Token request failed (HTTP 429). Details suppressed.'}
+  {Invoke-TokenForgeScopeProbe $inventory $secret -ResourceId $graph -DatabasePath $path -StopOnTransientFailure -DelayMilliseconds 0}|Should -Throw '*transient*'
+  $flows=Get-TokenForgeFlowEvidence $flowPath
+  $flows.Attempts[-1].Outcome|Should -Be Started
+  Mock Get-TokenForgeToken -ModuleName TokenForge {param($Request) [pscustomobject]@{AccessToken=ConvertTo-SecureString synthetic-access -AsPlainText -Force;RefreshToken=$null;GrantedScopes=@('User.Read');TokenClaims=[pscustomobject]@{Readable=$true;HasDelegatedScopeClaim=$true;Scopes=@('User.Read');TenantFingerprint=('a'*64);PrincipalFingerprint=('b'*64);ClientId=$Request.ClientId;Audience=$Request.ResourceId}}}
+  $null=Invoke-TokenForgeScopeProbe $inventory $secret -ResourceId $graph -DatabasePath $path -StopOnTransientFailure -DelayMilliseconds 0
+  @((Get-TokenForgeScopeDatabase $path).Observations).Count|Should -Be 1
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 2
+ }
  It 'resumes a fully failed plan without duplicate attempts or aggregate rows' {
   Mock Get-TokenForgeToken -ModuleName TokenForge {throw 'AADSTS65001'}
   $null=Invoke-TokenForgeScopeProbe $inventory $secret -ResourceId $graph -DatabasePath $path -ExploreAllFlows -DelayMilliseconds 0

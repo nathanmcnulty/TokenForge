@@ -90,23 +90,26 @@ function Update-TokenForgeApplicationMetadata {
     param(
         [Parameter(Mandatory)][string]$Path,
         [Parameter(Mandatory)]$Document,
-        [Parameter(Mandatory)][ValidateSet('Discovery','Inventory','SignIns','ScopeObservations')][string]$Kind
+        [Parameter(Mandatory)][ValidateSet('Discovery','Inventory','SignIns','ScopeObservations','RegistrationAttempts','FlowAttempts')][string]$Kind
     )
+    if($Kind -eq 'FlowAttempts'){Assert-TokenForgeFlowDocument $Document}
     $columns=switch($Kind){
         Discovery {@('AppId','Name','OwnerTenantId','Ownership','PublicClient','Foci','RedirectUris','PreferredRedirectUri','Grants','IsResourceCandidate','IdentifierUris')}
         Inventory {@('AppId','Name','Registration','Ownership','OwnerTenantId','AccountEnabled','AssignmentRequired','SignInAudience','PublicClient','Foci','RedirectUris','TenantRedirectUris','PreferredRedirectUri','PublishedGrants','DelegatedScopeDefinitions','AppRoleDefinitions','IdentifierUris','IsResourceCandidate')}
-        SignIns {@('AppId','SignInCount','KnownInInventory','RegisteredMicrosoft','Evidence')}
+        SignIns {@('AppId','SignInCount','KnownInInventory','RegisteredMicrosoft','Evidence','ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts')}
+        RegistrationAttempts {@('AppId','Outcome','HttpStatus')}
+        FlowAttempts {@('AttemptKey','PlanFingerprint','Protocol','Spa','RedirectFingerprint','Outcome','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','NamespaceVerification','RequestVerification','SignatureValidated','ErrorCodes','ElapsedSeconds')}
         ScopeObservations {@('ClientId','ResourceId','Outcome','Protocol','Spa','RequestedScopes','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','SignatureValidated','NamespaceVerification','RequestVerification','ErrorCodes','AttemptCount','ElapsedSeconds','RedirectFingerprint','CatalogHash')}
     }
-    $stamp=if($Kind -eq 'Discovery'){$Document.FetchedAt}elseif($Kind -eq 'ScopeObservations'){$Document.UpdatedAt}else{$Document.CapturedAt}
+    $stamp=if($Kind -eq 'Discovery'){$Document.FetchedAt}elseif($Kind -in @('ScopeObservations','RegistrationAttempts','FlowAttempts')){$Document.UpdatedAt}else{$Document.CapturedAt}
     $observed=([DateTimeOffset]$stamp).ToUniversalTime()
     if($observed -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Application metadata observation date is in the future.'}
-    $tenant=if($Kind -in @('Discovery','ScopeObservations')){$null}else{[string]$Document.TenantFingerprint}
+    $tenant=if($Kind -in @('Discovery','ScopeObservations','RegistrationAttempts','FlowAttempts')){$null}else{[string]$Document.TenantFingerprint}
     # Scope databases carry namespaces on each observation, not on the document.
     if($Kind -eq 'ScopeObservations'){$tenant=$null}
     if($Kind -in @('Inventory','SignIns') -and $tenant -notmatch '^[a-f0-9]{64}$'){throw 'A tenant fingerprint is required for private metadata.'}
     if($Kind -eq 'SignIns' -and $Document.Enumeration -ne 'Complete'){throw 'Incomplete sign-in discovery cannot update application metadata.'}
-    $rows=if($Kind -eq 'ScopeObservations'){@($Document.Observations|Sort-Object {([DateTimeOffset]$_.ObservedAt)})}else{@($Document.Applications)}
+    $rows=if($Kind -eq 'RegistrationAttempts'){@($Document.RegistrationAttempts|Sort-Object {([DateTimeOffset]$_.AttemptedAt)})}elseif($Kind -eq 'FlowAttempts'){@($Document.Attempts|Sort-Object {([DateTimeOffset]$_.ObservedAt)})}elseif($Kind -eq 'ScopeObservations'){@($Document.Observations|Sort-Object {([DateTimeOffset]$_.ObservedAt)})}else{@($Document.Applications)}
     $full=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
     $null=New-Item -ItemType Directory -Path (Split-Path $full) -Force
     $lock=$null
@@ -122,11 +125,18 @@ function Update-TokenForgeApplicationMetadata {
         $catalog=if(Test-Path -LiteralPath $full){Get-TokenForgeApplicationMetadata $full}else{@{Format='TokenForgeApplicationMetadata';SchemaVersion=1;CreatedAt=$now;UpdatedAt=$now;Applications=@{};Origins=@{};Runs=@()}}
         $runId=[guid]::NewGuid().ToString();$seen=@{};$affectedOrigins=@{};$count=0;$emptyIds=0
         foreach($row in $rows){
-            $rawId=if($Kind -eq 'ScopeObservations'){$row.ClientId}else{$row.AppId};$id=[guid]::Empty
+            $rawId=if($Kind -in @('ScopeObservations','FlowAttempts')){$row.ClientId}else{$row.AppId};$id=[guid]::Empty
             if(-not [guid]::TryParse([string]$rawId,[ref]$id)){throw 'Invalid application ID in collected metadata.'}
             if($id -eq [guid]::Empty){$emptyIds++;continue}
             $appId=$id.ToString();$rowTenant=$tenant;$principal=$null;$resource=$null;$date=$observed
-            if($Kind -eq 'ScopeObservations'){
+            if($Kind -eq 'RegistrationAttempts'){
+                $rowTenant=[string]$row.TenantFingerprint
+                if($rowTenant -notmatch '^[a-f0-9]{64}$' -or $row.Outcome -cnotin @('Created','AlreadyPresent','Failed','OwnerRejected','CleanupRequired','CleanupResolved','NotCreated')){throw 'Invalid registration metadata.'}
+                $date=([DateTimeOffset]$row.AttemptedAt).ToUniversalTime()
+                if($date -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Future registration date.'}
+                if($null -ne $row.HttpStatus -and ($row.HttpStatus -isnot [int] -and $row.HttpStatus -isnot [long] -or $row.HttpStatus -lt 100 -or $row.HttpStatus -gt 599)){throw 'Invalid registration status.'}
+            }
+            if($Kind -in @('ScopeObservations','FlowAttempts')){
                 $rowTenant=[string]$row.TenantFingerprint;$principal=[string]$row.PrincipalFingerprint;$resource=[string]$row.ResourceId
                 if($rowTenant -notmatch '^[a-f0-9]{64}$' -or $principal -notmatch '^[a-f0-9]{64}$'){throw 'Scope observation namespace is invalid.'}
                 $resourceId=[guid]::Empty;if(-not [guid]::TryParse($resource,[ref]$resourceId) -or $resourceId -eq [guid]::Empty){throw 'Invalid scope resource ID.'};$resource=$resourceId.ToString()
@@ -134,14 +144,16 @@ function Update-TokenForgeApplicationMetadata {
                 if($date -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Future scope observation date.'}
             }
             $origin=@($Kind,$rowTenant,$principal,$resource) -join '/'
+            if($Kind -eq 'FlowAttempts'){if($row.AttemptKey -notmatch '^[a-f0-9]{64}$'){throw 'Invalid flow attempt key.'};$origin+='/'+$row.AttemptKey}
             $attributes=[ordered]@{}
             foreach($column in $columns){if($row.PSObject.Properties[$column]){$attributes[$column]=$row.$column}elseif($row -is [Collections.IDictionary] -and $row.Contains($column)){$attributes[$column]=$row[$column]}}
-            foreach($nested in @('Grants','PublishedGrants','DelegatedScopeDefinitions','AppRoleDefinitions')){
+            foreach($nested in @('Grants','PublishedGrants','DelegatedScopeDefinitions','AppRoleDefinitions','ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts')){
                 if(-not $attributes.Contains($nested)){continue}
                 $fields=switch($nested){
                     {$_ -in @('Grants','PublishedGrants')} {@('ResourceId','Scopes')}
                     DelegatedScopeDefinitions {@('Value','Enabled','ConsentType')}
                     AppRoleDefinitions {@('Id','Value','DisplayName','Description','AllowedMemberTypes','Enabled')}
+                    default {@('Value','Count')}
                 }
                 $attributes[$nested]=@(foreach($entry in $attributes[$nested]){
                     $projected=[ordered]@{}
@@ -155,7 +167,7 @@ function Update-TokenForgeApplicationMetadata {
             # Nested metadata records were projected above; remaining values must be simple leaves.
             # Reject credential-bearing objects rather than serializing them under an allowed field name.
             foreach($field in $attributes.Keys){
-                $entries=if($field -in @('Grants','PublishedGrants','DelegatedScopeDefinitions','AppRoleDefinitions')){
+                $entries=if($field -in @('Grants','PublishedGrants','DelegatedScopeDefinitions','AppRoleDefinitions','ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts')){
                     @($attributes[$field]|ForEach-Object {$_.Values})
                 }else{@($attributes[$field])}
                 foreach($value in $entries){
@@ -164,7 +176,21 @@ function Update-TokenForgeApplicationMetadata {
                     }
                 }
             }
-            $sources=@(if($Kind -in @('Discovery','Inventory')){@($row.Sources|ForEach-Object {[ordered]@{Name=$_.Name;Location=if($_.PSObject.Properties['Location'] -or ($_ -is [Collections.IDictionary] -and $_.Contains('Location'))){$_.Location}else{$null};Evidence=$_.Evidence}})}else{@([ordered]@{Name=$Kind;Location=if($Kind -eq 'SignIns'){'https://graph.microsoft.com/beta/auditLogs/signIns'}else{'LocalScopeDatabase'};Evidence=if($Kind -eq 'SignIns'){'ObservedSignInNotOwnership'}else{'DiagnosticScopeObservation'}})})
+            if($Kind -eq 'SignIns'){
+                if($attributes.SignInCount -isnot [int] -and $attributes.SignInCount -isnot [long] -or $attributes.SignInCount -lt 0){throw 'Invalid sign-in count.'}
+                foreach($field in @('ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts')){
+                    if(-not $attributes.Contains($field)){continue}
+                    $allowed=@(Get-TokenForgeSignInSummaryValues $field)
+                    $values=@{}
+                    foreach($entry in $attributes[$field]){
+                        if($entry.Count -isnot [int] -and $entry.Count -isnot [long] -or $entry.Count -lt 0 -or $entry.Count -gt $attributes.SignInCount -or $entry.Value -isnot [string]){throw 'Invalid sign-in summary count.'}
+                        if($field -eq 'ResourceCounts'){$resourceGuid=[guid]::Empty;if(-not[guid]::TryParse($entry.Value,[ref]$resourceGuid) -or $resourceGuid -eq [guid]::Empty -or $entry.Value -cne $resourceGuid.ToString()){throw 'Invalid sign-in resource.'}}
+                        elseif($entry.Value -cnotin $allowed){throw 'Invalid sign-in summary value.'}
+                        if($values.ContainsKey($entry.Value)){throw 'Duplicate sign-in summary value.'};$values[$entry.Value]=$true
+                    }
+                }
+            }
+            $sources=@(if($Kind -in @('Discovery','Inventory')){@($row.Sources|ForEach-Object {[ordered]@{Name=$_.Name;Location=if($_.PSObject.Properties['Location'] -or ($_ -is [Collections.IDictionary] -and $_.Contains('Location'))){$_.Location}else{$null};Evidence=$_.Evidence}})}else{@([ordered]@{Name=$Kind;Location=if($Kind -eq 'SignIns'){'https://graph.microsoft.com/beta/auditLogs/signIns'}elseif($Kind -eq 'FlowAttempts'){'LocalFlowEvidence'}else{'LocalScopeDatabase'};Evidence=if($Kind -eq 'SignIns'){'ObservedSignInNotOwnership'}elseif($Kind -eq 'RegistrationAttempts'){'RegistrationAttemptNotConsent'}elseif($Kind -eq 'FlowAttempts'){'DiagnosticFlowAttempt'}else{'DiagnosticScopeObservation'}})})
             if($Kind -eq 'Inventory'){$sources+= [ordered]@{Name='TenantServicePrincipals';Location='https://graph.microsoft.com/v1.0/servicePrincipals';Evidence='TenantMetadataSnapshot'}}
             $hash=Get-TokenForgeFingerprint -Value (ConvertTo-Json -InputObject ([ordered]@{Attributes=$attributes;Sources=$sources}) -Depth 100 -Compress)
             if(-not $catalog.Applications.Contains($appId)){$catalog.Applications[$appId]=@{AppId=$appId;FirstSeenAt=$date.ToString('o');LastSeenAt=$date.ToString('o');Records=@{}}}
@@ -184,7 +210,7 @@ function Update-TokenForgeApplicationMetadata {
             $seen["$origin|$appId"]=$true;$affectedOrigins[$origin]=$true;$count++
         }
         # Complete snapshots can mark absence. Scope databases can be partial/batched, so do not mark their unseen pairs absent.
-        if($Kind -ne 'ScopeObservations'){
+        if($Kind -notin @('ScopeObservations','RegistrationAttempts','FlowAttempts')){
             $origin=@($Kind,$tenant,$null,$null) -join '/';$affectedOrigins[$origin]=$true
             $previous=$catalog.Origins[$origin]
             if(-not $previous -or $observed -ge [DateTimeOffset]::Parse($previous.LastObservedAt)){

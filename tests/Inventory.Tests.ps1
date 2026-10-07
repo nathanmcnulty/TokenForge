@@ -142,12 +142,13 @@ Describe 'Service principal registration' {
             return $null
         }
     }
-    It 'stops registration on an expired Graph session without recording candidate failures' {
+    It 'checkpoints an expired Graph session before stopping registration' {
         $app | Add-Member Registration Missing
         $inventory = [pscustomobject]@{ Applications=@($app);TenantFingerprint=('a'*64) }
         Mock Register-TokenForgeApplication -ModuleName TokenForge { throw 'Graph request failed (HTTP 401); details suppressed.' }
         { Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $secret -DatabasePath "$TestDrive/expired.json" -DelayMilliseconds 0 -Confirm:$false } | Should -Throw '*stopped*401*'
-        (Get-TokenForgeScopeDatabase -Path "$TestDrive/expired.json").RegistrationAttempts.Count | Should -Be 0
+        (Get-TokenForgeScopeDatabase -Path "$TestDrive/expired.json").RegistrationAttempts.Count | Should -Be 1
+        (Get-TokenForgeScopeDatabase -Path "$TestDrive/expired.json").RegistrationAttempts[0].HttpStatus | Should -Be 401
     }
     It 'continues bounded registration batches after checkpointed candidates' {
         $app | Add-Member Registration Missing
@@ -267,6 +268,9 @@ Describe 'Scope database and assessment selection' {
 
 Describe 'Resumable probe and matrix planning' {
     BeforeEach {
+        $probeRoot=Join-Path ($TestDrive -replace '^/var/','/private/var/') ([guid]::NewGuid().ToString())
+        $null=New-Item -ItemType Directory $probeRoot
+        if(-not $IsWindows){[IO.File]::SetUnixFileMode($probeRoot,[IO.UnixFileMode]448)}
         $app = [pscustomobject]@{ AppId = $clientId; Name = 'Fixture'; Registration = 'Present'; Ownership = 'VerifiedMicrosoftOwner'; AccountEnabled = $true; RedirectUris = @('https://example.test/callback'); PreferredRedirectUri = 'https://example.test/callback'; PublishedGrants = @([pscustomobject]@{ ResourceId = $graph; Scopes = @('User.Read') }); DelegatedScopeDefinitions = @(); PublicClient = $true; Foci = $false; Sources = @(); OwnerTenantId = $owner }
         $inventory = [pscustomobject]@{ Applications = @($app); TenantGrants = @(); TenantFingerprint = ('a'*64); PrincipalFingerprint = ('b'*64); DiscoveryCatalogHash = ('c'*64) }
         $secret = ConvertTo-SecureString synthetic -AsPlainText -Force
@@ -295,17 +299,17 @@ Describe 'Resumable probe and matrix planning' {
             param($Request)
             [pscustomobject]@{AccessToken=ConvertTo-SecureString synthetic -AsPlainText -Force;RefreshToken=$null;GrantedScopes=@('User.Read');TokenClaims=[pscustomobject]@{Readable=$true;HasDelegatedScopeClaim=$true;Scopes=@('User.Read');TenantFingerprint=('a'*64);PrincipalFingerprint=('d'*64);ClientId=$Request.ClientId;Audience=$Request.ResourceId}}
         }
-        $result=Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -PrincipalFingerprint ('d'*64) -DatabasePath "$TestDrive/observer.json" -DelayMilliseconds 0
+        $result=Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -PrincipalFingerprint ('d'*64) -DatabasePath "$probeRoot/observer.json" -DelayMilliseconds 0
         $result.Outcome | Should -Be Succeeded
         $result.PrincipalFingerprint | Should -Be ('d'*64)
         $result.NamespaceVerification | Should -Be Matched
     }
     It 'forwards persistent ESTS cookie names to every protocol request' {
-        $null=Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -CookieName ESTSAUTHPERSISTENT -ResourceId $graph -DatabasePath "$TestDrive/persistent.json" -DelayMilliseconds 0
+        $null=Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -CookieName ESTSAUTHPERSISTENT -ResourceId $graph -DatabasePath "$probeRoot/persistent.json" -DelayMilliseconds 0
         Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Exactly -Times 1 -ParameterFilter {$CookieName -eq 'ESTSAUTHPERSISTENT'}
     }
     It 'checkpoints scope claims but no credentials, and resumes without another request' {
-        $path = "$TestDrive/probes.json"
+        $path = "$probeRoot/probes.json"
         $first = @(Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath $path -DelayMilliseconds 0)
         $first.Count | Should -Be 1
         $first[0].Outcome | Should -Be Succeeded
@@ -315,7 +319,7 @@ Describe 'Resumable probe and matrix planning' {
     }
     It 'probes only the supplied matrix edges' {
         $plan = @([pscustomobject]@{ ClientId = $clientId; ResourceId = $graph })
-        @(Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -Plan $plan -DatabasePath "$TestDrive/matrix.json" -DelayMilliseconds 0).Count | Should -Be 1
+        @(Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -Plan $plan -DatabasePath "$probeRoot/matrix.json" -DelayMilliseconds 0).Count | Should -Be 1
         Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Exactly -Times 1
     }
     It 'continues through multiple clients without replacing the matrix parameter' {
@@ -323,7 +327,7 @@ Describe 'Resumable probe and matrix planning' {
         $second.AppId = '22222222-2222-2222-2222-222222222222'
         $inventory.Applications += $second
         $plan = @($inventory.Applications | ForEach-Object { [pscustomobject]@{ClientId=$_.AppId;ResourceId=$graph} })
-        $results = @(Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -Plan $plan -DatabasePath "$TestDrive/multi.json" -DelayMilliseconds 0)
+        $results = @(Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -Plan $plan -DatabasePath "$probeRoot/multi.json" -DelayMilliseconds 0)
         $results.Count | Should -Be 2
         @($results | Where-Object Outcome -eq Succeeded).Count | Should -Be 2
         Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Exactly -Times 2
@@ -332,7 +336,7 @@ Describe 'Resumable probe and matrix planning' {
         $second = $app.PSObject.Copy()
         $second.AppId = '22222222-2222-2222-2222-222222222222'
         $inventory.Applications += $second
-        $path = "$TestDrive/bounded.json"
+        $path = "$probeRoot/bounded.json"
         $first = @(Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath $path -DelayMilliseconds 0 -MaxApplications 1)
         $next = @(Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath $path -DelayMilliseconds 0 -MaxApplications 1)
         $first.Count | Should -Be 1
@@ -344,7 +348,7 @@ Describe 'Resumable probe and matrix planning' {
         Mock Get-TokenForgeToken -ModuleName TokenForge {
             [pscustomobject]@{AccessToken=ConvertTo-SecureString synthetic -AsPlainText -Force;RefreshToken=$null;GrantedScopes=@('User.Read');TokenClaims=[pscustomobject]@{Readable=$true;HasDelegatedScopeClaim=$true;Scopes=@('User.Read');TenantFingerprint=('a'*64);PrincipalFingerprint=('d'*64)}}
         }
-        $result=Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath "$TestDrive/context.json" -DelayMilliseconds 0
+        $result=Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath "$probeRoot/context.json" -DelayMilliseconds 0
         $result.Outcome | Should -Be ContextMismatch
         $result.NamespaceVerification | Should -Be Mismatch
         $result.ScpScopes.Count | Should -Be 0
@@ -354,29 +358,29 @@ Describe 'Resumable probe and matrix planning' {
         Mock Get-TokenForgeToken -ModuleName TokenForge {
             [pscustomobject]@{AccessToken=ConvertTo-SecureString synthetic -AsPlainText -Force;RefreshToken=$null;GrantedScopes=@('User.Read');TokenClaims=[pscustomobject]@{Readable=$true;HasDelegatedScopeClaim=$true;Scopes=@('User.Read');TenantFingerprint=('a'*64);PrincipalFingerprint=('b'*64);ClientId=$clientId;Audience='https://other-api.test'}}
         }
-        $result=Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath "$TestDrive/audience.json" -DelayMilliseconds 0
+        $result=Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath "$probeRoot/audience.json" -DelayMilliseconds 0
         $result.Outcome | Should -Be ContextMismatch
         $result.RequestVerification | Should -Be Mismatch
         $result.ScpScopes.Count | Should -Be 0
     }
     It 'records opaque token evidence without claiming verified scp' {
         Mock Get-TokenForgeToken -ModuleName TokenForge { [pscustomobject]@{ AccessToken = ConvertTo-SecureString synthetic -AsPlainText -Force; RefreshToken = $null; GrantedScopes = @('User.Read'); TokenClaims = [pscustomobject]@{ Readable = $false; HasDelegatedScopeClaim = $false; Scopes = @() } } }
-        $result = @(Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath "$TestDrive/opaque.json" -DelayMilliseconds 0)
+        $result = @(Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath "$probeRoot/opaque.json" -DelayMilliseconds 0)
         $result[0].Outcome | Should -Be OpaqueToken
     }
     It 'does not send credentials for an ownership mismatch or disabled client' {
         $app.Registration = 'OwnerMismatch'
-        (Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath "$TestDrive/mismatch.json" -DelayMilliseconds 0).Outcome | Should -Be OwnerMismatch
+        (Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath "$probeRoot/mismatch.json" -DelayMilliseconds 0).Outcome | Should -Be OwnerMismatch
         $app.Registration = 'Present'; $app.AccountEnabled = $false
-        (Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath "$TestDrive/disabled.json" -DelayMilliseconds 0).Outcome | Should -Be Disabled
+        (Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath "$probeRoot/disabled.json" -DelayMilliseconds 0).Outcome | Should -Be Disabled
         Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 0
     }
     It 'stores numeric failure codes without exception contents' {
         Mock Get-TokenForgeToken -ModuleName TokenForge { throw 'AADSTS65001 private-access private-user' }
-        $result = @(Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath "$TestDrive/failure.json" -DelayMilliseconds 0 -MaxRedirects 1)
+        $result = @(Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $secret -ResourceId $graph -DatabasePath "$probeRoot/failure.json" -DelayMilliseconds 0 -MaxRedirects 1)
         $result[0].Outcome | Should -Be Failed
         $result[0].ErrorCodes | Should -Contain 65001
-        (Get-Content "$TestDrive/failure.json" -Raw) | Should -Not -Match 'private-access|private-user'
+        (Get-Content "$probeRoot/failure.json" -Raw) | Should -Not -Match 'private-access|private-user'
     }
     It 'uses tenant scope definitions for explicit requests without inventing published grants' {
         $resource = [pscustomobject]@{ AppId = $graph; Registration = 'Present'; Ownership = 'VerifiedMicrosoftOwner'; DelegatedScopeDefinitions = @([pscustomobject]@{ Value = 'User.Read'; Enabled = $true },[pscustomobject]@{ Value = 'Mail.Read'; Enabled = $false }) }

@@ -2,6 +2,67 @@
   "SchemaVersion": 1,
   "Observations": [
     {
+      "ClientId": "3420270d-958d-47dd-b212-d94442460036",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:29:28.1814543+00:00",
+      "Scopes": [
+        "email",
+        "GroupMember.Read.All",
+        "openid",
+        "profile",
+        "User.Read",
+        "User.ReadBasic.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "3530b95b-aca8-4164-b78e-0c07cbfd0681",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:29:52.4485581+00:00",
+      "Scopes": [
+        "email",
+        "Group.Read.All",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "36c50012-7aa1-4bff-9ff8-51c75190ae4d",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:30:08.8598887+00:00",
+      "Scopes": [
+        "email",
+        "MultiTenantOrganization.ReadBasic.All",
+        "openid",
+        "profile"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "373aedd7-18be-428f-81e6-8174c02cf6d8",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:30:20.3236631+00:00",
+      "Scopes": [
+        "Calendars.Read",
+        "Chat.Read",
+        "Contacts.Read",
+        "email",
+        "Files.ReadWrite.All",
+        "OnlineMeetingTranscript.Read.All",
+        "openid",
+        "Presence.ReadWrite",
+        "profile",
+        "User.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
       "ClientId": "871c010f-5e61-4fb1-83ac-98610a7e9110",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
       "ObservedAt": "2026-10-07T12:48:27.3693944+00:00",
@@ -49,7 +110,7 @@
     {
       "ClientId": "89bee1f7-5e6e-4d8a-9f3d-ecd601259da7",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T12:48:47.3730290+00:00",
+      "ObservedAt": "2026-10-07T12:48:47.373029+00:00",
       "Scopes": [
         "email",
         "Files.ReadWrite",

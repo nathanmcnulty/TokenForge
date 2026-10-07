@@ -2,9 +2,22 @@
   "SchemaVersion": 1,
   "Observations": [
     {
+      "ClientId": "2f3b013e-5dc4-4b2a-831f-47ba08353237",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-07T20:29:12.6396881+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
       "ClientId": "7b7f48f0-62d0-4183-b9ad-c2b6b4fd7aff",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T06:51:54.0000000+00:00",
+      "ObservedAt": "2026-10-07T06:51:54+00:00",
       "Scopes": [
         "_H.AB",
         "Application.Read.All",
@@ -21,7 +34,7 @@
     {
       "ClientId": "7eadcef8-456d-4611-9480-4fff72b8b9e2",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T06:52:25.0000000+00:00",
+      "ObservedAt": "2026-10-07T06:52:25+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -34,7 +47,7 @@
     {
       "ClientId": "7f5a85eb-674c-4dee-8c57-1544c5769cfb",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T06:52:28.0000000+00:00",
+      "ObservedAt": "2026-10-07T06:52:28+00:00",
       "Scopes": [
         "Application.Read.All",
         "email",
@@ -48,7 +61,7 @@
     {
       "ClientId": "7f98cb04-cd1e-40df-9140-3bf7e2cea4db",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T06:52:34.0000000+00:00",
+      "ObservedAt": "2026-10-07T06:52:34+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -61,7 +74,7 @@
     {
       "ClientId": "7fba38f4-ec1f-458d-906c-f4e3c4f41335",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T06:52:35.0000000+00:00",
+      "ObservedAt": "2026-10-07T06:52:35+00:00",
       "Scopes": [
         "_A.A3",
         "_A.AA",
@@ -82,7 +95,7 @@
     {
       "ClientId": "801546d2-55cc-4ff4-b66d-134b1208deb5",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T06:52:36.0000000+00:00",
+      "ObservedAt": "2026-10-07T06:52:36+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -97,7 +110,7 @@
     {
       "ClientId": "80ccca67-54bd-44ab-8625-4b79c4dc7775",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T06:52:41.0000000+00:00",
+      "ObservedAt": "2026-10-07T06:52:41+00:00",
       "Scopes": [
         "_C.AL",
         "_C.AO",
@@ -144,7 +157,7 @@
     {
       "ClientId": "810dcf14-1858-4bf2-8134-4c369fa3235b",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T06:52:46.0000000+00:00",
+      "ObservedAt": "2026-10-07T06:52:46+00:00",
       "Scopes": [
         "AccessReview.ReadWrite.All",
         "Application.Read.All",
@@ -169,7 +182,7 @@
     {
       "ClientId": "81feaced-5ddd-41e7-8bef-3e20a2689bb7",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T06:52:51.0000000+00:00",
+      "ObservedAt": "2026-10-07T06:52:51+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -183,7 +196,7 @@
     {
       "ClientId": "82864fa0-ed49-4711-8395-a0e6003dca1f",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T06:53:10.0000000+00:00",
+      "ObservedAt": "2026-10-07T06:53:10+00:00",
       "Scopes": [
         "email",
         "Family.Read",
@@ -203,7 +216,7 @@
     {
       "ClientId": "835b2a73-6e10-4aa5-a979-21dfda45231c",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T06:53:13.0000000+00:00",
+      "ObservedAt": "2026-10-07T06:53:13+00:00",
       "Scopes": [
         "email",
         "GroupMember.Read.All",
@@ -217,7 +230,7 @@
     {
       "ClientId": "84a0e9dd-6e58-4aad-82af-ebe485acd09d",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T06:53:28.0000000+00:00",
+      "ObservedAt": "2026-10-07T06:53:28+00:00",
       "Scopes": [
         "email",
         "Files.Read.All",

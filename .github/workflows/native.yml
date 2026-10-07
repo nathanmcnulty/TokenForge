@@ -1,6 +1,8 @@
 name: Native CLI validation
 on:
   push:
+    branches: [main]
+    tags: ['**']
   pull_request:
 permissions:
   contents: read

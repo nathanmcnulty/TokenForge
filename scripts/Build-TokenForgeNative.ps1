@@ -12,6 +12,6 @@ $null=New-Item -ItemType Directory (Join-Path $destination src),(Join-Path $dest
 Copy-Item (Join-Path $repo src/TokenForge) (Join-Path $destination src) -Recurse
 Copy-Item (Join-Path $PSScriptRoot tokenforge.ps1) (Join-Path $destination scripts)
 Copy-Item (Join-Path $repo docs/native-cli.md) (Join-Path $destination README.md)
-foreach($name in @('native-cli.md','native-architecture.md','os-backed-vault.md','profiles-and-cli.md','research-catalog.md','sqlite-flow-evidence.md','sqlite-application-catalog.md')){Copy-Item (Join-Path $repo "docs/$name") (Join-Path $destination $name)}
+foreach($name in @('native-cli.md','native-architecture.md','os-backed-vault.md','profiles-and-cli.md','research-catalog.md','sqlite-flow-evidence.md','sqlite-application-catalog.md','sqlite-scope-history.md')){Copy-Item (Join-Path $repo "docs/$name") (Join-Path $destination $name)}
 $exe=Join-Path $destination $(if($Runtime.StartsWith('win-')){'tokenforge.exe'}else{'tokenforge'})
 [pscustomobject]@{Runtime=$Runtime;Path=$exe;Sha256=(Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant();AuthenticationDependency='PowerShell 7.4+';EvidenceDependency='Bundled SQLite'}

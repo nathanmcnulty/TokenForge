@@ -47,6 +47,7 @@ public sealed class EvidenceStore : IDisposable
         var root = document.RootElement;
         if (root.GetProperty("SchemaVersion").GetInt32() != 1 || root.GetProperty("Observations").ValueKind != JsonValueKind.Array)
             throw new InvalidOperationException("Unsupported scope database.");
+        if(root.EnumerateObject().Select(x=>x.Name).Distinct(StringComparer.Ordinal).Count()!=root.EnumerateObject().Count()) throw new InvalidOperationException("Duplicate scope database fields.");
         if(root.EnumerateObject().Any(x=>x.Name is not ("SchemaVersion" or "UpdatedAt" or "Observations" or "RegistrationAttempts"))) throw new InvalidOperationException("Unknown scope database fields.");
         using var transaction = connection.BeginTransaction();
         var count = 0;
@@ -105,18 +106,28 @@ public sealed class EvidenceStore : IDisposable
         clean["SignatureValidated"] = false;
         return clean;
     }
-    public string Export(bool publicOnly = false)
+    public string Export(bool publicOnly = false, bool latest = false, string? tenant = null, string? principal = null, string? resource = null)
     {
+        if(tenant!=null && !Regex.IsMatch(tenant,"\\A[a-f0-9]{64}\\z") || principal!=null && !Regex.IsMatch(principal,"\\A[a-f0-9]{64}\\z")) throw new InvalidOperationException("Invalid evidence namespace.");
+        if(principal!=null && tenant==null) throw new InvalidOperationException("Principal selection requires a tenant.");
+        if(resource!=null) resource=Guid.Parse(resource).ToString();
         using var transaction = connection.BeginTransaction();
         var rows = new List<JsonElement>();
+        long bytes=0;
+        void Bound(string payload){bytes+=Encoding.UTF8.GetByteCount(payload);if(bytes>64*1024*1024)throw new InvalidOperationException("Evidence export exceeds bounds.");}
         using (var command = connection.CreateCommand())
         {
-            command.Transaction = transaction; command.CommandText = "SELECT payload FROM observations ORDER BY observed,id;";
+            command.Transaction = transaction;
+            var filter=" WHERE ($tenant IS NULL OR tenant=$tenant) AND ($principal IS NULL OR principal=$principal) AND ($resource IS NULL OR resource=$resource)";
+            command.CommandText=latest ? "SELECT id,tenant,principal,client,resource,observed,payload FROM (SELECT *,ROW_NUMBER() OVER(PARTITION BY tenant,principal,client,resource ORDER BY observed DESC,rowid DESC) AS rank FROM observations"+filter+") WHERE rank=1 ORDER BY observed,id;" : "SELECT id,tenant,principal,client,resource,observed,payload FROM observations"+filter+" ORDER BY observed,rowid;";
+            Add(command,"$tenant",tenant);Add(command,"$principal",principal);Add(command,"$resource",resource);
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
-                using var document = JsonDocument.Parse(reader.GetString(0));
+                var payload=reader.GetString(6);Bound(payload);
+                using var document = JsonDocument.Parse(payload);
                 var clean = CleanObservation(document.RootElement);
+                if(Hash(JsonSerializer.Serialize(clean))!=reader.GetString(0) || (string?)clean["TenantFingerprint"]!=(reader.IsDBNull(1)?null:reader.GetString(1)) || (string?)clean["PrincipalFingerprint"]!=(reader.IsDBNull(2)?null:reader.GetString(2)) || (string?)clean["ClientId"]!=reader.GetString(3) || (string?)clean["ResourceId"]!=reader.GetString(4) || (string?)clean["ObservedAt"]!=reader.GetString(5)) throw new InvalidOperationException("Invalid stored scope evidence.");
                 if (publicOnly) { clean.Remove("TenantFingerprint"); clean.Remove("PrincipalFingerprint"); }
                 rows.Add(JsonSerializer.SerializeToElement(clean));
             }
@@ -124,11 +135,14 @@ public sealed class EvidenceStore : IDisposable
         var attempts = new List<JsonElement>();
         if (!publicOnly)
         {
-            using var command = connection.CreateCommand(); command.Transaction = transaction; command.CommandText = "SELECT payload FROM registration_attempts ORDER BY id;";
-            using var reader = command.ExecuteReader(); while (reader.Read()){using var document=JsonDocument.Parse(reader.GetString(0));attempts.Add(JsonSerializer.SerializeToElement(CleanRegistration(document.RootElement)));}
+            using var command = connection.CreateCommand(); command.Transaction = transaction; command.CommandText=latest ? "WITH ranked AS (SELECT *,json_extract(payload,'$.TenantFingerprint') AS tenant,json_extract(payload,'$.AppId') AS app,ROW_NUMBER() OVER(PARTITION BY json_extract(payload,'$.TenantFingerprint'),json_extract(payload,'$.AppId') ORDER BY json_extract(payload,'$.AttemptedAt') DESC,rowid DESC) AS rank FROM registration_attempts WHERE ($tenant IS NULL OR json_extract(payload,'$.TenantFingerprint')=$tenant)), cleanup AS (SELECT *,ROW_NUMBER() OVER(PARTITION BY json_extract(payload,'$.TenantFingerprint'),json_extract(payload,'$.AppId') ORDER BY json_extract(payload,'$.AttemptedAt') DESC,rowid DESC) AS rank FROM registration_attempts WHERE ($tenant IS NULL OR json_extract(payload,'$.TenantFingerprint')=$tenant) AND json_extract(payload,'$.Outcome') IN ('CleanupRequired','CleanupResolved')) SELECT CASE WHEN json_extract(c.payload,'$.Outcome')='CleanupRequired' THEN c.id ELSE r.id END,CASE WHEN json_extract(c.payload,'$.Outcome')='CleanupRequired' THEN c.payload ELSE r.payload END FROM ranked r LEFT JOIN cleanup c ON c.rank=1 AND json_extract(c.payload,'$.TenantFingerprint')=r.tenant AND json_extract(c.payload,'$.AppId')=r.app WHERE r.rank=1 ORDER BY json_extract(r.payload,'$.AttemptedAt'),r.id;" : "SELECT id,payload FROM registration_attempts WHERE ($tenant IS NULL OR json_extract(payload,'$.TenantFingerprint')=$tenant) ORDER BY json_extract(payload,'$.AttemptedAt'),rowid;";
+            Add(command,"$tenant",tenant);
+            using var reader = command.ExecuteReader(); while (reader.Read()){var payload=reader.GetString(1);Bound(payload);using var document=JsonDocument.Parse(payload);var clean=CleanRegistration(document.RootElement);if(Hash(JsonSerializer.Serialize(clean))!=reader.GetString(0))throw new InvalidOperationException("Invalid stored registration evidence.");attempts.Add(JsonSerializer.SerializeToElement(clean));}
         }
         transaction.Commit();
-        return JsonSerializer.Serialize(new { SchemaVersion = 1, UpdatedAt = DateTimeOffset.UtcNow.ToString("o"), Observations = rows, RegistrationAttempts = attempts });
+        var result=JsonSerializer.Serialize(new { SchemaVersion = 1, UpdatedAt = DateTimeOffset.UtcNow.ToString("o"), Observations = rows, RegistrationAttempts = attempts });
+        if(Encoding.UTF8.GetByteCount(result)>64*1024*1024)throw new InvalidOperationException("Evidence export exceeds bounds.");
+        return result;
     }
     public string Plan(IEnumerable<string> clients, int batchSize)
     {
@@ -175,10 +189,10 @@ public sealed class EvidenceStore : IDisposable
         return clean;
     }
     private static string GuidValue(JsonElement value){var id=Guid.Parse(value.GetString()!);return id.ToString();}
-    private static object? Fingerprint(JsonElement value) { if (value.ValueKind == JsonValueKind.Null) return null; var text = value.GetString(); if (text == null || !Regex.IsMatch(text, "^[a-f0-9]{64}$")) throw new InvalidOperationException("Invalid fingerprint."); return text; }
+    private static object? Fingerprint(JsonElement value) { if (value.ValueKind == JsonValueKind.Null) return null; var text = value.GetString(); if (text == null || !Regex.IsMatch(text, "\\A[a-f0-9]{64}\\z")) throw new InvalidOperationException("Invalid fingerprint."); return text; }
     private static string Date(JsonElement value){var text=value.GetString();if(text==null || text.Length>64 || !Regex.IsMatch(text,@"^\d{4}-\d{2}-\d{2}T[^\r\n]+(Z|[+-]\d{2}:\d{2})$")) throw new InvalidOperationException("Invalid evidence date.");return DateTimeOffset.Parse(text,System.Globalization.CultureInfo.InvariantCulture).ToUniversalTime().ToString("o");}
     private static string Choice(JsonElement value, string choices) { var text = value.GetString(); if (text == null || !choices.Split(' ').Contains(text, StringComparer.Ordinal)) throw new InvalidOperationException("Invalid evidence enum."); return text; }
-    private static string[] Strings(JsonElement value, string pattern) { if (value.GetArrayLength() > 4096) throw new InvalidOperationException("Too many scope values."); var values = value.EnumerateArray().Select(x => x.ValueKind == JsonValueKind.Number ? x.GetRawText() : x.GetString()!).ToArray(); if (values.Any(x => x == null || !Regex.IsMatch(x, pattern))) throw new InvalidOperationException("Invalid evidence values."); return values.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray(); }
+    private static string[] Strings(JsonElement value, string pattern) { if (value.GetArrayLength() > 4096) throw new InvalidOperationException("Too many scope values."); var values = value.EnumerateArray().Select(x => x.ValueKind == JsonValueKind.Number ? x.GetRawText() : x.GetString()!).ToArray(); if (values.Any(x => x == null || !Regex.IsMatch(x, pattern.Replace("^", "\\A").Replace("$", "\\z")))) throw new InvalidOperationException("Invalid evidence values."); return values.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray(); }
     private static double Number(JsonElement value, double max) { var number = value.GetDouble(); if (!double.IsFinite(number) || number < 0 || number > max) throw new InvalidOperationException("Invalid evidence count."); return number; }
     private static string Hash(string text) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text))).ToLowerInvariant();
     private static void Add(SqliteCommand command, string key, object? value) => command.Parameters.AddWithValue(key, value ?? DBNull.Value);

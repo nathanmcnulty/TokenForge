@@ -49,7 +49,7 @@ This store contains diagnostic metadata, never tokens, cookies, assertions, pass
 
 Storage is unencrypted. Unix paths require a private parent and mode-0600 files; Windows requires a protected current-user ACL. Linked paths and foreign SQLite formats are rejected. WAL/SHM files stay inside the private directory. The shared adapter uses private temporary metadata files, argument lists, a timeout, cleanup, and suppressed child diagnostics. Disk encryption remains useful for confidential research.
 
-History can grow in SQLite without whole-file checkpoint writes. Current reports avoid materializing version and full run history. JSON imports/exports remain limited to 128 MiB; use application/current selections for large exports. Very large current catalogs may still need partitioned reports. Scope summaries and the compatible registration database remain JSON in this release; their primary SQLite integration is the next storage migration. Authentication still uses PowerShell.
+History can grow in SQLite without whole-file checkpoint writes. Current reports avoid materializing version and full run history. JSON imports/exports remain limited to 128 MiB; use application/current selections for large exports. Very large current catalogs may still need partitioned reports. Version 0.15 also supports [primary SQLite scope/registration checkpoints](sqlite-scope-history.md); JSON remains portable. Authentication still uses PowerShell.
 
 ## Validation on 2026-10-07
 

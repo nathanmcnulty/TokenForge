@@ -76,9 +76,9 @@ function Test-TokenForgeProfile {
         }
     }catch{$inventoryState='InvalidOrUnsafePath'}
     try{
-        $file=Resolve-TokenForgeVaultPath (Join-Path $p.StatePath 'scopes.json')
+        $file=Resolve-TokenForgeVaultPath (Join-Path $p.StatePath $(if(Test-Path (Join-Path $p.StatePath 'scopes.sqlite')){'scopes.sqlite'}else{'scopes.json'}))
         if(Test-Path $file){
-            $database=Get-TokenForgeScopeDatabase $file
+            $database=Get-TokenForgeScopeDatabase $file -Latest -TenantFingerprint $p.ExpectedTenantFingerprint -PrincipalFingerprint $p.ExpectedPrincipalFingerprint
             $matching=@($database.Observations|Where-Object {$_.TenantFingerprint -eq $p.ExpectedTenantFingerprint -and $_.PrincipalFingerprint -eq $p.ExpectedPrincipalFingerprint -and $_.Outcome -eq 'Succeeded' -and $_.NamespaceVerification -eq 'Matched' -and $_.RequestVerification -eq 'Matched' -and ([DateTimeOffset]$_.ObservedAt) -ge [DateTimeOffset]::UtcNow.AddHours(-$p.MaxAgeHours) -and ([DateTimeOffset]$_.ObservedAt) -le [DateTimeOffset]::UtcNow.AddMinutes(5)})
             $scopeState=if($matching.Count){'FreshAccountObservations'}else{'NoFreshAccountObservations'}
         }

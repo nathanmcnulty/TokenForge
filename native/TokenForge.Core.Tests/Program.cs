@@ -83,5 +83,6 @@ Reject(()=>TokenForge.Core.V0110.PlatformVaultKey.Open("invalid",true));
 
 FlowEvidenceTests.Run(Check, Reject);
 ApplicationCatalogTests.Run(Check,Reject);
+count+=ScopeHistoryTests.Run();
 Console.WriteLine($"{count} native checks passed, including flow and application catalog transactions.");
 return 0;

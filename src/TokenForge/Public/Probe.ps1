@@ -15,7 +15,7 @@ function Invoke-TokenForgeScopeProbe {
         [object[]]$Plan,
         [ValidateSet('OAuth2V2Pkce','OAuth2V2Implicit','OAuth2V1Implicit')][string[]]$Protocols = @('OAuth2V2Pkce','OAuth2V2Implicit','OAuth2V1Implicit'),
         [Parameter(Mandatory)][string]$DatabasePath,
-        [string]$FlowDatabasePath,[switch]$ExploreAllFlows,
+        [string]$FlowDatabasePath,[switch]$ExploreAllFlows,[string]$NativeExecutablePath,[Collections.IDictionary]$FlowChanges,
         [guid[]]$ClientId,
         [ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,
         [ValidateRange(1,100000)][int]$MaxApplications = 100000,
@@ -42,7 +42,8 @@ function Invoke-TokenForgeScopeProbe {
         if(-not $probeLock){$probeLock=Open-TokenForgeVaultFile $probeLockPath}
     $database = Get-TokenForgeScopeDatabase -Path $DatabasePath
     if(-not $FlowDatabasePath){$FlowDatabasePath=$DatabasePath+'.flows.json'}
-    $flows=Get-TokenForgeFlowEvidence $FlowDatabasePath
+    $sqliteFlows=$FlowDatabasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)
+    $flows=if($sqliteFlows){$null}else{Get-TokenForgeFlowEvidence $FlowDatabasePath}
     $apps = @($Inventory.Applications | Where-Object { -not $ClientId -or $_.AppId -in @($ClientId | ForEach-Object ToString) } | Sort-Object AppId)
     $processedApplications = 0
     foreach ($app in $apps) {
@@ -84,19 +85,24 @@ function Invoke-TokenForgeScopeProbe {
             }
             $flowPlan=@{TenantFingerprint=$Inventory.TenantFingerprint;PrincipalFingerprint=$probePrincipal;ClientId=$app.AppId;ResourceId=$resource.ToString();Tenant=$Tenant;CatalogHash=if($Inventory.DiscoveryCatalogHash -match '^[a-f0-9]{64}$'){$Inventory.DiscoveryCatalogHash}else{$null};Eligibility=$eligibility;ResourceAliases=$aliases;Cells=@($slots);PlannedAt=[DateTimeOffset]::UtcNow.ToString('o')}
             $planHash=Get-TokenForgeFlowPlanHash $flowPlan
+            if($sqliteFlows){$flows=Get-TokenForgeFlowEvidence $FlowDatabasePath -PlanFingerprint $planHash -NativeExecutablePath $NativeExecutablePath}
+            if($null -ne $FlowChanges -and $flows.Plans.ContainsKey($planHash)){
+                Add-TokenForgeFlowChanges $FlowChanges $flows.Plans[$planHash] $planHash
+                foreach($prior in @($flows.Attempts|Where-Object PlanFingerprint -eq $planHash)){Add-TokenForgeFlowChanges $FlowChanges -Attempt $prior}
+            }
             $priorSlots=@{}
-            foreach($prior in @($flows.Attempts|Where-Object PlanFingerprint -eq $planHash|Sort-Object ObservedAt)){$priorSlots[$prior.AttemptKey]=$prior}
+            foreach($prior in @($flows.Attempts|Where-Object PlanFingerprint -eq $planHash|Sort-Object {([DateTimeOffset]$_.ObservedAt).UtcDateTime})){$priorSlots[$prior.AttemptKey]=$prior}
             $previousAttempts=@($priorSlots.Values|Where-Object Outcome -ne 'Started')
             $previousKeys=@($previousAttempts|ForEach-Object {$_.AttemptKey}|Sort-Object -Unique)
             $previousSuccess=@($previousAttempts|Where-Object Outcome -in @('Succeeded','OpaqueToken','NoDelegatedScp'))
-            $aggregate=@($database.Observations|Where-Object {$_.ClientId -eq $app.AppId -and $_.ResourceId -eq $resource.ToString() -and $_.TenantFingerprint -eq $Inventory.TenantFingerprint -and $_.PrincipalFingerprint -eq $probePrincipal}|Sort-Object ObservedAt -Descending|Select-Object -First 1)
-            $bestPrior=@($previousSuccess|Sort-Object @{Expression={if($_.Outcome -eq 'Succeeded'){0}else{1}}},@{Expression={$_.ObservedAt};Descending=$true}|Select-Object -First 1)
+            $aggregate=@($database.Observations|Where-Object {$_.ClientId -eq $app.AppId -and $_.ResourceId -eq $resource.ToString() -and $_.TenantFingerprint -eq $Inventory.TenantFingerprint -and $_.PrincipalFingerprint -eq $probePrincipal}|Sort-Object {([DateTimeOffset]$_.ObservedAt).UtcDateTime} -Descending|Select-Object -First 1)
+            $bestPrior=@($previousSuccess|Sort-Object @{Expression={if($_.Outcome -eq 'Succeeded'){0}else{1}}},@{Expression={([DateTimeOffset]$_.ObservedAt).UtcDateTime};Descending=$true}|Select-Object -First 1)
             $hasAggregate=$false
             if($aggregate.Count){
                 if($bestPrior.Count){
                     $hasAggregate=([DateTimeOffset]$aggregate[0].ObservedAt -eq [DateTimeOffset]$bestPrior[0].ObservedAt -and $aggregate[0].Protocol -eq $bestPrior[0].Protocol -and $aggregate[0].Spa -eq $bestPrior[0].Spa -and $aggregate[0].RedirectFingerprint -eq $bestPrior[0].RedirectFingerprint)
                 }elseif($previousAttempts.Count){
-                    $last=@($previousAttempts|Sort-Object ObservedAt -Descending)[0]
+                    $last=@($previousAttempts|Sort-Object {([DateTimeOffset]$_.ObservedAt).UtcDateTime} -Descending)[0]
                     $hasAggregate=([DateTimeOffset]$aggregate[0].ObservedAt -ge [DateTimeOffset]$last.ObservedAt)
                 }elseif($eligibility -ne 'Eligible'){
                     $expectedOutcome=if($eligibility -eq 'BrokerRedirectHint'){'BrokerRequired'}elseif($eligibility -eq 'InvalidRedirectHints'){'Failed'}else{$eligibility}
@@ -106,7 +112,7 @@ function Invoke-TokenForgeScopeProbe {
             $pairComplete=($flowPlan.Cells.Count -eq $previousKeys.Count -or (-not $ExploreAllFlows -and $previousSuccess.Count)) -and -not @($priorSlots.Values|Where-Object Outcome -eq 'Started').Count
             if(-not $Refresh -and $flows.Plans.ContainsKey($planHash) -and $pairComplete -and $hasAggregate -and -not @($previousAttempts|Where-Object Outcome -eq 'ContextMismatch').Count){continue}
             if(-not $processedThisApp){if($processedApplications -ge $MaxApplications){return};$processedApplications++;$processedThisApp=$true}
-            $flows=Save-TokenForgeFlowEvidence $FlowDatabasePath -Plan $flowPlan -PlanFingerprint $planHash
+            $flows=Save-TokenForgeFlowEvidence $FlowDatabasePath -Plan $flowPlan -PlanFingerprint $planHash -ExistingDocument $flows -NativeExecutablePath $NativeExecutablePath -Changes $FlowChanges
             if ($app.Registration -eq 'Missing') { $observation.Outcome = 'MissingRegistration' }
             elseif ($app.Registration -eq 'OwnerMismatch' -or $app.Ownership -ne 'VerifiedMicrosoftOwner') { $observation.Outcome = 'OwnerMismatch' }
             elseif (-not $app.AccountEnabled) { $observation.Outcome = 'Disabled' }
@@ -125,7 +131,7 @@ function Invoke-TokenForgeScopeProbe {
                         $token = $null
                         $redirectHash=Get-TokenForgeFingerprint $redirect
                         $attemptKey=Get-TokenForgeFingerprint ($planHash+'|'+$attempt.Protocol+'|'+[int]$spa+'|'+$redirectHash)
-                        $previous=@($flows.Attempts|Where-Object {$_.PlanFingerprint -eq $planHash -and $_.AttemptKey -eq $attemptKey}|Sort-Object ObservedAt -Descending|Select-Object -First 1)
+                        $previous=@($flows.Attempts|Where-Object {$_.PlanFingerprint -eq $planHash -and $_.AttemptKey -eq $attemptKey}|Sort-Object {([DateTimeOffset]$_.ObservedAt).UtcDateTime} -Descending|Select-Object -First 1)
                         $flowAttempt=$null
                         if(-not $Refresh -and $previous.Count -and $previous[0].Outcome -ne 'Started'){$flowAttempt=$previous[0]}
                         if($flowAttempt){
@@ -140,7 +146,7 @@ function Invoke-TokenForgeScopeProbe {
                         }
                         $started=[DateTimeOffset]::UtcNow.ToString('o')
                         $flowAttempt=@{AttemptId=[guid]::NewGuid().ToString();PlanFingerprint=$planHash;AttemptKey=$attemptKey;ClientId=$app.AppId;ResourceId=$resource.ToString();TenantFingerprint=$Inventory.TenantFingerprint;PrincipalFingerprint=$probePrincipal;StartedAt=$started;ObservedAt=$started;Protocol=$attempt.Protocol;Spa=[bool]$spa;RedirectFingerprint=$redirectHash;Outcome='Started';ResponseScopes=@();ScpScopes=@();ClaimsReadable=$false;HasScpClaim=$false;NamespaceVerification='Unverifiable';RequestVerification='Unverifiable';SignatureValidated=$false;ErrorCodes=@();ElapsedSeconds=0}
-                        $flows=Save-TokenForgeFlowEvidence $FlowDatabasePath -Attempt $flowAttempt
+                        $flows=Save-TokenForgeFlowEvidence $FlowDatabasePath -Attempt $flowAttempt -ExistingDocument $flows -NativeExecutablePath $NativeExecutablePath -Changes $FlowChanges
                         $attemptWatch=[Diagnostics.Stopwatch]::StartNew()
                         $observation.AttemptCount++
                         if($observation.Outcome -notin @('Succeeded','OpaqueToken','NoDelegatedScp')){$observation.Protocol = $attempt.Protocol;$observation.Spa = $spa}
@@ -187,7 +193,7 @@ function Invoke-TokenForgeScopeProbe {
                         } finally {
                             $flowAttempt.ObservedAt=[DateTimeOffset]::UtcNow.ToString('o');$flowAttempt.ElapsedSeconds=[math]::Round($attemptWatch.Elapsed.TotalSeconds,3)
                             # Persistence errors stop the sweep; no additional issuance after a failed checkpoint.
-                            try{$flows=Save-TokenForgeFlowEvidence $FlowDatabasePath -Attempt $flowAttempt}finally{
+                            try{$flows=Save-TokenForgeFlowEvidence $FlowDatabasePath -Attempt $flowAttempt -ExistingDocument $flows -NativeExecutablePath $NativeExecutablePath -Changes $FlowChanges}finally{
                             if ($token) { $token.AccessToken.Dispose(); if ($token.RefreshToken) { $token.RefreshToken.Dispose() } }
                             $token = $null
                             }
@@ -198,14 +204,14 @@ function Invoke-TokenForgeScopeProbe {
                 }
             }
             $latest=@{}
-            foreach($item in @($flows.Attempts|Where-Object PlanFingerprint -eq $planHash|Sort-Object ObservedAt)){$latest[$item.AttemptKey]=$item}
-            $best=@($latest.Values|Where-Object Outcome -in @('Succeeded','OpaqueToken','NoDelegatedScp')|Sort-Object @{Expression={if($_.Outcome -eq 'Succeeded'){0}else{1}}},@{Expression={$_.ObservedAt};Descending=$true}|Select-Object -First 1)
+            foreach($item in @($flows.Attempts|Where-Object PlanFingerprint -eq $planHash|Sort-Object {([DateTimeOffset]$_.ObservedAt).UtcDateTime})){$latest[$item.AttemptKey]=$item}
+            $best=@($latest.Values|Where-Object Outcome -in @('Succeeded','OpaqueToken','NoDelegatedScp')|Sort-Object @{Expression={if($_.Outcome -eq 'Succeeded'){0}else{1}}},@{Expression={([DateTimeOffset]$_.ObservedAt).UtcDateTime};Descending=$true}|Select-Object -First 1)
             if(@($latest.Values|Where-Object Outcome -eq 'ContextMismatch').Count){$observation.Outcome='ContextMismatch';$observation.ScpScopes=@();$observation.ResponseScopes=@()}
             elseif($best.Count){
                 foreach($field in @('Outcome','ObservedAt','Protocol','Spa','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','NamespaceVerification','RequestVerification')){$observation.$field=$best[0][$field]}
                 $observation|Add-Member RedirectFingerprint $best[0].RedirectFingerprint -Force
             }
-            if(-not $best.Count -and $latest.Count){$observation.ObservedAt=@($latest.Values|Sort-Object ObservedAt -Descending)[0].ObservedAt}
+            if(-not $best.Count -and $latest.Count){$observation.ObservedAt=@($latest.Values|Sort-Object {([DateTimeOffset]$_.ObservedAt).UtcDateTime} -Descending)[0].ObservedAt}
             $observation.ElapsedSeconds = [math]::Round($watch.Elapsed.TotalSeconds,3)
             $database = Add-TokenForgeScopeObservation -Database $database -Observation $observation -Path $DatabasePath
             $observation

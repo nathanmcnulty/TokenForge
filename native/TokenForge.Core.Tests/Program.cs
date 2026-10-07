@@ -50,7 +50,7 @@ try
   File.SetUnixFileMode(path,UnixFileMode.UserRead|UnixFileMode.UserWrite);
   var link=Path.Combine(root,"linked.sqlite");File.CreateSymbolicLink(link,path);Reject(()=>{using var linked=new EvidenceStore(link);});
  }
- Console.WriteLine($"{count} native checks passed.");
+
 }
 finally{Directory.Delete(root,true);}
 
@@ -81,4 +81,6 @@ if(args.Contains("--os-store"))
 }
 Reject(()=>TokenForge.Core.V0110.PlatformVaultKey.Open("invalid",true));
 
+FlowEvidenceTests.Run(Check, Reject);
+Console.WriteLine($"{count} native checks passed, including flow evidence transactions and resume.");
 return 0;

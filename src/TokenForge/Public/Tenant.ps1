@@ -13,7 +13,7 @@ function Get-TokenForgeTenantInventory {
     $tenantFingerprint = Get-TokenForgeFingerprint -Value ([string]$payload['tid'])
     $principal = [string]$payload['oid']
     $principalFingerprint = if ($principal) { Get-TokenForgeFingerprint -Value "$($payload['tid'])/$principal" } else { $null }
-    $select = 'id,appId,appOwnerOrganizationId,accountEnabled,replyUrls,oauth2PermissionScopes,appRoles,servicePrincipalNames,appRoleAssignmentRequired,signInAudience,preferredSingleSignOnMode'
+    $select = 'id,appId,displayName,servicePrincipalType,loginUrl,logoutUrl,homepage,appOwnerOrganizationId,accountEnabled,replyUrls,oauth2PermissionScopes,appRoles,servicePrincipalNames,appRoleAssignmentRequired,signInAudience,preferredSingleSignOnMode'
     $all = Get-TokenForgeGraphCollection -AccessToken $GraphToken -Uri "https://graph.microsoft.com/v1.0/servicePrincipals?`$select=$select&`$top=999"
     $objects = @{}; $byApp = @{}
     foreach ($sp in $all) { $objects[[string]$sp['id']] = $sp; $byApp[[string]$sp['appId']] = $sp }
@@ -54,11 +54,14 @@ function Get-TokenForgeTenantInventory {
         $definitions = @()
         if ($verified) {
             $definitions = @(foreach ($scope in @($sp['oauth2PermissionScopes'])) {
-                if ($scope['value']) { [pscustomobject]@{ Value = [string]$scope['value']; Enabled = $scope['isEnabled'] -eq $true; ConsentType = [string]$scope['type'] } }
+                if ($scope['value']) { [pscustomobject]@{ Id = $scope['id']; Value = [string]$scope['value']; Enabled = $scope['isEnabled'] -eq $true; ConsentType = [string]$scope['type']; AdminConsentDisplayName = $scope['adminConsentDisplayName']; AdminConsentDescription = $scope['adminConsentDescription']; UserConsentDisplayName = $scope['userConsentDisplayName']; UserConsentDescription = $scope['userConsentDescription'] } }
             })
         }
         [pscustomobject]@{
-            AppId = $id; Name = $candidate.Name; Sources = $candidate.Sources
+            AppId = $id; Name = if($verified -and $sp['displayName']){[string]$sp['displayName']}else{$candidate.Name}; PublishedName = $candidate.Name; Sources = $candidate.Sources
+            ServicePrincipalType = if($verified){[string]$sp['servicePrincipalType']}else{$null}
+            PreferredSingleSignOnMode = if($verified){[string]$sp['preferredSingleSignOnMode']}else{$null}
+            LoginUrl = if($verified){[string]$sp['loginUrl']}else{$null}; LogoutUrl = if($verified){[string]$sp['logoutUrl']}else{$null}; Homepage = if($verified){[string]$sp['homepage']}else{$null}
             Registration = if (-not $sp) { 'Missing' } elseif ($verified) { 'Present' } else { 'OwnerMismatch' }
             Ownership = if ($verified) { 'VerifiedMicrosoftOwner' } else { $candidate.Ownership }
             OwnerTenantId = if ($verified) { [string]$sp['appOwnerOrganizationId'] } else { $candidate.OwnerTenantId }

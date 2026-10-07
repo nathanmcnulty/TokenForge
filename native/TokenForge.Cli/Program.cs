@@ -4,10 +4,46 @@ using TokenForge.Core;
 
 try
 {
-    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.12.0",AuthenticationDependency="PowerShell 7.4+"}));return 0;}
+    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.13.0",AuthenticationDependency="PowerShell 7.4+"}));return 0;}
     if (args.Length == 0 || args[0] is "help" or "--help")
     {
-        Console.WriteLine("TokenForge: profile create/show/forget-key, login, status, doctor, logout, scopes explain, token get, graph permissions; research report/export-flows; evidence import/export/plan/pending/checkpoint. See README.md beside this executable for examples. Authentication currently requires PowerShell 7.4+.");
+        Console.WriteLine("TokenForge: profile create/show/forget-key, login, status, doctor, logout, scopes explain, token get, graph permissions; research report/export-flows; evidence import/export/plan/pending/checkpoint; flows import/export/plan/attempt. See README.md beside this executable for examples. Authentication currently requires PowerShell 7.4+.");
+        return 0;
+    }
+    if (args[0] == "flows")
+    {
+        if (args.Length < 4 || args[2] != "--database") throw new InvalidOperationException();
+        var operation = args[1];
+        if (operation == "export")
+        {
+            string? tenant = null; string? principal = null; string? plan = null; var latest = false;
+            var flowOptionsSeen = new HashSet<string>(StringComparer.Ordinal);
+            for (var flowIndex = 4; flowIndex < args.Length; flowIndex++)
+            {
+                var option = args[flowIndex];
+                if (!flowOptionsSeen.Add(option)) throw new InvalidOperationException();
+                if (option == "--latest") { latest = true; continue; }
+                if (flowIndex + 1 >= args.Length) throw new InvalidOperationException();
+                var value = args[++flowIndex];
+                switch (option) {
+                    case "--tenant": tenant = value; break;
+                    case "--principal": principal = value; break;
+                    case "--plan": plan = value; break;
+                    default: throw new InvalidOperationException();
+                }
+            }
+            using var store = new FlowEvidenceStore(args[3], true);
+            Console.WriteLine(store.Export(tenant, principal, latest, plan)); return 0;
+        }
+        if (operation is not ("import" or "plan" or "attempt") || args.Length != (operation == "plan" ? 8 : 6) || args[4] != "--input" || operation == "plan" && args[6] != "--fingerprint") throw new InvalidOperationException();
+        var file = new FileInfo(Path.GetFullPath(args[5]));
+        if (file.Length > 128 * 1024 * 1024 || (file.Attributes & FileAttributes.ReparsePoint) != 0) throw new InvalidOperationException();
+        var json = File.ReadAllText(file.FullName);
+        using (var store = new FlowEvidenceStore(args[3]))
+        {
+            if (operation == "import") Console.WriteLine(JsonSerializer.Serialize(new { SchemaVersion = 1, Imported = store.Import(json) }));
+            else { if (operation == "plan") store.SavePlan(args[7], json); else store.SaveAttempt(json); Console.WriteLine("{\"SchemaVersion\":1,\"Saved\":true}"); }
+        }
         return 0;
     }
     if (args[0] == "evidence")
@@ -59,7 +95,7 @@ try
         if (!operations.Contains(args[index])) throw new InvalidOperationException();
         start.ArgumentList.Add("-Operation"); start.ArgumentList.Add(args[index++]);
     }
-    var options = new Dictionary<string, string> { ["--tenant-fingerprint"]="TenantFingerprint", ["--principal-fingerprint"]="PrincipalFingerprint", ["--export-path"]="ExportPath", ["--login-hint"]="LoginHint", ["--profile"]="Profile", ["--root"]="Root", ["--tenant"]="Tenant", ["--state-path"]="StatePath", ["--storage"]="Storage", ["--resource"]="Resource", ["--scope"]="Scope", ["--passkey-path"]="PasskeyPath", ["--xdr-module-path"]="XdrModulePath", ["--bootstrap-client"]="BootstrapClientId", ["--max-extra-scopes"]="MaxAdditionalScopes", ["--max-bootstrap-extra-scopes"]="MaxBootstrapAdditionalScopes", ["--api-uri"]="ApiUri", ["--graph-command"]="GraphCommand" };
+    var options = new Dictionary<string, string> { ["--tenant-fingerprint"]="TenantFingerprint", ["--principal-fingerprint"]="PrincipalFingerprint", ["--flow-path"]="FlowPath", ["--export-path"]="ExportPath", ["--login-hint"]="LoginHint", ["--profile"]="Profile", ["--root"]="Root", ["--tenant"]="Tenant", ["--state-path"]="StatePath", ["--storage"]="Storage", ["--resource"]="Resource", ["--scope"]="Scope", ["--passkey-path"]="PasskeyPath", ["--xdr-module-path"]="XdrModulePath", ["--bootstrap-client"]="BootstrapClientId", ["--max-extra-scopes"]="MaxAdditionalScopes", ["--max-bootstrap-extra-scopes"]="MaxBootstrapAdditionalScopes", ["--api-uri"]="ApiUri", ["--graph-command"]="GraphCommand" };
     var flags = new Dictionary<string, string> { ["--summary-only"]="SummaryOnly", ["--json"]="Json", ["--browser"]="Browser", ["--interactive"]="Interactive", ["--prompt-passphrase"]="PromptPassphrase" };
     var seen = new HashSet<string>();
     while (index < args.Length)

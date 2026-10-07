@@ -102,13 +102,16 @@ Describe 'Sign-in CLI discovery persistence' {
 Describe 'Bounded sign-in protocol summaries' {
  It 'retains expanded enums but suppresses unknown text and raw failure details' {
   Mock Invoke-TokenForgeGraph -ModuleName TokenForge {
-   @{value=@(@{appId=$id;resourceId='00000003-0000-0000-c000-000000000000';authenticationProtocol='authorizationCodeWithPkce';clientAppUsed='Browser';signInEventTypes=@('interactiveUser');status=@{errorCode=0}},@{appId=$id;authenticationProtocol='private-protocol';clientAppUsed='private-client';signInEventTypes=@('private-event');status=@{errorCode=65001;failureReason='private-failure'}})}
+   @{value=@(@{appId=$id;resourceId='00000003-0000-0000-c000-000000000000';authenticationProtocol='authorizationCodeWithPkce';clientAppUsed='Browser';authenticationMethodsUsed=@('FIDO');clientCredentialType='certificate';incomingTokenType='primaryRefreshToken';signInEventTypes=@('interactiveUser');status=@{errorCode=0}},@{appId=$id;authenticationProtocol='private-protocol';clientAppUsed='private-client';authenticationMethodsUsed=@('private-method');clientCredentialType='private-credential';incomingTokenType='private-token-type';signInEventTypes=@('private-event');status=@{errorCode=65001;failureReason='private-failure'}})}
   }
   $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@()}
   $r=Get-TokenForgeSignInApplications $token $inventory
   @($r.Applications[0].ProtocolCounts|Where-Object Value -eq authorizationCodeWithPkce).Count|Should -Be 1
   @($r.Applications[0].OutcomeCounts|Where-Object Value -eq Failed)[0].Count|Should -Be 1
-  ($r|ConvertTo-Json -Depth 8)|Should -Not -Match 'private-protocol|private-client|private-event|private-failure'
+  $r.Applications[0].AuthenticationMethodCounts.Value|Should -Contain FIDO
+  $r.Applications[0].IncomingTokenTypeCounts.Value|Should -Contain primaryRefreshToken
+  $r.Applications[0].CredentialTypeCounts.Value|Should -Contain certificate
+  ($r|ConvertTo-Json -Depth 8)|Should -Not -Match 'private-protocol|private-client|private-event|private-failure|private-method|private-credential|private-token-type'
   Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -ParameterFilter {$IncludeUnknownEnumMembers}
   $null=Update-TokenForgeApplicationMetadata "$TestDrive/protocols.json" $r SignIns
   $r.Applications[0].ProtocolCounts[0].Value='private-injected'

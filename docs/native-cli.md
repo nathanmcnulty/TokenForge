@@ -82,3 +82,7 @@ See [native architecture](native-architecture.md) for their boundaries and valid
 Explicit Windows/Linux OS-backed profile storage is documented in [OS-backed vault](os-backed-vault.md).
 
 Offline `research report` and `research export-flows` commands are available through the packaged PowerShell adapter; see [Application research catalog](research-catalog.md).
+
+## Individual flow checkpoints
+
+Version 0.13 adds `flows import` and filtered `flows export`, plus individual transactional plan/attempt writes used by the probe adapter. See [SQLite flow evidence](sqlite-flow-evidence.md) for migration, private storage, namespace selection, and remaining JSON scale limits.

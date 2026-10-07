@@ -4,7 +4,7 @@ param(
  [Parameter(Position=0,Mandatory)][ValidateSet('profile','login','logout','status','doctor','token','scopes','graph','research')][string]$Command,
  [Parameter(Position=1)][ValidateSet('create','forget-key','show','get','explain','permissions','connect','disconnect','report','export-flows')][string]$Operation,
  [ValidatePattern('^[a-z][a-z0-9_-]{0,63}$')][string]$Profile='default',
- [string]$Root,[string]$Tenant,[string]$StatePath,[string]$ExportPath,[switch]$SummaryOnly,
+ [string]$Root,[string]$Tenant,[string]$StatePath,[string]$ExportPath,[string]$FlowPath,[string]$NativeExecutablePath,[switch]$SummaryOnly,
  [ValidatePattern('^[a-f0-9]{64}$')][string]$TenantFingerprint,[ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,
  [ValidateSet('Memory','Passphrase','OperatingSystem')][string]$Storage='Memory',
  [ValidateSet('graph','arm')][string]$Resource='graph',[string[]]$Scope,
@@ -53,14 +53,15 @@ try{
   research {
    $p=if($StatePath){$null}else{Get-TokenForgeProfile @common}
    $state=if($StatePath){$StatePath}else{$p.StatePath}
+   if(-not $FlowPath){$FlowPath=Join-Path $state $(if(Test-Path (Join-Path $state 'flows.sqlite')){'flows.sqlite'}else{'flows.json'})}
    switch($Operation){
     report {
-     $options=@{MetadataPath=(Join-Path $state applications.json);FlowPath=(Join-Path $state flows.json);SummaryOnly=$SummaryOnly}
+     $options=@{MetadataPath=(Join-Path $state applications.json);FlowPath=$FlowPath;NativeExecutablePath=$NativeExecutablePath;SummaryOnly=$SummaryOnly}
      if($TenantFingerprint -or $PrincipalFingerprint){$options.TenantFingerprint=$TenantFingerprint;$options.PrincipalFingerprint=$PrincipalFingerprint}
      elseif($p -and $p.ExpectedPrincipalFingerprint){$options.TenantFingerprint=$p.ExpectedTenantFingerprint;$options.PrincipalFingerprint=$p.ExpectedPrincipalFingerprint}
      Get-TokenForgeResearchCoverage @options
     }
-    export-flows {if(-not $ExportPath){throw 'Choose ExportPath.'};Export-TokenForgeFlowEvidence (Join-Path $state flows.json) -OutputPath $ExportPath;[pscustomobject]@{SchemaVersion=1;Exported=$true;CredentialOutput=$false}}
+    export-flows {if(-not $ExportPath){throw 'Choose ExportPath.'};$selection=@{};if($TenantFingerprint){$selection.TenantFingerprint=$TenantFingerprint};if($PrincipalFingerprint){$selection.PrincipalFingerprint=$PrincipalFingerprint};Export-TokenForgeFlowEvidence $FlowPath -OutputPath $ExportPath -NativeExecutablePath $NativeExecutablePath @selection;[pscustomobject]@{SchemaVersion=1;Exported=$true;CredentialOutput=$false}}
     default {throw 'Use research report or research export-flows.'}
    }
   }

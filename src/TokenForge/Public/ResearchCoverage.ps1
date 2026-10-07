@@ -4,14 +4,14 @@ function Get-TokenForgeResearchCoverage {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$MetadataPath,[string]$FlowPath,
+        [Parameter(Mandatory)][string]$MetadataPath,[string]$FlowPath,[string]$NativeExecutablePath,
         [ValidatePattern('^[a-f0-9]{64}$')][string]$TenantFingerprint,
         [ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,
         [guid[]]$AppId,[ValidateRange(1,8760)][int]$MaxAgeHours=24,[switch]$SummaryOnly
     )
     if([bool]$TenantFingerprint -ne [bool]$PrincipalFingerprint){throw 'Select both tenant and principal for account-specific flow coverage.'}
     $catalog=Get-TokenForgeApplicationMetadata $MetadataPath
-    $flows=if($FlowPath){Get-TokenForgeFlowEvidence $FlowPath}else{@{Plans=@{};Attempts=@()}}
+    $flows=if($FlowPath -and $TenantFingerprint){Get-TokenForgeFlowEvidence $FlowPath -NativeExecutablePath $NativeExecutablePath -TenantFingerprint $TenantFingerprint -PrincipalFingerprint $PrincipalFingerprint -Latest}else{@{Plans=@{};Attempts=@()}}
     $latest=@{};foreach($attempt in @($flows.Attempts|Sort-Object ObservedAt)){$latest[$attempt.AttemptKey]=$attempt}
     $selectedPlans=@{}
     if($TenantFingerprint){foreach($hash in $flows.Plans.Keys){

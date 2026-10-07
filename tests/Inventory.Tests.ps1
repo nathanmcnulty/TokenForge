@@ -109,7 +109,7 @@ Describe 'Tenant inventory' {
             param($AccessToken,$Uri)
             if ($Uri.AbsolutePath -eq '/v1.0/oauth2PermissionGrants') { return ,@(@{ clientId = 'private-client-object'; resourceId = 'private-resource-object'; principalId = 'synthetic-user'; consentType = 'Principal'; scope = 'User.Read' }) }
             return ,@(
-                @{ id = 'private-client-object'; appId = '11111111-1111-1111-1111-111111111111'; appOwnerOrganizationId = 'f8cdef31-a31e-4b4a-93e4-5f571e91255a'; accountEnabled = $true; replyUrls = @('https://example.test/callback'); oauth2PermissionScopes = @(); appRoles = @(); servicePrincipalNames = @(); appRoleAssignmentRequired = $false; signInAudience = 'AzureADMultipleOrgs' },
+                @{ id = 'private-client-object'; displayName='Tenant fixture';servicePrincipalType='Application';preferredSingleSignOnMode='oidc';loginUrl='https://example.test/login';logoutUrl='https://example.test/logout';homepage='https://example.test';appId = '11111111-1111-1111-1111-111111111111'; appOwnerOrganizationId = 'f8cdef31-a31e-4b4a-93e4-5f571e91255a'; accountEnabled = $true; replyUrls = @('https://example.test/callback'); oauth2PermissionScopes = @(); appRoles = @(); servicePrincipalNames = @(); appRoleAssignmentRequired = $false; signInAudience = 'AzureADMultipleOrgs' },
                 @{ id = 'private-resource-object'; appId = '00000003-0000-0000-c000-000000000000'; appOwnerOrganizationId = 'f8cdef31-a31e-4b4a-93e4-5f571e91255a'; accountEnabled = $true; replyUrls = @(); oauth2PermissionScopes = @(@{ value = 'User.Read'; isEnabled = $true; type = 'User' }); appRoles = @(); servicePrincipalNames = @(); appRoleAssignmentRequired = $false; signInAudience = 'AzureADMultipleOrgs' }
             )
         }
@@ -123,6 +123,10 @@ Describe 'Tenant inventory' {
         $app = $inventory.Applications | Where-Object AppId -eq $clientId
         $app.Registration | Should -Be Present
         $app.Ownership | Should -Be VerifiedMicrosoftOwner
+        $app.Name | Should -Be 'Tenant fixture'
+        $app.PreferredSingleSignOnMode | Should -Be oidc
+        $app.ServicePrincipalType | Should -Be Application
+        $app.LoginUrl | Should -Be 'https://example.test/login'
         ($inventory | ConvertTo-Json -Depth 30) | Should -Not -Match 'synthetic-tenant|synthetic-user|private-client-object|private-resource-object'
     }
     It 'does not describe failed grant enumeration as an absence of grants' {

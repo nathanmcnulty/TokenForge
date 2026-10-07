@@ -57,8 +57,20 @@ function Assert-TokenForgeFlowDocument {
     }
 }
 function Save-TokenForgeFlowEvidence {
-    param([string]$Path,$Plan,[string]$PlanFingerprint,$Attempt)
+    param([string]$Path,$Plan,[string]$PlanFingerprint,$Attempt,$ExistingDocument,[string]$NativeExecutablePath,[Collections.IDictionary]$Changes)
     $full=Resolve-TokenForgeVaultPath $Path -CreateDirectory
+    if($full.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){
+        if(-not $ExistingDocument){throw 'SQLite checkpointing requires the current plan document.'}
+        $db=$ExistingDocument
+        if($Plan){$db.Plans[$PlanFingerprint]=$Plan}
+        if($Attempt){$db.Attempts=@($db.Attempts|Where-Object AttemptId -ne $Attempt.AttemptId)+@($Attempt)}
+        $db.UpdatedAt=[DateTimeOffset]::UtcNow.ToString('o')
+        Assert-TokenForgeFlowDocument $db
+        if($Plan){$null=Invoke-TokenForgeNativeFlow $full plan -Document $Plan -PlanFingerprint $PlanFingerprint -NativeExecutablePath $NativeExecutablePath}
+        if($Attempt){$null=Invoke-TokenForgeNativeFlow $full attempt -Document $Attempt -NativeExecutablePath $NativeExecutablePath}
+        Add-TokenForgeFlowChanges $Changes $Plan $PlanFingerprint $Attempt
+        return $db
+    }
     $lockPath=Resolve-TokenForgeVaultPath "$full.lock"
     $lock=$null
     try{
@@ -73,6 +85,14 @@ function Save-TokenForgeFlowEvidence {
         if([Text.Encoding]::UTF8.GetByteCount($json) -gt 134217728){throw 'Flow evidence exceeds 128 MiB; archive history before retrying.'}
         Assert-TokenForgeFlowDocument ($json|ConvertFrom-Json -AsHashtable -Depth 12)
         Save-TokenForgeDocument -Document $db -Path $full
+        Add-TokenForgeFlowChanges $Changes $Plan $PlanFingerprint $Attempt
         $db
     }finally{if($lock){$lock.Dispose()}}
+}
+
+function Add-TokenForgeFlowChanges {
+    param([Collections.IDictionary]$Changes,$Plan,[string]$PlanFingerprint,$Attempt)
+    if($null -eq $Changes){return}
+    if($Plan){$Changes.Plans[$PlanFingerprint]=$Plan.Clone()}
+    if($Attempt){$Changes.Attempts[$Attempt.AttemptId]=$Attempt.Clone()}
 }

@@ -13,7 +13,7 @@ non-Microsoft principals. Probe uses existing consent and stops at interactive p
 param(
  [Parameter(Mandatory)][ValidateSet('Discover','SignIns','Inventory','Register','Probe','Merge','Export','Report','ExportFlows')][string]$Action,
  [Parameter(Mandatory)][string]$StatePath,
- [string]$MetadataPath,[string]$FlowPath,[switch]$ExploreAllFlows,[switch]$SummaryOnly,
+ [string]$MetadataPath,[string]$FlowPath,[string]$NativeExecutablePath,[switch]$ExploreAllFlows,[switch]$SummaryOnly,
  [securestring]$GraphToken,
  [securestring]$EstsAuth,
  [ValidateSet('ESTSAUTH','ESTSAUTHPERSISTENT')][string]$CookieName='ESTSAUTH',
@@ -91,9 +91,10 @@ try {
    if(-not $EstsAuth){throw 'Probe requires EstsAuth.'}
    $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
    $plan=Get-TokenForgeProbePlan -Inventory $inventory -ClientId $ClientId -GraphOnly:$GraphOnly @principalOptions
-   try{Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $EstsAuth -CookieName $CookieName -Plan $plan -DatabasePath $databasePath -ClientId $ClientId @principalOptions -Tenant $Tenant -MaxApplications $MaxApplications -MaxRedirects $MaxRedirects -Refresh:$Refresh -FlowDatabasePath $FlowPath -ExploreAllFlows:$ExploreAllFlows}finally{
+   $flowChanges=@{Plans=@{};Attempts=@{}}
+   try{Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $EstsAuth -CookieName $CookieName -Plan $plan -DatabasePath $databasePath -ClientId $ClientId @principalOptions -Tenant $Tenant -MaxApplications $MaxApplications -MaxRedirects $MaxRedirects -Refresh:$Refresh -FlowDatabasePath $FlowPath -ExploreAllFlows:$ExploreAllFlows -NativeExecutablePath $NativeExecutablePath -FlowChanges $flowChanges}finally{
    if(Test-Path $databasePath){$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document (Get-TokenForgeScopeDatabase -Path $databasePath) -Kind ScopeObservations}
-   if(Test-Path $FlowPath){$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document (Get-TokenForgeFlowEvidence $FlowPath) -Kind FlowAttempts}
+   if($flowChanges.Plans.Count){$changed=@{Format='TokenForgeFlowEvidence';SchemaVersion=1;UpdatedAt=[DateTimeOffset]::UtcNow.ToString('o');Plans=$flowChanges.Plans;Attempts=@($flowChanges.Attempts.Values)};$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $changed -Kind FlowAttempts}
    }
   }
   'Merge' {
@@ -106,11 +107,11 @@ try {
    $merged
   }
   'Report' {
-   $options=@{MetadataPath=$MetadataPath;FlowPath=$FlowPath;SummaryOnly=$SummaryOnly}
+   $options=@{MetadataPath=$MetadataPath;FlowPath=$FlowPath;SummaryOnly=$SummaryOnly;NativeExecutablePath=$NativeExecutablePath}
    if($PrincipalFingerprint){$inventory=Get-Content $inventoryPath -Raw|ConvertFrom-Json;$options.TenantFingerprint=$inventory.TenantFingerprint;$options.PrincipalFingerprint=$PrincipalFingerprint}
    Get-TokenForgeResearchCoverage @options
   }
-  'ExportFlows' {if(-not $ExportPath){throw 'ExportFlows requires ExportPath.'};Export-TokenForgeFlowEvidence $FlowPath -OutputPath $ExportPath}
+  'ExportFlows' {if(-not $ExportPath){throw 'ExportFlows requires ExportPath.'};Export-TokenForgeFlowEvidence $FlowPath -OutputPath $ExportPath -NativeExecutablePath $NativeExecutablePath}
   'Export' {
    if(-not $ExportPath){throw 'Export requires ExportPath.'}
    Export-TokenForgeScopeDatabase -Database (Get-TokenForgeScopeDatabase -Path $databasePath) -Path $ExportPath

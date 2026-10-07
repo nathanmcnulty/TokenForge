@@ -95,8 +95,8 @@ function Update-TokenForgeApplicationMetadata {
     if($Kind -eq 'FlowAttempts'){Assert-TokenForgeFlowDocument $Document}
     $columns=switch($Kind){
         Discovery {@('AppId','Name','OwnerTenantId','Ownership','PublicClient','Foci','RedirectUris','PreferredRedirectUri','Grants','IsResourceCandidate','IdentifierUris')}
-        Inventory {@('AppId','Name','Registration','Ownership','OwnerTenantId','AccountEnabled','AssignmentRequired','SignInAudience','PublicClient','Foci','RedirectUris','TenantRedirectUris','PreferredRedirectUri','PublishedGrants','DelegatedScopeDefinitions','AppRoleDefinitions','IdentifierUris','IsResourceCandidate')}
-        SignIns {@('AppId','SignInCount','KnownInInventory','RegisteredMicrosoft','Evidence','ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts')}
+        Inventory {@('AppId','Name','PublishedName','ServicePrincipalType','PreferredSingleSignOnMode','LoginUrl','LogoutUrl','Homepage','Registration','Ownership','OwnerTenantId','AccountEnabled','AssignmentRequired','SignInAudience','PublicClient','Foci','RedirectUris','TenantRedirectUris','PreferredRedirectUri','PublishedGrants','DelegatedScopeDefinitions','AppRoleDefinitions','IdentifierUris','IsResourceCandidate')}
+        SignIns {@('AppId','SignInCount','KnownInInventory','RegisteredMicrosoft','Evidence','ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts','AuthenticationMethodCounts','CredentialTypeCounts','IncomingTokenTypeCounts')}
         RegistrationAttempts {@('AppId','Outcome','HttpStatus')}
         FlowAttempts {@('AttemptKey','PlanFingerprint','Protocol','Spa','RedirectFingerprint','Outcome','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','NamespaceVerification','RequestVerification','SignatureValidated','ErrorCodes','ElapsedSeconds')}
         ScopeObservations {@('ClientId','ResourceId','Outcome','Protocol','Spa','RequestedScopes','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','SignatureValidated','NamespaceVerification','RequestVerification','ErrorCodes','AttemptCount','ElapsedSeconds','RedirectFingerprint','CatalogHash')}
@@ -147,11 +147,11 @@ function Update-TokenForgeApplicationMetadata {
             if($Kind -eq 'FlowAttempts'){if($row.AttemptKey -notmatch '^[a-f0-9]{64}$'){throw 'Invalid flow attempt key.'};$origin+='/'+$row.AttemptKey}
             $attributes=[ordered]@{}
             foreach($column in $columns){if($row.PSObject.Properties[$column]){$attributes[$column]=$row.$column}elseif($row -is [Collections.IDictionary] -and $row.Contains($column)){$attributes[$column]=$row[$column]}}
-            foreach($nested in @('Grants','PublishedGrants','DelegatedScopeDefinitions','AppRoleDefinitions','ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts')){
+            foreach($nested in @('Grants','PublishedGrants','DelegatedScopeDefinitions','AppRoleDefinitions','ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts','AuthenticationMethodCounts','CredentialTypeCounts','IncomingTokenTypeCounts')){
                 if(-not $attributes.Contains($nested)){continue}
                 $fields=switch($nested){
                     {$_ -in @('Grants','PublishedGrants')} {@('ResourceId','Scopes')}
-                    DelegatedScopeDefinitions {@('Value','Enabled','ConsentType')}
+                    DelegatedScopeDefinitions {@('Id','Value','Enabled','ConsentType','AdminConsentDisplayName','AdminConsentDescription','UserConsentDisplayName','UserConsentDescription')}
                     AppRoleDefinitions {@('Id','Value','DisplayName','Description','AllowedMemberTypes','Enabled')}
                     default {@('Value','Count')}
                 }
@@ -167,7 +167,7 @@ function Update-TokenForgeApplicationMetadata {
             # Nested metadata records were projected above; remaining values must be simple leaves.
             # Reject credential-bearing objects rather than serializing them under an allowed field name.
             foreach($field in $attributes.Keys){
-                $entries=if($field -in @('Grants','PublishedGrants','DelegatedScopeDefinitions','AppRoleDefinitions','ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts')){
+                $entries=if($field -in @('Grants','PublishedGrants','DelegatedScopeDefinitions','AppRoleDefinitions','ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts','AuthenticationMethodCounts','CredentialTypeCounts','IncomingTokenTypeCounts')){
                     @($attributes[$field]|ForEach-Object {$_.Values})
                 }else{@($attributes[$field])}
                 foreach($value in $entries){
@@ -178,7 +178,7 @@ function Update-TokenForgeApplicationMetadata {
             }
             if($Kind -eq 'SignIns'){
                 if($attributes.SignInCount -isnot [int] -and $attributes.SignInCount -isnot [long] -or $attributes.SignInCount -lt 0){throw 'Invalid sign-in count.'}
-                foreach($field in @('ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts')){
+                foreach($field in @('ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts','AuthenticationMethodCounts','CredentialTypeCounts','IncomingTokenTypeCounts')){
                     if(-not $attributes.Contains($field)){continue}
                     $allowed=@(Get-TokenForgeSignInSummaryValues $field)
                     $values=@{}

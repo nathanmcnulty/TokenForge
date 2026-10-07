@@ -1,6 +1,6 @@
 # Architecture and roadmap
 
-TokenForge separates credential-free planning, identity protocol execution, Graph tenant administration and persisted evidence. The PowerShell 7.4 module and script CLI run on Windows, Linux and macOS; a packaged standalone CLI remains future work.
+TokenForge separates credential-free planning, identity protocol execution, Graph tenant administration and persisted evidence. The PowerShell 7.4 module and script CLI run on Windows, Linux and macOS; self-contained native CLI packages are available, with PowerShell still required for authentication.
 
 | Layer | Functions | Evidence boundary |
 | --- | --- | --- |

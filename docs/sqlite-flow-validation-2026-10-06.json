@@ -1,0 +1,63 @@
+{
+  "Date": "2026-10-06",
+  "ModuleVersion": "0.13.0",
+  "Scope": "FourClientsGraphOneCallbackAllThreeImplementedProtocols",
+  "Accounts": [
+    {
+      "Account": "nora",
+      "SeededLegacyAttempts": 12,
+      "AdditionalLiveTerminalAttempts": 12,
+      "ImportedAttemptsThisRepeat": 0,
+      "RepeatedImport": 0,
+      "StoredAttempts": 36,
+      "LatestTerminalSlots": 12,
+      "LatestSuccessfulSlots": 3,
+      "ResumeReturnedObservations": 0,
+      "ResumeRequests": 0,
+      "ResumeAddedAttempts": 0,
+      "StrictJsonRoundtrip": true,
+      "InventoryRows": 5522,
+      "TenantNamesCollected": 287,
+      "SsoPreferencesCollected": 0,
+      "SignInStatus": "Denied403",
+      "ApplicationsWithMethodSummaries": 0,
+      "ApplicationsWithIncomingTokenSummaries": 0,
+      "ApplicationsWithCredentialTypeSummaries": 0,
+      "TokensPersisted": false,
+      "ConsentGranted": false
+    },
+    {
+      "Account": "secadmin",
+      "SeededLegacyAttempts": 12,
+      "AdditionalLiveTerminalAttempts": 12,
+      "ImportedAttemptsThisRepeat": 0,
+      "RepeatedImport": 0,
+      "StoredAttempts": 24,
+      "LatestTerminalSlots": 12,
+      "LatestSuccessfulSlots": 4,
+      "ResumeReturnedObservations": 0,
+      "ResumeRequests": 0,
+      "ResumeAddedAttempts": 0,
+      "StrictJsonRoundtrip": true,
+      "InventoryRows": 5522,
+      "TenantNamesCollected": 287,
+      "SsoPreferencesCollected": 0,
+      "SignInStatus": "Complete",
+      "ApplicationsWithMethodSummaries": 0,
+      "ApplicationsWithIncomingTokenSummaries": 209,
+      "ApplicationsWithCredentialTypeSummaries": 209,
+      "TokensPersisted": false,
+      "ConsentGranted": false
+    }
+  ],
+  "NativeChecks": 57,
+  "PowerShellPassed": 247,
+  "PowerShellSkipped": 2,
+  "Review": "IndependentSolReviewNoRemainingBlocker",
+  "Limitations": [
+    "Application ledger and scope summaries remain bounded JSON",
+    "No successful service-principal creation claimed by this milestone",
+    "No universal flow requirement or API acceptance inferred",
+    "Authentication still requires PowerShell"
+  ]
+}

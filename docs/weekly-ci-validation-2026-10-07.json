@@ -365,5 +365,105 @@
     "WorkflowLintPassed": true,
     "PackageHelperIdentityVerified": true,
     "Review": "Sol approved reader and requested future-recipe rejection and corrected expanded CI pass counts; both fixed"
+  },
+  "HostedIsolatedMultiResourceValidation": {
+    "PlanId": "17bbcdf60ba8921cce2d0e603e0b5beac9172041ecdf9aa97cbcf8d98cb2886b",
+    "SelectedApplications": 4,
+    "SelectedPairs": 8,
+    "AssessedApplications": 4,
+    "AssessedPairs": 8,
+    "SuccessfulApplications": 3,
+    "SuccessfulPairs": 4,
+    "TerminalFlowAttempts": 66,
+    "ScopeRows": 8,
+    "ProtocolAttempts": {
+      "OAuth2V2Pkce": 22,
+      "OAuth2V1Implicit": 22,
+      "OAuth2V2Implicit": 22
+    },
+    "Complete": true,
+    "CheckpointContextVerified": true,
+    "ExactPartitionsVerified": true,
+    "AllPlannedCellsTerminal": true,
+    "CredentialsPersisted": false,
+    "SignatureValidated": false,
+    "ApiAuthorization": "NotEstablishedByFlowAttempts",
+    "DateUTC": "2026-10-08",
+    "RunId": 37706314330,
+    "RunUrl": "https://github.com/nathanmcnulty/TokenForge/actions/runs/37706314330",
+    "SourceCommit": "b02aff8ca29c07334daabd1bdb65a7cfee9af067",
+    "Account": "nora",
+    "IndependentPasskeyLogins": 2,
+    "ResumeChecksPassed": 2,
+    "ResumeAddedAttempts": 0,
+    "ResumeAddedScopeRows": 0,
+    "PushJob": "Skipped",
+    "DataBranchBefore": "869d082aa3d248599a7a8533e76a93c76bcafde3",
+    "DataBranchAfter": "869d082aa3d248599a7a8533e76a93c76bcafde3",
+    "CatalogBranchUnchanged": true,
+    "ValidationReportArtifact": "validation-report-1",
+    "RunnerMinutesByStage": {
+      "Prepare": 1.467,
+      "Worker": 3.283,
+      "Publish": 0.9
+    },
+    "TotalRunnerMinutes": 5.65,
+    "Review": "Sol reviewed workflow and sanitized evidence verifier; hosted proof verifies the bounded set only"
+  },
+  "HostedPublicationStagingRegression": {
+    "FailedRunId": 37706731704,
+    "Failure": "Git staging rejected an absent optional reports directory after artifact transport",
+    "CatalogBranchAdvanced": false,
+    "FixPullRequest": 31,
+    "FixCommit": "43d0b2fa426b2938706764ee4e7944e621a6f984",
+    "ControllerTestsPassed": 33,
+    "GitRegressionCases": [
+      "Absent optional directories",
+      "Empty optional directories",
+      "Populated optional directories"
+    ],
+    "RealArtifactPublicFilesStaged": 60,
+    "RealArtifactReportsDirectoryPresent": false,
+    "PlatformChecksPassed": 6,
+    "Review": "Sol approved existing-file staging within the validated public allowlist"
+  },
+  "ArtifactStorageSnapshot": {
+    "ObservedAtUTC": "2026-10-08T00:28:11.776931+00:00",
+    "UnexpiredArtifactCount": 176,
+    "GitHubReportedSizeMiB": 221.18,
+    "GitHubReportedSizeMiBByCategory": {
+      "PublicTransportAndTests": 70.69,
+      "NativePackages": 93.52,
+      "EncryptedRecovery": 56.98
+    },
+    "Evidence": "GitHubActionsArtifactsAPIReportedSizesNotBillingStatementOrWeeklyUsage"
+  },
+  "HostedNormalPublicationAfterWriterSplit": {
+    "DateUTC": "2026-10-08",
+    "RunId": 37707708903,
+    "RunUrl": "https://github.com/nathanmcnulty/TokenForge/actions/runs/37707708903",
+    "SourceCommit": "43d0b2fa426b2938706764ee4e7944e621a6f984",
+    "DataCommit": "1fe876f4955384e546d38918f3dfda0bb347de3d",
+    "DataParent": "869d082aa3d248599a7a8533e76a93c76bcafde3",
+    "PlanId": "cc4e968e29cb56d55ce787fa884bffd29e72b31e3f8ba616611a57020cbcccd7",
+    "Jobs": {
+      "prepare": "success",
+      "publish": "success",
+      "worker": "skipped",
+      "push": "success"
+    },
+    "PublishedFilesMatchedValidatedArtifact": 60,
+    "FrozenLegacyRecipeUnchanged": true,
+    "Complete": true,
+    "AssessedApplications": 100,
+    "AssessedPairs": 100,
+    "ResourceCount": 1,
+    "NoNewTokenWorkers": true,
+    "RunnerMinutesByStage": {
+      "prepare": 1.033,
+      "publish": 1.05,
+      "push": 0.733
+    },
+    "TotalRunnerMinutes": 2.817
   }
 }

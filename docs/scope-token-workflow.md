@@ -95,4 +95,4 @@ The admin had two direct active roles and one direct eligible role. The second a
 
 `SecurityAlert.Read.All` remained `NeedsObservation` for both observers. There was no fresh coverage for that exact least-privileged scope, and no consent was added or stronger scope silently substituted. This is an availability outcome, not an API denial. See [bounded comparison evidence](scope-workflow-validation-2026-10-04.json).
 
-Work stops before another tenant, guest scenarios, or live Windows/macOS browser validation. Cross-platform CI verifies offline behavior. A standalone CLI executable remains future work.
+This bounded proof did not cover another tenant, guest scenarios, or live Windows/macOS browser validation. Cross-platform CI verifies offline behavior. Self-contained [CLI packages](native-cli.md) are now available; authentication still invokes PowerShell 7.4+.

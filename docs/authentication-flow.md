@@ -106,7 +106,7 @@ try {
 }
 ```
 
-For later renewal, the lower-level token command can submit a caller-held refresh token with the same request. That uses the token endpoint directly and does not need the ESTS cookie. Automatic cross-client refresh discovery and automatic vault refresh rotation are not implemented; an opted-in scoped request can save its returned refresh token.
+For later renewal, the lower-level token command can submit a caller-held refresh token with the same request. That uses the token endpoint directly and does not need the ESTS cookie. The lower-level vault commands do not manage refresh rotation. The [profile workflow](profiles-and-cli.md#what-a-token-request-does) manages same-client, exact-request renewal and saves rotated credentials under a session revision check. Automatic cross-client refresh discovery is not implemented; an opted-in scoped request can save its returned refresh token.
 
 ## What is saved, and how it is protected
 
@@ -127,4 +127,4 @@ Memory-only does not mean inaccessible or securely erased. The passkey helper, H
 
 Disposal is local cleanup. It does not revoke the Entra session, unregister the passkey, revoke issued tokens, or sign out the browser.
 
-The [session vault guide](session-vault.md) explains the opt-in encrypted store, account isolation, expiry, concurrency, removal, and native CLI roadmap. OS-backed key protection is future work. The metadata database must not be used as a credential store.
+The [session vault guide](session-vault.md) explains the opt-in encrypted store, account isolation, expiry, concurrency, removal, and native CLI roadmap. [OS-backed key protection](os-backed-vault.md) is available explicitly through Windows Credential Manager and Linux Secret Service. macOS Keychain support remains deferred. The metadata database must not be used as a credential store.

@@ -16,6 +16,10 @@ on:
       app_ids:
         description: 'Optional comma-separated published IDs for a new deep recipe'
         default: ''
+      validation_only:
+        description: 'Isolated hosted proof: Deep mode, 1-4 explicit IDs, no catalog branch update'
+        type: boolean
+        default: false
       retry_exhausted:
         description: 'Allow up to ten attempts instead of three'
         type: boolean
@@ -67,10 +71,24 @@ jobs:
           MODE: ${{ inputs.mode || 'Auto' }}
           APP_IDS: ${{ inputs.app_ids }}
           RETRY_EXHAUSTED: ${{ inputs.retry_exhausted }}
+          VALIDATION_ONLY: ${{ inputs.validation_only }}
         run: |
           $options=@{}
           if($env:APP_IDS){$options.AppId=@($env:APP_IDS.Split(',')|ForEach-Object {[guid]$_.Trim()})}
-          ./scripts/Invoke-TokenForgeWeeklyCi.ps1 -Action Prepare -DataPath "$env:RUNNER_TEMP/discovery-data" -BundlePath "$env:RUNNER_TEMP/plan" -Workers ([int]$env:WORKERS) -Mode $env:MODE -RetryExhausted:($env:RETRY_EXHAUSTED -eq 'true') @options
+          $validation=$env:VALIDATION_ONLY -eq 'true'
+          if($validation){
+            if($env:MODE -cne 'Deep' -or -not $options.AppId -or $options.AppId.Count -gt 4){throw 'Validation requires Deep mode and 1-4 explicit app IDs.'}
+            $source="$env:RUNNER_TEMP/discovery-data"
+            $data="$env:RUNNER_TEMP/validation-data"
+            New-Item -ItemType Directory $data | Out-Null
+            if(Test-Path "$source/applications.json"){Copy-Item "$source/applications.json" "$data/applications.json"}
+            git -C $data init --quiet
+            git -C $data -c user.name=Validation -c user.email=validation@example.invalid commit --quiet --allow-empty -m 'Isolated validation seed'
+            if($LASTEXITCODE -ne 0){throw 'Validation seed failed.'}
+            $options.ValidationOnly=$true
+          }else{$data="$env:RUNNER_TEMP/discovery-data"}
+          ./scripts/Invoke-TokenForgeWeeklyCi.ps1 -Action Prepare -DataPath $data -BundlePath "$env:RUNNER_TEMP/plan" -Workers ([int]$env:WORKERS) -Mode $env:MODE -RetryExhausted:($env:RETRY_EXHAUSTED -eq 'true') @options
+          if($validation){Remove-Item -LiteralPath $source -Recurse -Force;Move-Item -LiteralPath $data -Destination $source}
       - name: Upload public recipe
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -147,6 +165,36 @@ jobs:
           if($env:AUTHENTICATED -ne 'true' -or -not $env:TOKENFORGE_CHECKPOINT_KEY){throw 'Verified authentication and a checkpoint key are required.'}
           ./scripts/Invoke-TokenForgeCiDiscovery.ps1 -DataPath "$env:RUNNER_TEMP/anonymous" -WeeklyStatePath "$env:RUNNER_TEMP/plan/state.json" -ChunkIndex ([int]$env:INDEX) -ReceiptPath "$env:RUNNER_TEMP/result/receipt.json" -CheckpointPath "$env:RUNNER_TEMP/private/checkpoint.sealed" -CheckpointInputPath "$env:RUNNER_TEMP/private/prior.sealed"
           Copy-Item (Join-Path "$env:RUNNER_TEMP/anonymous/scopes" ('chunk-{0:D4}.json' -f [int]$env:INDEX)) "$env:RUNNER_TEMP/result/scopes.json"
+      - name: Verify isolated encrypted resume does not repeat completed cells
+        if: inputs.validation_only
+        shell: pwsh
+        env:
+          TOKENFORGE_ESTS_COOKIE: ${{ steps.login.outputs.auth-cookie }}
+          TOKENFORGE_COOKIE_NAME: ${{ steps.login.outputs.cookie-name }}
+          TOKENFORGE_TENANT_FINGERPRINT: ${{ secrets.NORA_TENANT_FINGERPRINT }}
+          TOKENFORGE_PRINCIPAL_FINGERPRINT: ${{ secrets.NORA_PRINCIPAL_FINGERPRINT }}
+          TOKENFORGE_CHECKPOINT_KEY: ${{ secrets.TOKENFORGE_CHECKPOINT_KEY }}
+          INDEX: ${{ matrix.index }}
+        run: |
+          $ErrorActionPreference='Stop'
+          . ./scripts/TokenForgeCiState.ps1
+          $state=Get-Content "$env:RUNNER_TEMP/plan/state.json" -Raw|ConvertFrom-Json -AsHashtable
+          Assert-TfCiState $state
+          $context="$($env:TOKENFORGE_TENANT_FINGERPRINT)/$($env:TOKENFORGE_PRINCIPAL_FINGERPRINT)/$($state.PlanId)/$($env:INDEX)"
+          $checkpoint="$env:RUNNER_TEMP/private/checkpoint.sealed"
+          $before=Get-Content "$env:RUNNER_TEMP/result/receipt.json" -Raw|ConvertFrom-Json
+          if($before.Status -cne 'Complete'){throw 'Initial validation worker did not complete.'}
+          $bytes=Unprotect-TfCiCheckpoint ([IO.File]::ReadAllBytes($checkpoint)) $env:TOKENFORGE_CHECKPOINT_KEY $context
+          try{$saved=[Text.Encoding]::UTF8.GetString($bytes)|ConvertFrom-Json;$attempts=$saved.Flows.Attempts.Count;$rows=$saved.Scopes.Observations.Count;$saved=$null}
+          finally{[Security.Cryptography.CryptographicOperations]::ZeroMemory($bytes)}
+          ./scripts/Invoke-TokenForgeCiDiscovery.ps1 -DataPath "$env:RUNNER_TEMP/anonymous" -WeeklyStatePath "$env:RUNNER_TEMP/plan/state.json" -ChunkIndex ([int]$env:INDEX) -ReceiptPath "$env:RUNNER_TEMP/result/receipt.json" -CheckpointPath $checkpoint -CheckpointInputPath $checkpoint
+          $after=Get-Content "$env:RUNNER_TEMP/result/receipt.json" -Raw|ConvertFrom-Json
+          foreach($field in @('Status','SchemaVersion','Assessed','Successful','AssessedPairs','SuccessfulPairs')){if($before.$field -cne $after.$field){throw 'Resumed receipt changed completion or counts.'}}
+          $bytes=Unprotect-TfCiCheckpoint ([IO.File]::ReadAllBytes($checkpoint)) $env:TOKENFORGE_CHECKPOINT_KEY $context
+          try{$saved=[Text.Encoding]::UTF8.GetString($bytes)|ConvertFrom-Json;if($saved.Flows.Attempts.Count -ne $attempts -or $saved.Scopes.Observations.Count -ne $rows){throw 'Encrypted resume repeated completed evidence.'};$saved=$null}
+          finally{[Security.Cryptography.CryptographicOperations]::ZeroMemory($bytes)}
+          Copy-Item (Join-Path "$env:RUNNER_TEMP/anonymous/scopes" ('chunk-{0:D4}.json' -f [int]$env:INDEX)) "$env:RUNNER_TEMP/result/scopes.json"
+          Add-Content $env:GITHUB_STEP_SUMMARY 'Isolated encrypted resume: completed receipt preserved; added flow attempts 0; added scope rows 0.'
       - name: Save encrypted diagnostic checkpoint
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -167,9 +215,9 @@ jobs:
           if-no-files-found: ignore
   publish:
     needs: [prepare, worker]
-    if: always() && needs.prepare.result == 'success'
+    if: always() && needs.prepare.result == 'success' && (!inputs.validation_only || needs.worker.result == 'success')
     permissions:
-      contents: write
+      contents: read
       actions: read
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -202,9 +250,74 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           MODE: ${{ needs.prepare.outputs.mode }}
+          VALIDATION_ONLY: ${{ inputs.validation_only }}
         run: |
           $ErrorActionPreference='Stop'
-          ./scripts/Invoke-TokenForgeWeeklyCi.ps1 -Action Publish -DataPath "$env:RUNNER_TEMP/discovery-data" -BundlePath "$env:RUNNER_TEMP/plan" -Mode $env:MODE
+          $validation=$env:VALIDATION_ONLY -eq 'true'
+          $report=./scripts/Invoke-TokenForgeWeeklyCi.ps1 -Action Publish -DataPath "$env:RUNNER_TEMP/discovery-data" -BundlePath "$env:RUNNER_TEMP/plan" -Mode $env:MODE -ValidationOnly:$validation
+          $report
+          if($validation){
+            if(-not $report.Complete){throw 'Hosted validation did not complete its selected set.'}
+            Add-Content $env:GITHUB_STEP_SUMMARY 'Isolated validation only: no catalog branch files were updated.'
+            exit 0
+          }
+      - name: Save isolated aggregate validation report
+        if: inputs.validation_only
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: validation-report-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/discovery-data/coverage-deep.json
+          retention-days: 8
+          overwrite: true
+          if-no-files-found: error
+      - name: Save validated public data for the branch writer
+        if: ${{ !inputs.validation_only }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: validated-data
+          overwrite: true
+          path: |
+            ${{ runner.temp }}/discovery-data/applications.json
+            ${{ runner.temp }}/discovery-data/weekly-*.json
+            ${{ runner.temp }}/discovery-data/coverage-*.json
+            ${{ runner.temp }}/discovery-data/reports/*.json
+            ${{ runner.temp }}/discovery-data/scopes/*.json
+          retention-days: 1
+          if-no-files-found: error
+  push:
+    needs: publish
+    if: always() && needs.publish.result == 'success' && !inputs.validation_only
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: validated-data
+          path: ${{ runner.temp }}/discovery-data
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: weekly-plan
+          path: ${{ runner.temp }}/plan
+      - name: Validate public files and advance the frozen data parent
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference='Stop'
+          . ./scripts/TokenForgeCiState.ps1
+          Import-Module ./src/TokenForge/TokenForge.psd1
+          $request=Get-Content "$env:RUNNER_TEMP/plan/request.json" -Raw|ConvertFrom-Json -AsHashtable
+          Assert-TfCiKeys $request @('SchemaVersion','PlanId','Mode','Indices','BaseCommit')
+          if($request.SchemaVersion -ne 1 -or $request.BaseCommit -notmatch '^[a-f0-9]{40}$' -or $request.PlanId -notmatch '^[a-f0-9]{64}$' -or $request.Mode -cnotin @('Shallow','Deep')){throw 'Only normal publication requests can advance the data branch.'}
+          Assert-TfCiPublicData "$env:RUNNER_TEMP/discovery-data"
+          $null=Get-TokenForgeApplicationMetadata "$env:RUNNER_TEMP/discovery-data/applications.json" -PublicOnly
+          $published=Get-Content (Join-Path "$env:RUNNER_TEMP/discovery-data" ('weekly-'+$request.Mode.ToLowerInvariant()+'.json')) -Raw|ConvertFrom-Json -AsHashtable
+          if($published.PlanId -cne $request.PlanId -or $published.Recipe.Mode -cne $request.Mode){throw 'Validated data does not match the publication request.'}
           Set-Location "$env:RUNNER_TEMP/discovery-data"
           git init --quiet
           git remote add origin "https://github.com/$env:GITHUB_REPOSITORY.git"

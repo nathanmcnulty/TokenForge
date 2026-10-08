@@ -5,12 +5,21 @@ param(
  [Parameter(Mandatory)][string]$DataPath,[Parameter(Mandatory)][string]$BundlePath,
  [ValidateRange(1,4)][int]$Workers=4,[ValidateSet('Auto','Shallow','Deep')][string]$Mode='Auto',
  [ValidateRange(1,100)][int]$DeepMaxApplications=100,
- [guid[]]$AppId,[switch]$RetryExhausted
+ [guid[]]$AppId,[switch]$RetryExhausted,[switch]$ValidationOnly
 )
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'TokenForgeCiState.ps1')
 Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1') -Force
 function Save-CiJson($Value,[string]$Path){$temp=$Path+'.'+[guid]::NewGuid()+'.tmp';try{$Value|ConvertTo-Json -Depth 100|Set-Content $temp;Move-Item -LiteralPath $temp -Destination $Path -Force}finally{if(Test-Path $temp){Remove-Item $temp -Force}}}
+if($ValidationOnly){
+ if($Mode -cne 'Deep'){throw 'Isolated validation requires Deep mode.'}
+ if($Action -eq 'Prepare'){
+  if(-not $AppId -or $AppId.Count -gt 4){throw 'Choose one to four explicit published validation IDs.'}
+  if($Workers -lt [Math]::Ceiling(@($AppId|Sort-Object -Unique).Count/2)){throw 'Validation requires enough workers for every two-app chunk.'}
+  if(Test-Path -LiteralPath $DataPath){if(@(Get-ChildItem -LiteralPath $DataPath -File -Filter 'weekly-*.json').Count){throw 'Validation requires an isolated directory without weekly state.'}}
+  $DeepMaxApplications=4
+ }
+}
 $null=New-Item -ItemType Directory $DataPath,$BundlePath,(Join-Path $DataPath reports) -Force
 Assert-TfCiPublicData $DataPath
 if($Mode -eq 'Auto'){
@@ -39,7 +48,7 @@ if($Action -eq 'Prepare'){
   $public=$discovery|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable
   $options=@{};if($AppId){$options.AppId=@($AppId|ForEach-Object ToString)}
   if($Mode -eq 'Deep'){
-   $options.ChunkSize=25
+   $options.ChunkSize=if($ValidationOnly){2}else{25}
    $options.ResourceId=@('00000003-0000-0000-c000-000000000000','797f4846-ba00-4fd7-ba43-dac1f8f63013')
    if($AppId -and $AppId.Count -gt $DeepMaxApplications){throw 'Deep selection exceeds its independent weekly budget.'}
    if(-not $AppId){
@@ -67,7 +76,9 @@ if($Action -eq 'Prepare'){
  Save-CiJson $state $statePath
  Save-CiJson $state (Join-Path $BundlePath state.json)
  $base=git -C $DataPath rev-parse HEAD 2>$null;if($LASTEXITCODE -ne 0){throw 'Weekly CI requires an initialized data branch.'}
- Save-CiJson @{SchemaVersion=1;PlanId=$state.PlanId;Mode=$Mode;Indices=$selection;BaseCommit=[string]$base} (Join-Path $BundlePath request.json)
+ $request=[ordered]@{SchemaVersion=1;PlanId=$state.PlanId;Mode=$Mode;Indices=$selection;BaseCommit=[string]$base}
+ if($ValidationOnly){$request.SchemaVersion=2;$request.ValidationOnly=$true}
+ Save-CiJson $request (Join-Path $BundlePath request.json)
  Save-CiJson (Get-TfCiReport $state) (Join-Path $DataPath ('coverage-'+$Mode.ToLowerInvariant()+'.json'))
  $matrix=@{include=@($selection|ForEach-Object {@{index=$_;plan=$state.PlanId}})}|ConvertTo-Json -Compress
  if($env:GITHUB_OUTPUT){Add-Content $env:GITHUB_OUTPUT "matrix=$matrix";Add-Content $env:GITHUB_OUTPUT "mode=$Mode";Add-Content $env:GITHUB_OUTPUT "has_work=$([bool]$selection.Count)"}
@@ -78,9 +89,14 @@ if($Action -eq 'Prepare'){
  $current=Get-Content $statePath -Raw|ConvertFrom-Json -AsHashtable;Assert-TfCiState $current
  if((Get-TfCiHash $state) -cne (Get-TfCiHash $current)){throw 'Publisher state changed after planning.'}
  $request=Get-Content (Join-Path $BundlePath request.json) -Raw|ConvertFrom-Json -AsHashtable
- Assert-TfCiKeys $request @('SchemaVersion','PlanId','Mode','Indices','BaseCommit')
+ $requestFields=@('SchemaVersion','PlanId','Mode','Indices','BaseCommit');if($ValidationOnly){$requestFields+='ValidationOnly'}
+ Assert-TfCiKeys $request $requestFields
+ if($ValidationOnly){
+  if($request.SchemaVersion -ne 2 -or $request.ValidationOnly -isnot [bool] -or -not $request.ValidationOnly -or $state.SchemaVersion -ne 2 -or $state.Recipe.Mode -cne 'Deep' -or $state.Recipe.AppIds.Count -gt 4 -or $state.Recipe.ChunkSize -ne 2 -or @(Get-TfCiResources $state).Count -ne 2){throw 'Invalid isolated validation recipe.'}
+ }
+
  if($request.BaseCommit -notmatch '^[a-f0-9]{40}$'){throw 'Invalid data parent.'}
- if($request.SchemaVersion -ne 1 -or $request.PlanId -cne $state.PlanId -or $request.Mode -cne $Mode -or @($request.Indices|Sort-Object -Unique).Count -ne $request.Indices.Count -or $request.Indices.Count -gt 4){throw 'Invalid publication request.'}
+ if($request.SchemaVersion -ne $(if($ValidationOnly){2}else{1}) -or $request.PlanId -cne $state.PlanId -or $request.Mode -cne $Mode -or @($request.Indices|Sort-Object -Unique).Count -ne $request.Indices.Count -or $request.Indices.Count -gt 4){throw 'Invalid publication request.'}
  $allowed=@('receipt.json','scopes.json')
  $null=New-Item -ItemType Directory (Join-Path $DataPath scopes) -Force
  foreach($index in $request.Indices){

@@ -10,7 +10,7 @@ After the shallow recipe completes, Auto mode spends a separate deep budget: at 
 
 ## State and reports
 
-The `discovery-data` branch must already be initialized. The publisher is the only job with `contents: write`; workers have read access and do not receive the publication credential. Source code with credential access runs only from `main`, with pinned actions. Nora's passkey values, expected account fingerprints, and checkpoint key are repository **secrets**.
+The `discovery-data` branch must already be initialized. The final branch-writing job is the only job with `contents: write`; workers and the report publisher have read access and do not receive the branch-writing credential. Source code with credential access runs only from `main`, with pinned actions. Nora's passkey values, expected account fingerprints, and checkpoint key are repository **secrets**.
 
 Public outputs are:
 
@@ -98,3 +98,13 @@ The PowerShell entry point is `./scripts/tokenforge.ps1 research weekly -StatePa
 Reports distinguish source catalog, selected applications, successful applications, and app/resource pairs. They include remaining applications/pairs, pending/exhausted batches, observation dates, and next-step guidance. An older recipe is marked `CurrentWeek=false`; refresh the checkout and inspect scheduling before assuming the current week has run. Future-week recipes and creation times more than five minutes ahead are rejected. Assessment includes structural exclusions, and successful token observations do not establish universal support or API authorization. The packaged native command uses its PowerShell adapter, so PowerShell 7.4+ is required.
 
 Validation on 2026-10-07 matched the published snapshot through both entry points: 5,454 shallow assessments with 252 successful pairs, and 100 deep assessments with 46 successful pairs. The final packaged native read took 21.98 seconds on this Linux machine; this is one observed runtime, not a platform guarantee. All ten packaged weekly CLI cases and 32 expanded native adapter cases passed. The stable full suite passed 340 tests with two platform skips. See the [sanitized report](weekly-ci-validation-2026-10-07.json).
+
+## Isolated hosted validation
+
+Workflow dispatch supports `validation_only=true` with Deep mode and one to four explicit published app IDs. Use two workers for three or four IDs; one worker suffices for one or two. The coordinator creates a fresh runner-local data directory, copies only the public application ledger, and freezes Graph/ARM pairs into two-app chunks. It refuses existing weekly state. A schema v2 publication request marks the isolated route; normal publication rejects that request, and isolated publication rejects normal requests.
+
+Each worker signs in independently with the existing Nora repository secrets, assesses its partition, then restores its encrypted checkpoint and checks that receipt completion/counts and flow/summary counts remain unchanged. The validation report is produced only if all validation workers and their resume checks succeed. The branch-writing job is skipped entirely, so this mode does not replace or extend the real weekly recipe. The read-only publisher uploads a `validation-report-<run-attempt>` aggregate artifact for eight days; encrypted checkpoints retain their existing account/plan/partition binding and eight-day retention. This proof creates no registrations or consent grants.
+
+Normal runs now pass validated public files through a one-day artifact to a separate branch writer. That writer revalidates public files, requires a normal publication request and matching plan, checks the original data parent, and performs a fast-forward push. The additional job adds runner overhead beyond the earlier measured cycle; its cost has not yet been measured in a complete new weekly cycle.
+
+Validation reports use an attempt-specific name so a failed rerun cannot look like a newly successful proof by retaining an earlier aggregate. Normal validated-data artifacts keep a stable name with overwrite enabled, allowing a failed branch writer to retry without rerunning successful workers; the original parent check still rejects stale publication.

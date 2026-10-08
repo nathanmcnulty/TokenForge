@@ -1,6 +1,6 @@
 # Weekly research CI
 
-The scheduled workflow refreshes public source metadata every six hours. It freezes a UTC ISO-week recipe containing **all published application IDs**, the public discovery snapshot, protocol bounds, and fixed chunk membership. It does not publish the tenant's eligible registration inventory. App IDs found only in private sign-in logs remain in the separate private maintenance catalog.
+The scheduled workflow checks every six hours and refreshes public source metadata while weekly work remains. Once both current-week recipes complete, it refreshes sources once per UTC day and skips later scheduled refreshes that day. Manual runs always refresh. It freezes a UTC ISO-week recipe containing **all published application IDs**, the public discovery snapshot, protocol bounds, and fixed chunk membership. It does not publish the tenant's eligible registration inventory. App IDs found only in private sign-in logs remain in the separate private maintenance catalog.
 
 Four independently authenticated workers assess at most 100 published IDs each. Every selected ID must have an explicit fresh inventory record, including missing, disabled, or unverified entries. These structural results count as assessment coverage without token issuance. A successful token observation is a different measure: it describes what Entra issued for the tested account/session, not universal support or API authorization.
 
@@ -9,6 +9,21 @@ The coordinator chooses pending batches and failed batches with fewer than three
 After the shallow recipe completes, Auto mode spends a separate deep budget: at most 100 public candidates per week, 25 per batch, at most two workers, up to four callbacks, and all three implemented delegated protocols. New deep recipes freeze Graph and ARM as separate resource pairs, with at most 200 pairs across 100 selected apps; existing Graph-only recipes remain frozen unchanged. Changed published hints take priority, followed by never-selected apps and then the oldest deep selections. A public last-selected-week ledger is independent of shallow token success, so successful clients can still receive deeper exploration. Selection history records scheduling, not completed assessment; interrupted work retries within its frozen week. Existing recipes retain their membership and plan hash when the ledger is added. Changed hints retain priority, so sustained changes exceeding the weekly budget can delay unchanged apps; selection history does not guarantee completion after interrupted weeks. Deep work does not make the shallow report more complete. Explicit target IDs are allowed only for Deep and remain bounded by its budget. If public sources provide no usable deep selection, planning fails clearly rather than silently expanding the budget.
 
 ## State and reports
+
+The scheduled idle check reads both frozen recipes and recomputes their reports, validating
+hashes, modes, membership, completion, and recipe dates. It then validates the public application
+ledger and requires its referenced Discovery run to match the origin's observation time on the
+current UTC date, with no future observation. Import time alone does not qualify. Missing,
+incomplete, or old-week evidence takes the full path; invalid evidence fails the run. A new UTC
+day or week resumes normal preparation. This uses a recorded public observation and branch
+provenance, not independent authentication of the upstream data. Skipped invocations write no
+catalog metadata and emit no plan/publication artifacts or writer readiness. Every discovery
+script that actually runs continues to update the metadata ledger.
+
+On a full production snapshot, the idle check returned true in 26.60 seconds locally. This
+single measurement excludes hosted setup and is not a revised full-week runner cost. The
+change removes source downloads, plan generation, transport artifacts, and the separate writer
+from that scheduled idle path; hosted scheduled timing remains to be measured.
 
 The `discovery-data` branch must already be initialized. The final branch-writing job is the only job with `contents: write`; workers and the report publisher have read access and do not receive the branch-writing credential. Source code with credential access runs only from `main`, with pinned actions. Nora's passkey values, expected account fingerprints, and checkpoint key are repository **secrets**.
 

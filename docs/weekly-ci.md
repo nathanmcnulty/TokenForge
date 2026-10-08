@@ -166,3 +166,22 @@ time of 9.985 seconds before and 6.905 seconds after. These are local function t
 complete workflow savings. Production publication preserved the frozen recipe and all 55 scope
 files; 35 weekly tests and 327 offline tests passed, with 34 platform/package skips.
 See the [sanitized report](weekly-ci-validation-2026-10-07.json).
+
+## Hosted no-worker publication measurements
+
+The inline publication path passed runs [37715412744](https://github.com/nathanmcnulty/TokenForge/actions/runs/37715412744)
+and [37716208626](https://github.com/nathanmcnulty/TokenForge/actions/runs/37716208626). In each,
+workers and the separate publisher were skipped, the writer succeeded, all 60 published files
+matched the validated artifact, and all 55 scope files and the frozen recipe stayed unchanged.
+Each data commit directly descended from its requested parent.
+
+Those runs used 3.93 and 3.83 runner-minutes, compared with 2.82 and 2.93 for earlier
+separate-publisher runs. No saving has been demonstrated. The source commits and live data
+differed, and preparation time increased in code unchanged by the routing change. Measure
+matched source/data fixtures before attributing the difference or claiming a hosted improvement.
+These runs did no token matrix work and do not measure a complete new weekly cycle.
+
+After the indexed membership/report reuse change, [run 37718137655](https://github.com/nathanmcnulty/TokenForge/actions/runs/37718137655)
+passed the same publication checks and used 3.48 runner-minutes (169 seconds preparation,
+40 seconds writer). This is one uncontrolled no-worker sample; it is not a complete weekly
+cost or a controlled comparison of publication routes.

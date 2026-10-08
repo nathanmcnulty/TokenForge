@@ -122,5 +122,9 @@
     "SelfContainedLinuxBuilt": true,
     "PowerShellZipIncludesOAuthSourceAndEvidence": true,
     "ActionlintPassed": true
-  }
+  },
+  "MergedPullRequest": 33,
+  "MergeCommit": "b20ebf0a5ac537c52064b1d0fda6e0354804215f",
+  "ReviewedHead": "3df9a97467a72f60af557db1ec6ceef4940fe595",
+  "PlatformChecksPassed": 6
 }

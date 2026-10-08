@@ -199,11 +199,13 @@ using System.Threading.Tasks;
 public sealed class TokenForgeFixtureHandler : HttpMessageHandler {
     public string Body;
     public string Origin;
+    public bool OriginPresent;
     public string Method;
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) {
         Method = request.Method.Method;
         Body = request.Content == null ? null : await request.Content.ReadAsStringAsync();
-        Origin = request.Headers.Contains("Origin") ? String.Join("", request.Headers.GetValues("Origin")) : null;
+        OriginPresent = request.Headers.Contains("Origin");
+        Origin = OriginPresent ? String.Join("", request.Headers.GetValues("Origin")) : null;
         var response = new HttpResponseMessage(HttpStatusCode.Found);
         response.Headers.Location = new Uri("https://example.test/callback?code=synthetic");
         response.Content = new StringContent("synthetic-content");
@@ -211,6 +213,22 @@ public sealed class TokenForgeFixtureHandler : HttpMessageHandler {
     }
 }
 '@
+    }
+    It 'omits Origin for a <Mode> PowerShell value' -TestCases @(@{Mode='Missing'},@{Mode='Null'},@{Mode='Empty'}) {
+        param($Mode)
+        $handler = [TokenForgeFixtureHandler]::new()
+        $client = [Net.Http.HttpClient]::new($handler)
+        try {
+            $response = & (Get-Module TokenForge) {
+                param($testClient,$mode)
+                $options=@{}
+                if($mode -eq 'Null'){$options.Origin=$null}
+                if($mode -eq 'Empty'){$options.Origin=''}
+                Invoke-TokenForgeHttp -Client $testClient -Uri 'https://login.microsoftonline.com/organizations/oauth2/v2.0/token' -Form @{grant_type='synthetic'} @options
+            } $client $Mode
+            $handler.OriginPresent | Should -BeFalse
+            $response.Status | Should -Be 302
+        } finally { $client.Dispose() }
     }
     It 'encodes form values and returns the redirect without following it' {
         $handler = [TokenForgeFixtureHandler]::new()

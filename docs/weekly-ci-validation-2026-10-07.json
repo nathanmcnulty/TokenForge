@@ -653,5 +653,69 @@
       "Complete": true,
       "ScopeFilesUnchanged": 55
     }
+  },
+  "HostedNoWorkerInlinePublication": {
+    "DateUTC": "2026-10-08",
+    "RunId": 37715412744,
+    "RunUrl": "https://github.com/nathanmcnulty/TokenForge/actions/runs/37715412744",
+    "SourceCommit": "a73dcbb82917ffafaa83c19989e45b8d68c674b7",
+    "DataCommit": "fff85447019aa663aa4386dea3c7503994c25663",
+    "ParentCommit": "0e56da6376342306811f90a6b467f456cb83cc4c",
+    "PlanId": "cc4e968e29cb56d55ce787fa884bffd29e72b31e3f8ba616611a57020cbcccd7",
+    "Jobs": {
+      "prepare": "success",
+      "push": "success",
+      "worker": "skipped",
+      "publish": "skipped"
+    },
+    "PublishedFilesMatchedValidatedArtifact": 60,
+    "ScopeFilesUnchanged": 55,
+    "FrozenRecipeUnchanged": true,
+    "WorkerIndices": 0,
+    "NoTokenWorkers": true,
+    "RunnerMinutesByStage": {
+      "prepare": 3.05,
+      "push": 0.883
+    },
+    "TotalRunnerMinutes": 3.933,
+    "Complete": true,
+    "SelectedApplications": 100,
+    "SelectedPairs": 100,
+    "ResourceCount": 1,
+    "ComparisonBaselineRunId": 37707708903,
+    "ComparisonBaselineRunnerMinutes": 2.817,
+    "ComparisonIsTwoSingleNoWorkerInvocationsNotFullWeeklyCycle": true,
+    "Review": "Sol approved workflow; all six platform checks passed before merge; actual artifacts and direct Git parent verified"
+  },
+  "HostedNoWorkerInlinePublicationSecond": {
+    "Run": 37716208626,
+    "DataCommit": "03ec388b22eda81d9539e4a548dc82acef7668c9",
+    "BaseCommit": "fff85447019aa663aa4386dea3c7503994c25663",
+    "DirectParentVerified": true,
+    "PublishedFilesMatchArtifact": 60,
+    "ScopeFilesUnchanged": 55,
+    "FrozenRecipeUnchanged": true,
+    "WorkerIndices": 0,
+    "CredentialsUsed": false,
+    "RunnerMinutes": 3.8333333333333335
+  },
+  "NoWorkerPerformanceComparison": {
+    "BaselineSeparateJobRunnerMinutes": [
+      2.816666666666667,
+      2.933333333333333
+    ],
+    "InlineRunnerMinutes": [
+      3.933333333333333,
+      3.8333333333333335
+    ],
+    "Conclusion": "No saving demonstrated. Runs differ in source commits and live data; unchanged preparation also grew. Controlled matched-fixture comparison required.",
+    "BaselineRuns": [
+      37707708903,
+      37711657906
+    ],
+    "InlineRuns": [
+      37715412744,
+      37716208626
+    ]
   }
 }

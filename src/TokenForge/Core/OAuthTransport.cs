@@ -150,7 +150,7 @@ namespace TokenForge.Core.V0180
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellation); deadline.CancelAfter(TimeSpan.FromSeconds(30));
             using var request = new HttpRequestMessage(form == null ? HttpMethod.Get : HttpMethod.Post, uri);
             if (form != null) request.Content = new FormUrlEncodedContent(form);
-            if (origin != null) request.Headers.Add("Origin", origin);
+            if (!string.IsNullOrEmpty(origin)) request.Headers.Add("Origin", origin);
             try
             {
                 using var response = client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, deadline.Token).GetAwaiter().GetResult();

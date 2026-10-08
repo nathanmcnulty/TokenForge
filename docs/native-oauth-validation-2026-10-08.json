@@ -126,5 +126,55 @@
   "MergedPullRequest": 33,
   "MergeCommit": "b20ebf0a5ac537c52064b1d0fda6e0354804215f",
   "ReviewedHead": "3df9a97467a72f60af557db1ec6ceef4940fe595",
-  "PlatformChecksPassed": 6
+  "PlatformChecksPassed": 6,
+  "PowerShellOriginRegression": {
+    "Date": "2026-10-08",
+    "BaselineMissingNullEmptyHeaderTestsFailed": 3,
+    "FixedTransportTestsPassed": 34,
+    "ErrorBeforeFix": 9002326,
+    "Change": "Omit Origin for null or empty values; explicit SPA origins remain unchanged",
+    "Review": "Sol approved",
+    "LiveProofContext": "PowerShell profiles with shared vault crypto candidate; transport rejection occurred before vault creation",
+    "SharedVaultCryptoCandidateSha256": "efa1c068494db3ba80e183370075ad684441b4f495cd652a94a33d6f0a09c6cb",
+    "LiveAccounts": [
+      {
+        "AccountLabel": "nora",
+        "Storage": "LinuxSecretService",
+        "Fresh": "BoundedTargetedSilentExplicitScopeAcquisition",
+        "FreshApiStatus": 200,
+        "ReopenedCache": "CachedVerifiedContextNotNewIssuance",
+        "ReopenedApiStatus": 200,
+        "Renewal": "SameClientRefreshMatchedIssuedContext",
+        "RenewedApiStatus": 200,
+        "AdditionalApiScopes": 0,
+        "RetentionPreserved": true,
+        "IdentityConfirmationTimePreserved": true,
+        "GraphSdkReadSucceeded": true,
+        "VaultRemoved": true,
+        "KeyRemoved": true
+      },
+      {
+        "AccountLabel": "secadmin",
+        "Storage": "LinuxSecretService",
+        "Fresh": "BoundedTargetedSilentExplicitScopeAcquisition",
+        "FreshApiStatus": 200,
+        "ReopenedCache": "CachedVerifiedContextNotNewIssuance",
+        "ReopenedApiStatus": 200,
+        "Renewal": "SameClientRefreshMatchedIssuedContext",
+        "RenewedApiStatus": 200,
+        "AdditionalApiScopes": 0,
+        "RetentionPreserved": true,
+        "IdentityConfirmationTimePreserved": true,
+        "GraphSdkReadSucceeded": true,
+        "VaultRemoved": true,
+        "KeyRemoved": true
+      }
+    ],
+    "ConsentGranted": false,
+    "ApplicationsRegistered": false,
+    "TemporaryEncryptedVaultsCreatedAndRemoved": true,
+    "AccountIdentityCheck": "Graph me confirmation in profile login; subsequent read-only API and SDK checks",
+    "RenewalTrigger": "Local expiry metadata forced stale; real same-client refresh redeemed; server expiry not claimed",
+    "SignatureValidated": false
+  }
 }

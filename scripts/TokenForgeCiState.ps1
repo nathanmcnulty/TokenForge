@@ -69,7 +69,9 @@ function Assert-TfCiState($State) {
  $resources=@(Get-TfCiResources $State)
  if($State.SchemaVersion -eq 2 -and ($recipe.Mode -cne 'Deep' -or $recipe.ResourceIds -isnot [array] -or $resources.Count -lt 1 -or $resources.Count -gt 2 -or @($resources|Where-Object {$_ -isnot [string] -or $_ -cnotin @('00000003-0000-0000-c000-000000000000','797f4846-ba00-4fd7-ba43-dac1f8f63013')}).Count -or ($resources -join '/') -cne (@($resources|Sort-Object -Unique) -join '/'))){throw 'Invalid frozen resource membership.'}
  $published=@($recipe.Discovery.Applications|ForEach-Object AppId)
- if($recipe.AppIds -isnot [array] -or -not $recipe.AppIds.Count -or @($recipe.AppIds|Sort-Object -Unique).Count -ne $recipe.AppIds.Count -or @($recipe.AppIds|Where-Object {$_ -notin $published}).Count -or ($recipe.AppIds -join '/') -cne (@($recipe.AppIds|Sort-Object) -join '/')){throw 'Invalid frozen membership.'}
+ # Match PowerShell's case-insensitive GUID membership without rescanning the catalog per ID.
+ $publishedIds=[Collections.Generic.HashSet[string]]::new([string[]]$published,[StringComparer]::OrdinalIgnoreCase)
+ if($recipe.AppIds -isnot [array] -or -not $recipe.AppIds.Count -or @($recipe.AppIds|Sort-Object -Unique).Count -ne $recipe.AppIds.Count -or @($recipe.AppIds|Where-Object {-not $publishedIds.Contains([string]$_)}).Count -or ($recipe.AppIds -join '/') -cne (@($recipe.AppIds|Sort-Object) -join '/')){throw 'Invalid frozen membership.'}
  if($recipe.Mode -eq 'Shallow' -and $recipe.AppIds.Count -ne $published.Count){throw 'Incomplete public shallow membership.'}
  if($State.Contains('DeepSelectionHistory')){
   $history=$State.DeepSelectionHistory

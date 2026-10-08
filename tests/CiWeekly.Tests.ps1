@@ -292,6 +292,47 @@ Describe 'Weekly publisher integration' {
   $state=Get-Content "$data/weekly-deep.json" -Raw|ConvertFrom-Json -AsHashtable
   $state.Batches[0].Status|Should -Be Failed;$state.Batches[0].Attempts|Should -Be 1
  }
+ It 'freezes isolated validation in two-app chunks and requires the matching publish route' {
+  $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep -AppId $discovery.Applications[0].AppId -ValidationOnly
+  $state=Get-Content "$bundle/state.json" -Raw|ConvertFrom-Json -AsHashtable
+  $request=Get-Content "$bundle/request.json" -Raw|ConvertFrom-Json -AsHashtable
+  $state.Recipe.ChunkSize|Should -Be 2
+  $state.Recipe.ResourceIds.Count|Should -Be 2
+  $request.SchemaVersion|Should -Be 2;$request.ValidationOnly|Should -BeTrue
+  {& $runner -Action Publish -DataPath $data -BundlePath $bundle -Mode Deep}|Should -Throw '*fields*'
+  $out=Join-Path $bundle result-0;$null=New-Item -ItemType Directory $out
+  @{SchemaVersion=2;PlanId=$state.PlanId;Index=0;Attempt=1;Status='Complete';Assessed=1;Successful=0;AssessedPairs=2;SuccessfulPairs=0;DurationSeconds=1;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')}|ConvertTo-Json|Set-Content "$out/receipt.json"
+  @{SchemaVersion=1;Observations=@();Disclaimer='Observed scopes are session/tenant dependent, not universal consent or guaranteed API access.'}|ConvertTo-Json -Depth 10|Set-Content "$out/scopes.json"
+  $report=& $runner -Action Publish -DataPath $data -BundlePath $bundle -Mode Deep -ValidationOnly
+  $report.Complete|Should -BeTrue;$report.AssessedPairs|Should -Be 2
+ }
+ It 'selects every validation chunk and rejects a non-boolean or false validation marker' {
+  $four=$discovery|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable
+  $four.Applications=@($four.Applications|Select-Object -First 2)
+  foreach($id in @('33333333-3333-3333-3333-333333333333','44444444-4444-4444-4444-444444444444')){$app=$four.Applications[0]|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable;$app.AppId=$id;$four.Applications+=@($app)}
+  Mock Update-TokenForgeDiscovery {$four}
+  $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep -Workers 2 -AppId @($four.Applications|ForEach-Object AppId) -ValidationOnly
+  $request=Get-Content "$bundle/request.json" -Raw|ConvertFrom-Json -AsHashtable
+  $request.Indices.Count|Should -Be 2
+  foreach($value in @('true',$false)){
+   $request.ValidationOnly=$value;$request|ConvertTo-Json -Depth 20|Set-Content "$bundle/request.json"
+   {& $runner -Action Publish -DataPath $data -BundlePath $bundle -Mode Deep -ValidationOnly}|Should -Throw '*Invalid isolated validation*'
+  }
+ }
+ It 'refuses validation against existing weekly state without changing it' {
+  $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep -DeepMaxApplications 1
+  $before=(Get-FileHash "$data/weekly-deep.json").Hash
+  {& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep -AppId $discovery.Applications[0].AppId -ValidationOnly}|Should -Throw '*isolated directory*'
+  (Get-FileHash "$data/weekly-deep.json").Hash|Should -Be $before
+  {& $runner -Action Publish -DataPath $data -BundlePath $bundle -Mode Deep -ValidationOnly}|Should -Throw '*fields*'
+ }
+ It 'rejects automatic or unbounded isolated validation before preparing a recipe' {
+  {& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Auto -AppId $discovery.Applications[0].AppId -ValidationOnly}|Should -Throw '*Deep mode*'
+  {& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep -ValidationOnly}|Should -Throw '*one to four*'
+  {& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep -AppId @([guid[]]@('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222','33333333-3333-3333-3333-333333333333','44444444-4444-4444-4444-444444444444','55555555-5555-5555-5555-555555555555')) -ValidationOnly}|Should -Throw '*one to four*'
+  {& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep -Workers 1 -AppId @([guid[]]@('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222','33333333-3333-3333-3333-333333333333','44444444-4444-4444-4444-444444444444')) -ValidationOnly}|Should -Throw '*enough workers*'
+  Test-Path "$data/weekly-deep.json"|Should -BeFalse
+ }
  It 'records missing worker artifacts as failed work instead of claiming completion' {
   $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Shallow
   $report=& $runner -Action Publish -DataPath $data -BundlePath $bundle

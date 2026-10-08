@@ -196,6 +196,19 @@ function Assert-TfCiScopeExport($Document) {
   $null=[DateTimeOffset]::Parse([string]$row.ObservedAt)
  }
 }
+function Get-TfCiPublicStagePaths([string]$Path){
+ # Artifact transport omits empty directories. Select existing allowlisted files
+ # after Assert-TfCiPublicData rather than passing optional directories to git.
+ foreach($file in Get-ChildItem -LiteralPath $Path -File){
+  if($file.Name -cin @('applications.json','weekly-shallow.json','weekly-deep.json','coverage-shallow.json','coverage-deep.json')){$file.Name}
+ }
+ foreach($folder in @('reports','scopes')){
+  $directory=Join-Path $Path $folder
+  if(Test-Path -LiteralPath $directory -PathType Container){
+   foreach($file in Get-ChildItem -LiteralPath $directory -File){$folder+'/'+$file.Name}
+  }
+ }
+}
 function Assert-TfCiPublicData([string]$Path){
  foreach($file in Get-ChildItem $Path -Recurse -Force|Where-Object {$_.FullName -notmatch '[/\\]\.git([/\\]|$)'}){if($file.Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Linked public data is not allowed.'}}
  foreach($file in @(Get-ChildItem $Path -File -Filter 'coverage-*.json')){if($file.Name -cnotin @('coverage-shallow.json','coverage-deep.json')){throw 'Unexpected coverage path.'};Assert-TfCiReport (Get-Content $file.FullName -Raw|ConvertFrom-Json -AsHashtable)}

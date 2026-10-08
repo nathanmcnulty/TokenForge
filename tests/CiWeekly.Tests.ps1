@@ -342,3 +342,30 @@ Describe 'Weekly publisher integration' {
   $state.Batches[0].Attempts|Should -Be 1
  }
 }
+
+Describe 'Public branch staging after artifact transport' {
+ It 'stages existing public files with <DirectoryState> optional directories' -ForEach @(
+  @{DirectoryState='Absent'},@{DirectoryState='Empty'},@{DirectoryState='Populated'}
+ ) {
+  $data=Join-Path $TestDrive $DirectoryState
+  $null=New-Item -ItemType Directory $data
+  git -C $data init --quiet
+  $LASTEXITCODE|Should -Be 0
+  $expected=@('applications.json','weekly-deep.json','coverage-deep.json')
+  foreach($name in $expected){Set-Content (Join-Path $data $name) '{}'}
+  Set-Content (Join-Path $data 'private.json') '{}'
+  if($DirectoryState -ne 'Absent'){
+   $null=New-Item -ItemType Directory (Join-Path $data reports),(Join-Path $data scopes)
+  }
+  if($DirectoryState -eq 'Populated'){
+   $expected+=@('reports/2026-W41-deep.json','scopes/chunk-0000.json')
+   foreach($name in @('reports/2026-W41-deep.json','scopes/chunk-0000.json')){Set-Content (Join-Path $data $name) '{}'}
+  }
+  $paths=@(Get-TfCiPublicStagePaths $data)
+  git -C $data add -- @paths
+  $LASTEXITCODE|Should -Be 0
+  $staged=@(git -C $data diff --cached --name-only)
+  ($staged|Sort-Object) -join '/'|Should -Be (($expected|Sort-Object) -join '/')
+  $staged|Should -Not -Contain 'private.json'
+ }
+}

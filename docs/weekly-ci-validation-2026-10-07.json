@@ -590,5 +590,68 @@
     "ScopeFilesUnchanged": 55,
     "Mode": "Deep",
     "Review": "Sol approved workflow failure/skip/validation/rerun boundaries; 33 controller tests and actionlint passed"
+  },
+  "LocalCoordinatorMembershipBenchmark": {
+    "Date": "2026-10-08",
+    "Execution": "LocalFrozenSnapshotNotHostedRunnerTiming",
+    "BaselineCommit": "a73dcbb82917ffafaa83c19989e45b8d68c674b7",
+    "CandidateCodeCommit": "5eddb691240ee4f5d216b50d5e6e0cfb5430de0f",
+    "FixtureSha256": "20375a0bd510835b34c4528a01bc9a881ebd56d1428b6f505bd94e5de16b0af8",
+    "Applications": 5454,
+    "Method": "Three alternating paired Assert-TfCiState calls in one PowerShell process; unrelated local test and proof processes completed before this measurement. No hosted timing or process memory claim.",
+    "Samples": [
+      {
+        "Round": 1,
+        "Applications": 5454,
+        "Seconds": 10.2290905,
+        "Variant": "Baseline"
+      },
+      {
+        "Round": 1,
+        "Applications": 5454,
+        "Seconds": 7.0558278,
+        "Variant": "Candidate"
+      },
+      {
+        "Round": 2,
+        "Applications": 5454,
+        "Seconds": 6.9050343,
+        "Variant": "Candidate"
+      },
+      {
+        "Round": 2,
+        "Applications": 5454,
+        "Seconds": 9.9854629,
+        "Variant": "Baseline"
+      },
+      {
+        "Round": 3,
+        "Applications": 5454,
+        "Seconds": 8.7653688,
+        "Variant": "Baseline"
+      },
+      {
+        "Round": 3,
+        "Applications": 5454,
+        "Seconds": 6.8050915,
+        "Variant": "Candidate"
+      }
+    ],
+    "BaselineMedianSeconds": 9.9854629,
+    "CandidateMedianSeconds": 6.9050343,
+    "WeeklyTestsPassed": 35,
+    "OfflineTestsPassed": 327,
+    "OfflineTestsSkipped": 34,
+    "SolReview": "Approved; trust gates preserved",
+    "ProductionPublisherProof": {
+      "Assessed": 100,
+      "CredentialsUsed": false,
+      "PublicBranchUpdated": false,
+      "Seconds": 72.0491859,
+      "PlanUnchanged": true,
+      "Successful": 46,
+      "Complete": true,
+      "ScopeFilesUnchanged": 55
+    }
   }
 }

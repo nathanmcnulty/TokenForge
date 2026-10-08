@@ -93,7 +93,7 @@ Public discovery metadata is published on the `discovery-data` branch; private a
 
 ## Broader discovery and tenant inventory
 
-The [inventory workflow](docs/inventory.md) aggregates three public sources, verifies Microsoft service-principal ownership, registers missing candidates without granting consent, builds a client/resource probe matrix, and checkpoints scope observations. It supports resumable batches, fresh least-scope candidate selection, availability/scope diffs, and anonymous exports. `scripts/Invoke-TokenForgeInventory.ps1` is the PowerShell CLI entry point; a ZIP distribution with the runtime CLI is available through `scripts/Build-TokenForgePackage.ps1`. Self-contained native CLI packages are available; authentication currently requires PowerShell. See [native CLI](docs/native-cli.md). See [browser authentication, assessment planning, and maintenance](docs/browser-assessment.md).
+The [inventory workflow](docs/inventory.md) aggregates three public sources, verifies Microsoft service-principal ownership, registers missing candidates without granting consent, builds a client/resource probe matrix, and checkpoints scope observations. It supports resumable batches, fresh least-scope candidate selection, availability/scope diffs, and anonymous exports. `scripts/Invoke-TokenForgeInventory.ps1` is the PowerShell CLI entry point; a ZIP distribution with the runtime CLI is available through `scripts/Build-TokenForgePackage.ps1`. Self-contained native CLI packages are available; profile login and storage currently require PowerShell, while explicit token acquisition runs natively. See [native CLI](docs/native-cli.md). See [browser authentication, assessment planning, and maintenance](docs/browser-assessment.md).
 
 See [sign-in discovery and account-specific sweeps](docs/signin-discovery-and-sweeps.md) to extract previously unknown app IDs, resolve missing Microsoft service principals, and resume token-scope probing separately for each account.
 
@@ -110,7 +110,7 @@ Application IDs now accumulate in a persistent [`applications.json` catalog](doc
 
 Named profiles and the simpler CLI are documented in [Profiles and CLI](docs/profiles-and-cli.md). The platform direction is documented in [Native architecture](docs/native-architecture.md).
 
-A native CLI and transactional evidence workspace are available; see [Native CLI](docs/native-cli.md). Authentication currently uses the packaged PowerShell module.
+A native CLI and transactional evidence workspace are available; see [Native CLI](docs/native-cli.md). PowerShell and native callers share the OAuth transport; profile login and storage still use the packaged PowerShell module.
 
 Explicit Windows/Linux OS-backed profile storage is documented in [OS-backed vault](docs/os-backed-vault.md).
 

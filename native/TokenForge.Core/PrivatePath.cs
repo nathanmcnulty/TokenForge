@@ -4,6 +4,25 @@ using System.Security.Principal;
 namespace TokenForge.Core;
 public static class PrivatePath
 {
+    // Read-only counterpart for context plans; never creates or changes storage.
+    public static string ValidateExisting(string path)
+    {
+        path = Path.GetFullPath(path);
+        if (OperatingSystem.IsWindows() && path.StartsWith(@"\\", StringComparison.Ordinal)) throw new InvalidOperationException("Use a local storage path.");
+        var file = new FileInfo(path);
+        if (!file.Exists || file.Directory == null) throw new InvalidOperationException("A private existing file is required.");
+        for (FileSystemInfo? item = file; item != null; item = item is FileInfo f ? f.Directory : ((DirectoryInfo)item).Parent)
+            if ((item.Attributes & FileAttributes.ReparsePoint) != 0) throw new InvalidOperationException("Linked storage paths are not supported.");
+        if (OperatingSystem.IsWindows())
+        {
+            var sid = WindowsIdentity.GetCurrent().User ?? throw new InvalidOperationException("User identity unavailable.");
+            CheckWindows(file.Directory.GetAccessControl(), sid);
+            CheckWindows(file.GetAccessControl(), sid);
+        }
+        else if (((int)File.GetUnixFileMode(file.Directory.FullName) & 63) != 0 || ((int)File.GetUnixFileMode(path) & 63) != 0)
+            throw new InvalidOperationException("Storage permissions must exclude group and other access.");
+        return path;
+    }
     public static string Prepare(string path)
     {
         path = Path.GetFullPath(path);

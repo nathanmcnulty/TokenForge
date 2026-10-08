@@ -4,12 +4,13 @@ using TokenForge.Core;
 
 try
 {
-    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.17.0",AuthenticationDependency="PowerShell 7.4+"}));return 0;}
+    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.18.0",AuthenticationDependency="Profile login and storage: PowerShell 7.4+; token acquire: native"}));return 0;}
     if (args.Length == 0 || args[0] is "help" or "--help")
     {
-        Console.WriteLine("TokenForge: profile create/show/forget-key, login, status, doctor, logout, scopes explain, token get, graph permissions; research report/weekly/export-flows/backup; evidence import/update/export/plan/cohort/cohort-export/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Authentication currently requires PowerShell 7.4+.");
+        Console.WriteLine("TokenForge: profile create/show/forget-key, login, status, doctor, logout, scopes explain, token get/acquire, graph permissions; research report/weekly/export-flows/backup; evidence import/update/export/plan/cohort/cohort-export/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Profile login and storage require PowerShell 7.4+; token acquire runs natively.");
         return 0;
     }
+    if (args.Length > 1 && args[0] == "token" && args[1] == "acquire") return NativeTokenCommand.Run(args);
     if (args[0] == "catalog")
     {
         if(args.Length<4 || args[2]!="--database")throw new InvalidOperationException();
@@ -152,6 +153,11 @@ try
     if (args[0] == "profile" && args.Length > 1 && args[1] == "create" && !seen.Contains("--storage")) { start.ArgumentList.Add("-Storage"); start.ArgumentList.Add("Passphrase"); }
     using var process = Process.Start(start) ?? throw new InvalidOperationException();
     await process.WaitForExitAsync(); return process.ExitCode;
+}
+catch (NativeTokenException error)
+{
+    Console.Error.WriteLine(JsonSerializer.Serialize(new { SchemaVersion = 1, Succeeded = false, Code = error.Code, error.Reason, error.HttpStatus, error.IdentityErrorCodes, Message = "Native token operation failed; credential and identity details suppressed." }));
+    return 1;
 }
 catch
 {

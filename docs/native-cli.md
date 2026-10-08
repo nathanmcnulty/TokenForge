@@ -1,10 +1,10 @@
 # Native CLI and evidence store
 
 The native CLI is a self-contained .NET executable per OS and architecture. Evidence commands
-run directly in the shared core with bundled SQLite. Authentication commands currently invoke
-the packaged PowerShell 7.4+ module; install `pwsh` and keep `src/` and `scripts/` beside the
-executable. This is the migration bridge, not a standalone native OAuth engine or an OS keystore.
-The actual issued-token policy is shared C# used by PowerShell and the native core.
+run directly in the shared core with bundled SQLite. Profile login, storage, and `token get` currently invoke the packaged PowerShell 7.4+ module;
+install `pwsh` and keep `src/` and `scripts/` beside the executable for those commands.
+Version 0.18 adds direct native `token acquire`, and PowerShell uses the same C# OAuth transport
+and issued-token policy. Native acquisition does not itself provide browser/passkey login or a keystore.
 
 ```sh
 tokenforge profile create --profile lab --tenant example.onmicrosoft.com --state-path /private/evidence
@@ -23,6 +23,68 @@ by PowerShell, never passed in process arguments or environment variables. The n
 parser has no raw-cookie, token, or passphrase argument. Token output contains metadata only.
 Use the in-process module API for Graph SDK handoff; an SDK connection in a finished child
 process cannot authenticate the caller's PowerShell process.
+
+## Direct native acquisition
+
+`token acquire` is an advanced validation and teaching command. Give it an explicit request
+and the expected account context, then supply an existing ESTSAUTH cookie or refresh token.
+It runs entirely inside the native executable. It returns policy-checked metadata, disposes
+the acquired tokens, and saves no credentials. Use `token get` and the module API for the
+existing profile and Graph PowerShell workflows.
+
+```sh
+tokenforge token acquire --plan /private/native/request.json --credential cookie
+tokenforge token acquire --plan /private/native/request.json --credential refresh
+```
+
+The credential prompt does not echo. An explicit `--stdin` accepts one credential followed
+by EOF, optionally with trailing line endings; never put credentials in command arguments,
+environment variables, shell history, or a plan file. Cancellation stops active network requests.
+Each response has a 30-second deadline and a 2 MiB streamed size limit.
+
+The JSON plan has `SchemaVersion: 1`, a `Request` containing selected fields from `New-TokenForgeRequest`,
+`ExpectedTenantFingerprint`, `ExpectedPrincipalFingerprint`, and `MaximumAdditionalScopes`.
+Fingerprints must come from your verified profile/account context. The request contains
+ClientId, ResourceId, ResourceUri, Tenant, RedirectUri, Scopes, OAuthScopes, Spa, Discovery,
+and Protocol; native CLI acquisition accepts explicit scopes with OAuth2V2Pkce and
+Discovery=false. Prepare plans using verified inventory and published callback metadata.
+Do not serialize the complete PowerShell request object into `Request`: its provenance fields
+are not transport fields. Project the fields explicitly; Discovery defaults to false and Protocol
+to OAuth2V2Pkce:
+
+```powershell
+$nativeRequest = $request | Select-Object ClientId,ResourceId,ResourceUri,Tenant,RedirectUri,Scopes,OAuthScopes,Spa
+$nativePlan = @{
+    SchemaVersion = 1
+    Request = $nativeRequest
+    ExpectedTenantFingerprint = $verifiedTenantFingerprint
+    ExpectedPrincipalFingerprint = $verifiedPrincipalFingerprint
+    MaximumAdditionalScopes = 0
+}
+# Serialize $nativePlan into your private request.json with ConvertTo-Json -Depth 8.
+```
+
+Plan fields cannot contain credentials. Duplicate or unknown fields are rejected. Store the
+file and its immediate directory with current-user-only permissions: 0600/0700 on Unix or
+protected owner-only ACLs on Windows. Linked paths are rejected; plan validation changes no files.
+
+Before returning metadata, the command checks decoded account fingerprints, client, audience,
+requested delegated scopes, known expiry with at least two minutes remaining, and the
+additional-scope cap. A missing cap defaults to zero. Refresh uses the same client and exact
+OAuth scopes in that plan; it has no acquisition fallback. Keep the same trusted plan when
+renewing an existing credential. This command does not persist a refresh-to-plan binding;
+the existing profile workflow provides that durable binding.
+
+Entra may issue additional pre-consented scopes. A rejected scope request does not imply that
+the transport failed or that every scope for the app is unavailable. Errors return a static
+stage/category and bounded numeric HTTP/AADSTS codes, with response details suppressed.
+Decoded JWT claims remain unverified; acquisition does not establish signature validity or
+API authorization. Opaque tokens cannot satisfy this command's account/scope policy.
+
+Credentials briefly exist as managed strings for HTTP encoding; disposing SecureStrings,
+clearing request dictionaries, and zeroing byte buffers reduces lifetime but does not guarantee
+that every immutable string is erased from process memory. An OS vault protects persisted
+credentials separately. See [native validation](native-oauth-validation-2026-10-08.json).
 
 ## Durable private evidence
 

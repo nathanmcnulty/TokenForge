@@ -102,7 +102,7 @@
     "Failed": 0,
     "Skipped": 25
   },
-  "NativeCoreChecks": 169,
+  "NativeCoreChecks": 174,
   "LinuxNativeInputTests": {
     "Passed": 8,
     "Failed": 0,

@@ -46,7 +46,7 @@ Describe 'Native acquisition input boundary' -Skip:(-not $nativeAvailable) {
  It 'rejects invalid input before network access with no PowerShell on PATH: <Case>' -ForEach @(@{Case='Protocol'},@{Case='DuplicateKeys'},@{Case='CredentialField'},@{Case='ScopeMismatch'}) {
   switch($Case){
    Protocol {$plan.Request.Protocol='INVALID';$plan|ConvertTo-Json -Depth 8|Set-Content $path}
-   DuplicateKeys {'{"SchemaVersion":1,"SchemaVersion":1}'|Set-Content $path}
+   DuplicateKeys {($plan|ConvertTo-Json -Depth 8) -replace '^\{','{"SchemaVersion":1,'|Set-Content $path}
    CredentialField {$plan.PrivateCredential='synthetic-private-credential';$plan|ConvertTo-Json -Depth 8|Set-Content $path}
    ScopeMismatch {$plan.Request.Protocol='OAuth2V2Pkce';$plan.Request.OAuthScopes=@('https://evil.test/.default');$plan|ConvertTo-Json -Depth 8|Set-Content $path}
   }

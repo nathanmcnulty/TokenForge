@@ -36,7 +36,9 @@ static class OAuthTransportTests
             reject(()=>OAuthTransport.Refresh(plan,secret));
         }
         foreach(string suffix in new[]{"?code=private-code&state=wrong","?code=private-code","?code=x&code=y&state={state}","?code=x&state={state}&state={state}","?code=x&state={state}#private-fragment"}){
-            reject(()=>OAuthTransport.AcquireForAdapter(Plan(),"Cookie",secret,null,null,"ESTSAUTH",(c,u,f,o)=>new(302,"https://example.test/callback"+suffix.Replace("{state}",System.Web.HttpUtility.ParseQueryString(u.Query)["state"]),"")));
+            calls=0;
+            reject(()=>OAuthTransport.AcquireForAdapter(Plan(),"Cookie",secret,null,null,"ESTSAUTH",(c,u,f,o)=>{ calls++; return f==null ? new(302,"https://example.test/callback"+suffix.Replace("{state}",System.Web.HttpUtility.ParseQueryString(u.Query)["state"]),"") : Token(); }));
+            check(calls==1);
         }
         calls=0;reject(()=>OAuthTransport.AcquireForAdapter(Plan(),"Cookie",secret,null,null,"ESTSAUTH",(c,u,f,o)=>{calls++;return new(302,"https://login.microsoftonline.com.evil.test/private-code","");}));check(calls==1);
         calls=0;reject(()=>OAuthTransport.AcquireForAdapter(Plan(),"Cookie",secret,null,null,"ESTSAUTH",(c,u,f,o)=>{calls++;return new(302,"/loop","");}));check(calls==10);

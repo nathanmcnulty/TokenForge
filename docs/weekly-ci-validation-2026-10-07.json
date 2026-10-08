@@ -717,5 +717,28 @@
       37715412744,
       37716208626
     ]
+  },
+  "HostedCoordinatorIndexPublication": {
+    "Run": 37718137655,
+    "SourceCommit": "4d925113277072c1e3dcf1f053eff7e87bdbb974",
+    "DataCommit": "30fd2c2e15f2da9a7dbb48ca9436bc1343f5299b",
+    "BaseCommit": "03ec388b22eda81d9539e4a548dc82acef7668c9",
+    "DirectParentVerified": true,
+    "PublishedFilesMatchArtifact": 60,
+    "ScopeFilesUnchanged": 55,
+    "FrozenRecipeUnchanged": true,
+    "WorkerIndices": 0,
+    "Jobs": [
+      {
+        "Job": "prepare",
+        "Seconds": 169.0
+      },
+      {
+        "Job": "push",
+        "Seconds": 40.0
+      }
+    ],
+    "TotalRunnerMinutes": 3.4833333333333334,
+    "Scope": "OneHostedNoWorkerSampleNotControlledComparisonOrCompleteWeek"
   }
 }

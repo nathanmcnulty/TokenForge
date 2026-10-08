@@ -180,3 +180,8 @@ separate-publisher runs. No saving has been demonstrated. The source commits and
 differed, and preparation time increased in code unchanged by the routing change. Measure
 matched source/data fixtures before attributing the difference or claiming a hosted improvement.
 These runs did no token matrix work and do not measure a complete new weekly cycle.
+
+After the indexed membership/report reuse change, [run 37718137655](https://github.com/nathanmcnulty/TokenForge/actions/runs/37718137655)
+passed the same publication checks and used 3.48 runner-minutes (169 seconds preparation,
+40 seconds writer). This is one uncontrolled no-worker sample; it is not a complete weekly
+cost or a controlled comparison of publication routes.

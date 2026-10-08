@@ -14,6 +14,21 @@ Describe 'Frozen CI recipes and receipt completeness' {
   $round.Recipe.AppIds[0]='ffffffff-ffff-ffff-ffff-ffffffffffff'
   {Assert-TfCiState $round}|Should -Throw
  }
+ It 'rejects unpublished membership even with a recomputed recipe hash' {
+  $state=New-TfCiState $discovery -Mode Deep -AppId @($discovery.Applications[0].AppId)
+  $state.Recipe.AppIds=@('ffffffff-ffff-ffff-ffff-ffffffffffff')
+  $state.PlanId=Get-TfCiHash $state.Recipe
+  {Assert-TfCiState $state}|Should -Throw '*membership*'
+ }
+ It 'preserves case-insensitive published ID membership' {
+  $mixed=$discovery|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable
+  $mixed.Applications[0].AppId='abcdefab-cdef-abcd-efab-cdefabcdefab'
+  $state=New-TfCiState $mixed -Mode Deep -AppId @($mixed.Applications[0].AppId)
+  $state.Recipe.AppIds=@($state.Recipe.AppIds[0].ToUpperInvariant())
+  ($state.Recipe.AppIds[0] -cne $mixed.Applications[0].AppId)|Should -BeTrue
+  $state.PlanId=Get-TfCiHash $state.Recipe
+  Assert-TfCiState $state
+ }
  It 'retries failed work independently of run numbers and never counts it complete' {
   $state=New-TfCiState $discovery -ChunkSize 1
   $receipt=[ordered]@{SchemaVersion=1;PlanId=$state.PlanId;Index=0;Attempt=1;Status='Failed';Assessed=0;Successful=0;DurationSeconds=20;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')}

@@ -79,10 +79,11 @@ if($Action -eq 'Prepare'){
  $request=[ordered]@{SchemaVersion=1;PlanId=$state.PlanId;Mode=$Mode;Indices=$selection;BaseCommit=[string]$base}
  if($ValidationOnly){$request.SchemaVersion=2;$request.ValidationOnly=$true}
  Save-CiJson $request (Join-Path $BundlePath request.json)
- Save-CiJson (Get-TfCiReport $state) (Join-Path $DataPath ('coverage-'+$Mode.ToLowerInvariant()+'.json'))
+ $report=Get-TfCiReport $state
+ Save-CiJson $report (Join-Path $DataPath ('coverage-'+$Mode.ToLowerInvariant()+'.json'))
  $matrix=@{include=@($selection|ForEach-Object {@{index=$_;plan=$state.PlanId}})}|ConvertTo-Json -Compress
  if($env:GITHUB_OUTPUT){Add-Content $env:GITHUB_OUTPUT "matrix=$matrix";Add-Content $env:GITHUB_OUTPUT "mode=$Mode";Add-Content $env:GITHUB_OUTPUT "has_work=$([bool]$selection.Count)"}
- Get-TfCiReport $state
+ $report
 }else{
  $null=Get-TokenForgeApplicationMetadata (Join-Path $DataPath applications.json) -PublicOnly
  $state=Get-Content (Join-Path $BundlePath state.json) -Raw|ConvertFrom-Json -AsHashtable;Assert-TfCiState $state

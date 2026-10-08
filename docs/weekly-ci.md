@@ -153,5 +153,16 @@ The local proof used the actual public data snapshot with a completed 100-app le
 recipe. It validated 60 public files, preserved all 55 scope files byte for byte and retained the
 frozen plan, without credentials, a local commit, or a public branch update. Preparation took
 93.154 seconds and publication plus validation 83.671 seconds on this machine. These are local
-timings. The hosted saving must be measured after deployment; this removes a job and artifact
+timings. The hosted effect must be measured after deployment; this removes a job and artifact
 transfer rather than skipping the required metadata refresh.
+
+## Coordinator validation performance
+
+Frozen membership validation now indexes published GUIDs with case-insensitive hash membership,
+while keeping recipe hashes, sorting, uniqueness, shallow completeness, and publication checks.
+Preparation computes its coverage report once for persistence and return. Sol approved the change.
+Three alternating local comparisons on the same 5,454-ID snapshot measured median state-validation
+time of 9.985 seconds before and 6.905 seconds after. These are local function timings, not
+complete workflow savings. Production publication preserved the frozen recipe and all 55 scope
+files; 35 weekly tests and 327 offline tests passed, with 34 platform/package skips.
+See the [sanitized report](weekly-ci-validation-2026-10-07.json).

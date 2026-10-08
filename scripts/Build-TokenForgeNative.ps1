@@ -15,6 +15,6 @@ Copy-Item (Join-Path $PSScriptRoot TokenForgeCiState.ps1) (Join-Path $destinatio
 Copy-Item (Join-Path $PSScriptRoot Export-TokenForgeMaintenanceBackup.ps1) (Join-Path $destination scripts)
 Copy-Item (Join-Path $repo docs/native-cli.md) (Join-Path $destination README.md)
 foreach($name in @('native-cli.md','native-architecture.md','os-backed-vault.md','profiles-and-cli.md','research-catalog.md','sqlite-flow-evidence.md','sqlite-application-catalog.md','sqlite-scope-history.md','research-cohorts.md','weekly-ci.md','private-maintenance.md')){Copy-Item (Join-Path $repo "docs/$name") (Join-Path $destination $name)}
-foreach($name in @('weekly-catalog-cycle-2026-10-07.json','weekly-ci-validation-2026-10-07.json','private-maintenance-validation-2026-10-07.json','native-oauth-validation-2026-10-08.json')){Copy-Item (Join-Path $repo "docs/$name") $destination}
+foreach($name in @('weekly-catalog-cycle-2026-10-07.json','weekly-ci-validation-2026-10-07.json','private-maintenance-validation-2026-10-07.json','native-oauth-validation-2026-10-08.json','vault-core-validation-2026-10-08.json')){Copy-Item (Join-Path $repo "docs/$name") $destination}
 $exe=Join-Path $destination $(if($Runtime.StartsWith('win-')){'tokenforge.exe'}else{'tokenforge'})
 [pscustomobject]@{Runtime=$Runtime;Path=$exe;Sha256=(Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant();AuthenticationDependency='Profile login and storage: PowerShell 7.4+; token acquire: native';EvidenceDependency='Bundled SQLite'}

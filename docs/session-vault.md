@@ -108,3 +108,20 @@ Use a **shared .NET library**, a thin PowerShell wrapper, and a standalone CLI b
 Self-contained Windows, macOS, and Linux [CLI packages](native-cli.md), shared issued-token policy and SQLite evidence stores, explicit Windows Credential Manager/Linux Secret Service [key protection](os-backed-vault.md), and managed profile refresh rotation are implemented. Authentication still uses PowerShell 7.4+. Next milestones are portable native acquisition, signed macOS Keychain integration, durable signed releases, and live Windows/macOS authentication validation. Full cookie-jar synchronization remains separate work.
 
 The current offline viewer establishes the teaching model now. A later GUI should consume this same sanitized projection by default. Any future credential operations must be a separately authorized CLI/provider action, not an unauthenticated local web endpoint.
+
+## Shared cryptographic implementation
+
+Version 0.19 uses the same C# envelope implementation in PowerShell and the native core.
+The v1 format and cryptographic parameters remain unchanged; independently generated legacy
+envelopes and shared-core envelopes cross-read in both directions. Parsing now rejects duplicate,
+unknown, or mistyped envelope fields before deriving keys. PowerShell retains private path checks,
+file locks, record validation, revision checks, and atomic replacement. Native profile storage is
+still a separate migration milestone.
+
+Passphrase conversion uses a copied SecureString and a length-prefixed BSTR, so cleanup covers
+embedded NUL characters as well as Unicode passwords. Character, UTF-8 password, and derived-key
+buffers are cleared; failed decryption clears its tentative plaintext. Successful plaintext buffers
+belong to the caller, which must clear them. PowerShell record serialization still creates immutable
+credential strings, and buffer cleanup does not guarantee every process-memory copy is erased.
+The [sanitized validation report](vault-core-validation-2026-10-08.json) includes independent
+compatibility tests and both-account Linux acquisition/reopen/renewal/SDK/deletion checks.

@@ -1,0 +1,126 @@
+{
+  "DateUTC": "2026-10-08",
+  "Version": "0.18.0",
+  "Execution": "LocalNativeChildProcessesWithPwshAbsentFromPath",
+  "ClientId": "04b07795-8ddb-461a-bbee-02f9e1bf7b46",
+  "NativeAcquisitions": 4,
+  "NativeExactRequestRefreshes": 4,
+  "NativePolicyRejections": 2,
+  "AccountBinding": "PreviouslyVerifiedNamespaceFingerprintsNotFreshGraphMe",
+  "Cases": [
+    {
+      "GrantedScopeCount": 12,
+      "NativePolicyNegativeChecks": [
+        "WrongAccountRejected",
+        "AdditionalScopesRejected"
+      ],
+      "CookieAcquisition": true,
+      "CredentialsPersisted": false,
+      "Transport": "NativeOAuth",
+      "Resource": "Graph",
+      "AccountBinding": "PreviouslyVerifiedNamespaceFingerprints",
+      "PwshAbsentFromChildPath": true,
+      "TokensReturned": false,
+      "ExactRequestRefresh": true,
+      "Account": "nora",
+      "ApiAuthorization": "NotEstablished",
+      "RefreshGrantedScopeCount": 12,
+      "RequestedScopes": [
+        "User.Read.All"
+      ],
+      "SignatureValidated": false
+    },
+    {
+      "GrantedScopeCount": 1,
+      "NativePolicyNegativeChecks": [],
+      "CookieAcquisition": true,
+      "CredentialsPersisted": false,
+      "Transport": "NativeOAuth",
+      "Resource": "ARM",
+      "AccountBinding": "PreviouslyVerifiedNamespaceFingerprints",
+      "PwshAbsentFromChildPath": true,
+      "TokensReturned": false,
+      "ExactRequestRefresh": true,
+      "Account": "nora",
+      "ApiAuthorization": "NotEstablished",
+      "RefreshGrantedScopeCount": 1,
+      "RequestedScopes": [
+        "user_impersonation"
+      ],
+      "SignatureValidated": false
+    },
+    {
+      "GrantedScopeCount": 12,
+      "NativePolicyNegativeChecks": [],
+      "CookieAcquisition": true,
+      "CredentialsPersisted": false,
+      "Transport": "NativeOAuth",
+      "Resource": "Graph",
+      "AccountBinding": "PreviouslyVerifiedNamespaceFingerprints",
+      "PwshAbsentFromChildPath": true,
+      "TokensReturned": false,
+      "ExactRequestRefresh": true,
+      "Account": "secadmin",
+      "ApiAuthorization": "NotEstablished",
+      "RefreshGrantedScopeCount": 12,
+      "RequestedScopes": [
+        "User.Read.All"
+      ],
+      "SignatureValidated": false
+    },
+    {
+      "GrantedScopeCount": 1,
+      "NativePolicyNegativeChecks": [],
+      "CookieAcquisition": true,
+      "CredentialsPersisted": false,
+      "Transport": "NativeOAuth",
+      "Resource": "ARM",
+      "AccountBinding": "PreviouslyVerifiedNamespaceFingerprints",
+      "PwshAbsentFromChildPath": true,
+      "TokensReturned": false,
+      "ExactRequestRefresh": true,
+      "Account": "secadmin",
+      "ApiAuthorization": "NotEstablished",
+      "RefreshGrantedScopeCount": 1,
+      "RequestedScopes": [
+        "user_impersonation"
+      ],
+      "SignatureValidated": false
+    }
+  ],
+  "InitialScopeRejection": {
+    "Account": "nora",
+    "Resource": "Graph",
+    "Scope": "User.Read",
+    "IdentityErrorCodes": [
+      "65002"
+    ],
+    "TokenReturned": false
+  },
+  "PowerShellSuite": {
+    "Passed": 325,
+    "Failed": 0,
+    "Skipped": 25
+  },
+  "NativeCoreChecks": 174,
+  "LinuxNativeInputTests": {
+    "Passed": 8,
+    "Failed": 0,
+    "Skipped": 1
+  },
+  "Review": "Sol approved shared transport, PowerShell adapter, native private-input and diagnostic boundaries, tests, and live proof after fixes",
+  "SignatureValidated": false,
+  "ApiAuthorization": "NotEstablished",
+  "CredentialsPersisted": false,
+  "NativeLoginAndProfileStorage": "RemainPowerShellBacked",
+  "LinuxPackagedNativeTests": {
+    "Passed": 40,
+    "Failed": 0,
+    "Skipped": 1
+  },
+  "PackageChecks": {
+    "SelfContainedLinuxBuilt": true,
+    "PowerShellZipIncludesOAuthSourceAndEvidence": true,
+    "ActionlintPassed": true
+  }
+}

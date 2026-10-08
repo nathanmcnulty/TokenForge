@@ -153,7 +153,7 @@ The local proof used the actual public data snapshot with a completed 100-app le
 recipe. It validated 60 public files, preserved all 55 scope files byte for byte and retained the
 frozen plan, without credentials, a local commit, or a public branch update. Preparation took
 93.154 seconds and publication plus validation 83.671 seconds on this machine. These are local
-timings. The hosted saving must be measured after deployment; this removes a job and artifact
+timings. The hosted effect must be measured after deployment; this removes a job and artifact
 transfer rather than skipping the required metadata refresh.
 
 ## Coordinator validation performance

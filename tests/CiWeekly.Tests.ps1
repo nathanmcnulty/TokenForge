@@ -21,8 +21,11 @@ Describe 'Frozen CI recipes and receipt completeness' {
   {Assert-TfCiState $state}|Should -Throw '*membership*'
  }
  It 'preserves case-insensitive published ID membership' {
-  $state=New-TfCiState $discovery -Mode Deep -AppId @($discovery.Applications[0].AppId)
+  $mixed=$discovery|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable
+  $mixed.Applications[0].AppId='abcdefab-cdef-abcd-efab-cdefabcdefab'
+  $state=New-TfCiState $mixed -Mode Deep -AppId @($mixed.Applications[0].AppId)
   $state.Recipe.AppIds=@($state.Recipe.AppIds[0].ToUpperInvariant())
+  ($state.Recipe.AppIds[0] -cne $mixed.Applications[0].AppId)|Should -BeTrue
   $state.PlanId=Get-TfCiHash $state.Recipe
   Assert-TfCiState $state
  }

@@ -465,5 +465,130 @@
       "push": 0.733
     },
     "TotalRunnerMinutes": 2.817
+  },
+  "LocalFullProductionMultiResourceRecipe": {
+    "IndependentPasskeyLogins": 4,
+    "ConsentGranted": false,
+    "Execution": "LocalSequentialProductionWorkersNotHostedRunnerTiming",
+    "SignatureValidated": false,
+    "Complete": true,
+    "TerminalFlowAttempts": 1534,
+    "DateUTC": "2026-10-08",
+    "PlanId": "3c20e74a0feedd1dab761c7afe20dfc9d7b466dd8b54608021dd954ffe49b2d8",
+    "PublicBranchUpdated": false,
+    "Account": "nora",
+    "TotalElapsedSeconds": 3745.717,
+    "ResourceCount": 2,
+    "SourceCommit": "43d0b2fa426b2938706764ee4e7944e621a6f984",
+    "Applications": 100,
+    "Workers": [
+      {
+        "Applications": 25,
+        "ScopeRows": 50,
+        "WorkerSeconds": 775.327,
+        "SuccessfulPairs": 22,
+        "SuccessfulApplications": 13,
+        "Pairs": 50,
+        "ResumeSeconds": 39.225,
+        "TerminalFlowAttempts": 392,
+        "LoginSeconds": 3.965,
+        "ResumeAddedScopeRows": 0,
+        "ResumeAddedAttempts": 0,
+        "Index": 0,
+        "ProtocolAttempts": {
+          "OAuth2V1Implicit": 110,
+          "OAuth2V2Pkce": 172,
+          "OAuth2V2Implicit": 110
+        }
+      },
+      {
+        "Applications": 25,
+        "ScopeRows": 50,
+        "WorkerSeconds": 701.916,
+        "SuccessfulPairs": 16,
+        "SuccessfulApplications": 12,
+        "Pairs": 50,
+        "ResumeSeconds": 44.82,
+        "TerminalFlowAttempts": 356,
+        "LoginSeconds": 3.002,
+        "ResumeAddedScopeRows": 0,
+        "ResumeAddedAttempts": 0,
+        "Index": 1,
+        "ProtocolAttempts": {
+          "OAuth2V1Implicit": 96,
+          "OAuth2V2Pkce": 164,
+          "OAuth2V2Implicit": 96
+        }
+      },
+      {
+        "Applications": 25,
+        "ScopeRows": 50,
+        "WorkerSeconds": 639.846,
+        "SuccessfulPairs": 14,
+        "SuccessfulApplications": 11,
+        "Pairs": 50,
+        "ResumeSeconds": 44.11,
+        "TerminalFlowAttempts": 316,
+        "LoginSeconds": 3.539,
+        "ResumeAddedScopeRows": 0,
+        "ResumeAddedAttempts": 0,
+        "Index": 2,
+        "ProtocolAttempts": {
+          "OAuth2V1Implicit": 86,
+          "OAuth2V2Pkce": 144,
+          "OAuth2V2Implicit": 86
+        }
+      },
+      {
+        "Applications": 25,
+        "ScopeRows": 50,
+        "WorkerSeconds": 1016.775,
+        "SuccessfulPairs": 21,
+        "SuccessfulApplications": 15,
+        "Pairs": 50,
+        "ResumeSeconds": 35.621,
+        "TerminalFlowAttempts": 470,
+        "LoginSeconds": 2.795,
+        "ResumeAddedScopeRows": 0,
+        "ResumeAddedAttempts": 0,
+        "Index": 3,
+        "ProtocolAttempts": {
+          "OAuth2V1Implicit": 128,
+          "OAuth2V2Pkce": 214,
+          "OAuth2V2Implicit": 128
+        }
+      }
+    ],
+    "Chunks": 4,
+    "ResumeAddedScopeRows": 0,
+    "ScopeRows": 200,
+    "ApiAuthorization": "NotEstablishedByFlowAttempts",
+    "Pairs": 200,
+    "SuccessfulPairs": 73,
+    "ResumeAddedAttempts": 0,
+    "CredentialsPersisted": false,
+    "SuccessfulApplications": 51,
+    "Review": "Sol reviewed the production worker proof script before execution; aggregate follows validated publisher and authenticated resume assertions"
+  },
+  "LocalNoWorkerInlinePublication": {
+    "PlanId": "cc4e968e29cb56d55ce787fa884bffd29e72b31e3f8ba616611a57020cbcccd7",
+    "InlinePublicationValidated": true,
+    "PublicBranchUpdated": false,
+    "LocalCommitCreated": false,
+    "CredentialsUsed": false,
+    "PublicFiles": 60,
+    "PrepareSeconds": 93.154,
+    "DateUTC": "2026-10-08",
+    "Complete": true,
+    "WorkerIndices": 0,
+    "PublishAndValidationSeconds": 83.671,
+    "Execution": "LocalPublicSnapshotInlinePublicationNotHostedTiming",
+    "ParentCommit": "0e56da6376342306811f90a6b467f456cb83cc4c",
+    "SuccessfulApplications": 46,
+    "AssessedApplications": 100,
+    "FrozenRecipeUnchanged": true,
+    "ScopeFilesUnchanged": 55,
+    "Mode": "Deep",
+    "Review": "Sol approved workflow failure/skip/validation/rerun boundaries; 33 controller tests and actionlint passed"
   }
 }

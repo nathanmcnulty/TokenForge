@@ -1,4 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
  <PropertyGroup><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><RestorePackagesWithLockFile>true</RestorePackagesWithLockFile></PropertyGroup>
- <ItemGroup><Compile Include="../../src/TokenForge/Core/OAuthTransport.cs" Link="OAuthTransport.cs" /><Compile Include="../../src/TokenForge/Core/TokenPolicy.cs" Link="TokenPolicy.cs" /><Compile Include="../../src/TokenForge/Core/PlatformVaultKey.cs" Link="PlatformVaultKey.cs" /><PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" /></ItemGroup>
+ <ItemGroup><Compile Include="../../src/TokenForge/Core/VaultEnvelope.cs" Link="VaultEnvelope.cs" /><Compile Include="../../src/TokenForge/Core/OAuthTransport.cs" Link="OAuthTransport.cs" /><Compile Include="../../src/TokenForge/Core/TokenPolicy.cs" Link="TokenPolicy.cs" /><Compile Include="../../src/TokenForge/Core/PlatformVaultKey.cs" Link="PlatformVaultKey.cs" /><PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" /></ItemGroup>
 </Project>

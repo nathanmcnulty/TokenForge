@@ -54,7 +54,7 @@ function Open-TokenForgeVaultFile {
 
 function Invoke-TokenForgeVaultTransaction {
     param([string]$Path,[securestring]$Password,[ValidateSet('Read','Create','Update')][string]$Mode='Read',[scriptblock]$Update)
-    $lock=$null;$stream=$null;$aes=$null;$key=$null;$passwordBytes=$null;$plainBytes=$null;$temporary=$null;$document=$null
+    $lock=$null;$stream=$null;$plainBytes=$null;$temporary=$null;$document=$null
     try{
         if(-not $Password -or $Password.Length -lt 12 -or $Password.Length -gt 1024){throw 'Vault passphrase must contain 12 to 1024 characters.'}
         if(-not [Security.Cryptography.AesGcm]::IsSupported){throw 'Authenticated vault encryption is unavailable on this platform.'}
@@ -72,41 +72,26 @@ function Invoke-TokenForgeVaultTransaction {
             $stream=Open-TokenForgeVaultFile -Path $full
             if($stream.Length -gt 16777216 -or $stream.Length -lt 100){throw 'Invalid vault envelope size.'}
             $bytes=[byte[]]::new([int]$stream.Length);$stream.ReadExactly($bytes);$stream.Dispose();$stream=$null
-            $envelope=[Text.Encoding]::UTF8.GetString($bytes)|ConvertFrom-Json -AsHashtable -Depth 8 -ErrorAction Stop
-            if($envelope.Count -ne 8 -or $envelope.Format -cne 'TokenForgeVault' -or $envelope.Version -ne 1 -or $envelope.Kdf -cne 'PBKDF2-SHA256' -or $envelope.Iterations -ne 600000){throw 'Unsupported vault envelope.'}
-            $salt=[Convert]::FromBase64String($envelope.Salt);$nonce=[Convert]::FromBase64String($envelope.Nonce);$tag=[Convert]::FromBase64String($envelope.Tag);$cipher=[Convert]::FromBase64String($envelope.Ciphertext)
-            if($salt.Length -ne 32 -or $nonce.Length -ne 12 -or $tag.Length -ne 16 -or $cipher.Length -gt 8388608){throw 'Invalid vault cryptographic parameters.'}
-        }
-        $passwordBytes=[Text.Encoding]::UTF8.GetBytes([Net.NetworkCredential]::new('', $Password).Password)
-        $aad=[Text.Encoding]::UTF8.GetBytes('TokenForgeVault|1|PBKDF2-SHA256|600000|AES-256-GCM')
-        if($Mode -ne 'Create'){
-            $key=[Security.Cryptography.Rfc2898DeriveBytes]::Pbkdf2($passwordBytes,$salt,600000,[Security.Cryptography.HashAlgorithmName]::SHA256,32)
-            $aes=[Security.Cryptography.AesGcm]::new($key,16);$plainBytes=[byte[]]::new($cipher.Length)
-            $aes.Decrypt($nonce,$cipher,$tag,$plainBytes,$aad)
+            $plainBytes=[TokenForge.Core.V0190.VaultEnvelope]::Decrypt($bytes,$Password)
             $document=[Text.Encoding]::UTF8.GetString($plainBytes)|ConvertFrom-Json -AsHashtable -Depth 32 -ErrorAction Stop
-            [Array]::Clear($plainBytes);$plainBytes=$null;$aes.Dispose();$aes=$null;[Array]::Clear($key);$key=$null
+            [Array]::Clear($plainBytes);$plainBytes=$null
             if($document.SchemaVersion -ne 1 -or $document.Sessions -isnot [Collections.IDictionary]){throw 'Invalid vault records.'}
         }
         if($Mode -eq 'Read'){return $document}
         if($Update){$null=& $Update $document}
         $plainBytes=[Text.Encoding]::UTF8.GetBytes(($document|ConvertTo-Json -Depth 32 -Compress))
         if($plainBytes.Length -gt 8388608){throw 'Vault exceeds its 8 MiB record limit.'}
-        $salt=[Security.Cryptography.RandomNumberGenerator]::GetBytes(32);$nonce=[Security.Cryptography.RandomNumberGenerator]::GetBytes(12)
-        $key=[Security.Cryptography.Rfc2898DeriveBytes]::Pbkdf2($passwordBytes,$salt,600000,[Security.Cryptography.HashAlgorithmName]::SHA256,32)
-        $aes=[Security.Cryptography.AesGcm]::new($key,16);$cipher=[byte[]]::new($plainBytes.Length);$tag=[byte[]]::new(16)
-        $aes.Encrypt($nonce,$plainBytes,$cipher,$tag,$aad)
-        $envelope=@{Format='TokenForgeVault';Version=1;Kdf='PBKDF2-SHA256';Iterations=600000;Salt=[Convert]::ToBase64String($salt);Nonce=[Convert]::ToBase64String($nonce);Tag=[Convert]::ToBase64String($tag);Ciphertext=[Convert]::ToBase64String($cipher)}
+        $encoded=[TokenForge.Core.V0190.VaultEnvelope]::Encrypt($plainBytes,$Password)
         $temporary=Join-Path ([IO.Path]::GetDirectoryName($full)) ([guid]::NewGuid().ToString()+'.tmp')
         $stream=Open-TokenForgeVaultFile -Path $temporary -Create
-        $encoded=[Text.Encoding]::UTF8.GetBytes(($envelope|ConvertTo-Json -Compress))
         $stream.Write($encoded);$stream.Flush($true);$stream.Dispose();$stream=$null
         [IO.File]::Move($temporary,$full,($Mode -eq 'Update'));$temporary=$null
     }catch{
         # Never forward JSON parser/crypto/IO exceptions, which can retain credential content.
         throw 'Vault operation failed; check passphrase, format, private path permissions, size, and writer availability. Details suppressed.'
     }finally{
-        if($stream){$stream.Dispose()};if($lock){$lock.Dispose()};if($aes){$aes.Dispose()}
-        foreach($buffer in @($key,$passwordBytes,$plainBytes)){if($buffer){[Array]::Clear($buffer)}}
+        if($stream){$stream.Dispose()};if($lock){$lock.Dispose()}
+        if($plainBytes){[Array]::Clear($plainBytes)}
         if($temporary){Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue}
         $document=$null
     }

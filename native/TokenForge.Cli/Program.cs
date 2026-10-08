@@ -4,7 +4,7 @@ using TokenForge.Core;
 
 try
 {
-    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.18.0",AuthenticationDependency="Profile login and storage: PowerShell 7.4+; token acquire: native"}));return 0;}
+    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.19.0",AuthenticationDependency="Profile login and storage: PowerShell 7.4+; token acquire: native"}));return 0;}
     if (args.Length == 0 || args[0] is "help" or "--help")
     {
         Console.WriteLine("TokenForge: profile create/show/forget-key, login, status, doctor, logout, scopes explain, token get/acquire, graph permissions; research report/weekly/export-flows/backup; evidence import/update/export/plan/cohort/cohort-export/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Profile login and storage require PowerShell 7.4+; token acquire runs natively.");

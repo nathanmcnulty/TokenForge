@@ -38,6 +38,7 @@ jobs:
       matrix: ${{ steps.plan.outputs.matrix }}
       has_work: ${{ steps.plan.outputs.has_work }}
       mode: ${{ steps.plan.outputs.mode }}
+      inline_publication: ${{ steps.no_worker_publish.outputs.ready }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -89,6 +90,34 @@ jobs:
           }else{$data="$env:RUNNER_TEMP/discovery-data"}
           ./scripts/Invoke-TokenForgeWeeklyCi.ps1 -Action Prepare -DataPath $data -BundlePath "$env:RUNNER_TEMP/plan" -Workers ([int]$env:WORKERS) -Mode $env:MODE -RetryExhausted:($env:RETRY_EXHAUSTED -eq 'true') @options
           if($validation){Remove-Item -LiteralPath $source -Recurse -Force;Move-Item -LiteralPath $data -Destination $source}
+      - name: Validate publication when no token workers are needed
+        id: no_worker_publish
+        if: steps.plan.outputs.has_work == 'False' && !inputs.validation_only
+        shell: pwsh
+        env:
+          MODE: ${{ steps.plan.outputs.mode }}
+        run: |
+          $ErrorActionPreference='Stop'
+          $request=Get-Content "$env:RUNNER_TEMP/plan/request.json" -Raw|ConvertFrom-Json -AsHashtable
+          if($request.SchemaVersion -ne 1 -or $request.Indices -isnot [array] -or $request.Indices.Count -ne 0){throw 'Inline publication requires a normal request with no worker indices.'}
+          ./scripts/Invoke-TokenForgeWeeklyCi.ps1 -Action Publish -DataPath "$env:RUNNER_TEMP/discovery-data" -BundlePath "$env:RUNNER_TEMP/plan" -Mode $env:MODE
+          . ./scripts/TokenForgeCiState.ps1
+          Assert-TfCiPublicData "$env:RUNNER_TEMP/discovery-data"
+          Add-Content $env:GITHUB_OUTPUT 'ready=True'
+      - name: Save validated data without a separate publisher job
+        if: steps.no_worker_publish.outputs.ready == 'True'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: validated-data
+          overwrite: true
+          path: |
+            ${{ runner.temp }}/discovery-data/applications.json
+            ${{ runner.temp }}/discovery-data/weekly-*.json
+            ${{ runner.temp }}/discovery-data/coverage-*.json
+            ${{ runner.temp }}/discovery-data/reports/*.json
+            ${{ runner.temp }}/discovery-data/scopes/*.json
+          retention-days: 1
+          if-no-files-found: error
       - name: Upload public recipe
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -100,6 +129,7 @@ jobs:
           retention-days: 8
           if-no-files-found: error
       - name: Upload prepared public data
+        if: steps.plan.outputs.has_work == 'True'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: prepared-data
@@ -215,7 +245,7 @@ jobs:
           if-no-files-found: ignore
   publish:
     needs: [prepare, worker]
-    if: always() && needs.prepare.result == 'success' && (!inputs.validation_only || needs.worker.result == 'success')
+    if: always() && needs.prepare.result == 'success' && needs.prepare.outputs.has_work == 'True' && (!inputs.validation_only || needs.worker.result == 'success')
     permissions:
       contents: read
       actions: read
@@ -285,8 +315,8 @@ jobs:
           retention-days: 1
           if-no-files-found: error
   push:
-    needs: publish
-    if: always() && needs.publish.result == 'success' && !inputs.validation_only
+    needs: [prepare, publish]
+    if: always() && needs.prepare.result == 'success' && !inputs.validation_only && (needs.publish.result == 'success' || (needs.publish.result == 'skipped' && needs.prepare.outputs.inline_publication == 'True' && needs.prepare.outputs.has_work == 'False'))
     permissions:
       contents: write
     runs-on: ubuntu-latest

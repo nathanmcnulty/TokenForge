@@ -120,3 +120,38 @@ Independent artifact verification checked the frozen recipe, account and partiti
 The first normal attempt exposed an artifact-transport edge case: an empty `reports` directory was omitted and fixed directory staging failed. [PR #31](https://github.com/nathanmcnulty/TokenForge/pull/31) stages existing validated public files instead; Git-based absent/empty/populated-directory regression cases and the actual 60-file artifact passed before the successful hosted run.
 
 A 2026-10-08 Actions API snapshot reported 176 unexpired artifacts totaling 221.18 MiB: 93.52 MiB of native packages, 56.98 MiB of encrypted recovery, and 70.69 MiB of other transport/test artifacts. These reported sizes describe that snapshot, not billed storage accrual, the account's remaining allowance, or weekly growth. Continue monitoring retention as research depth increases.
+
+## Full local Graph/ARM production recipe on 2026-10-08
+
+A frozen production recipe assessed 100 published applications and 200 Graph/ARM pairs
+in four sequential local workers, each with a fresh Nora passkey login. All pairs completed,
+with 51 successful applications across 73 pairs and 1,534 terminal flow attempts: 694 PKCE,
+420 v2 implicit, and 420 v1 implicit. Each encrypted checkpoint resumed with zero new attempts
+or scope rows, and both publication rounds accepted the receipts and anonymous exports.
+
+The proof used immutable source commit `43d0b2fa426b2938706764ee4e7944e621a6f984` and the
+published legacy 100-app selection, frozen into a new two-resource recipe. It created no
+consent grants, persisted no credentials, and updated no public branch. Total local elapsed
+time was 3,745.717 seconds (62.43 minutes). This is local sequential execution, not hosted
+runner consumption or an estimate for all 5,454 applications. It establishes no JWT signature
+validity or API authorization. See the sanitized validation report for per-worker timing.
+
+## Publication when no token workers are selected
+
+For a normal request with zero worker indices, the preparation job now invokes the same
+publication validator before uploading the validated public files. It sets a readiness marker
+only after the publication and public-data checks succeed. The separate publisher job and
+prepared-data upload are skipped. The sole branch writer still validates the artifact and
+requires the original data parent before pushing. Metadata refreshes and report generation
+continue even without token issuance; exhausted batches still report incomplete coverage.
+
+Worker runs retain their existing receipt-merging publisher. Isolated validation cannot take
+the inline normal route or write the catalog branch. A failed prepare/upload, absent readiness
+marker, unexpected worker selection, or stale parent prevents the inline route from writing.
+
+The local proof used the actual public data snapshot with a completed 100-app legacy deep
+recipe. It validated 60 public files, preserved all 55 scope files byte for byte and retained the
+frozen plan, without credentials, a local commit, or a public branch update. Preparation took
+93.154 seconds and publication plus validation 83.671 seconds on this machine. These are local
+timings. The hosted saving must be measured after deployment; this removes a job and artifact
+transfer rather than skipping the required metadata refresh.

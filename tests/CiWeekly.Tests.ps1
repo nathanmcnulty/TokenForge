@@ -188,6 +188,14 @@ Describe 'Weekly publisher integration' {
   $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Shallow
   @((Get-Content "$bundle/request.json" -Raw|ConvertFrom-Json).Indices).Count|Should -Be 0
   @((Get-Content "$data/scopes/chunk-0000.json" -Raw|ConvertFrom-Json).Observations).Count|Should -Be 1
+  $scopeHash=(Get-FileHash "$data/scopes/chunk-0000.json").Hash
+  $recipeHash=(Get-Content "$bundle/state.json" -Raw|ConvertFrom-Json).PlanId
+  $inline=& $runner -Action Publish -DataPath $data -BundlePath $bundle -Mode Shallow
+  Assert-TfCiPublicData $data
+  $inline.Complete|Should -BeTrue
+  $inline.SuccessfulApplications|Should -Be 1
+  (Get-FileHash "$data/scopes/chunk-0000.json").Hash|Should -Be $scopeHash
+  (Get-Content "$data/weekly-shallow.json" -Raw|ConvertFrom-Json).PlanId|Should -Be $recipeHash
  }
  It 'automatically starts a separately bounded deep recipe only after shallow completion' {
   $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Shallow

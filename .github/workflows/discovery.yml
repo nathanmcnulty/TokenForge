@@ -64,7 +64,16 @@ jobs:
             if($LASTEXITCODE -ne 0){throw 'Repository access failed.'}
             git checkout --quiet --orphan discovery-data
           }
+      - name: Check whether completed weekly work already refreshed today
+        id: idle
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $idle=./scripts/Test-TokenForgeCiIdle.ps1 -DataPath "$env:RUNNER_TEMP/discovery-data" -EventName $env:GITHUB_EVENT_NAME
+          Add-Content $env:GITHUB_OUTPUT "idle=$idle"
+          if($idle){Add-Content $env:GITHUB_STEP_SUMMARY 'Both current UTC-week recipes are complete and public sources were observed today. Scheduled refresh skipped; the next UTC day refreshes sources again. Manual runs always refresh.'}
       - name: Freeze membership and select pending or failed work
+        if: steps.idle.outputs.idle != 'True'
         id: plan
         shell: pwsh
         env:
@@ -119,6 +128,7 @@ jobs:
           retention-days: 1
           if-no-files-found: error
       - name: Upload public recipe
+        if: steps.idle.outputs.idle != 'True'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: weekly-plan

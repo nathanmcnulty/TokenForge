@@ -9,11 +9,11 @@ public sealed class EvidenceStore : IDisposable
 {
     private readonly SqliteConnection connection;
     private static readonly HashSet<string> Fields = new("ClientId ResourceId Outcome TenantFingerprint PrincipalFingerprint ObservedAt Protocol Spa RedirectFingerprint RequestedScopes ResponseScopes ScpScopes ClaimsReadable HasScpClaim NamespaceVerification RequestVerification SignatureValidated ErrorCodes AttemptCount ElapsedSeconds CatalogHash PlanFingerprint".Split(' '), StringComparer.Ordinal);
-    public EvidenceStore(string path, bool readOnly = false)
+    public EvidenceStore(string path, bool readOnly = false, bool requireExisting = false)
     {
-        if(readOnly && !File.Exists(path)) throw new InvalidOperationException("Evidence database does not exist.");
+        if((readOnly || requireExisting) && !File.Exists(path)) throw new InvalidOperationException("Evidence database does not exist.");
         var wasEmpty=!File.Exists(path) || new FileInfo(path).Length==0;
-        path = readOnly ? PrivatePath.ValidateExisting(path) : PrivatePath.Prepare(path);
+        path = readOnly || requireExisting ? PrivatePath.ValidateExisting(path) : PrivatePath.Prepare(path);
         connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false, DefaultTimeout = 5, Mode = readOnly ? SqliteOpenMode.ReadOnly : SqliteOpenMode.ReadWrite }.ToString());
         connection.Open();
         using var command = connection.CreateCommand();
@@ -22,7 +22,7 @@ public sealed class EvidenceStore : IDisposable
             command.CommandText="PRAGMA application_id;";var applicationId=Convert.ToInt32(command.ExecuteScalar());
             command.CommandText="PRAGMA user_version;";var version=Convert.ToInt32(command.ExecuteScalar());
             if(!wasEmpty && (applicationId!=0x54464745 || version!=1)) throw new InvalidOperationException("Unknown evidence database format.");
-            if(readOnly && wasEmpty) throw new InvalidOperationException("Evidence database is not initialized.");
+            if((readOnly || requireExisting) && wasEmpty) throw new InvalidOperationException("Evidence database is not initialized.");
             command.CommandText="PRAGMA trusted_schema=OFF;";command.ExecuteNonQuery();
             if(!wasEmpty) return;
         }
@@ -76,6 +76,22 @@ public sealed class EvidenceStore : IDisposable
             }
         }
         transaction.Commit(); return count;
+    }
+    // JSON profile checkpoints use the same metadata whitelist as transactional SQLite imports.
+    // The caller must hold the cooperating state writer lock and read the latest snapshot.
+    public static string AppendPortableObservation(string json,string observation)
+    {
+        foreach(string text in new[]{json,observation})if(text==null || text.Length>64*1024*1024 || Encoding.UTF8.GetByteCount(text)>64*1024*1024)throw new InvalidOperationException();
+        using var document=JsonDocument.Parse(json,new JsonDocumentOptions{MaxDepth=8});
+        using var added=JsonDocument.Parse(observation,new JsonDocumentOptions{MaxDepth=8});
+        var root=document.RootElement;
+        if(root.GetProperty("SchemaVersion").GetInt32()!=1 || root.GetProperty("Observations").ValueKind!=JsonValueKind.Array ||
+            root.EnumerateObject().Select(p=>p.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count()!=root.EnumerateObject().Count() ||
+            root.EnumerateObject().Any(p=>p.Name is not ("SchemaVersion" or "UpdatedAt" or "Observations" or "RegistrationAttempts")))throw new InvalidOperationException();
+        var rows=root.GetProperty("Observations").EnumerateArray().Select(CleanObservation).ToList();rows.Add(CleanObservation(added.RootElement));
+        var registrations=root.TryGetProperty("RegistrationAttempts",out var attempts)?attempts.EnumerateArray().Select(CleanRegistration).ToArray():Array.Empty<SortedDictionary<string,object?>>();
+        string result=JsonSerializer.Serialize(new{SchemaVersion=1,UpdatedAt=DateTimeOffset.UtcNow.ToString("o"),Observations=rows,RegistrationAttempts=registrations});
+        if(Encoding.UTF8.GetByteCount(result)>64*1024*1024)throw new InvalidOperationException();return result;
     }
     private static SortedDictionary<string, object?> CleanObservation(JsonElement row)
     {

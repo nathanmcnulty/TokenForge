@@ -11,10 +11,43 @@ function Get-TokenForgePersistedProfileToken {
  }
  $fresh=[Func[TokenForge.Core.ProfileFreshRequest,TokenForge.Core.ProfileCredentialToken]] {
   param($inputRequest)
-  $auth=if($inputRequest.Cookie){@{EstsAuth=$inputRequest.Cookie;CookieName=$inputRequest.CookieName}}else{@{Browser=$true;NoConsent=$true;LoginHint=$LoginHint}}
+  if($inputRequest.Cookie){
+   $inventoryPath=Resolve-TokenForgeVaultPath (Join-Path $p.StatePath 'inventory.json')
+   if((Get-Item -LiteralPath $inventoryPath).Length -gt 64MB){throw 'Inventory exceeds bounds.'}
+   $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
+   $databasePath=Resolve-TokenForgeVaultPath (Join-Path $p.StatePath $(if(Test-Path (Join-Path $p.StatePath 'scopes.sqlite')){'scopes.sqlite'}else{'scopes.json'}))
+   $databaseExists=Test-Path -LiteralPath $databasePath -PathType Leaf
+   $database=Get-TokenForgeScopeDatabase -Path $databasePath -Latest -TenantFingerprint $p.ExpectedTenantFingerprint -PrincipalFingerprint $p.ExpectedPrincipalFingerprint -ResourceId $ResourceId
+   $execute=[Func[TokenForge.Core.ScopePlanning+RequestRow,TokenForge.Core.ProfileCredentialToken]] {
+    param($request)
+    $issued=$null
+    try{$issued=Get-TokenForgeToken -Request $request -EstsAuth $inputRequest.Cookie -CookieName $inputRequest.CookieName;& $copyResult $issued $request 'SilentExplicitScopeAcquisition'}
+    finally{if($issued){$issued.AccessToken.Dispose();if($issued.RefreshToken){$issued.RefreshToken.Dispose()}}}
+   }
+   $identity=[Func[securestring,string]] {param($token) [string](Invoke-TokenForgeGraph -AccessToken $token -Uri 'https://graph.microsoft.com/v1.0/me?$select=id').id}
+   $checkpoint=[Action[string]] {
+    param($json)
+    $observation=$json|ConvertFrom-Json
+    # Preserve date strings across PowerShell versions and local timezones.
+    $document=[Text.Json.JsonDocument]::Parse($json)
+    try{$observation.ObservedAt=$document.RootElement.GetProperty('ObservedAt').GetString()}finally{$document.Dispose()}
+    $stateLock=$null
+    try{
+     $stateLock=Open-TokenForgeProfileOperation -Directory (Split-Path $databasePath -Parent) -Leaf '.writer.lock'
+     if($databaseExists -and -not (Test-Path -LiteralPath $databasePath -PathType Leaf)){throw 'Evidence database disappeared during acquisition.'}
+     $latest=if($databasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){$database}else{Get-TokenForgeScopeDatabase $databasePath}
+     if($databasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){
+      $document=New-TokenForgeScopeDatabase;$document.Observations=@($observation)
+      $null=Invoke-TokenForgeNativeEvidence $databasePath update -Document $document -Domain evidence -RequireExisting
+     }else{$null=Add-TokenForgeScopeObservation -Database $latest -Observation $observation -Path $databasePath}
+    }finally{if($stateLock){$stateLock.Dispose()}}
+   }
+   return [TokenForge.Core.ProfileScopeAcquisition]::Acquire($Name,$Record.ConfigurationJson,(ConvertTo-TokenForgePlanningInventory $inventory),(ConvertTo-TokenForgePlanningDatabase $database),
+     $ResourceId.ToString(),[string[]]$Scope,$inputRequest.Cookie,$inputRequest.CookieName,$MaxCandidates,$MaxRedirects,$execute,$identity,$checkpoint,[Threading.CancellationToken]::None)
+  }
   $issued=$null
   try {
-   $issued=Request-TokenForgeProfileScope -Profile $p -ResourceId $ResourceId -Scope $Scope -Authentication $auth -MaxCandidates $MaxCandidates -MaxRedirects $MaxRedirects
+   $issued=Request-TokenForgeProfileScope -Profile $p -ResourceId $ResourceId -Scope $Scope -Authentication @{Browser=$true;NoConsent=$true;LoginHint=$LoginHint} -MaxCandidates $MaxCandidates -MaxRedirects $MaxRedirects
    & $copyResult $issued $issued.Request $issued.Evidence
   }finally{if($issued){$issued.AccessToken.Dispose();if($issued.RefreshToken){$issued.RefreshToken.Dispose()}}}
  }

@@ -47,6 +47,9 @@ namespace TokenForge.Core.V0180
         public string? TenantFingerprint { get; internal set; }
         public string? PrincipalFingerprint { get; internal set; }
         public DateTimeOffset? ExpiresAt { get; internal set; }
+        private string? principalIdentity;
+        internal bool MatchesPrincipalIdentity(Guid identity) => identity != Guid.Empty &&
+            Guid.TryParse(principalIdentity, out var claimed) && claimed != Guid.Empty && claimed == identity;
         public bool SignatureValidated => false;
         public string Evidence => Readable ? "JwtPayloadUnverified" : "OpaqueToken";
         public static TokenClaims Read(SecureString token)
@@ -71,6 +74,7 @@ namespace TokenForge.Core.V0180
                 result.Audience = Text(root, "aud");
                 result.ClientId = Text(root, "azp") ?? Text(root, "appid");
                 string? tenant = Text(root, "tid"), principal = Text(root, "oid");
+                result.principalIdentity = principal;
                 if (!string.IsNullOrEmpty(tenant)) result.TenantFingerprint = Fingerprint(tenant);
                 if (!string.IsNullOrEmpty(tenant) && !string.IsNullOrEmpty(principal)) result.PrincipalFingerprint = Fingerprint(tenant + "/" + principal);
                 if (root.TryGetProperty("exp", out var expiry) && expiry.ValueKind == JsonValueKind.Number && expiry.TryGetInt64(out long seconds))

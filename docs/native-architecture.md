@@ -2,7 +2,7 @@
 
 Use one shared .NET core with platform adapters, a CLI first, and a metadata-only visualization
 surface later. Do not maintain separate OAuth policy implementations for each operating system.
-The PowerShell workflow is the compatibility surface while code moves into the shared core. Shared timestamp projection and profile configuration and decrypted credential-record validation, private-file checks, vault-file transactions, issued-token policy, OAuth transport, vault envelope encryption, SQLite evidence import/export and checkpoints, and native CLI packages are implemented. Scope explanation, profile create/show, vault inspection, logout, OS-key forgetting, and direct token acquisition run natively; persisted-profile cache selection, same-client renewal, and credential writes also run in the shared native core. Browser/passkey login, fresh request construction and iteration, Memory sessions, and the CLI token-get adapter still use PowerShell. Coverage and candidate ranking use the shared native planner. See [Native CLI](native-cli.md) for current dependencies.
+The PowerShell workflow is the compatibility surface while code moves into the shared core. Shared timestamp projection and profile configuration and decrypted credential-record validation, private-file checks, vault-file transactions, issued-token policy, OAuth transport, vault envelope encryption, SQLite evidence import/export and checkpoints, and native CLI packages are implemented. Scope explanation, profile create/show, vault inspection, logout, OS-key forgetting, and direct token acquisition run natively; persisted-profile cache selection, same-client renewal, and credential writes also run in the shared native core. Saved-cookie persisted-profile acquisition and CLI token get now run natively, using shared request planning, Graph bootstrap confirmation and bounded candidate execution. Browser/passkey login, Memory sessions and browser/interactive adapters still use PowerShell. Coverage and candidate ranking use the shared native planner. See [Native CLI](native-cli.md) for current dependencies.
 
 The security boundary is a credential service that exposes scoped acquisition operations and
 metadata, not a general cookie jar export. Windows Credential Manager and Linux Secret Service adapters now protect a random vault password
@@ -62,9 +62,12 @@ validated by the shared transport before it reaches execution.
 Scope names are case-sensitive. `User.Read` and `user.read` remain separate requested scopes;
 exact duplicates are removed. This corrects the earlier PowerShell request builder's
 case-insensitive deduplication. Neither planning nor a metadata fingerprint confirms the
-current account. PowerShell still confirms bootstrap identity, executes fresh requests,
-checks issued context/scopes, and saves successful observations. Each attempted request
-rechecks inventory and, for warm requests, observation freshness. Native fresh profile
-execution and login remain unfinished.
+current account. Version 0.31 moves saved-cookie profile bootstrap confirmation, fresh request execution,
+issued-context checks and successful observation creation into the shared native acquisition service.
+PowerShell retains the browser execution adapter. Each attempted request
+rechecks inventory and, for warm requests, observation freshness. Native saved-cookie profile
+execution is implemented; native browser/passkey login remains unfinished.
 
 The [v0.30 validation report](native-request-planning-validation-2026-10-11.json) records the sanitized two-account cold/warm acquisition proof and checks.
+
+The [v0.31 validation report](native-fresh-acquisition-validation-2026-10-11.json) records native saved-cookie cold/warm/cache/renewal proofs. Metadata checkpoints precede the separate final credential commit and may remain when that later commit fails. See [native CLI](native-cli.md#native-saved-cookie-profile-acquisition) for the supported storage modes and remaining adapters.

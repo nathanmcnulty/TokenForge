@@ -4,11 +4,12 @@ using TokenForge.Core;
 
 try
 {
+    if(args.Length>=2 && args[0]=="token" && args[1]=="get" && NativeProfileTokenCommand.TryRun(args,out var tokenExit))return tokenExit;
     if(args.Length>=2 && args[0]=="scopes" && args[1]=="explain")return NativeScopeCommand.Run(args);
-    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.30.0",AuthenticationDependency="Profile login, fresh profile acquisition and CLI token get: PowerShell 7.4+; persisted cache/renewal/storage: shared native core; scopes explain, profile create/show/forget-key/inspect-vault, logout and token acquire: native"}));return 0;}
+    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.31.0",AuthenticationDependency="Profile login/browser/interactive adapters: PowerShell 7.4+; saved-cookie profile token get/cache/renewal/storage: native; scopes explain, profile create/show/forget-key/inspect-vault, logout and token acquire: native"}));return 0;}
     if (args.Length == 0 || args[0] is "help" or "--help")
     {
-        Console.WriteLine("TokenForge: profile create/show/forget-key/inspect-vault, login, status, doctor, logout, scopes explain, token get/acquire, graph permissions; research report/weekly/export-flows/backup; evidence import/update/export/plan/cohort/cohort-export/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Profile login, fresh profile acquisition and CLI token get require PowerShell 7.4+; persisted cache, renewal and storage use the shared native core. Scopes explain, profile create/show/forget-key/inspect-vault, logout and token acquire run natively.");
+        Console.WriteLine("TokenForge: profile create/show/forget-key/inspect-vault, login, status, doctor, logout, scopes explain, token get/acquire, graph permissions; research report/weekly/export-flows/backup; evidence import/update/export/plan/cohort/cohort-export/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Profile login and browser/interactive adapters require PowerShell 7.4+; saved-cookie profile token get, cache, renewal and storage run natively. Scopes explain, profile create/show/forget-key/inspect-vault, logout and token acquire run natively.");
         return 0;
     }
     if (args[0] == "logout") return NativeProfileCommand.Run(new[]{"profile","logout"}.Concat(args.Skip(1)).ToArray());
@@ -76,7 +77,7 @@ try
         if (args.Length < 4 || args[2] != "--database") throw new InvalidOperationException();
         var valid=args[1] switch {
             "import" => (args.Length==6 || args.Length==8 && args[6]=="--source") && args[4]=="--input",
-            "update" => args.Length==6 && args[4]=="--input",
+            "update" => (args.Length==6 || args.Length==7 && args[6]=="--require-existing") && args[4]=="--input",
             "export" => true,
             "plan" => args.Length==8 && args[4]=="--input" && args[6]=="--batch-size",
             "cohort" => args.Length==8 && args[4]=="--input" && args[6]=="--batch-size",
@@ -85,7 +86,7 @@ try
             "checkpoint" => args.Length==10 && args[4]=="--plan" && args[6]=="--client" && args[8]=="--outcome",
             _ => false };
         if(!valid) throw new InvalidOperationException();
-        using var store = new EvidenceStore(args[3],args[1] is "export" or "pending" or "cohort-export");
+        using var store = new EvidenceStore(args[3],args[1] is "export" or "pending" or "cohort-export",requireExisting:args[1]=="update" && args.Length==7);
         object result;
         switch (args[1])
         {

@@ -109,6 +109,11 @@ jobs:
           pattern: release-*
           merge-multiple: true
           path: release-assets
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-assets
       - name: Validate complete source-bound package set
         id: verify
         shell: pwsh
@@ -123,7 +128,9 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: verified-release
-          path: release-assets/*
+          path: |
+            release-assets/release-manifest.json
+            release-assets/SHA256SUMS
           retention-days: 1
           if-no-files-found: error
   publish:

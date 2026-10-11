@@ -28,7 +28,7 @@ Inspect the verified provenance and compare its source revision with the release
 
 ## Maintaining releases
 
-Run **Release packages** manually on `main`. The default `publish=false` builds, extracts, smoke-tests, and verifies all six packages without creating tags, attestations, or releases. Pull requests changing the release workflow or asset validator run the same read-only packaging route. Temporary release artifacts retain one day; published release assets remain available independently of that retention.
+Run **Release packages** manually on `main`. The default `publish=false` builds, extracts, smoke-tests, and verifies all six packages without creating tags, attestations, or releases. Pull requests changing the release workflow or asset validator run the same read-only packaging route. The verifier transports only the manifest and checksums, avoiding a second copy of the six archives. Temporary release artifacts retain one day; published release assets remain available independently of that retention.
 
 Use `publish=true` only for a new module version. The source must still be the exact current `main` commit after building, and both main-branch validation workflows must have succeeded for that commit, including all six named platform gates. The builder uses SDK 10.0.401 and locked dependencies. Each architecture runs the shared core checks and launches its extracted executable; the extracted module must import too. The verifier requires exactly six archives and their matching version/source/hash receipts.
 

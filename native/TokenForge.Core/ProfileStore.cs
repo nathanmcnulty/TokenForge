@@ -48,7 +48,17 @@ public static class ProfileStore
         }
         catch { throw new InvalidOperationException("Profile key removal failed. Details suppressed."); }
     }
-    public static VaultInspection InspectVault(string name, string? root = null, SecureString? password = null)
+    public sealed record LogoutResult(string Profile, bool Removed, string Evidence);
+    public static VaultInspection InspectVault(string name, string? root = null, SecureString? password = null) =>
+        WithVault(name,root,password,null,"Read",false,(transaction,key,configuration)=>VaultInspector.Inspect(transaction!,key!,name,configuration.GetProperty("ExpectedTenantFingerprint").GetString(),configuration.GetProperty("ExpectedPrincipalFingerprint").GetString(),DateTimeOffset.UtcNow));
+    public static LogoutResult Logout(string name, string? root = null, SecureString? password = null, Func<SecureString>? passwordProvider = null) =>
+        WithVault(name,root,password,passwordProvider,"Update",true,(transaction,key,configuration)=>
+        {
+            if (transaction != null) VaultInspector.RemoveSession(transaction,key!,name);
+            return new LogoutResult(name,true,"LocalLogoutNotServerRevocation");
+        });
+    private static T WithVault<T>(string name, string? root, SecureString? password, Func<SecureString>? passwordProvider,
+        string mode, bool allowMissing, Func<VaultFileTransaction?,SecureString?,JsonElement,T> operation)
     {
         SecureString? ownedPassword = null;
         try
@@ -57,24 +67,35 @@ public static class ProfileStore
             using var profile = JsonDocument.Parse(initial);
             var configuration = profile.RootElement;
             string storage = configuration.GetProperty("Storage").GetString()!;
-            if (storage == "Memory" || storage == "OperatingSystem" && (password != null || PlatformVaultKey.Backend == "Unsupported") || storage == "Passphrase" && password == null) throw new InvalidOperationException();
+            if (password != null && passwordProvider != null || storage != "Passphrase" && passwordProvider != null || storage == "OperatingSystem" && password != null) throw new InvalidOperationException();
             string directory = Path.Combine(Root(root, false), name);
             string operationPath = PrivateFiles.Resolve(Path.Combine(directory,".operation.lock"),false);
-            FileStream operation;
-            try { operation = PrivateFiles.Open(operationPath,true); }
-            catch (IOException) { operation = PrivateFiles.Open(operationPath,false); }
-            using (operation)
+            FileStream held;
+            try { held = PrivateFiles.Open(operationPath,true); }
+            catch (IOException) { held = PrivateFiles.Open(operationPath,false); }
+            using (held)
             {
                 if (Read(name,root) != initial) throw new InvalidOperationException();
+                if (storage == "Memory")
+                {
+                    if (!allowMissing) throw new InvalidOperationException();
+                    return operation(null,null,configuration);
+                }
                 string vault = PrivateFiles.Resolve(Path.Combine(directory,"session.tfvault"),false);
-                // Fail before contacting an OS store when no private ciphertext exists.
-                if (!File.Exists(vault)) throw new InvalidOperationException();
-                using var transaction = VaultFileTransaction.Begin(vault,"Read");
+                if (!File.Exists(vault))
+                {
+                    if (!allowMissing) throw new InvalidOperationException();
+                    return operation(null,null,configuration);
+                }
+                if (storage == "OperatingSystem" && PlatformVaultKey.Backend == "Unsupported") throw new InvalidOperationException();
+                using var transaction = VaultFileTransaction.Begin(vault,mode);
                 if (storage == "OperatingSystem") ownedPassword = PlatformVaultKey.Open(ProfileKeyIdentity.Compute(directory,configuration.GetProperty("KeyId").GetString()!),false);
-                return VaultInspector.Inspect(transaction,ownedPassword ?? password!,name,configuration.GetProperty("ExpectedTenantFingerprint").GetString(),configuration.GetProperty("ExpectedPrincipalFingerprint").GetString(),DateTimeOffset.UtcNow);
+                else if (password == null && passwordProvider != null) ownedPassword = passwordProvider();
+                if (ownedPassword == null && password == null) throw new InvalidOperationException();
+                return operation(transaction,ownedPassword ?? password,configuration);
             }
         }
-        catch { throw new InvalidOperationException("Profile vault inspection failed. Details suppressed."); }
+        catch { throw new InvalidOperationException("Profile vault operation failed. Details suppressed."); }
         finally { ownedPassword?.Dispose(); }
     }
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };

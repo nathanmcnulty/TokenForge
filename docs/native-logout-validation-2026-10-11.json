@@ -1,0 +1,92 @@
+{
+  "DateUTC": "2026-10-11",
+  "Version": "0.27.0",
+  "Scope": "Native local logout with profile, unrelated-session and OS-key preservation",
+  "NativeCommand": "logout",
+  "RequiresPowerShellForLogout": false,
+  "NativeLogoutNetworkRequests": 0,
+  "CredentialOutput": false,
+  "SchemaAndEncryptionUnchanged": true,
+  "CoreChecksPassed": 529,
+  "Review": "Independent Sol review: no remaining concrete blocker; focused tests 14 passed, 1 platform skip",
+  "Accounts": [
+    {
+      "AccountLabel": "nora",
+      "NativeLogoutWithoutPowerShell": true,
+      "SavedSessionRemoved": true,
+      "ProfileConfigurationPreserved": true,
+      "OperatingSystemKeyPreserved": true,
+      "NativeInspectionWithoutPowerShell": true,
+      "NativeInspectionMatchesModule": true,
+      "ExpectedAccountNamespaceMatched": true,
+      "Storage": "LinuxSecretService",
+      "Fresh": "BoundedTargetedSilentExplicitScopeAcquisition",
+      "FreshApiStatus": 200,
+      "ReopenedCache": "CachedVerifiedContextNotNewIssuance",
+      "ReopenedApiStatus": 200,
+      "Renewal": "SameClientRefreshMatchedIssuedContext",
+      "RenewedApiStatus": 200,
+      "AdditionalApiScopes": 0,
+      "RetentionPreserved": true,
+      "IdentityConfirmationTimePreserved": true,
+      "GraphSdkReadSucceeded": true,
+      "VaultRemoved": true,
+      "KeyRemoved": true
+    },
+    {
+      "AccountLabel": "secadmin",
+      "NativeLogoutWithoutPowerShell": true,
+      "SavedSessionRemoved": true,
+      "ProfileConfigurationPreserved": true,
+      "OperatingSystemKeyPreserved": true,
+      "NativeInspectionWithoutPowerShell": true,
+      "NativeInspectionMatchesModule": true,
+      "ExpectedAccountNamespaceMatched": true,
+      "Storage": "LinuxSecretService",
+      "Fresh": "BoundedTargetedSilentExplicitScopeAcquisition",
+      "FreshApiStatus": 200,
+      "ReopenedCache": "CachedVerifiedContextNotNewIssuance",
+      "ReopenedApiStatus": 200,
+      "Renewal": "SameClientRefreshMatchedIssuedContext",
+      "RenewedApiStatus": 200,
+      "AdditionalApiScopes": 0,
+      "RetentionPreserved": true,
+      "IdentityConfirmationTimePreserved": true,
+      "GraphSdkReadSucceeded": true,
+      "VaultRemoved": true,
+      "KeyRemoved": true
+    }
+  ],
+  "PlatformProof": "Linux real accounts; Windows and macOS hosted checks required before merge; live Windows and macOS account authentication remains future work",
+  "InventoryProofPolicy": "October 7 inventory with explicit MaxAgeHours=168; production default remains 24",
+  "Limitations": "Local removal does not revoke server credentials or clear credentials held in other processes. Owned byte arrays are cleared; managed and library allocations are not guaranteed immediate erasure.",
+  "SourceSha256": {
+    "native/TokenForge.Core/ProfileStore.cs": "247380b57321f1ed7c8a6a53e89722d21b97d16f9463d745851de283e5badb55",
+    "native/TokenForge.Core/VaultInspection.cs": "ef1f7f4eb1f0e95ba15362abffd85138374ca117e4bd4984909c8e6b5de16632",
+    "native/TokenForge.Cli/NativeProfileCommand.cs": "5d1065ce05f565b765ce6f2cd159b7541b117ba7d74878f3e64d5899925086f5",
+    "native/TokenForge.Core.Tests/VaultInspectionChecks.cs": "8cce41d3fc3684d6cfee7b08e68be0cec7c87ca95af926ecd52d8dda32df56ec",
+    "tests/NativeProfiles.Tests.ps1": "47f70d1c52a93385a7996bb7dffba4c79be383e687688b2bd846678653a46388"
+  },
+  "IsolatedLinuxOsStoreCoreChecksPassed": 536,
+  "OsStoreLogoutProof": "Existing-key retention, empty-vault idempotence, both locks, missing-key fail-closed, missing-vault noncreation; real-account selected-session removal in Accounts",
+  "FocusedNativeProfileTests": {
+    "Passed": 14,
+    "Failed": 0,
+    "Skipped": 1
+  },
+  "IndependentSolNativeProfileTests": {
+    "Passed": 14,
+    "Failed": 0,
+    "Skipped": 1
+  },
+  "FullSuite": {
+    "Passed": 380,
+    "Failed": 0,
+    "Skipped": 49
+  },
+  "PackagedTests": {
+    "Passed": 54,
+    "Failed": 0,
+    "Skipped": 2
+  }
+}

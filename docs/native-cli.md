@@ -1,10 +1,10 @@
 # Native CLI and evidence store
 
 The native CLI is a self-contained .NET executable per OS and architecture. Evidence commands
-run directly in the shared core with bundled SQLite. Profile login and browser/interactive adapters invoke the packaged PowerShell 7.4+ module;
+run directly in the shared core with bundled SQLite. Profile login and profile browser/interactive adapters invoke the packaged PowerShell 7.4+ module;
 install `pwsh` and keep `src/` and `scripts/` beside the executable for those commands.
 Version 0.18 adds direct native `token acquire`, and PowerShell uses the same C# OAuth transport
-and issued-token policy. Native acquisition does not itself provide browser/passkey login or a keystore.
+and issued-token policy. Version 0.33 adds native system-browser PKCE to advanced `token acquire`. Profile login and passkey enrollment still use PowerShell.
 Version 0.19 also shares vault envelope encryption with the native core; profile storage and
 login still use PowerShell. See [shared vault validation](vault-core-validation-2026-10-08.json).
 Version 0.20 shares profile configuration validation between PowerShell and the native core.
@@ -135,6 +135,8 @@ loopback listener, redeems it with PKCE, validates the expected context and scop
 the tokens after printing metadata. Browser mode rejects `--stdin`; browser-only flags are
 rejected for cookie and refresh acquisition. The browser timeout accepts 30–900 seconds.
 The OS browser launcher has a separate ten-second bound and suppresses its child output.
+
+The [0.33 validation report](native-browser-cli-validation-2026-10-11.json) records real Entra code redemption through the self-contained Linux CLI for Nora and secadmin, using a headless redirect fixture. Both responses included 107 additional API scopes. A plan allowing only 32 was rejected; the positive proof explicitly allowed 4096. Choose an additional-scope budget deliberately: requesting User.Read alone does not guarantee that Entra issues only that scope.
 
 The credential prompt does not echo. An explicit `--stdin` accepts one credential followed
 by EOF, optionally with trailing line endings; never put credentials in command arguments,

@@ -60,3 +60,7 @@ tokenforge research backup --snapshot-path /private/path/maintenance.sealed --ba
 Version 0.34 runs research backup directly in the native CLI, without PowerShell or an authentication profile. The script and CLI share the same BCL backup service. The command handles ciphertext only and performs no login or token request. Concurrent identical copies converge on one file; conflicting content is never overwritten. It checks the envelope version and bounded size, but does not decrypt or authenticate the payload.
 
 The [0.34 validation report](native-maintenance-backup-validation-2026-10-11.json) records native copies and deduplicated repeats of existing Nora and secadmin maintenance snapshots, plus bounded corruption, concurrency and private-path fixtures. The native child ran without PowerShell on its PATH. These copy proofs do not refresh metadata or authenticate the ciphertext.
+
+Version 0.34.1 fixes concurrent publication on Unix: a hard link publishes the complete, flushed temporary file only when the destination does not exist. Windows uses its no-overwrite move. Exactly one concurrent writer reports `Saved=true`; other writers verify the existing bytes. Unix backup storage must support hard links; unsupported filesystems fail without an overwrite or copy fallback. The temporary file is removed after publication.
+
+The [0.34.1 publication report](native-backup-publication-validation-2026-10-11.json) records the failing hosted regression and the fixed Linux races and existing-snapshot copy proofs.

@@ -1,0 +1,48 @@
+{
+  "Date": "2026-10-11",
+  "Version": "0.34.1",
+  "EncryptedBackupsRemainInPrivateLocalState": true,
+  "Accounts": [
+    {
+      "FirstCopySaved": true,
+      "FreshLoginPerformed": false,
+      "CiphertextBytesIdentical": true,
+      "NativeSelfContained": true,
+      "SecondCopyDeduplicated": true,
+      "Account": "nora",
+      "Source": "ExistingEncryptedMaintenanceSnapshotFrom2026-10-07",
+      "Authenticated": false,
+      "PowerShellOnNativeProcessPath": false
+    },
+    {
+      "FirstCopySaved": true,
+      "FreshLoginPerformed": false,
+      "CiphertextBytesIdentical": true,
+      "NativeSelfContained": true,
+      "SecondCopyDeduplicated": true,
+      "Account": "secadmin",
+      "Source": "ExistingEncryptedMaintenanceSnapshotFrom2026-10-07",
+      "Authenticated": false,
+      "PowerShellOnNativeProcessPath": false
+    }
+  ],
+  "CredentialsOrKeysCopied": false,
+  "Validation": {
+    "NativeBackupFixtureChecks": 15,
+    "Failed": 0,
+    "ConcurrentRounds": 10,
+    "WritersPerRound": 4,
+    "ExactlyOnePublisherPerRound": true,
+    "TemporaryFilesCleaned": true,
+    "Platform": "Linux"
+  },
+  "RegressionTrigger": {
+    "WorkflowRun": 38131002981,
+    "Failure": "Two concurrent native writers reported Saved=true on Linux before this fix."
+  },
+  "Limitations": [
+    "Copies existing encrypted snapshots; no fresh metadata, decryption or payload authentication.",
+    "Unix storage must support hard links; unsupported storage fails closed.",
+    "Hosted Windows and macOS checks are required before merge."
+  ]
+}

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security;
 using System.Text.Json;
 using TokenForge.Core;
 
@@ -14,7 +15,7 @@ internal static class NativeProfileCommand
         for (int i = 2; i < args.Length; i++)
         {
             string option = args[i]; if (!seen.Add(option)) throw new InvalidOperationException();
-            if (option == "--json" || operation == "inspect-vault" && option == "--stdin") continue;
+            if (option == "--json" || (operation is "inspect-vault" or "logout") && option == "--stdin" || operation == "logout" && option == "--prompt-passphrase") continue;
             if (!allowed.Contains(option) || ++i == args.Length || args[i].StartsWith('-') || args[i].Length > 4096) throw new InvalidOperationException();
             values[option] = args[i];
         }
@@ -22,6 +23,20 @@ internal static class NativeProfileCommand
         string? Optional(string option) => values.GetValueOrDefault(option);
         int Number(string option, int fallback) => values.TryGetValue(option, out string? value) ? int.Parse(value, NumberStyles.None, CultureInfo.InvariantCulture) : fallback;
         string name = values.ContainsKey("--profile") ? Required("--profile") : "default";
+        if (operation == "logout")
+        {
+            using var configuration = JsonDocument.Parse(ProfileStore.Read(name,Optional("--root")));
+            string storage = configuration.RootElement.GetProperty("Storage").GetString()!;
+            bool stdin = seen.Contains("--stdin"), prompt = seen.Contains("--prompt-passphrase");
+            if ((stdin || prompt) && storage != "Passphrase" || stdin && prompt) throw new InvalidOperationException();
+            Func<SecureString>? unlock = storage == "Passphrase" ? () =>
+            {
+                if (!stdin && Console.IsInputRedirected) throw new InvalidOperationException();
+                return NativeTokenCommand.ReadCredential(stdin,12,1024,"Vault passphrase (hidden): ");
+            } : null;
+            Console.WriteLine(JsonSerializer.Serialize(ProfileStore.Logout(name,Optional("--root"),passwordProvider:unlock)));
+            return 0;
+        }
         if (operation == "inspect-vault")
         {
             using var configuration = JsonDocument.Parse(ProfileStore.Read(name,Optional("--root")));

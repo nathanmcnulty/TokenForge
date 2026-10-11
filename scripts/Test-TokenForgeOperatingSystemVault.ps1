@@ -8,11 +8,12 @@ if($LASTEXITCODE){throw 'Synthetic platform-store checks failed.'}
 Import-Module (Join-Path $repo 'src/TokenForge/TokenForge.psd1') -Force
 $root=Join-Path ([IO.Path]::GetTempPath()) ('TokenForge-os-fixture-'+[guid]::NewGuid())
 $password=$null
-function Invoke-NativeFixtureProfile([string]$Name='fixture',[int]$ExpectedExit=0,[switch]$Partial,[switch]$Inspect) {
+function Invoke-NativeFixtureProfile([string]$Name='fixture',[int]$ExpectedExit=0,[switch]$Partial,[switch]$Inspect,[switch]$Logout) {
     $start=[Diagnostics.ProcessStartInfo]::new($NativeExecutablePath)
     $start.UseShellExecute=$false;$start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
     $start.Environment['PATH']=Join-Path $root no-pwsh
-    foreach($argument in @('profile',$(if($Inspect){'inspect-vault'}else{'forget-key'}),'--profile',$Name,'--root',$root,'--json')){$start.ArgumentList.Add($argument)}
+    if(-not $Logout){$start.ArgumentList.Add('profile')}
+    foreach($argument in @($(if($Inspect){'inspect-vault'}elseif($Logout){'logout'}else{'forget-key'}),'--profile',$Name,'--root',$root,'--json')){$start.ArgumentList.Add($argument)}
     $process=[Diagnostics.Process]::Start($start)
     try{
         $output=$process.StandardOutput.ReadToEndAsync();$errors=$process.StandardError.ReadToEndAsync()
@@ -22,6 +23,7 @@ function Invoke-NativeFixtureProfile([string]$Name='fixture',[int]$ExpectedExit=
         if($ExpectedExit -eq 0 -or $Partial){
             if($errorText){throw 'Native synthetic deletion returned unexpected diagnostics.'}
             $result=$text|ConvertFrom-Json
+            if($Logout){if($result.Profile -ne $Name -or -not $result.Removed -or $result.Evidence -ne 'LocalLogoutNotServerRevocation'){throw 'Native synthetic logout metadata mismatched.'};return $result}
             if($Inspect){if($result.Sessions.Count -ne 0 -or $result.Evidence -ne 'StoredMetadataNotNewIssuanceOrApiAuthorization'){throw 'Native synthetic inspection metadata mismatched.'};return $result}
             if($result.Profile -ne $Name -or -not $result.VaultRemoved -or $result.KeyRemoved -eq [bool]$Partial -or $result.Evidence -ne 'LocalDeletionNotServerRevocation'){throw 'Native synthetic deletion metadata mismatched.'}
             return $result
@@ -40,7 +42,7 @@ try{
     $failedClosed=$false
     try{$null=Connect-TokenForgeProfile fixture -Root $root}catch{$failedClosed=$_.Exception.Message -match 'Operating-system vault key unavailable'}
     if(-not $failedClosed -or (Get-FileHash -LiteralPath $record.VaultPath).Hash -ne $before){throw 'Missing-key recovery changed the vault or failed to stop before authentication.'}
-    if($NativeExecutablePath){$null=Invoke-NativeFixtureProfile fixture 1 -Inspect}
+    if($NativeExecutablePath){$null=Invoke-NativeFixtureProfile fixture 1 -Inspect;$null=Invoke-NativeFixtureProfile fixture 1 -Logout}
     $keyStillAbsent=$false
     try{$opened=& (Get-Module TokenForge) {param($record) Open-TokenForgeProfilePlatformKey $record} $record; $opened.Dispose()}catch{$keyStillAbsent=$_.Exception.Message -match 'Operating-system vault key unavailable'}
     if(-not $keyStillAbsent){throw 'A missing key was recreated for an existing vault.'}
@@ -59,14 +61,22 @@ try{
         if((Get-FileHash $nativeRecord.VaultPath).Hash -ne $nativeBefore){throw 'Native inspection changed synthetic ciphertext.'}
         foreach($leaf in @('.operation.lock','session.tfvault.lock')){
             $held=[IO.FileStream]::new((Join-Path $nativeRecord.Directory $leaf),[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
-            try{$null=Invoke-NativeFixtureProfile nativefixture 1;$null=Invoke-NativeFixtureProfile nativefixture 1 -Inspect}finally{$held.Dispose()}
+            try{$null=Invoke-NativeFixtureProfile nativefixture 1;$null=Invoke-NativeFixtureProfile nativefixture 1 -Inspect;$null=Invoke-NativeFixtureProfile nativefixture 1 -Logout}finally{$held.Dispose()}
             if((Get-FileHash $nativeRecord.VaultPath).Hash -ne $nativeBefore){throw 'Native lock conflict changed synthetic ciphertext.'}
         }
+        $configurationBefore=(Get-FileHash (Join-Path $nativeRecord.Directory 'profile.json')).Hash
+        $null=Invoke-NativeFixtureProfile nativefixture -Logout
+        if((Get-FileHash $nativeRecord.VaultPath).Hash -ne $nativeBefore -or (Get-FileHash (Join-Path $nativeRecord.Directory 'profile.json')).Hash -ne $configurationBefore){throw 'Idempotent logout changed empty vault or configuration.'}
+        $retainedKey=[TokenForge.Core.V0110.PlatformVaultKey]::Open($legacyHandle,$false);$retainedKey.Dispose()
         $null=Invoke-NativeFixtureProfile nativefixture
         if(Test-Path $nativeRecord.VaultPath){throw 'Native synthetic deletion left ciphertext.'}
         $absent=$false
         try{$unexpected=[TokenForge.Core.V0110.PlatformVaultKey]::Open($legacyHandle,$false);$unexpected.Dispose()}catch{$absent=$_.Exception.Message -match 'Operating-system vault key unavailable'}
         if(-not $absent){throw 'Native synthetic deletion left its OS key.'}
+        $null=Invoke-NativeFixtureProfile nativefixture -Logout
+        $stillAbsent=$false
+        try{$unexpected=[TokenForge.Core.V0110.PlatformVaultKey]::Open($legacyHandle,$false);$unexpected.Dispose()}catch{$stillAbsent=$true}
+        if(-not $stillAbsent -or (Test-Path $nativeRecord.VaultPath)){throw 'Missing-vault logout created a vault or OS key.'}
         $null=Invoke-NativeFixtureProfile nativefixture
         Write-Output 'Native synthetic vault inspection is read-only, shares locks, and never recreates a missing key.'
         Write-Output 'Native synthetic key deletion works without PowerShell on PATH, shares locks and key identity, and is idempotent.'

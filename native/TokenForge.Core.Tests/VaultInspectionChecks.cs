@@ -42,8 +42,34 @@ static class VaultInspectionChecks
    var malformed=Fixture();malformed["Sessions"]!["Lab"]!["Tokens"]![id]!["ConsentEvidence"]=new JsonObject{["AccessToken"]="synthetic-private"};Write(malformed);reject(()=>ProfileStore.InspectVault("lab",root,password));
    try{ProfileStore.InspectVault("lab",root,password);throw new Exception("Expected rejection.");}catch(InvalidOperationException error){check(error.InnerException==null && !error.ToString().Contains("synthetic-private"));}
    var onlyOther=Fixture();var session=onlyOther["Sessions"]!["Lab"]!.DeepClone();onlyOther["Sessions"]!.AsObject().Clear();onlyOther["Sessions"]!["other"]=session;Write(onlyOther);check(ProfileStore.InspectVault("lab",root,password).Sessions.Length==0);
+   var badBefore=File.ReadAllBytes(vaultPath);Write(malformed);badBefore=File.ReadAllBytes(vaultPath);
+   reject(()=>ProfileStore.Logout("lab",root,password));check(File.ReadAllBytes(vaultPath).SequenceEqual(badBefore));
+   Write(foreign);check(ProfileStore.Logout("lab",root,password).Removed);check(ProfileStore.InspectVault("lab",root,password).Sessions.Length==0);
+   var expanded=Fixture();var large=Fixture()["Sessions"]!["Lab"]!.DeepClone();
+   large["Cookie"]=new string('é',1000000);large["Tokens"]![id]!["AccessToken"]=new string('é',1000000);
+   expanded["Sessions"]!["other"]=large;
+   var compact=JsonSerializer.SerializeToUtf8Bytes(expanded,new JsonSerializerOptions{Encoder=System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping});
+   try{using var tx=VaultFileTransaction.Begin(vaultPath,"Update");tx.ReadEnvelope();tx.Commit(VaultEnvelope.Encrypt(compact,password));}finally{Array.Clear(compact);}
+   var boundedBefore=File.ReadAllBytes(vaultPath);SecureString? failurePassword=null;
+   reject(()=>ProfileStore.Logout("lab",root,passwordProvider:()=>failurePassword=password.Copy()));
+   reject(()=>{_ = failurePassword!.Length;});check(File.ReadAllBytes(vaultPath).SequenceEqual(boundedBefore));
+   // Acquiring a new transaction proves failure released both profile and vault locks.
+   using(var tx=VaultFileTransaction.Begin(vaultPath,"Read")){check(tx.ReadEnvelope().SequenceEqual(boundedBefore));}
+   check(ProfileStore.InspectVault("lab",root,password).Sessions.Length==1);
+   Write(Fixture());var preserved=Fixture()["Sessions"]!["Lab"]!.DeepClone();var multi=Fixture();multi["Sessions"]!["other"]=preserved.DeepClone();Write(multi);
+   var profileBefore=File.ReadAllBytes(profilePath);var vaultBefore=File.ReadAllBytes(vaultPath);
+   reject(()=>ProfileStore.Logout("lab",root,wrong));check(File.ReadAllBytes(vaultPath).SequenceEqual(vaultBefore));
+   int prompts=0;
+   foreach(string leaf in new[]{".operation.lock","session.tfvault.lock"}){using var held=PrivateFiles.Open(Path.Combine(root,"lab",leaf),false);reject(()=>ProfileStore.Logout("lab",root,passwordProvider:()=>{prompts++;return password.Copy();}));}
+   check(prompts==0 && File.ReadAllBytes(vaultPath).SequenceEqual(vaultBefore));
+   var loggedOut=ProfileStore.Logout("lab",root,password);check(loggedOut.Removed && loggedOut.Evidence=="LocalLogoutNotServerRevocation");check(File.ReadAllBytes(profilePath).SequenceEqual(profileBefore));check(password.Length==31);
+   var remaining=VaultEnvelope.Decrypt(File.ReadAllBytes(vaultPath),password);
+   try{var doc=JsonNode.Parse(remaining)!;check(doc["Sessions"]!.AsObject().Count==1 && JsonNode.DeepEquals(doc["Sessions"]!["other"],preserved));}finally{Array.Clear(remaining);}
+   var after=File.ReadAllBytes(vaultPath);check(ProfileStore.Logout("lab",root,password).Removed && File.ReadAllBytes(vaultPath).SequenceEqual(after));
+   Write(Fixture());SecureString? provided=null;check(ProfileStore.Logout("lab",root,passwordProvider:()=>provided=password.Copy()).Removed);reject(()=>{_ = provided!.Length;});check(password.Length==31);
+   File.Delete(vaultPath);check(ProfileStore.Logout("lab",root,passwordProvider:()=>throw new Exception("synthetic-private")).Removed);check(!File.Exists(vaultPath));
    Write(Fixture());p["ExpectedTenantFingerprint"]=null;p["ExpectedPrincipalFingerprint"]=null;File.WriteAllText(profilePath,p.ToJsonString());reject(()=>ProfileStore.InspectVault("lab",root,password));
-   p["Storage"]="Memory";File.WriteAllText(profilePath,p.ToJsonString());reject(()=>ProfileStore.InspectVault("lab",root,password));
+   p["Storage"]="Memory";File.WriteAllText(profilePath,p.ToJsonString());reject(()=>ProfileStore.InspectVault("lab",root,password));check(ProfileStore.Logout("lab",root).Removed);
   }finally{if(Directory.Exists(root))Directory.Delete(root,true);}
  }
 }

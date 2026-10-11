@@ -142,4 +142,65 @@ Describe 'Native profile configuration interoperability' -Skip:(-not $nativeAvai
   Test-Path (Join-Path $root 'lab/session.tfvault')|Should -BeFalse
  }
 
+ It 'logs out locally without PowerShell and preserves profile configuration' {
+  $p=New-TokenForgeProfile lab example.test -Root $root -Storage Passphrase
+  $vault=Join-Path $root 'lab/session.tfvault';$password=ConvertTo-SecureString synthetic-logout-passphrase -AsPlainText -Force
+  try {
+   $null=New-TokenForgeVault $vault $password
+   & (Get-Module TokenForge) {
+    param($vault,$password)
+    Invoke-TokenForgeVaultTransaction $vault $password -Mode Update -Update {
+     param($d)
+     $now=[DateTimeOffset]::UtcNow
+     $d.Sessions.lab=@{TenantFingerprint='a'*64;PrincipalFingerprint='b'*64;Revision=[guid]::NewGuid().ToString();CreatedAt=$now.ToString('o');LastConfirmedAt=$now.ToString('o');RetainUntil=$now.AddHours(1).ToString('o');Cookie='synthetic-private-cookie';CookieName='ESTSAUTH';Tokens=@{}}
+    }
+   } $vault $password
+   $configuration=(Get-FileHash (Join-Path $root 'lab/profile.json')).Hash
+   $before=(Get-FileHash $vault).Hash
+   Invoke-NativeProfile @('logout','--profile','lab','--root',$root,'--stdin') 1 'synthetic-wrong-passphrase'
+   (Get-FileHash $vault).Hash|Should -Be $before
+   $result=Invoke-NativeProfile @('logout','--profile','lab','--root',$root,'--stdin') 0 'synthetic-logout-passphrase'
+   $result.Removed|Should -BeTrue;$result.Profile|Should -Be lab
+   $result.Evidence|Should -Be LocalLogoutNotServerRevocation
+   ($result|ConvertTo-Json)|Should -Not -Match 'synthetic-private|Cookie|AccessToken|RefreshToken'
+   (Get-TokenForgeVault -Path $vault -Password $password).Sessions.Count|Should -Be 0
+   (Get-FileHash (Join-Path $root 'lab/profile.json')).Hash|Should -Be $configuration
+   $after=(Get-FileHash $vault).Hash
+   $null=Invoke-NativeProfile @('logout','--profile','lab','--root',$root,'--stdin') 0 'synthetic-logout-passphrase'
+   (Get-FileHash $vault).Hash|Should -Be $after
+  }finally{$password.Dispose()}
+ }
+ It 'logs out missing and memory vaults without reading redirected credentials' {
+  $null=Invoke-NativeProfile @('profile','create','--tenant','example.test','--root',$root)
+  (Invoke-NativeProfile @('logout','--root',$root)).Removed|Should -BeTrue
+  Test-Path (Join-Path $root 'default/session.tfvault')|Should -BeFalse
+  $null=New-TokenForgeProfile lab example.test -Root $root
+  (Invoke-NativeProfile @('logout','--profile','lab','--root',$root)).Removed|Should -BeTrue
+  Test-Path (Join-Path $root 'lab/session.tfvault')|Should -BeFalse
+ }
+ It 'rejects unsafe logout options and credentials before modifying ciphertext' {
+  $null=Invoke-NativeProfile @('profile','create','--tenant','example.test','--root',$root)
+  $vault=Join-Path $root 'default/session.tfvault';$password=ConvertTo-SecureString synthetic-logout-passphrase -AsPlainText -Force
+  try{$null=New-TokenForgeVault $vault $password}finally{$password.Dispose()}
+  $before=(Get-FileHash $vault).Hash
+  foreach($arguments in @(
+   @('logout','--root',$root),
+   @('logout','--root',$root,'--stdin','--stdin'),
+   @('logout','--root',$root,'--stdin','--prompt-passphrase'),
+   @('logout','--root',$root,'--password','synthetic-private'),
+   @('logout','--root',$root,'--stdin')
+  )){Invoke-NativeProfile $arguments 1 'short';(Get-FileHash $vault).Hash|Should -Be $before}
+  Invoke-NativeProfile @('logout','--root',$root,'--stdin') 1 ('x'*1025)
+  (Get-FileHash $vault).Hash|Should -Be $before
+  $null=New-TokenForgeProfile lab example.test -Root $root
+  Invoke-NativeProfile @('logout','--profile','lab','--root',$root,'--stdin') 1 'synthetic-logout-passphrase'
+  if(-not $IsMacOS){
+   $null=Invoke-NativeProfile @('profile','create','--profile','osfixture','--tenant','example.test','--root',$root,'--storage','OperatingSystem')
+   foreach($flag in @('--stdin','--prompt-passphrase')){
+    Invoke-NativeProfile @('logout','--profile','osfixture','--root',$root,$flag) 1 'synthetic-logout-passphrase'
+   }
+   Test-Path (Join-Path $root 'osfixture/session.tfvault')|Should -BeFalse
+  }
+ }
+
 }

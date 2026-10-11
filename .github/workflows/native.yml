@@ -58,7 +58,7 @@ jobs:
           Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force -SkipPublisherCheck
           $env:TOKENFORGE_TEST_NATIVE = (Resolve-Path (Join-Path './dist/native/${{ matrix.runtime }}' $(if ($IsWindows) { 'tokenforge.exe' } else { 'tokenforge' }))).Path
           $result = Invoke-Pester ./tests/SqliteFlow.Tests.ps1,./tests/SqliteCatalog.Tests.ps1,./tests/SqliteScope.Tests.ps1,./tests/ResearchCohort.Tests.ps1,./tests/WeeklyCli.Tests.ps1,./tests/NativeOAuth.Tests.ps1,./tests/NativeProfiles.Tests.ps1 -PassThru -Output Detailed
-          $expectedPasses = if ($IsWindows) { 47 } elseif ($IsMacOS) { 50 } else { 51 } # Native input checks include platform-specific permission cases.
+          $expectedPasses = if ($IsWindows) { 50 } elseif ($IsMacOS) { 53 } else { 54 } # Native input checks include platform-specific permission cases.
           if ($result.FailedCount -or $result.FailedContainersCount -or $result.PassedCount -ne $expectedPasses) { throw 'Native metadata and weekly CLI adapter tests failed.' }
       - name: Smoke-test packaged CLI
         shell: pwsh

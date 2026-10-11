@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -49,6 +50,59 @@ internal static class VaultInspector
         }
         catch { throw new InvalidOperationException("Vault inspection failed. Details suppressed."); }
         finally { if (plaintext != null) CryptographicOperations.ZeroMemory(plaintext); }
+    }
+    // Explicit local cleanup preserves unrelated sessions without projecting their credentials.
+    internal static void RemoveSession(VaultFileTransaction transaction, SecureString password, string sessionName)
+    {
+        byte[]? plaintext = null, rewritten = null, writeBuffer = null;
+        try
+        {
+            plaintext = VaultEnvelope.Decrypt(transaction.ReadEnvelope(),password);
+            VaultRecordPolicy.Validate(plaintext);
+            using var document = JsonDocument.Parse(plaintext);
+            var sessions = document.RootElement.GetProperty("Sessions");
+            if (!sessions.EnumerateObject().Any(s=>string.Equals(s.Name,sessionName,StringComparison.OrdinalIgnoreCase))) return;
+            // A fixed backing array cannot abandon plaintext allocations while growing.
+            // Escaping beyond the existing 8 MiB record limit fails before commit.
+            writeBuffer = new byte[VaultEnvelope.MaximumPlaintextBytes];
+            var buffer = new BoundedCredentialWriter(writeBuffer);
+            using (var writer = new Utf8JsonWriter(buffer))
+            {
+                writer.WriteStartObject();writer.WriteNumber("SchemaVersion",1);writer.WriteStartObject("Sessions");
+                foreach(var session in sessions.EnumerateObject())
+                {
+                    if(string.Equals(session.Name,sessionName,StringComparison.OrdinalIgnoreCase))continue;
+                    writer.WritePropertyName(session.Name);session.Value.WriteTo(writer);
+                }
+                writer.WriteEndObject();writer.WriteEndObject();writer.Flush();
+            }
+            rewritten = writeBuffer.AsSpan(0,buffer.WrittenCount).ToArray();
+            VaultRecordPolicy.Validate(rewritten);
+            transaction.Commit(VaultEnvelope.Encrypt(rewritten,password));
+        }
+        catch { throw new InvalidOperationException("Vault session removal failed. Details suppressed."); }
+        finally
+        {
+            if (plaintext != null) CryptographicOperations.ZeroMemory(plaintext);
+            if (rewritten != null) CryptographicOperations.ZeroMemory(rewritten);
+            if (writeBuffer != null) CryptographicOperations.ZeroMemory(writeBuffer);
+        }
+    }
+    // Stream writers allocate a growing internal buffer. This writer owns no extra array.
+    private sealed class BoundedCredentialWriter(byte[] bytes) : IBufferWriter<byte>
+    {
+        public int WrittenCount { get; private set; }
+        public void Advance(int count)
+        {
+            if(count < 0 || count > bytes.Length-WrittenCount) throw new InvalidOperationException();
+            WrittenCount += count;
+        }
+        public Memory<byte> GetMemory(int sizeHint=0)
+        {
+            if(sizeHint < 0 || Math.Max(sizeHint,1) > bytes.Length-WrittenCount) throw new InvalidOperationException();
+            return bytes.AsMemory(WrittenCount);
+        }
+        public Span<byte> GetSpan(int sizeHint=0) => GetMemory(sizeHint).Span;
     }
     private static string Text(JsonElement value,string field)=>value.GetProperty(field).GetString()!;
     private static string? NullableText(JsonElement value,string field)=>value.GetProperty(field).ValueKind == JsonValueKind.Null ? null : Text(value,field);

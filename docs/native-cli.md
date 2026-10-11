@@ -25,7 +25,15 @@ Version 0.26 runs `profile inspect-vault` natively. It unlocks the existing encr
 tokenforge profile inspect-vault --profile lab --json
 ```
 
-Inspection uses both operation and vault locks, validates decrypted records, and clears its owned plaintext buffer. Metadata reports stored lifetime and scope observations, not new issuance or API authorization. The underlying record validator can allocate managed strings; this is not a guarantee of immediate erasure of every in-memory copy. Normal login, `token get`, and logout still use PowerShell.
+Inspection uses both operation and vault locks, validates decrypted records, and clears its owned plaintext buffer. Metadata reports stored lifetime and scope observations, not new issuance or API authorization. The underlying record validator can allocate managed strings; this is not a guarantee of immediate erasure of every in-memory copy. Normal login and `token get` still use PowerShell.
+
+Version 0.27 runs `logout` natively. It removes the selected persisted session, including its cookie and tokens, while preserving profile configuration, unrelated sessions, and the OS encryption key. Expired or stale account bindings do not prevent deliberate cleanup. Missing vaults and Memory profiles complete without unlocking or creating storage. Existing vaults require both locks and valid decrypted records before any write.
+
+```sh
+tokenforge logout --profile lab
+```
+
+Passphrase profiles use a hidden prompt, or explicit `--stdin` with a 12–1024 character passphrase followed by EOF. `--prompt-passphrase` remains accepted; it cannot be combined with `--stdin`. OS-backed profiles reject either credential-input flag. Logout emits only local-removal metadata. It does not revoke server sessions or clear credentials already held by another process. Owned plaintext and rewrite byte arrays are cleared; managed strings and library internals are not guaranteed immediate erasure. If rewriting exceeds the bounded record size, the operation fails without replacing ciphertext. See the [sanitized logout validation report](native-logout-validation-2026-10-11.json).
 
 Version 0.22 also shares vault-file transactions: exclusive locks, bounded ciphertext reads,
 private temporary files, and atomic publication. The transaction API handles ciphertext only;

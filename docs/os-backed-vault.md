@@ -109,3 +109,5 @@ records browser login, cold/warm acquisition, cache reuse, refresh-token storage
 key/vault removal for both lab accounts in disposable Linux Secret Service stores. It also
 records the pre-fix inspection label and the corrected native read-only fixture. The headless
 proof does not establish visible browser UI or live Windows/macOS account support.
+
+Native CI runs the full packaged CLI suite on all six release targets. Windows Credential Manager and isolated Linux Secret Service fixtures run on both x64 and ARM64; Intel and Apple Silicon macOS run the passphrase/unsupported-OS-store cases. These fixtures use disposable synthetic credentials and do not establish live account authentication on those platforms. Native package retention requires one complete six-target build before removing older packages, including historical three-target builds.

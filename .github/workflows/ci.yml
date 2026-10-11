@@ -20,11 +20,11 @@ jobs:
       - name: Install Pester
         shell: pwsh
         run: |
-          if (-not (Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue)) {
-            Register-PSRepository -Default -ErrorAction Stop
+          if (-not (Get-PSResourceRepository -Name PSGallery -ErrorAction SilentlyContinue)) {
+            Register-PSResourceRepository -PSGallery -ErrorAction Stop
           }
-          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-PSResource Pester -Version 5.7.1 -Repository PSGallery -Scope CurrentUser -TrustRepository -Reinstall -ErrorAction Stop
+          Import-Module Pester -RequiredVersion 5.7.1 -Force -ErrorAction Stop
       - name: Validate module and run offline tests
         shell: pwsh
         run: ./scripts/Test-TokenForge.ps1

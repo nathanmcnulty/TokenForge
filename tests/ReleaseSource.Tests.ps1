@@ -14,7 +14,7 @@ Describe 'Release source and existing-version guard' {
   )
   $global:tfReleaseFixture.jobs=@{
    '1'=@(@{name='test (ubuntu-latest)';conclusion='success'},@{name='test (windows-latest)';conclusion='success'},@{name='test (macos-latest)';conclusion='success'})
-   '2'=@(@{name='native (ubuntu-latest, linux-x64)';conclusion='success'},@{name='native (windows-latest, win-x64)';conclusion='success'},@{name='native (macos-latest, osx-arm64)';conclusion='success'})
+   '2'=@(@{name='native (ubuntu-latest, linux-x64)';conclusion='success'},@{name='native (windows-latest, win-x64)';conclusion='success'},@{name='native (macos-latest, osx-arm64)';conclusion='success'},@{name='native (ubuntu-24.04-arm, linux-arm64)';conclusion='success'},@{name='native (windows-11-arm, win-arm64)';conclusion='success'},@{name='native (macos-15-intel, osx-x64)';conclusion='success'})
   }
   Mock gh {
    param($Command,$Path)
@@ -27,7 +27,7 @@ Describe 'Release source and existing-version guard' {
    throw 'Unexpected API request.'
   }
  }
- It 'accepts exact current main only with all six successful platform gates' {
+ It 'accepts exact current main only with all nine successful platform gates' {
   {& $validator -Repository owner/repo -SourceCommit $commit -Version 1.2.3}|Should -Not -Throw
  }
  It 'rejects an existing exact version tag without changing it' {
@@ -50,6 +50,10 @@ Describe 'Release source and existing-version guard' {
  }
  It 'rejects a successful workflow missing a required platform job' {
   $global:tfReleaseFixture.jobs['2']=@($global:tfReleaseFixture.jobs['2']|Where-Object {$_.name -notlike '*windows*'})
+  {& $validator -Repository owner/repo -SourceCommit $commit -Version 1.2.3}|Should -Throw '*platform gate*'
+ }
+ It 'rejects legacy three-target native coverage even when that workflow succeeded' {
+  $global:tfReleaseFixture.jobs['2']=$global:tfReleaseFixture.jobs['2'][0..2]
   {& $validator -Repository owner/repo -SourceCommit $commit -Version 1.2.3}|Should -Throw '*platform gate*'
  }
  It 'rejects duplicate platform jobs rather than choosing an arbitrary result' {

@@ -18,6 +18,12 @@ jobs:
             runtime: win-x64
           - os: macos-latest
             runtime: osx-arm64
+          - os: ubuntu-24.04-arm
+            runtime: linux-arm64
+          - os: windows-11-arm
+            runtime: win-arm64
+          - os: macos-15-intel
+            runtime: osx-x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7.0.1
@@ -40,22 +46,23 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          ./scripts/Test-TokenForgeOperatingSystemVault.ps1 -NativeExecutablePath (Resolve-Path ./dist/native/win-x64/tokenforge.exe).Path
+          ./scripts/Test-TokenForgeOperatingSystemVault.ps1 -NativeExecutablePath (Resolve-Path ./dist/native/${{ matrix.runtime }}/tokenforge.exe).Path
       - name: Test Linux Secret Service in an isolated session
         if: runner.os == 'Linux'
         shell: bash
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq gnome-keyring libsecret-1-0 dbus
-          dbus-run-session -- bash scripts/Test-TokenForgeSecretService.sh pwsh -NoProfile -File scripts/Test-TokenForgeOperatingSystemVault.ps1 -NativeExecutablePath "$PWD/dist/native/linux-x64/tokenforge"
+          sudo apt-get install -y -qq gnome-keyring libsecret-1-0 dbus xdg-utils python3
+          test -x /usr/bin/xdg-open && test -x /usr/bin/python3
+          dbus-run-session -- bash scripts/Test-TokenForgeSecretService.sh pwsh -NoProfile -File scripts/Test-TokenForgeOperatingSystemVault.ps1 -NativeExecutablePath "$PWD/dist/native/${{ matrix.runtime }}/tokenforge"
       - name: Validate SQLite scope, flow, and catalog adapters with synthetic evidence
         shell: pwsh
         run: |
-          if (-not (Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue)) {
-            Register-PSRepository -Default -ErrorAction Stop
+          if (-not (Get-PSResourceRepository -Name PSGallery -ErrorAction SilentlyContinue)) {
+            Register-PSResourceRepository -PSGallery -ErrorAction Stop
           }
-          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-PSResource Pester -Version 5.7.1 -Repository PSGallery -Scope CurrentUser -TrustRepository -Reinstall -ErrorAction Stop
+          Import-Module Pester -RequiredVersion 5.7.1 -Force -ErrorAction Stop
           $env:TOKENFORGE_TEST_NATIVE = (Resolve-Path (Join-Path './dist/native/${{ matrix.runtime }}' $(if ($IsWindows) { 'tokenforge.exe' } else { 'tokenforge' }))).Path
           Import-Module (Join-Path (Split-Path $env:TOKENFORGE_TEST_NATIVE -Parent) src/TokenForge/TokenForge.psd1) -Force
           Remove-Module TokenForge # Keep compiled credential types loaded while tests import their source module.

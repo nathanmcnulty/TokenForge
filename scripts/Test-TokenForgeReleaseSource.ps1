@@ -13,7 +13,7 @@ foreach($workflow in @('ci.yml','native.yml')){
   if(-not $run -or $run.head_sha -cne $SourceCommit -or $run.status -cne 'completed' -or $run.conclusion -cne 'success'){throw 'Exact-source validation is not complete.'}
   $jobs=gh api "repos/$Repository/actions/runs/$($run.id)/jobs?per_page=100"|ConvertFrom-Json
   if($LASTEXITCODE){throw 'Cannot verify validation jobs.'}
-  $expected=if($workflow -ceq 'ci.yml'){@('test (ubuntu-latest)','test (windows-latest)','test (macos-latest)')}else{@('native (ubuntu-latest, linux-x64)','native (windows-latest, win-x64)','native (macos-latest, osx-arm64)')}
+  $expected=if($workflow -ceq 'ci.yml'){@('test (ubuntu-latest)','test (windows-latest)','test (macos-latest)')}else{@('native (ubuntu-latest, linux-x64)','native (windows-latest, win-x64)','native (macos-latest, osx-arm64)','native (ubuntu-24.04-arm, linux-arm64)','native (windows-11-arm, win-arm64)','native (macos-15-intel, osx-x64)')}
   foreach($name in $expected){$job=@($jobs.jobs|Where-Object {$_.name -ceq $name});if($job.Count -ne 1 -or $job[0].conclusion -cne 'success'){throw 'Required platform gate did not pass.'}}
 }
 $tag="v$Version"

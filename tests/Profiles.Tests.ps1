@@ -173,7 +173,7 @@ Describe 'Named profile sessions and managed tokens' {
   Remove-Item "$root/lab/profile.json"
   $profile=New-TokenForgeProfile lab example.test -Root $root -Storage Passphrase -StatePath $profile.StatePath
   $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie -VaultPassword $password
-  & (Get-Module TokenForge) {param($root,$password) Invoke-TokenForgeVaultTransaction "$root/lab/session.tfvault" $password -Mode Update -Update {param($vault) $vault.Sessions.lab.Tokens['synthetic-stale-record']=@{RefreshToken='synthetic-revoked'}}} $root $password
+  & (Get-Module TokenForge) {param($root,$password) Invoke-TokenForgeVaultTransaction "$root/lab/session.tfvault" $password -Mode Update -Update {param($vault) $id='c'*64;$now=[DateTimeOffset]::UtcNow;$vault.Sessions.lab.Tokens[$id]=@{Id=$id;ClientId='038ddad9-5bbe-4f64-b0cd-12434d1e633b';ResourceId='00000003-0000-0000-c000-000000000000';Tenant='example.test';Audience='00000003-0000-0000-c000-000000000000';Scopes=@('User.Read');IssuedScopes=@('User.Read');AdditionalScopeCount=0;RedirectUri='https://login.microsoftonline.com/common/oauth2/nativeclient';Spa=$false;OfflineAccess=$true;Protocol='OAuth2V2Pkce';AcquiredAt=$now.AddHours(-2).ToString('o');ExpiresAt=$now.AddHours(-1).ToString('o');AccessToken='synthetic-expired';RefreshToken='synthetic-revoked';ConsentEvidence='SyntheticOnly'}}} $root $password
   $loginToken=New-ProfileTestToken
   $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie -VaultPassword $password
   (Get-TokenForgeVault "$root/lab/session.tfvault" $password).Sessions[0].Tokens.Count|Should -Be 0

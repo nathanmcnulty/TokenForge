@@ -22,13 +22,14 @@ function Invoke-TokenForgeVaultTransaction {
         }else{
             $bytes=$transaction.ReadEnvelope()
             $plainBytes=[TokenForge.Core.V0190.VaultEnvelope]::Decrypt($bytes,$Password)
+            [TokenForge.Core.V0250.VaultRecordPolicy]::Validate($plainBytes)
             $document=[Text.Encoding]::UTF8.GetString($plainBytes)|ConvertFrom-Json -AsHashtable -Depth 32 -ErrorAction Stop
             [Array]::Clear($plainBytes);$plainBytes=$null
-            if($document.SchemaVersion -ne 1 -or $document.Sessions -isnot [Collections.IDictionary]){throw 'Invalid vault records.'}
         }
         if($Mode -eq 'Read'){return $document}
         if($Update){$null=& $Update $document}
         $plainBytes=[Text.Encoding]::UTF8.GetBytes(($document|ConvertTo-Json -Depth 32 -Compress))
+        [TokenForge.Core.V0250.VaultRecordPolicy]::Validate($plainBytes)
         $encoded=[TokenForge.Core.V0190.VaultEnvelope]::Encrypt($plainBytes,$Password)
         $transaction.Commit($encoded)
     }catch{

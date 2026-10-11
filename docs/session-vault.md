@@ -140,3 +140,11 @@ Vault retention and token-expiry checks preserve UTC timestamps after JSON parsi
 both `Z` and explicit-offset forms. They do not reinterpret UTC date objects in the machine's
 local timezone. The same shared timestamp policy protects evidence freshness and public export
 chronology; legacy string dates retain their existing culture-dependent parsing rules.
+
+## Shared credential-record validation
+
+The encrypted envelope authenticates bytes; it does not establish that those bytes form valid session records. Version 0.25 adds the same BCL-only `VaultRecordPolicy` to the compiled core and PowerShell module. Vault reads validate decrypted UTF-8 bytes before PowerShell JSON projection. Create/update operations validate the proposed serialized bytes before encryption and atomic commit. Invalid reads return no records; invalid updates preserve the prior ciphertext. Errors suppress parser details and contain no inner exception.
+
+Schema version 1 is unchanged. Validation requires the current session/token fields, rejects unknown fields, duplicate names and case aliases, checks scalar/array types, session names, token-map IDs, GUIDs, fingerprints and dates, and bounds plaintext and individual values. Standalone mixed-case session names remain accepted; case-colliding names are rejected because PowerShell dictionaries cannot distinguish them reliably. Expired timestamps remain valid historical records, and unknown expiry remains null: acquisition/retrieval still enforce retention, lifetime, requested scopes, client/resource identity and account context. This validator does not inspect JWT signatures or establish consent or API authorization.
+
+The validator emits no credential projection. It disposes its JSON document, and the vault transaction clears its owned plaintext byte buffer in `finally`. PowerShell's existing managed string projection is still required for credential operations; this change does not promise that every managed string is immediately erased from memory. A future native credential service must preserve explicit secret ownership while replacing that projection.

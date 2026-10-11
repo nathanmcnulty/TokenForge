@@ -1,4 +1,5 @@
 Set-StrictMode -Version Latest
+if(-not ('TokenForge.Core.V0250.VaultRecordPolicy' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot 'Core/VaultRecordPolicy.cs')}
 if(-not ('TokenForge.Core.V0240.TimestampPolicy' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot 'Core/TimestampPolicy.cs')}
 if(-not ('TokenForge.Core.V0230.ProfileKeyIdentity' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot 'Core/ProfileKeyIdentity.cs')}
 if(-not ('TokenForge.Core.V0220.PrivateFiles' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot 'Core/PrivateFiles.cs')}

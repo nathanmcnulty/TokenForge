@@ -57,4 +57,4 @@ The same copy is available through both CLI entry points without an authenticati
 tokenforge research backup --snapshot-path /private/path/maintenance.sealed --backup-directory /private/path/maintenance-backups --json
 ```
 
-The native CLI uses its bundled PowerShell adapter for this command, so PowerShell 7.4+ remains required. The backup command handles ciphertext only and performs no login or token request.
+Version 0.34 runs research backup directly in the native CLI, without PowerShell or an authentication profile. The script and CLI share the same BCL backup service. The command handles ciphertext only and performs no login or token request. Concurrent identical copies converge on one file; conflicting content is never overwritten. It checks the envelope version and bounded size, but does not decrypt or authenticate the payload.

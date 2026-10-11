@@ -1,13 +1,13 @@
 # Architecture and roadmap
 
-TokenForge separates credential-free planning, identity protocol execution, Graph tenant administration and persisted evidence. The PowerShell 7.4 module and script CLI run on Windows, Linux and macOS; self-contained native CLI packages are available, with PowerShell still required for authentication.
+TokenForge separates credential-free planning, identity protocol execution, Graph tenant administration and persisted evidence. The PowerShell 7.4 module and script CLI run on Windows, Linux and macOS; self-contained native CLI packages are available, with native saved-cookie acquisition and advanced system-browser PKCE. Profile login and passkey enrollment still require PowerShell.
 
 | Layer | Functions | Evidence boundary |
 | --- | --- | --- |
 | Public metadata | Catalog update/read, discovery update/aggregate, application matching | Source claims; not tenant consent |
 | Tenant state | Tenant inventory, registration, registration synchronization | Microsoft owner verified through Graph; configured grants distinct from preauthorization |
 | Planning | Explicit catalog/tenant requests, discovery requests, probe matrix | One client/resource; definitions do not establish client permission |
-| Acquisition | ESTS cookie PKCE, refresh redemption, discovery-only implicit flows | State checked, callback never contacted, exact identity host only |
+| Acquisition | ESTS cookie PKCE, refresh redemption, discovery-only implicit flows | State checked, fixed identity authority; external callbacks are not contacted; browser PKCE accepts a bounded loopback callback |
 | Observations | Claims inspection, resumable probes, database, diff, coverage, export | Diagnostic scp; no signature or API authorization claim |
 | Session vault / teaching view | Opt-in encrypted sessions and tokens; metadata-only offline HTML | Named account isolation, explicit unlock, no background broker or implicit cache hits |
 | Authentication/API checks | Optional XDRInternals passkey adapter, read-only Graph/ARM status check | Credentials memory-only by default; optional encrypted vault; response bodies not retained |

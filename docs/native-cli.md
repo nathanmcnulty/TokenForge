@@ -294,3 +294,15 @@ Cold checkpoint writes take the cooperating state writer lock and reread current
 Memory profiles, `--login-hint`, and `--prompt-passphrase` retain the existing PowerShell adapter. If an OS-backed session needs fresh browser authentication because it has no cookie, the native operation releases its locks before invoking that adapter. Explicit stdin cannot be replayed into a browser fallback; use the existing interactive/module workflow. Login and passkey enrollment still require PowerShell. Windows and Linux OS stores are supported; macOS requires the existing signed-helper work. JWT payload checks do not establish signature verification.
 
 The [sanitized live report](native-fresh-acquisition-validation-2026-10-11.json) records Linux native cold/warm/cache/renewal Graph `/me` checks with Nora and secadmin, each HTTP 200, with PowerShell absent from the native commands’ PATH. Both sessions and OS keys were removed afterward. This is bounded Graph evidence, not proof for every app/resource or live Windows/macOS authentication.
+
+## Native encrypted maintenance backup
+
+Version 0.34 runs research backup without PowerShell or an authentication profile:
+
+~~~sh
+tokenforge research backup --snapshot-path /private/maintenance.sealed --backup-directory /private/backups --json
+~~~
+
+The command copies ciphertext into a private directory under its SHA-256 content identity. Existing identical copies are reused; corrupt or conflicting files are never overwritten. Concurrent identical copies converge on one saved file. It rejects linked or broadly accessible paths, malformed envelope headers and oversized inputs. Output contains copy metadata and Authenticated=false: size, version and hash checks do not authenticate the encrypted payload. Keep the decryption key separately; account-bound authenticated restoration remains in the repository maintenance workflow. See [private maintenance](private-maintenance.md).
+
+The [0.34 validation report](native-maintenance-backup-validation-2026-10-11.json) records native copies and deduplicated repeats of existing Nora and secadmin maintenance snapshots, plus bounded corruption, concurrency and private-path fixtures. The native child ran without PowerShell on its PATH. These copy proofs do not refresh metadata or authenticate the ciphertext.

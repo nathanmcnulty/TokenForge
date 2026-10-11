@@ -6,10 +6,27 @@ try
 {
     if(args.Length>=2 && args[0]=="token" && args[1]=="get" && NativeProfileTokenCommand.TryRun(args,out var tokenExit))return tokenExit;
     if(args.Length>=2 && args[0]=="scopes" && args[1]=="explain")return NativeScopeCommand.Run(args);
-    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.33.0",AuthenticationDependency="Profile login and profile browser/interactive adapters: PowerShell 7.4+; saved-cookie profile token get/cache/renewal/storage: native; scopes explain, profile create/show/forget-key/inspect-vault, logout and token acquire including system-browser PKCE: native"}));return 0;}
+    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.34.0",AuthenticationDependency="Profile login and profile browser/interactive adapters: PowerShell 7.4+; saved-cookie profile token get/cache/renewal/storage: native; scopes explain, profile create/show/forget-key/inspect-vault, logout, research backup and token acquire including system-browser PKCE: native"}));return 0;}
     if (args.Length == 0 || args[0] is "help" or "--help")
     {
-        Console.WriteLine("TokenForge: profile create/show/forget-key/inspect-vault, login, status, doctor, logout, scopes explain, token get/acquire, graph permissions; research report/weekly/export-flows/backup; evidence import/update/export/plan/cohort/cohort-export/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Profile login and profile browser/interactive adapters require PowerShell 7.4+; saved-cookie profile token get, cache, renewal and storage run natively. Scopes explain, profile create/show/forget-key/inspect-vault, logout and token acquire including system-browser PKCE run natively.");
+        Console.WriteLine("TokenForge: profile create/show/forget-key/inspect-vault, login, status, doctor, logout, scopes explain, token get/acquire, graph permissions; research report/weekly/export-flows/backup; evidence import/update/export/plan/cohort/cohort-export/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Profile login and profile browser/interactive adapters require PowerShell 7.4+; saved-cookie profile token get, cache, renewal and storage run natively. Scopes explain, profile create/show/forget-key/inspect-vault, logout, research backup and token acquire including system-browser PKCE run natively.");
+        return 0;
+    }
+    if (args.Length > 1 && args[0] == "research" && args[1] == "backup")
+    {
+        string? snapshot = null, directory = null;
+        var backupOptions = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 2; i < args.Length; i++)
+        {
+            string option = args[i];
+            if (!backupOptions.Add(option)) throw new InvalidOperationException();
+            if (option == "--json") continue;
+            if (option is not ("--snapshot-path" or "--backup-directory") || ++i >= args.Length ||
+                args[i].StartsWith("--", StringComparison.Ordinal) || args[i].Length > 4096) throw new InvalidOperationException();
+            if (option == "--snapshot-path") snapshot = args[i]; else directory = args[i];
+        }
+        if (string.IsNullOrEmpty(snapshot) || string.IsNullOrEmpty(directory)) throw new InvalidOperationException();
+        Console.WriteLine(JsonSerializer.Serialize(MaintenanceBackup.Save(snapshot, directory)));
         return 0;
     }
     if (args[0] == "logout") return NativeProfileCommand.Run(new[]{"profile","logout"}.Concat(args.Skip(1)).ToArray());

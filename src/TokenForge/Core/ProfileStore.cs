@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Security;
 using System.Text.Encodings.Web;
@@ -57,8 +61,8 @@ public static class ProfileStore
             if (transaction != null) VaultInspector.RemoveSession(transaction,key!,name);
             return new LogoutResult(name,true,"LocalLogoutNotServerRevocation");
         });
-    private static T WithVault<T>(string name, string? root, SecureString? password, Func<SecureString>? passwordProvider,
-        string mode, bool allowMissing, Func<VaultFileTransaction?,SecureString?,JsonElement,T> operation)
+    internal static T WithVault<T>(string name, string? root, SecureString? password, Func<SecureString>? passwordProvider,
+        string mode, bool allowMissing, Func<VaultFileTransaction?,SecureString?,JsonElement,T> operation, Action<JsonElement>? validateConfiguration=null)
     {
         SecureString? ownedPassword = null;
         try
@@ -76,6 +80,7 @@ public static class ProfileStore
             using (held)
             {
                 if (Read(name,root) != initial) throw new InvalidOperationException();
+                validateConfiguration?.Invoke(configuration);
                 if (storage == "Memory")
                 {
                     if (!allowMissing) throw new InvalidOperationException();
@@ -103,7 +108,7 @@ public static class ProfileStore
     {
         if (name == null || !Regex.IsMatch(name, @"\A[a-z][a-z0-9_-]{0,63}\z", RegexOptions.CultureInvariant)) throw new InvalidOperationException();
     }
-    private static string Root(string? root, bool create)
+    internal static string Root(string? root, bool create)
     {
         if (string.IsNullOrEmpty(root))
         {

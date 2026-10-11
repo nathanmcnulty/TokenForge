@@ -116,7 +116,7 @@ namespace TokenForge.Core.V0180
             Func<HttpClient, Uri, Dictionary<string, string>?, string?, OAuthHttpResponse> adapter)
             => Acquire(request, mode, credential, verifier, redirect, cookieName, adapter, default);
         public static void ValidateRequest(OAuthRequest request) => Snapshot(request);
-        private static OAuthRequest Snapshot(OAuthRequest p)
+        internal static OAuthRequest Snapshot(OAuthRequest p)
         {
             if (p == null) throw new InvalidOperationException("Invalid request client or tenant.");
             // Validate only the owned snapshot; a caller may mutate its original concurrently.

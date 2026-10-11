@@ -190,6 +190,46 @@ Describe 'Named profile sessions and managed tokens' {
   $result.AccessToken.Dispose();$result.RefreshToken.Dispose()
  }
 
+ It 'uses the native persisted lifecycle for fresh acquisition and cache reuse without rewriting' {
+  Remove-Item "$root/lab/profile.json"
+  $profile=New-TokenForgeProfile lab example.test -Root $root -Storage Passphrase -StatePath $profile.StatePath
+  $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie -VaultPassword $password
+  $issued=New-ProfileTestToken
+  $issued|Add-Member Request ([pscustomobject]@{ClientId=$profile.BootstrapClientId;ResourceId=$issued.ResourceId;Tenant='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';Scopes=@('User.Read');OAuthScopes=@("$($issued.ResourceId)/User.Read",'offline_access');RedirectUri='https://login.microsoftonline.com/common/oauth2/nativeclient';Spa=$false;Protocol='OAuth2V2Pkce'})
+  Mock Get-TokenForgeScopedToken -ModuleName TokenForge {return $issued}
+  $first=Get-TokenForgeProfileToken lab -Root $root -Scope User.Read
+  $first.Evidence|Should -Be SilentExplicitScopeAcquisition
+  $before=(Get-FileHash "$root/lab/session.tfvault").Hash
+  $first.AccessToken.Dispose();$first.RefreshToken.Dispose()
+  $cached=Get-TokenForgeProfileToken lab -Root $root -Scope User.Read
+  try{$cached.Evidence|Should -Be CachedVerifiedContextNotNewIssuance;$cached.AccessToken.Length|Should -BeGreaterThan 0}
+  finally{$cached.AccessToken.Dispose();$cached.RefreshToken.Dispose()}
+  (Get-FileHash "$root/lab/session.tfvault").Hash|Should -Be $before
+  Should -Invoke Get-TokenForgeScopedToken -ModuleName TokenForge -Times 1 -Exactly
+  {[Net.NetworkCredential]::new('', $issued.AccessToken).Password}|Should -Throw
+ }
+ It 'uses native persisted renewal while preserving deadlines and an omitted replacement refresh token' {
+  Remove-Item "$root/lab/profile.json"
+  $profile=New-TokenForgeProfile lab example.test -Root $root -Storage Passphrase -StatePath $profile.StatePath
+  $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie -VaultPassword $password
+  $issued=New-ProfileTestToken
+  $issued|Add-Member Request ([pscustomobject]@{ClientId=$profile.BootstrapClientId;ResourceId=$issued.ResourceId;Tenant='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';Scopes=@('User.Read');OAuthScopes=@("$($issued.ResourceId)/User.Read",'offline_access');RedirectUri='https://login.microsoftonline.com/common/oauth2/nativeclient';Spa=$false;Protocol='OAuth2V2Pkce'})
+  Mock Get-TokenForgeScopedToken -ModuleName TokenForge {return $issued}
+  $first=Get-TokenForgeProfileToken lab -Root $root -Scope User.Read
+  $first.AccessToken.Dispose();$first.RefreshToken.Dispose()
+  $before=(Get-TokenForgeVault "$root/lab/session.tfvault" $password).Sessions[0]
+  & (Get-Module TokenForge) {param($root,$password) Invoke-TokenForgeVaultTransaction "$root/lab/session.tfvault" $password -Mode Update -Update {param($vault) foreach($entry in $vault.Sessions.lab.Tokens.Values){$entry.ExpiresAt=[DateTimeOffset]::UtcNow.AddMinutes(-1).ToString('o')}}} $root $password
+  $replacement=New-ProfileTestToken;$replacement.RefreshToken.Dispose();$replacement.RefreshToken=$null
+  Mock Get-TokenForgeToken -ModuleName TokenForge {param($Request,$RefreshToken) $Request.ClientId|Should -Be $profile.BootstrapClientId;$RefreshToken.Length|Should -BeGreaterThan 0;return $replacement}
+  $renewed=Get-TokenForgeProfileToken lab -Root $root -Scope User.Read
+  try{$renewed.Evidence|Should -Be SameClientRefreshMatchedIssuedContext;$renewed.RefreshToken.Length|Should -BeGreaterThan 0}
+  finally{$renewed.AccessToken.Dispose();$renewed.RefreshToken.Dispose()}
+  $after=(Get-TokenForgeVault "$root/lab/session.tfvault" $password).Sessions[0]
+  $after.RetainUntil|Should -Be $before.RetainUntil;$after.LastConfirmedAt|Should -Be $before.LastConfirmedAt
+  $after.Tokens.Count|Should -Be 1;$after.Tokens[0].HasRefreshToken|Should -BeTrue
+  Should -Invoke Get-TokenForgeScopedToken -ModuleName TokenForge -Times 1 -Exactly
+ }
+
 }
 Describe 'OS-protected profile boundaries' {
  BeforeEach {

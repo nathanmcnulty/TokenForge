@@ -91,7 +91,10 @@ configuration and private scope evidence still remain on disk.
    `.default`, broad sweep, or registration fallback. Hinted scope names can be tried even when omitted from resource definitions; only a matching issued token confirms the request. Successful evidence is checkpointed privately.
 5. Validate the issued context, lifetime, and scope policy. The default permits zero additional
    API scopes; OIDC scopes are excluded. Explicit profile creation can set broader caps.
-6. Save under a session revision check, replacing the selected record on rotation. Deleted,
+6. For persisted profiles, save after comparing the original profile and complete vault ciphertext,
+   replacing the selected record on rotation. Direct vault changes during network acquisition
+   reject the result without overwriting those changes; retry against the current state. Memory
+   sessions use their process-context revision check. Deleted,
    changed, or expired sessions cannot be resurrected by renewal. Preserve the original retention
    deadline and login-confirmation time. Only explicit login starts a new retention window and clears old cached credentials so a failed refresh can recover through the new session.
 7. If requested, perform one resource-bound GET API check. A 403 is separate authorization
@@ -102,6 +105,30 @@ operation. Local logout removes profile-owned caches; it does not revoke the ser
 SecureString and private files reduce accidental exposure; a process running as the same user
 can still read its own credentials. Encrypted vault plaintext necessarily exists transiently
 while unlocked; the process cache retains only SecureStrings and nonsecret metadata.
+
+## Persisted lifecycle implementation
+
+Version 0.28 uses the shared C# credential runtime in process for persisted cache selection,
+same-client renewal, policy enforcement, and atomic persistence. Fresh candidate planning and
+login remain PowerShell operations; Memory sessions remain process-local. A cache hit makes
+no token request and does not rewrite the vault. Expired saved tokens must still pass identity,
+client, audience, scope and known-expiry checks before their refresh credential can be used.
+A failed renewal does not silently try another client. When renewal omits a replacement refresh
+credential, the existing same-client credential is preserved.
+
+The operation lock spans acquisition; the vault lock is released during network work and
+reacquired before checking the original ciphertext and profile configuration. Session retention,
+token lifetime and cancellation are checked again after encryption, immediately before commit.
+Successful renewal preserves the original retention deadline and login-confirmation time.
+Failure preserves the existing ciphertext. Owned plaintext byte buffers and failed results are
+cleared or disposed; managed strings and library allocations cannot be guaranteed immediate
+erasure. The checks inspect JWT payloads and do not verify token signatures.
+
+Packages contain `src/TokenForge/lib/net8.0/TokenForge.Credentials.dll`, with no SQLite dependency.
+Source imports compile the same sources together. Restart PowerShell after changing runtime
+versions; mixed or incompatible credential types fail with a fresh-process instruction.
+
+See the [both-account validation report](native-profile-lifecycle-validation-2026-10-11.json).
 
 ## Graph PowerShell
 

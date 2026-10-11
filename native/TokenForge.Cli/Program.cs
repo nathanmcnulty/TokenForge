@@ -4,10 +4,10 @@ using TokenForge.Core;
 
 try
 {
-    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.27.0",AuthenticationDependency="Profile login and credential storage: PowerShell 7.4+; profile create/show/forget-key/inspect-vault, logout and token acquire: native"}));return 0;}
+    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.28.0",AuthenticationDependency="Login, fresh planning and CLI token get: PowerShell 7.4+; persisted cache/renewal/storage: shared native core; profile create/show/forget-key/inspect-vault, logout and token acquire: native"}));return 0;}
     if (args.Length == 0 || args[0] is "help" or "--help")
     {
-        Console.WriteLine("TokenForge: profile create/show/forget-key/inspect-vault, login, status, doctor, logout, scopes explain, token get/acquire, graph permissions; research report/weekly/export-flows/backup; evidence import/update/export/plan/cohort/cohort-export/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Profile login and credential storage require PowerShell 7.4+; profile create/show/forget-key/inspect-vault, logout and token acquire run natively.");
+        Console.WriteLine("TokenForge: profile create/show/forget-key/inspect-vault, login, status, doctor, logout, scopes explain, token get/acquire, graph permissions; research report/weekly/export-flows/backup; evidence import/update/export/plan/cohort/cohort-export/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Login, fresh planning and CLI token get require PowerShell 7.4+; persisted cache, renewal and storage use the shared native core. Profile create/show/forget-key/inspect-vault, logout and token acquire run natively.");
         return 0;
     }
     if (args[0] == "logout") return NativeProfileCommand.Run(new[]{"profile","logout"}.Concat(args.Skip(1)).ToArray());

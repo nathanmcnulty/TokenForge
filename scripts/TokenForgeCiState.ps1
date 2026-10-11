@@ -1,6 +1,6 @@
 # Shared, credential-free weekly state and authenticated-encryption operations.
 Set-StrictMode -Version Latest
-if(-not ('TokenForge.Core.V0240.TimestampPolicy' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot '../src/TokenForge/Core/TimestampPolicy.cs')}
+. (Join-Path $PSScriptRoot '../src/TokenForge/Core/Initialize-Credentials.ps1')
 function Get-TfCiHash($Value) {
  $json=ConvertTo-Json -InputObject $Value -Depth 100 -Compress
  # Date parsing uses the host time zone. Convert parsed dates to UTC offsets

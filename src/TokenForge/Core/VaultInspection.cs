@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Buffers;
 using System.Security;
 using System.Security.Cryptography;
@@ -54,7 +58,7 @@ internal static class VaultInspector
     // Explicit local cleanup preserves unrelated sessions without projecting their credentials.
     internal static void RemoveSession(VaultFileTransaction transaction, SecureString password, string sessionName)
     {
-        byte[]? plaintext = null, rewritten = null, writeBuffer = null;
+        byte[]? plaintext = null, rewritten = null;
         try
         {
             plaintext = VaultEnvelope.Decrypt(transaction.ReadEnvelope(),password);
@@ -62,11 +66,7 @@ internal static class VaultInspector
             using var document = JsonDocument.Parse(plaintext);
             var sessions = document.RootElement.GetProperty("Sessions");
             if (!sessions.EnumerateObject().Any(s=>string.Equals(s.Name,sessionName,StringComparison.OrdinalIgnoreCase))) return;
-            // A fixed backing array cannot abandon plaintext allocations while growing.
-            // Escaping beyond the existing 8 MiB record limit fails before commit.
-            writeBuffer = new byte[VaultEnvelope.MaximumPlaintextBytes];
-            var buffer = new BoundedCredentialWriter(writeBuffer);
-            using (var writer = new Utf8JsonWriter(buffer))
+            rewritten = Serialize(writer =>
             {
                 writer.WriteStartObject();writer.WriteNumber("SchemaVersion",1);writer.WriteStartObject("Sessions");
                 foreach(var session in sessions.EnumerateObject())
@@ -74,9 +74,8 @@ internal static class VaultInspector
                     if(string.Equals(session.Name,sessionName,StringComparison.OrdinalIgnoreCase))continue;
                     writer.WritePropertyName(session.Name);session.Value.WriteTo(writer);
                 }
-                writer.WriteEndObject();writer.WriteEndObject();writer.Flush();
-            }
-            rewritten = writeBuffer.AsSpan(0,buffer.WrittenCount).ToArray();
+                writer.WriteEndObject();writer.WriteEndObject();
+            });
             VaultRecordPolicy.Validate(rewritten);
             transaction.Commit(VaultEnvelope.Encrypt(rewritten,password));
         }
@@ -85,8 +84,18 @@ internal static class VaultInspector
         {
             if (plaintext != null) CryptographicOperations.ZeroMemory(plaintext);
             if (rewritten != null) CryptographicOperations.ZeroMemory(rewritten);
-            if (writeBuffer != null) CryptographicOperations.ZeroMemory(writeBuffer);
         }
+    }
+    internal static byte[] Serialize(Action<Utf8JsonWriter> write)
+    {
+        byte[] buffer = new byte[VaultEnvelope.MaximumPlaintextBytes];
+        try
+        {
+            var output = new BoundedCredentialWriter(buffer);
+            using(var writer = new Utf8JsonWriter(output)){write(writer);writer.Flush();}
+            return buffer.AsSpan(0,output.WrittenCount).ToArray();
+        }
+        finally { CryptographicOperations.ZeroMemory(buffer); }
     }
     // Stream writers allocate a growing internal buffer. This writer owns no extra array.
     private sealed class BoundedCredentialWriter(byte[] bytes) : IBufferWriter<byte>

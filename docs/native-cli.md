@@ -260,7 +260,7 @@ Version 0.16 connects [frozen research cohorts](research-cohorts.md) to the inve
 
 ## Encrypted maintenance backups
 
-`tokenforge research backup --snapshot-path <maintenance.sealed> --backup-directory <private-directory> --json` saves an immutable ciphertext copy without loading an authentication profile. It requires the bundled PowerShell adapter and reports byte identity separately from authentication. See [private maintenance](private-maintenance.md) for key custody and restoration.
+`tokenforge research backup --snapshot-path <maintenance.sealed> --backup-directory <private-directory> --json` saves an immutable ciphertext copy without loading an authentication profile. It runs natively and reports byte identity separately from authentication. See [private maintenance](private-maintenance.md) for key custody and restoration.
 
 ## Inspect weekly progress offline
 

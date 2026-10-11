@@ -76,12 +76,16 @@ Describe 'Native immutable maintenance backup' -Skip:(-not $nativeAvailable) {
   $null=Complete-Backup (Start-Backup @('--snapshot-path',$source,'--backup-directory')) 1
   Test-Path $destination|Should -BeFalse
  }
- It 'saves identical snapshots concurrently and cleans losing temporary files' {
-  $first=Start-Backup $options;$second=Start-Backup $options
-  $a=Complete-Backup $first;$b=Complete-Backup $second
-  @($a,$b|Where-Object Saved).Count|Should -Be 1
-  $a.BackupPath|Should -Be $b.BackupPath
-  @(Get-ChildItem -LiteralPath $destination -Force).Count|Should -Be 1
+ It 'saves identical snapshots concurrently across repeated races and cleans temporary files' {
+  foreach($round in 1..10){
+   $destination=Join-Path $root ('race-'+$round)
+   $options=@('--snapshot-path',$source,'--backup-directory',$destination,'--json')
+   $processes=@(1..4|ForEach-Object {Start-Backup $options})
+   $results=@($processes|ForEach-Object {Complete-Backup $_})
+   @($results|Where-Object Saved).Count|Should -Be 1
+   @($results.BackupPath|Select-Object -Unique).Count|Should -Be 1
+   @(Get-ChildItem -LiteralPath $destination -Force).Count|Should -Be 1
+  }
  }
  It 'rejects Unix <Case> paths' -Skip:$IsWindows -ForEach @(@{Case='LinkedSource'},@{Case='LinkedDestination'},@{Case='SharedSource'},@{Case='SharedDestination'}) {
   switch($Case){

@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Security.Cryptography;
+using System.Runtime.InteropServices;
 using TokenForge.Core.V0220;
 
 namespace TokenForge.Core;
@@ -41,7 +42,7 @@ public static class MaintenanceBackup
                 temporary = PrivateFiles.Resolve(Path.Combine(Path.GetDirectoryName(target)!, ".backup-" + Guid.NewGuid().ToString("N") + ".tmp"), false);
                 using (var output = PrivateFiles.Open(temporary, true)) { output.Write(blob); output.Flush(true); }
                 PrivateFiles.Resolve(target, false);
-                try { File.Move(temporary, target, false); temporary = null; saved = true; }
+                try { if (PublishNoOverwrite(temporary, target)) temporary = null; saved = true; }
                 catch (IOException) when (File.Exists(target)) { /* An independent identical copy may have won publication. */ }
             }
             if (!saved)
@@ -67,4 +68,20 @@ public static class MaintenanceBackup
             if (blob != null) CryptographicOperations.ZeroMemory(blob);
         }
     }
+    // A Unix File.Move(false) can race between its destination check and rename.
+    // Hard-link publication atomically fails if ANY destination entry already exists.
+    // The caller retains its temporary link for finally cleanup on Unix.
+    private static bool PublishNoOverwrite(string source, string target)
+    {
+        if (OperatingSystem.IsWindows()) { File.Move(source, target, false); return true; }
+        int result = OperatingSystem.IsLinux() ? LinuxLink(source, target) :
+            OperatingSystem.IsMacOS() ? MacLink(source, target) : throw new PlatformNotSupportedException();
+        if (result != 0) throw new IOException("Immutable backup publication failed.");
+        return false;
+    }
+    [DllImport("libc", EntryPoint="link", SetLastError=true)]
+    private static extern int LinuxLink([MarshalAs(UnmanagedType.LPUTF8Str)] string source, [MarshalAs(UnmanagedType.LPUTF8Str)] string target);
+    [DllImport("libSystem.B.dylib", EntryPoint="link", SetLastError=true)]
+    private static extern int MacLink([MarshalAs(UnmanagedType.LPUTF8Str)] string source, [MarshalAs(UnmanagedType.LPUTF8Str)] string target);
+
 }

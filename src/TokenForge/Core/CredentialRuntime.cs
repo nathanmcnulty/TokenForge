@@ -7,5 +7,5 @@ using System.Threading;
 namespace TokenForge.Core;
 public static class CredentialRuntime
 {
-    public const string Version = "0.35.0";
+    public const string Version = "0.35.1";
 }

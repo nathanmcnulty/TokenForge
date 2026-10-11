@@ -176,7 +176,7 @@ public static class ProfileStore
                         output.Write(Encoding.UTF8.GetBytes(json)); output.Flush(true);
                     }
                     // Revalidate the destination and refuse overwrite, including uncooperative creators.
-                    PrivateFiles.Resolve(path, false); File.Move(temporary, path, false); return json;
+                    PrivateFiles.Resolve(path, false); PrivateFiles.PublishNew(temporary, path); return json;
                 }
                 finally { if (File.Exists(temporary)) File.Delete(temporary); }
             }

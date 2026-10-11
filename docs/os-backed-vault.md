@@ -91,3 +91,9 @@ deleting the OS key. If key deletion fails, the output reports `VaultRemoved=tru
 remains available for explicit login. macOS OS-backed profiles remain unsupported; the
 native command preserves their ciphertext and fails. This is local deletion, without server
 revocation or access to other processes’ credential copies.
+
+## Atomic creation
+
+Version 0.35.1 shares one no-overwrite publication primitive across profile creation, vault creation and encrypted maintenance backups. Linux/macOS publish a complete, flushed private temporary file with an atomic hard link; Windows uses a no-overwrite move. Existing files, including files created concurrently, are preserved. Each caller removes its temporary file. Vault updates retain their separate replace behavior under the transaction lock. Unix profile/vault storage must support hard links as well as private permissions; unsupported storage fails without an overwrite fallback.
+
+The [0.35.1 publication report](private-file-publication-validation-2026-10-11.json) records competing-writer preservation, the old-move regression, packaged profile/vault checks and existing encrypted snapshot copies.

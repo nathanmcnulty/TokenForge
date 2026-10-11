@@ -64,3 +64,5 @@ The [0.34 validation report](native-maintenance-backup-validation-2026-10-11.jso
 Version 0.34.1 fixes concurrent publication on Unix: a hard link publishes the complete, flushed temporary file only when the destination does not exist. Windows uses its no-overwrite move. Exactly one concurrent writer reports `Saved=true`; other writers verify the existing bytes. Unix backup storage must support hard links; unsupported filesystems fail without an overwrite or copy fallback. The temporary file is removed after publication.
 
 The [0.34.1 publication report](native-backup-publication-validation-2026-10-11.json) records the failing hosted regression and the fixed Linux races and existing-snapshot copy proofs.
+
+Version 0.35.1 reuses that publication primitive for profile and vault creation too. Backup behavior and key custody are unchanged.

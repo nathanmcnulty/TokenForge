@@ -41,6 +41,15 @@
     "Advanced acquisition only; profile passkey login and enrollment remain PowerShell adapters"
   ],
   "FocusedBoundaryChecks": 63,
-  "Review": "Sol: no source blocker; final regression and hosted gates pending",
-  "ConsentChangePerformed": false
+  "Review": "Sol: no remaining source or packaging blocker",
+  "ConsentChangePerformed": false,
+  "LocalNativeRegressionChecks": 905,
+  "PackagedNativeOAuthCases": {
+    "Passed": 22,
+    "Failed": 0,
+    "Skipped": 1
+  },
+  "SourceImplementationCommit": "8ce1ac9cce64e37bdb08d677b544cc3644004c1b",
+  "CredentialBootstrapCasesPassed": 7,
+  "MaximumAdditionalScopesInLiveProof": 128
 }

@@ -217,7 +217,9 @@ The [sanitized live report](native-software-passkey-validation-2026-10-11.json) 
 Linux proofs for Nora and secadmin: native child acquisition with no PowerShell on
 PATH, policy acceptance, and separate Graph `/me` HTTP 200 identity confirmation.
 Temporary key copies were removed and the originals remained unchanged. This does
-not establish live Windows/macOS authentication or other apps/resources.
+not establish live Windows/macOS authentication or other apps/resources. The proof
+explicitly allowed up to 128 additional scopes; both responses reported 107. The
+default cap of zero rejects such broader tokens rather than accepting them silently.
 
 This adapter supports the public Microsoft cloud and `login.microsoft.com` RP, local
 PKCS#8 P-256 credentials, and a zero signature counter. It never updates the key file.

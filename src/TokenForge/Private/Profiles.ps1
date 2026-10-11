@@ -20,19 +20,11 @@ function Read-TokenForgeProfile {
     $path=Resolve-TokenForgeVaultPath -Path (Join-Path $rootPath "$Name/profile.json")
     try{
         if((Get-Item -LiteralPath $path).Length -gt 32768){throw 'Oversized profile.'}
-        $p=Get-Content -LiteralPath $path -Raw|ConvertFrom-Json -AsHashtable -Depth 4
-        $keys=@('Format','SchemaVersion','Name','Tenant','StatePath','Storage','BootstrapClientId','MaxAdditionalScopes','MaxBootstrapAdditionalScopes','MaxAgeHours','SessionRetentionHours','PasskeyPath','XdrModulePath','ExpectedTenantFingerprint','ExpectedPrincipalFingerprint','Revision','CreatedAt','UpdatedAt')
-        if($p.SchemaVersion -eq 2){$keys+='KeyId';if($p.Storage -cne 'OperatingSystem' -or $p.KeyId -isnot [string] -or $p.KeyId -cnotmatch '^[a-f0-9]{32}$' -or $p.KeyId -eq ('0'*32)){throw 'Invalid platform key policy.'}}
-        if($p.Keys.Count -ne $keys.Count -or @($p.Keys|Where-Object {$_ -cnotin $keys}).Count -or $p.Format -cne 'TokenForgeProfile' -or  $p.SchemaVersion -notin @(1,2) -or $p.Name -cne $Name){throw 'Invalid profile schema.'}
-        if($p.Tenant -isnot [string] -or $p.Tenant -notmatch '^[a-zA-Z0-9][a-zA-Z0-9.-]{0,252}$' -or $p.Tenant -in @('common','organizations','consumers') -or $p.Storage -cnotin @('Memory','Passphrase','OperatingSystem') -or ($p.Storage -eq 'OperatingSystem' -and $p.SchemaVersion -ne 2)){throw 'Invalid profile policy.'}
-        foreach($key in @('StatePath','PasskeyPath','XdrModulePath')){if($p[$key] -isnot [string] -or $p[$key].Length -gt 4096){throw 'Invalid profile paths.'}}
-        $id=[guid]::Empty
-        foreach($key in @('BootstrapClientId','Revision')){if(-not [guid]::TryParse([string]$p[$key],[ref]$id) -or $id -eq [guid]::Empty){throw 'Invalid profile ID.'}}
-        foreach($key in @('ExpectedTenantFingerprint','ExpectedPrincipalFingerprint')){if($null -ne $p[$key] -and ($p[$key] -isnot [string] -or $p[$key] -cnotmatch '^[a-f0-9]{64}$')){throw 'Invalid profile namespace.'}}
-        foreach($key in @('MaxAdditionalScopes','MaxBootstrapAdditionalScopes','MaxAgeHours','SessionRetentionHours')){if($p[$key] -isnot [long] -and $p[$key] -isnot [int] -or $p[$key] -lt 0 -or $p[$key] -gt 8760){throw 'Invalid profile limit.'}}
-        if($p.MaxAgeHours -lt 1 -or $p.SessionRetentionHours -lt 1 -or $p.SessionRetentionHours -gt 168){throw 'Invalid profile lifetime.'}
-        foreach($key in @('CreatedAt','UpdatedAt')){if($p[$key] -is [datetime]){$p[$key]=$p[$key].ToUniversalTime().ToString('o')};$date=[DateTimeOffset]::MinValue;if($p[$key] -isnot [string] -or -not [DateTimeOffset]::TryParse($p[$key],[ref]$date)){throw 'Invalid profile timestamp.'}}
-        if([bool]$p.PasskeyPath -ne [bool]$p.XdrModulePath){throw 'Incomplete passkey configuration.'}
+        $json=Get-Content -LiteralPath $path -Raw
+        [TokenForge.Core.V0200.ProfilePolicy]::Validate($json,$Name)
+        $p=$json|ConvertFrom-Json -AsHashtable -Depth 4
+        # Keep the PowerShell configuration projection's historical UTC date strings.
+        foreach($key in @('CreatedAt','UpdatedAt')){if($p[$key] -is [datetime]){$p[$key]=$p[$key].ToUniversalTime().ToString('o')}}
         [pscustomobject]@{Configuration=$p;Path=$path;Directory=(Split-Path $path -Parent);VaultPath=(Join-Path (Split-Path $path -Parent) 'session.tfvault');ContextKey=$path}
     }catch{throw 'Profile cannot be read; check its name, private path, format, and policy. Details suppressed.'}
 }

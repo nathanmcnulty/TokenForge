@@ -7,6 +7,8 @@ Version 0.18 adds direct native `token acquire`, and PowerShell uses the same C#
 and issued-token policy. Native acquisition does not itself provide browser/passkey login or a keystore.
 Version 0.19 also shares vault envelope encryption with the native core; profile storage and
 login still use PowerShell. See [shared vault validation](vault-core-validation-2026-10-08.json).
+Version 0.20 shares profile configuration validation between PowerShell and the native core.
+Profile file operations, credential lifecycle, and login still use PowerShell. See [profile policy validation](profile-core-validation-2026-10-10.json).
 
 ```sh
 tokenforge profile create --profile lab --tenant example.onmicrosoft.com --state-path /private/evidence

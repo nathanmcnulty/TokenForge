@@ -5,6 +5,14 @@ and session policy. It contains no cookie, token, vault passphrase, or passkey p
 Create separate profiles for separate accounts. Login confirms the account with Graph `/me` and
 pins the confirmed tenant ID; later sign-ins cannot silently switch the profile's account.
 
+Version 0.20 validates the existing version 1/2 profile configuration through the shared C#
+core before the PowerShell projection reads it. Field names and integer types are strict;
+unknown, duplicate, escaped-duplicate, and case-colliding fields are rejected. Tenant/account
+bindings, scope limits, storage/key-ID policy, and timestamp parsing remain enforced. Generated
+profile formats remain compatible. File permissions, paths, locks, atomic writes, and login
+remain in the PowerShell workflow; this milestone does not provide direct native profile commands.
+See the [sanitized validation report](profile-core-validation-2026-10-10.json).
+
 ## Start in PowerShell
 
 ```powershell

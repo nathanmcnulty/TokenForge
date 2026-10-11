@@ -73,6 +73,15 @@ For manual renewal, `VaultToken -RefreshOnly` returns only the saved refresh cre
 
 ## Security and lifetime
 
+Version 0.22 uses the shared core for vault-file transactions. Reads and writes hold an
+exclusive lock until the operation finishes; writes flush a private temporary file before
+publishing it atomically. Creating a vault refuses to overwrite an existing file. Failed
+updates leave the original ciphertext intact. Envelope encryption and credential record
+validation remain separate layers, and the public listing still exposes metadata only.
+
+The file lock coordinates TokenForge operations. It does not isolate other processes running
+as the same operating-system user. Native login and credential lifecycle remain future work.
+
 | Boundary | Implemented behavior |
 | --- | --- |
 | At rest | AES-256-GCM authenticated encryption; PBKDF2-HMAC-SHA256 with 600,000 iterations; fresh 32-byte salt and 12-byte nonce for every write |

@@ -20,7 +20,7 @@ static class ProfileScopeAcquisitionChecks
   {
    var profile=JsonNode.Parse(ProfileStore.Create("lab",tenant,root))!.AsObject();
    profile["ExpectedTenantFingerprint"]=Hash(tenant);profile["ExpectedPrincipalFingerprint"]=Hash(tenant+"/"+principal);profile["BootstrapClientId"]=bootstrap;
-   JsonObject App(string id)=>new(){["AppId"]=id,["Registration"]="Present",["Ownership"]="VerifiedMicrosoftOwner",["AccountEnabled"]=true,["RedirectUris"]=new JsonArray(native),["PublishedGrants"]=new JsonArray(new JsonObject{["ResourceId"]=graph,["Scopes"]=new JsonArray("Mail.Read")})};
+   JsonObject App(string id)=>new(){["AppId"]=id,["Registration"]="Present",["Ownership"]="VerifiedMicrosoftOwner",["AccountEnabled"]=true,["RedirectUris"]=new JsonArray(native,"http://localhost/"),["PublishedGrants"]=new JsonArray(new JsonObject{["ResourceId"]=graph,["Scopes"]=new JsonArray("Mail.Read")})};
    var inventory=new JsonObject{["TenantFingerprint"]=Hash(tenant),["CapturedAt"]=DateTimeOffset.UtcNow.ToString("o"),["GrantEnumeration"]="Complete",["Applications"]=new JsonArray(App(client),App(second),App(bootstrap),App(graph)),["TenantGrants"]=new JsonArray()};
    inventory["Applications"]![3]!["DelegatedScopeDefinitions"]=new JsonArray(new JsonObject{["Value"]="User.Read",["Enabled"]=true});
    var empty=new JsonObject{["SchemaVersion"]=1,["Observations"]=new JsonArray()};
@@ -31,8 +31,8 @@ static class ProfileScopeAcquisitionChecks
     using var access=Secret(jwt);using var refresh=Secret("synthetic-refresh");
     return new ProfileCredentialToken(row.ToTransport(),access,refresh,DateTimeOffset.UtcNow.AddHours(1),extras);
    }
-   ProfileCredentialToken Acquire(JsonObject db,Func<ScopePlanning.RequestRow,ProfileCredentialToken> execute,Action<string>? checkpoint=null,Func<SecureString,string>? identity=null,CancellationToken ct=default)=>
-    ProfileScopeAcquisition.Acquire("lab",profile.ToJsonString(),inventory.ToJsonString(),db.ToJsonString(),graph,new[]{"Mail.Read"},cookie,maxCandidates:2,execute:execute,readIdentity:identity,checkpoint:checkpoint,cancellation:ct);
+   ProfileCredentialToken Acquire(JsonObject db,Func<ScopePlanning.RequestRow,ProfileCredentialToken> execute,Action<string>? checkpoint=null,Func<SecureString,string>? identity=null,CancellationToken ct=default,bool browser=false)=>
+    ProfileScopeAcquisition.Acquire("lab",profile.ToJsonString(),inventory.ToJsonString(),db.ToJsonString(),graph,new[]{"Mail.Read"},browser?null:cookie,maxCandidates:2,execute:execute,readIdentity:identity,checkpoint:checkpoint,cancellation:ct,browser:browser);
    int calls=0,writes=0;ProfileCredentialToken? supplied=null;string? saved=null;
    using(var result=Acquire(empty,row=>{calls++;return supplied=Token(row);},value=>{writes++;saved=value;}))
    {check(result.Evidence=="BoundedTargetedSilentExplicitScopeAcquisition" && result.TokenClaims.Scopes.SequenceEqual(new[]{"Mail.Read"}));check(result.AccessToken.Length>0);}
@@ -59,6 +59,15 @@ static class ProfileScopeAcquisitionChecks
    inventory["Applications"]![3]!["DelegatedScopeDefinitions"]![0]!["Enabled"]=true;
    using var cancel=new CancellationTokenSource();calls=0;writes=0;
    reject(()=>Acquire(empty,row=>{calls++;supplied=Token(row);cancel.Cancel();return supplied;},_=>writes++,ct:cancel.Token));check(calls==1 && writes==0);reject(()=>{_ = supplied!.AccessToken.Length;});
+   calls=0;writes=0;
+   using(var result=Acquire(empty,row=>{calls++;check(row.RedirectUri=="http://localhost/");return Token(row);},_=>writes++,browser:true))
+    check(result.Evidence=="BoundedTargetedSilentExplicitScopeAcquisition" && result.Request.OAuthScopes.Contains("offline_access"));
+   check(calls==1 && writes==1 && cookie.Length>0);
+   calls=0;identities=0;
+   using(var result=Acquire(warm,row=>{calls++;check(row.RedirectUri=="http://localhost/");return Token(row);},identity:_=>{identities++;return principal;},browser:true))
+    check(result.Evidence=="SilentExplicitScopeAcquisition");
+   check(calls==2 && identities==1);
+   reject(()=>ProfileScopeAcquisition.Acquire("lab",profile.ToJsonString(),inventory.ToJsonString(),empty.ToJsonString(),graph,new[]{"Mail.Read"},null,checkpoint:_=>{},browser:true));
    calls=0;inventory["CapturedAt"]=DateTimeOffset.UtcNow.AddDays(-2).ToString("o");reject(()=>Acquire(empty,row=>{calls++;return Token(row);},_=>{}));check(calls==0);
   }
   finally{if(Directory.Exists(root))Directory.Delete(root,true);}

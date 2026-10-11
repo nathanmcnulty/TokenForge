@@ -50,6 +50,34 @@ Describe 'Native profile configuration interoperability' -Skip:(-not $nativeAvai
   Invoke-NativeProfile @('profile','create','--tenant','example.onmicrosoft.com','--root',$root,'--profile','') 1
   Test-Path $root|Should -BeFalse
  }
+ It 'rejects duplicate and unknown browser login options without changing configuration' {
+  $created=Invoke-NativeProfile @('profile','create','--tenant','example.onmicrosoft.com','--root',$root)
+  Invoke-NativeProfile @('login','--browser','--root',$root,'--browser') 1
+  Invoke-NativeProfile @('login','--browser','--root',$root,'--password','synthetic-private') 1
+  (Invoke-NativeProfile @('profile','show','--root',$root)).Revision|Should -Be $created.Revision
+  Test-Path (Join-Path $root 'default/session.tfvault')|Should -BeFalse
+ }
+ It 'requires one explicit passphrase input method for native browser login' {
+  $created=Invoke-NativeProfile @('profile','create','--tenant','example.onmicrosoft.com','--root',$root)
+  Invoke-NativeProfile @('login','--browser','--root',$root) 1
+  Invoke-NativeProfile @('login','--browser','--root',$root,'--stdin','--prompt-passphrase') 1
+  (Invoke-NativeProfile @('profile','show','--root',$root)).Revision|Should -Be $created.Revision
+ }
+ It 'rejects passphrase input for a memory browser profile' {
+  $created=Invoke-NativeProfile @('profile','create','--tenant','example.onmicrosoft.com','--storage','Memory','--root',$root)
+  Invoke-NativeProfile @('login','--browser','--root',$root,'--stdin') 1
+  (Invoke-NativeProfile @('profile','show','--root',$root)).Revision|Should -Be $created.Revision
+ }
+ It 'rejects invalid browser login hints before reading credentials or creating state' {
+  Invoke-NativeProfile @('login','--browser','--root',$root,'--prompt-passphrase','--login-hint',('x'*321)) 1
+  Invoke-NativeProfile @('login','--browser','--root',$root,'--stdin','--login-hint',"synthetic`nprivate") 1
+  Test-Path $root|Should -BeFalse
+ }
+ It 'rejects invalid browser deadlines before creating local state' {
+  Invoke-NativeProfile @('login','--browser','--root',$root,'--timeout-seconds','0') 1
+  Invoke-NativeProfile @('login','--browser','--root',$root,'--timeout-seconds','901') 1
+  Test-Path $root|Should -BeFalse
+ }
  It 'does not create missing directories when showing a profile' {
   Invoke-NativeProfile @('profile','show','--root',$root) 1
   Test-Path $root|Should -BeFalse

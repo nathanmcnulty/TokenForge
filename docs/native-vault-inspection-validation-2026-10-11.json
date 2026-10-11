@@ -1,0 +1,87 @@
+{
+  "DateUTC": "2026-10-11",
+  "Version": "0.26.0",
+  "Scope": "Native account-bound read-only vault inspection plus Linux credential lifecycle compatibility",
+  "NativeCommand": "profile inspect-vault",
+  "RequiresPowerShellForInspection": false,
+  "CredentialInputs": "Passphrase hidden prompt or explicit bounded stdin; OS store reads existing key only",
+  "CredentialOutput": false,
+  "NativeInspectionNetworkRequests": 0,
+  "SchemaAndEncryptionUnchanged": true,
+  "CoreChecksPassed": 504,
+  "IsolatedLinuxOsStoreCoreChecksPassed": 511,
+  "OsStoreInspectionChecks": "Read-only empty-vault decryption, operation/vault locks, missing-key noncreation, private ciphertext preservation",
+  "FocusedTests": {
+    "Passed": 19,
+    "Failed": 0,
+    "Skipped": 2
+  },
+  "IndependentSolNativeProfileTests": {
+    "Passed": 11,
+    "Failed": 0,
+    "Skipped": 1
+  },
+  "FullSuite": {
+    "Passed": 380,
+    "Failed": 0,
+    "Skipped": 46
+  },
+  "PackagedTests": {
+    "Passed": 51,
+    "Failed": 0,
+    "Skipped": 2
+  },
+  "PlatformProof": "Linux local; Windows/macOS hosted checks required before merge; live Windows/macOS account authentication remains future work",
+  "InventoryProofPolicy": "Prior October 7 inventory with explicit MaxAgeHours=168; production default remains 24",
+  "Accounts": [
+    {
+      "AccountLabel": "nora",
+      "NativeInspectionWithoutPowerShell": true,
+      "NativeInspectionMatchesModule": true,
+      "ExpectedAccountNamespaceMatched": true,
+      "Storage": "LinuxSecretService",
+      "Fresh": "BoundedTargetedSilentExplicitScopeAcquisition",
+      "FreshApiStatus": 200,
+      "ReopenedCache": "CachedVerifiedContextNotNewIssuance",
+      "ReopenedApiStatus": 200,
+      "Renewal": "SameClientRefreshMatchedIssuedContext",
+      "RenewedApiStatus": 200,
+      "AdditionalApiScopes": 0,
+      "RetentionPreserved": true,
+      "IdentityConfirmationTimePreserved": true,
+      "GraphSdkReadSucceeded": true,
+      "VaultRemoved": true,
+      "KeyRemoved": true
+    },
+    {
+      "AccountLabel": "secadmin",
+      "NativeInspectionWithoutPowerShell": true,
+      "NativeInspectionMatchesModule": true,
+      "ExpectedAccountNamespaceMatched": true,
+      "Storage": "LinuxSecretService",
+      "Fresh": "BoundedTargetedSilentExplicitScopeAcquisition",
+      "FreshApiStatus": 200,
+      "ReopenedCache": "CachedVerifiedContextNotNewIssuance",
+      "ReopenedApiStatus": 200,
+      "Renewal": "SameClientRefreshMatchedIssuedContext",
+      "RenewedApiStatus": 200,
+      "AdditionalApiScopes": 0,
+      "RetentionPreserved": true,
+      "IdentityConfirmationTimePreserved": true,
+      "GraphSdkReadSucceeded": true,
+      "VaultRemoved": true,
+      "KeyRemoved": true
+    }
+  ],
+  "TokenSignatureValidated": false,
+  "NativeLoginImplemented": false,
+  "NativeProfileTokenAcquisitionImplemented": false,
+  "ManagedStringImmediateErasureGuaranteed": false,
+  "Cleanup": "Proof vaults and OS keys removed; owned SecureString instances disposed; temporary authentication log deleted",
+  "SourceSha256": {
+    "native/TokenForge.Core/VaultInspection.cs": "72dda891418bf4d31fb00fa13a38698bba9bc98e7333e953d80ee1404b230ea0",
+    "native/TokenForge.Core/ProfileStore.cs": "c48cbda9846aae9704f788fa55b325b9239a0f9173b1467957a47039edec7bc7",
+    "native/TokenForge.Cli/NativeProfileCommand.cs": "14d2ee0a81e047d9abeb7b75ba67c953d2f84ad1a18bc6d8862697171c129ad9",
+    "native/TokenForge.Cli/NativeTokenCommand.cs": "177486eb6fa66c290560b7896a15449ee20258b4ad26baf2bd1b88a1a2234503"
+  }
+}

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Security;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -9,7 +10,7 @@ using TokenForge.Core.V0230;
 
 namespace TokenForge.Core;
 
-// Create/read handle configuration only. ForgetKey explicitly removes ciphertext and its OS key; no network services are used.
+// Configuration operations, read-only vault inspection, and explicit OS-key forgetting use no network services.
 public static class ProfileStore
 {
     public sealed record KeyRemoval(string Profile, bool VaultRemoved, bool KeyRemoved, string NextStep, string Evidence);
@@ -46,6 +47,35 @@ public static class ProfileStore
             }
         }
         catch { throw new InvalidOperationException("Profile key removal failed. Details suppressed."); }
+    }
+    public static VaultInspection InspectVault(string name, string? root = null, SecureString? password = null)
+    {
+        SecureString? ownedPassword = null;
+        try
+        {
+            string initial = Read(name, root);
+            using var profile = JsonDocument.Parse(initial);
+            var configuration = profile.RootElement;
+            string storage = configuration.GetProperty("Storage").GetString()!;
+            if (storage == "Memory" || storage == "OperatingSystem" && (password != null || PlatformVaultKey.Backend == "Unsupported") || storage == "Passphrase" && password == null) throw new InvalidOperationException();
+            string directory = Path.Combine(Root(root, false), name);
+            string operationPath = PrivateFiles.Resolve(Path.Combine(directory,".operation.lock"),false);
+            FileStream operation;
+            try { operation = PrivateFiles.Open(operationPath,true); }
+            catch (IOException) { operation = PrivateFiles.Open(operationPath,false); }
+            using (operation)
+            {
+                if (Read(name,root) != initial) throw new InvalidOperationException();
+                string vault = PrivateFiles.Resolve(Path.Combine(directory,"session.tfvault"),false);
+                // Fail before contacting an OS store when no private ciphertext exists.
+                if (!File.Exists(vault)) throw new InvalidOperationException();
+                using var transaction = VaultFileTransaction.Begin(vault,"Read");
+                if (storage == "OperatingSystem") ownedPassword = PlatformVaultKey.Open(ProfileKeyIdentity.Compute(directory,configuration.GetProperty("KeyId").GetString()!),false);
+                return VaultInspector.Inspect(transaction,ownedPassword ?? password!,name,configuration.GetProperty("ExpectedTenantFingerprint").GetString(),configuration.GetProperty("ExpectedPrincipalFingerprint").GetString(),DateTimeOffset.UtcNow);
+            }
+        }
+        catch { throw new InvalidOperationException("Profile vault inspection failed. Details suppressed."); }
+        finally { ownedPassword?.Dispose(); }
     }
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
     private static void Name(string name)

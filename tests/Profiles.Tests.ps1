@@ -14,7 +14,7 @@ Describe 'Named profile sessions and managed tokens' {
   if(Test-Path $root){Remove-Item $root -Recurse -Force}
   $profile=New-TokenForgeProfile -Name lab -Tenant example.test -Root $root
   $loginToken=New-ProfileTestToken
-  $apps=foreach($id in @($profile.BootstrapClientId,'00000003-0000-0000-c000-000000000000')){[pscustomobject]@{AppId=$id;Name='Synthetic';PublicClient=$true;Foci=$false;PreferredRedirectUri='https://login.microsoftonline.com/common/oauth2/nativeclient';Registration='Present';Ownership='VerifiedMicrosoftOwner';AccountEnabled=$true;RedirectUris=@('https://login.microsoftonline.com/common/oauth2/nativeclient','http://localhost');IdentifierUris=@('https://graph.microsoft.com');DelegatedScopeDefinitions=@([pscustomobject]@{Enabled=$true;Value='User.Read'})}}
+  $apps=foreach($id in @($profile.BootstrapClientId,'00000003-0000-0000-c000-000000000000')){[pscustomobject]@{AppId=$id;Name='Synthetic';PublishedGrants=$(if($id -eq $profile.BootstrapClientId){@([pscustomobject]@{ResourceId='00000003-0000-0000-c000-000000000000';Scopes=@('User.Read','Internal.Read','user.read')})}else{@()});PublicClient=$true;Foci=$false;PreferredRedirectUri='https://login.microsoftonline.com/common/oauth2/nativeclient';Registration='Present';Ownership='VerifiedMicrosoftOwner';AccountEnabled=$true;RedirectUris=@('https://login.microsoftonline.com/common/oauth2/nativeclient','http://localhost');IdentifierUris=@('https://graph.microsoft.com');DelegatedScopeDefinitions=@([pscustomobject]@{Enabled=$true;Value='User.Read'})}}
   @{DiscoveryCatalogHash=('d'*64);CapturedAt=[DateTimeOffset]::UtcNow.ToString('o');TenantFingerprint=$loginToken.TokenClaims.TenantFingerprint;Applications=@($apps)}|ConvertTo-Json -Depth 6|Set-Content "$($profile.StatePath)/inventory.json"
   if(-not $IsWindows){[IO.File]::SetUnixFileMode("$($profile.StatePath)/inventory.json",[IO.UnixFileMode]384)}
   $cookie=ConvertTo-SecureString synthetic-cookie -AsPlainText -Force
@@ -127,7 +127,6 @@ Describe 'Named profile sessions and managed tokens' {
  It 'resolves missing observations using bounded explicit candidates' {
   $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie
   Mock Get-TokenForgeAssessmentCoverage -ModuleName TokenForge {return @()}
-  Mock Get-TokenForgeScopeCandidates -ModuleName TokenForge {return [pscustomobject]@{ClientId='038ddad9-5bbe-4f64-b0cd-12434d1e633b';CandidateRank=2}}
   $issued=New-ProfileTestToken
   Mock Get-TokenForgeToken -ModuleName TokenForge {param($Request) $Request.Scopes|Should -Be @('User.Read');$Request.PSObject.Properties.Name|Should -Not -Contain Discovery;return $issued}
   $result=Get-TokenForgeProfileToken lab -Root $root -Scope User.Read
@@ -160,7 +159,6 @@ Describe 'Named profile sessions and managed tokens' {
  It 'terminates a successful cold request when checkpoint persistence fails' {
   $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie
   Mock Get-TokenForgeAssessmentCoverage -ModuleName TokenForge {return @()}
-  Mock Get-TokenForgeScopeCandidates -ModuleName TokenForge {return @([pscustomobject]@{ClientId='038ddad9-5bbe-4f64-b0cd-12434d1e633b';CandidateRank=2},[pscustomobject]@{ClientId='038ddad9-5bbe-4f64-b0cd-12434d1e633b';CandidateRank=2})}
   $issued=New-ProfileTestToken
   Mock Get-TokenForgeToken -ModuleName TokenForge {return $issued}
   Mock Add-TokenForgeScopeObservation -ModuleName TokenForge {throw 'synthetic disk failure'}
@@ -182,7 +180,6 @@ Describe 'Named profile sessions and managed tokens' {
  It 'can validate hinted scopes absent from resource definitions using explicit issuance' {
   $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie
   Mock Get-TokenForgeAssessmentCoverage -ModuleName TokenForge {return @()}
-  Mock Get-TokenForgeScopeCandidates -ModuleName TokenForge {return [pscustomobject]@{ClientId='038ddad9-5bbe-4f64-b0cd-12434d1e633b';CandidateRank=2}}
   $issued=New-ProfileTestToken -Scopes @('Internal.Read')
   Mock Get-TokenForgeToken -ModuleName TokenForge {param($Request) $Request.Scopes|Should -Be @('Internal.Read');$Request.Source|Should -Be 'PublishedOrConfiguredHintNotProvenConsent';return $issued}
   $result=Get-TokenForgeProfileToken lab -Root $root -Scope Internal.Read
@@ -230,6 +227,14 @@ Describe 'Named profile sessions and managed tokens' {
   Should -Invoke Get-TokenForgeScopedToken -ModuleName TokenForge -Times 1 -Exactly
  }
 
+ It 'preserves case-distinct profile scopes before cold request planning' {
+  $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie
+  Mock Get-TokenForgeAssessmentCoverage -ModuleName TokenForge {return @()}
+  $issued=New-ProfileTestToken -Scopes @('User.Read','user.read')
+  Mock Get-TokenForgeToken -ModuleName TokenForge {return $issued}
+  $result=Get-TokenForgeProfileToken lab -Root $root -Scope User.Read,user.read
+  try{$result.Request.Scopes|Should -Be @('User.Read','user.read')}finally{$result.AccessToken.Dispose();$result.RefreshToken.Dispose()}
+ }
 }
 Describe 'OS-protected profile boundaries' {
  BeforeEach {
@@ -280,4 +285,6 @@ Describe 'OS-protected profile boundaries' {
   Mock Remove-TokenForgeProfilePlatformKey -ModuleName TokenForge {}
   (Remove-TokenForgeProfileKey lab -Root $root).KeyRemoved|Should -BeTrue
  }
+
+
 }

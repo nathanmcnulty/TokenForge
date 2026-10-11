@@ -75,48 +75,35 @@ function Request-TokenForgeProfileScope {
     if($Inventory.TenantFingerprint -ne $Profile.ExpectedTenantFingerprint -or ([DateTimeOffset]$Inventory.CapturedAt) -lt [DateTimeOffset]::UtcNow.AddHours(-$Profile.MaxAgeHours) -or ([DateTimeOffset]$Inventory.CapturedAt) -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Inventory must be fresh and match the profile tenant.'}
     $resource=@($Inventory.Applications|Where-Object {$_.AppId -eq $ResourceId.ToString() -and $_.Registration -eq 'Present' -and $_.Ownership -eq 'VerifiedMicrosoftOwner' -and $_.AccountEnabled})
     if($resource.Count -ne 1){throw 'Enabled ownership-verified target resource required.'}
-    $candidates=@(Get-TokenForgeScopeCandidates -Inventory $Inventory -Database $Database -ResourceId $ResourceId -Scope $Scope -PrincipalFingerprint $Profile.ExpectedPrincipalFingerprint -MaxAgeHours $Profile.MaxAgeHours|Where-Object CandidateRank -LE 2)
     if($DatabasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){$null=Invoke-TokenForgeNativeEvidence $DatabasePath update -Document (New-TokenForgeScopeDatabase) -Domain evidence}
-    $attempted=0
-    foreach($candidate in $candidates){
-        $app=@($Inventory.Applications|Where-Object AppId -eq $candidate.ClientId)[0]
-        $redirects=@($app.RedirectUris|Where-Object {
-            $uri=$null
-            [uri]::TryCreate($_,[UriKind]::Absolute,[ref]$uri) -and -not $uri.UserInfo -and -not $uri.Query -and -not $uri.Fragment -and
-            $(if($Authentication.ContainsKey('Browser') -and $Authentication.Browser){$uri.Scheme -eq 'http' -and $uri.Host -eq 'localhost' -and $uri.AbsolutePath -eq '/'}else{$_ -ceq 'https://login.microsoftonline.com/common/oauth2/nativeclient'})
-        }|Select-Object -First $MaxRedirects)
-        if(-not $redirects.Count){continue}
-        if($attempted -ge $MaxCandidates){break}
-        $attempted++
-        foreach($redirect in $redirects){
-            $token=$null;$success=$false
+    $plans=@(New-TokenForgePlannedScopeRequests -Inventory $Inventory -Database $Database -ResourceId $ResourceId -Scope $Scope -PrincipalFingerprint $Profile.ExpectedPrincipalFingerprint -Tenant $Profile.Tenant -Warm $false -Browser ($Authentication.ContainsKey('Browser') -and [bool]$Authentication.Browser) -OfflineAccess $true -MaxCandidates $MaxCandidates -MaxRedirects $MaxRedirects -MaxAgeHours $Profile.MaxAgeHours)
+    foreach($request in $plans){
+        $redirect=$request.RedirectUri
+        $token=$null;$success=$false
+        try{
+            $instant=[DateTimeOffset]::UtcNow;$date=[TokenForge.Core.V0240.TimestampPolicy]::Parse($Inventory.CapturedAt)
+            if($date -lt $instant.AddHours(-$Profile.MaxAgeHours) -or $date -gt $instant.AddMinutes(5)){throw 'Inventory expired during acquisition.'}
+            $token=Get-TokenForgeToken -Request $request @Authentication
+            $claims=Assert-TokenForgeProfileToken $token $Profile $Scope $request.ClientId $ResourceId.ToString() $Profile.MaxAdditionalScopes
+            $token|Add-Member Request $request -Force
+            $token|Add-Member TokenClaims $claims -Force
+            $token|Add-Member Evidence 'BoundedTargetedSilentExplicitScopeAcquisition' -Force
+            $observation=[pscustomobject]@{ClientId=$request.ClientId;ResourceId=$ResourceId.ToString();Outcome='Succeeded';TenantFingerprint=$claims.TenantFingerprint;PrincipalFingerprint=$claims.PrincipalFingerprint;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o');Protocol='OAuth2V2Pkce';Spa=$false;RedirectFingerprint=(Get-TokenForgeFingerprint $redirect);RequestedScopes=$Scope;ScpScopes=@($claims.Scopes);ClaimsReadable=$true;HasScpClaim=$true;NamespaceVerification='Matched';RequestVerification='Matched';SignatureValidated=$false}
+            $stateLock=$null
             try{
-                # Candidate eligibility was established from fresh verified inventory plus matching
-                # published/configured hints. Resource definitions can omit internal scope names.
-                $planning=[pscustomobject]@{Source='PublishedOrConfiguredHintNotProvenConsent';ContentSha256=$null;ResourceIdentifiers=@{};Applications=@([pscustomobject]@{ClientId=$app.AppId;Name=$app.Name;PublicClient=$app.PublicClient;Foci=$app.Foci;RedirectUris=$app.RedirectUris;PreferredRedirectUri=$app.PreferredRedirectUri;Grants=@([pscustomobject]@{ResourceId=$ResourceId.ToString();Scopes=$Scope})})}
-                $request=New-TokenForgeRequest -Catalog $planning -ClientId $candidate.ClientId -ResourceId $ResourceId -Scope $Scope -RedirectUri $redirect -Tenant $Profile.Tenant -OfflineAccess
-                $token=Get-TokenForgeToken -Request $request @Authentication
-                $claims=Assert-TokenForgeProfileToken $token $Profile $Scope $candidate.ClientId $ResourceId.ToString() $Profile.MaxAdditionalScopes
-                $token|Add-Member Request $request -Force
-                $token|Add-Member TokenClaims $claims -Force
-                $token|Add-Member Evidence 'BoundedTargetedSilentExplicitScopeAcquisition' -Force
-                $observation=[pscustomobject]@{ClientId=$candidate.ClientId;ResourceId=$ResourceId.ToString();Outcome='Succeeded';TenantFingerprint=$claims.TenantFingerprint;PrincipalFingerprint=$claims.PrincipalFingerprint;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o');Protocol='OAuth2V2Pkce';Spa=$false;RedirectFingerprint=(Get-TokenForgeFingerprint $redirect);RequestedScopes=$Scope;ScpScopes=@($claims.Scopes);ClaimsReadable=$true;HasScpClaim=$true;NamespaceVerification='Matched';RequestVerification='Matched';SignatureValidated=$false}
-                $stateLock=$null
-                try{
-                    $stateLock=Open-TokenForgeProfileOperation -Directory (Split-Path $DatabasePath -Parent) -Leaf '.writer.lock'
-                    $latest=if($DatabasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){$Database}else{Get-TokenForgeScopeDatabase $DatabasePath}
-                    $null=Add-TokenForgeScopeObservation -Database $latest -Observation $observation -Path $DatabasePath
-                }catch{
-                    $failure=[InvalidOperationException]::new('Scope acquisition succeeded but its checkpoint could not be saved; token discarded. Details suppressed.')
-                    $failure.Data['TokenForgeCheckpointFailure']=$true;throw $failure
-                }finally{if($stateLock){$stateLock.Dispose()};$latest=$null}
-                $success=$true
-                return $token
+                $stateLock=Open-TokenForgeProfileOperation -Directory (Split-Path $DatabasePath -Parent) -Leaf '.writer.lock'
+                $latest=if($DatabasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){$Database}else{Get-TokenForgeScopeDatabase $DatabasePath}
+                $null=Add-TokenForgeScopeObservation -Database $latest -Observation $observation -Path $DatabasePath
             }catch{
-                if($_.Exception.Data['TokenForgeCheckpointFailure']){throw}
-                # Only bounded candidate attempts; no .default, registration, or consent fallback.
-            }finally{if($token -and -not $success){$token.AccessToken.Dispose();if($token.RefreshToken){$token.RefreshToken.Dispose()}}}
-        }
+                $failure=[InvalidOperationException]::new('Scope acquisition succeeded but its checkpoint could not be saved; token discarded. Details suppressed.')
+                $failure.Data['TokenForgeCheckpointFailure']=$true;throw $failure
+            }finally{if($stateLock){$stateLock.Dispose()};$latest=$null}
+            $success=$true
+            return $token
+        }catch{
+            if($_.Exception.Data['TokenForgeCheckpointFailure']){throw}
+            # Only bounded candidate attempts; no .default, registration, or consent fallback.
+        }finally{if($token -and -not $success){$token.AccessToken.Dispose();if($token.RefreshToken){$token.RefreshToken.Dispose()}}}
     }
     throw 'No bounded candidate completed a matching explicit scope request. Inspect scope hints or run explicit discovery; no broad fallback was attempted.'
 }

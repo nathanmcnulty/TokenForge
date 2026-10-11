@@ -38,7 +38,7 @@ function Get-TokenForgeCatalog {
             if ($scopes -isnot [array] -or @($scopes | Where-Object { $_ -isnot [string] -or $_ -notmatch '^[A-Za-z0-9_.-]+$' }).Count) {
                 throw 'Catalog contains invalid scope names.'
             }
-            [pscustomobject]@{ ResourceId = $resourceId; Scopes = @($scopes | Sort-Object -Unique) }
+            [pscustomobject]@{ ResourceId = $resourceId; Scopes = @($scopes | Sort-Object -Unique -CaseSensitive) }
         }
         [pscustomobject]@{
             ClientId = $id
@@ -129,7 +129,7 @@ function New-TokenForgeRequest {
         throw 'Redirect URI must be absolute without user information, query, or fragment.'
     }
     if ($Spa -and $RedirectUri.Scheme -ne 'https') { throw 'SPA requests require an HTTPS redirect URI.' }
-    $scopes = @($Scope | Sort-Object -Unique)
+    $scopes = @($Scope | Sort-Object -Unique -CaseSensitive)
     if (@($scopes | Where-Object { $_ -notmatch '^[A-Za-z0-9_-][A-Za-z0-9_.-]*$' -or $_ -eq '.default' -or $_ -cin @('openid','profile','email','offline_access') }).Count) {
         throw 'Supply explicit delegated API scope names, without resource prefixes, .default, or OIDC scopes.'
     }

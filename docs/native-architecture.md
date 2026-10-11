@@ -42,3 +42,29 @@ A teaching GUI should consume a sanitized metadata API: token type, audience, sc
 client, provenance, and flow stages. Raw tokens, refresh credentials, cookies, passkeys, and
 identity claims should stay outside that API. Opening a visualization should never authenticate,
 renew, request consent, or register an application.
+
+### Shared explicit request planning
+
+The shared credential assembly now builds the explicit request slots used by PowerShell
+fresh acquisition. Warm planning uses fresh, matched scope observations, orders clients by
+missing/extra scope coverage, and prioritizes the previously observed published redirect.
+Other warm redirects use ordinal ordering. Cookie requests may use published HTTPS,
+localhost HTTP, or URN callbacks; browser requests require a clean localhost root callback.
+SPA is retained only for warm nonbrowser HTTPS requests.
+
+Cold planning uses eligible published/configured hints, not a consent claim. Cookie requests
+require the exact canonical Microsoft nativeclient redirect. Browser requests use clean
+localhost root callbacks. Cold callback selection preserves inventory order, removing exact
+duplicates. Only clients with a usable callback consume the candidate budget, and both client
+and callback counts are bounded. Every emitted request is explicit OAuth v2 PKCE and is
+validated by the shared transport before it reaches execution.
+
+Scope names are case-sensitive. `User.Read` and `user.read` remain separate requested scopes;
+exact duplicates are removed. This corrects the earlier PowerShell request builder's
+case-insensitive deduplication. Neither planning nor a metadata fingerprint confirms the
+current account. PowerShell still confirms bootstrap identity, executes fresh requests,
+checks issued context/scopes, and saves successful observations. Each attempted request
+rechecks inventory and, for warm requests, observation freshness. Native fresh profile
+execution and login remain unfinished.
+
+The [v0.30 validation report](native-request-planning-validation-2026-10-11.json) records the sanitized two-account cold/warm acquisition proof and checks.

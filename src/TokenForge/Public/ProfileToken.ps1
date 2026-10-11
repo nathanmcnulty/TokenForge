@@ -17,7 +17,7 @@ function Get-TokenForgeProfileToken {
         [ValidateRange(1,8)][int]$MaxRedirects=2
     )
     if(@($Scope|Where-Object {$_ -notmatch '^[A-Za-z0-9_-][A-Za-z0-9_.-]*$' -or $_ -cin @('openid','profile','email','offline_access')}).Count){throw 'Provide explicit API scope names.'}
-    $Scope=@($Scope|Sort-Object -Unique)
+    $Scope=@($Scope|Sort-Object -Unique -CaseSensitive)
     if(-not $PSBoundParameters.ContainsKey('ResourceId')){$ResourceId=if($Resource -eq 'graph'){'00000003-0000-0000-c000-000000000000'}else{'797f4846-ba00-4fd7-ba43-dac1f8f63013'}}
     if($ApiUri){
         $hostName=switch($ResourceId.ToString()){'00000003-0000-0000-c000-000000000000'{'graph.microsoft.com'} '797f4846-ba00-4fd7-ba43-dac1f8f63013'{'management.azure.com'} default {throw 'No API host mapping is defined for this resource.'}}
@@ -51,7 +51,7 @@ function Get-TokenForgeProfileToken {
         $sessionRevision=$session.Revision;$cookieName=if($session.Contains('CookieName')){$session.CookieName}elseif($context){$context.CookieName}else{'ESTSAUTH'}
         if($savedToken){
             $r=$savedToken.Request
-            if($r.Tenant -cne $p.Tenant -or $r.ResourceId -ne $ResourceId.ToString() -or $r.Protocol -ne 'OAuth2V2Pkce' -or (@($r.Scopes|Sort-Object -Unique) -join ' ') -cne ($Scope -join ' ') -or @($r.OAuthScopes|Where-Object {$_ -ceq '.default' -or $_ -clike '*/.default'}).Count){throw 'Saved request does not match the canonical profile authority, resource, explicit scopes, or protocol.'}
+            if($r.Tenant -cne $p.Tenant -or $r.ResourceId -ne $ResourceId.ToString() -or $r.Protocol -ne 'OAuth2V2Pkce' -or (@($r.Scopes|Sort-Object -Unique -CaseSensitive) -join ' ') -cne ($Scope -join ' ') -or @($r.OAuthScopes|Where-Object {$_ -ceq '.default' -or $_ -clike '*/.default'}).Count){throw 'Saved request does not match the canonical profile authority, resource, explicit scopes, or protocol.'}
             # Invalid cached context must fail closed, rather than allowing its refresh credential to be redeemed.
             $claims=Get-TokenForgeTokenClaims $savedToken.AccessToken
             if($claims.TenantFingerprint -ne $p.ExpectedTenantFingerprint -or $claims.PrincipalFingerprint -ne $p.ExpectedPrincipalFingerprint -or $claims.ClientId -ne $savedToken.Request.ClientId -or -not $claims.HasDelegatedScopeClaim){throw 'Saved token identity or client context is invalid.'}

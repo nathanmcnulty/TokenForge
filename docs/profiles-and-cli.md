@@ -161,3 +161,8 @@ returns the process-wide context, so runspaces do not provide independent accoun
 For teaching, the existing `Export-TokenForgeVaultView` produces an offline HTML view from whitelisted persisted-session metadata. It contains no cookie or token values and makes no network calls. See [Session vault](session-vault.md).
 
 Explicit Windows/Linux OS-backed profile storage is documented in [OS-backed vault](os-backed-vault.md).
+
+Fresh acquisition now shares explicit request construction with the native credential core.
+Warm observation-based requests and cold hint-based requests retain different redirect rules;
+see [shared explicit request planning](native-architecture.md#shared-explicit-request-planning).
+This is an internal planning change. Profile login and fresh acquisition still use PowerShell.

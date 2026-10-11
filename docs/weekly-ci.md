@@ -248,3 +248,10 @@ cannot be reconstructed from this metadata. Daily run-search partitions, paginat
 checks refuse oversized, truncated, or visibly changing responses rather than report false
 coverage. A report is an API observation, not a transactionally frozen GitHub snapshot;
 rerun it after workflows settle when comparing weeks.
+
+API JSON dates may be parsed by PowerShell as UTC `DateTime` values. The reporter converts
+those directly to `DateTimeOffset`, preserving the instant; formatting them as local strings
+would change week membership and future-time checks. Regression fixtures run in Anchorage
+and Tokyo timezones and cover runs at both UTC week boundaries.
+Runs and jobs already deleted or outside GitHub's retention are unavailable to this API
+observation. A settled report cannot establish that such missing history never existed.

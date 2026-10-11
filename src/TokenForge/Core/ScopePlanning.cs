@@ -94,7 +94,7 @@ public static class ScopePlanning
         int maxAgeHours=24,DateTimeOffset? now=null)=>JsonSerializer.Serialize(PlanRequests(inventoryJson,databaseJson,resource,scopes,principal,
             tenant,warm,browser,offlineAccess,maxCandidates,maxRedirects,maxAgeHours,now));
 
-    public static RequestRow BootstrapRequest(string inventoryJson,string tenant,string client,int maxAgeHours=24,DateTimeOffset? now=null)
+    public static RequestRow BootstrapRequest(string inventoryJson,string tenant,string client,int maxAgeHours=24,DateTimeOffset? now=null,bool browser=false)
     {
         try
         {
@@ -106,8 +106,8 @@ public static class ScopePlanning
             using var parsed=Parse(inventoryJson);
             var resource=Array(parsed.RootElement,"Applications",100000).Single(a=>Id(a,"AppId")==graph);
             if(!Array(resource,"DelegatedScopeDefinitions",4096).Any(d=>Text(d,"Value")=="User.Read" && Boolean(d,"Enabled")==true))throw new InvalidOperationException();
-            // Warm bootstrap keeps its published HTTPS nativeclient suffix rule; cold planning is stricter.
-            var redirect=application.Redirects.FirstOrDefault(text=>SupportedRedirect(text,true,false) && new Uri(text).Scheme=="https" && new Uri(text).AbsolutePath.EndsWith("/nativeclient",StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException();
+            // Cookie bootstrap uses a published HTTPS nativeclient suffix; browser bootstrap requires a supported loopback callback.
+            var redirect=application.Redirects.FirstOrDefault(text=>SupportedRedirect(text,true,browser) && (browser || new Uri(text).Scheme=="https" && new Uri(text).AbsolutePath.EndsWith("/nativeclient",StringComparison.OrdinalIgnoreCase))) ?? throw new InvalidOperationException();
             var request=new RequestRow(clientId.ToString(),graph,graph,new[]{"User.Read"},new[]{graph+"/User.Read"},redirect,tenant,false,"OAuth2V2Pkce",
                 "TenantResourceScopeDefinitionNotClientConsent","VerifiedTenantScopeDefinitions",null);
             TokenForge.Core.V0180.OAuthTransport.ValidateRequest(request.ToTransport());return request;

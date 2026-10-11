@@ -17,9 +17,9 @@ namespace TokenForge.Core;
 public static class ProfileScopeAcquisition
 {
     public static ProfileCredentialToken Acquire(string name,string profileJson,string inventoryJson,string databaseJson,
-        string resource,string[] scopes,SecureString cookie,string cookieName="ESTSAUTH",int maxCandidates=8,int maxRedirects=2,
+        string resource,string[] scopes,SecureString? cookie,string cookieName="ESTSAUTH",int maxCandidates=8,int maxRedirects=2,
         Func<ScopePlanning.RequestRow,ProfileCredentialToken>? execute=null,Func<SecureString,string>? readIdentity=null,
-        Action<string>? checkpoint=null,CancellationToken cancellation=default)
+        Action<string>? checkpoint=null,CancellationToken cancellation=default,bool browser=false)
     {
         try
         {
@@ -31,26 +31,26 @@ public static class ProfileScopeAcquisition
             string principal=p.GetProperty("ExpectedPrincipalFingerprint").GetString() ?? throw new InvalidOperationException();
             string authority=p.GetProperty("Tenant").GetString()!;
             int hours=p.GetProperty("MaxAgeHours").GetInt32(),limit=p.GetProperty("MaxAdditionalScopes").GetInt32();
-            if(cookie==null || cookie.Length==0 || cookieName is not ("ESTSAUTH" or "ESTSAUTHPERSISTENT"))throw new InvalidOperationException();
-            using var ownedCookie=cookie.Copy();ownedCookie.MakeReadOnly();
+            if(browser && execute==null || !browser && (cookie==null || cookie.Length==0) || cookieName is not ("ESTSAUTH" or "ESTSAUTHPERSISTENT"))throw new InvalidOperationException();
+            using var ownedCookie=browser?null:cookie!.Copy();ownedCookie?.MakeReadOnly();
             using var inventory=JsonDocument.Parse(inventoryJson,new JsonDocumentOptions{MaxDepth=16});
             if(inventory.RootElement.GetProperty("TenantFingerprint").GetString()!=tenant)throw new InvalidOperationException();
             var captured=TimestampPolicy.Parse(inventory.RootElement.GetProperty("CapturedAt").GetString());
             using var covered=JsonDocument.Parse(ScopePlanning.Coverage(databaseJson,resource,scopes,tenant,principal,hours));
             bool warm=covered.RootElement.EnumerateArray().Any(r=>r.GetProperty("CoversAll").GetBoolean());
-            var requests=ScopePlanning.PlanRequests(inventoryJson,databaseJson,resource,scopes,principal,authority,warm,false,true,maxCandidates,maxRedirects,hours);
+            var requests=ScopePlanning.PlanRequests(inventoryJson,databaseJson,resource,scopes,principal,authority,warm,browser,true,maxCandidates,maxRedirects,hours);
             if(!warm && checkpoint==null)throw new InvalidOperationException();
             ProfileCredentialToken Execute(ScopePlanning.RequestRow row)
             {
                 cancellation.ThrowIfCancellationRequested();
                 // Adapters receive independent arrays; they cannot change the approved request.
                 if(execute!=null)return execute(row with{Scopes=row.Scopes.ToArray(),OAuthScopes=row.OAuthScopes.ToArray()}) ?? throw new InvalidOperationException();
-                using var token=OAuthTransport.Cookie(row.ToTransport(),ownedCookie,cookieName,cancellation);
+                using var token=OAuthTransport.Cookie(row.ToTransport(),ownedCookie!,cookieName,cancellation);
                 return new ProfileCredentialToken(row.ToTransport(),token.AccessToken,token.RefreshToken,token.ExpiresAt,token.AdditionalScopes.Length);
             }
             if(warm)
             {
-                var bootstrap=ScopePlanning.BootstrapRequest(inventoryJson,authority,p.GetProperty("BootstrapClientId").GetString()!,hours);
+                var bootstrap=ScopePlanning.BootstrapRequest(inventoryJson,authority,p.GetProperty("BootstrapClientId").GetString()!,hours,browser:browser);
                 using var issued=Execute(bootstrap);
                 Validate(issued,bootstrap,tenant,principal,p.GetProperty("MaxBootstrapAdditionalScopes").GetInt32());
                 string identity=readIdentity==null?ProfileTokenApi.ReadIdentity(issued.AccessToken,cancellation):readIdentity(issued.AccessToken);

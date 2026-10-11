@@ -49,7 +49,7 @@ Describe 'Native saved profile tokens without PowerShell on PATH' -Skip:(-not $n
   (Get-FileHash $vault).Hash|Should -Be $before
   Test-Path (Join-Path $p.StatePath inventory.json)|Should -BeFalse;Test-Path (Join-Path $p.StatePath scopes.sqlite)|Should -BeFalse
  }
- It 'fails missing-cookie fresh acquisition without creating evidence or changing the vault' {
+ It 'fails fresh browser acquisition with missing inventory without creating evidence or changing the vault' {
   $before=(Get-FileHash $vault).Hash
   Invoke-NativeProfileToken @('--scope','Mail.Read','--stdin') 1
   (Get-FileHash $vault).Hash|Should -Be $before
@@ -75,7 +75,10 @@ Describe 'Native saved profile tokens without PowerShell on PATH' -Skip:(-not $n
    @('--scope','.default','--stdin'),@('--scope','User.Read','--scope','Mail.Read','--stdin'),
    @('--scope','User.Read','--stdin','--api-uri','https://example.test/'),
    @('--scope','User.Read','--stdin','--resource','graph','--resource-id',$graph),
-   @('--scope','User.Read','--stdin','--max-candidates','101')
+   @('--scope','User.Read','--stdin','--max-candidates','101'),
+   @('--scope','User.Read','--stdin','--prompt-passphrase'),
+   @('--scope','User.Read','--stdin','--timeout-seconds','0'),
+   @('--scope','User.Read','--stdin','--login-hint',('x'*321))
   )){Invoke-NativeProfileToken $arguments 1}
   (Get-FileHash $vault).Hash|Should -Be $before
  }

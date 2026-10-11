@@ -1,10 +1,10 @@
 # Native CLI and evidence store
 
 The native CLI is a self-contained .NET executable per OS and architecture. Evidence commands
-run directly in the shared core with bundled SQLite. Profile login and profile browser/interactive adapters invoke the packaged PowerShell 7.4+ module;
+run directly in the shared core with bundled SQLite. Passkey login and Memory profile token adapters invoke the packaged PowerShell 7.4+ module;
 install `pwsh` and keep `src/` and `scripts/` beside the executable for those commands.
 Version 0.18 adds direct native `token acquire`, and PowerShell uses the same C# OAuth transport
-and issued-token policy. Version 0.33 adds native system-browser PKCE to advanced `token acquire`. Profile login and passkey enrollment still use PowerShell.
+and issued-token policy. Version 0.33 adds native system-browser PKCE to advanced `token acquire`. Version 0.36 adds native browser profile login and persisted browser profile acquisition. Passkey login and enrollment still use PowerShell.
 Version 0.19 also shares vault envelope encryption with the native core; profile storage and
 login still use PowerShell. See [shared vault validation](vault-core-validation-2026-10-08.json).
 Version 0.20 shares profile configuration validation between PowerShell and the native core.
@@ -108,7 +108,7 @@ JWT signature validity, or API authorization. Explanation does not perform or co
 The planner returns metadata only. Account fingerprints, arbitrary input properties, cookies,
 and token values are excluded. Timestamps retain their instants across PowerShell projections and are emitted as UTC strings.
 Saved-cookie profile acquisition, including warm/cold request planning, runs natively.
-Profile login and its browser/passkey adapters still require PowerShell. Explanation itself
+Passkey login still requires PowerShell. Browser profile login runs natively. Explanation itself
 is offline and performs no authentication or token acquisition.
 
 ## Direct native acquisition
@@ -321,3 +321,52 @@ Version 0.35 keeps issued-token policy enforcement unchanged and distinguishes i
 Unknown failures retain ValidationFailed. Identity-service transport and authorization failure reasons remain separate. No raw exception, token, cookie, account identifier, or rejected claim is included in this diagnostic projection. An additional-scope rejection is a local policy decision after issuance, not evidence that Entra denied consent. Review scope observations and consider a narrower client before deliberately changing an allowance; the CLI never changes it automatically.
 
 The [0.35 native policy diagnostic report](native-token-policy-validation-2026-10-11.json) records local rejection after actual Entra code redemption for both lab accounts. Neither proof returned tokens or changed consent.
+
+## Browser profile login and acquisition
+
+Version 0.36 runs `login --browser` directly in the executable. It requires an existing
+profile and a private inventory within that profile's configured age limit. The bootstrap
+client must be enabled, verified as Microsoft-owned, and publish a supported loopback
+callback. The default cookie bootstrap client may not publish that callback; configure
+an appropriate verified client explicitly when creating the profile. No client or scope
+budget is changed automatically.
+
+```sh
+tokenforge login --browser --profile lab --prompt-passphrase --interactive --login-hint observer@example.test
+tokenforge token get --profile lab --scope User.Read --prompt-passphrase --json
+```
+
+`--stdin` is an explicit alternative to the hidden passphrase prompt. Memory and OS-backed
+profiles reject both passphrase options. OS-backed profiles use the existing Windows or
+Linux key provider; macOS remains unsupported. `--timeout-seconds` accepts 30–900 seconds,
+with 300 as the default. Login is silent unless `--interactive` is requested. Token get
+always uses silent authorization; establish the browser session with explicit login first.
+Consent is never automatically approved or retried.
+
+Login validates the issued bootstrap context, confirms the principal through Graph `/me`,
+binds the profile to that tenant/account, and resets this session's cached tokens. Persisted
+sessions contain no browser cookie. Unrelated sessions are retained. Existing encrypted
+vaults require their existing key; missing keys or held locks fail before authentication.
+Token lifetime and session retention are checked again before saving. Memory login binds
+configuration but does not persist a session across CLI processes; use persisted storage
+for the cross-command workflow.
+
+A fresh `token get` uses the system browser when the session has no cookie. `--browser`,
+`--login-hint`, or `--timeout-seconds` explicitly select the browser for fresh acquisition.
+Cache hits and same-client renewal keep their normal paths and do not launch a browser.
+An existing saved cookie is not removed by selecting browser acquisition; explicit login
+resets the session without a cookie. Cold acquisition checkpoints sanitized scope evidence
+before its separate credential commit; warm acquisition confirms identity before requesting
+the selected scopes. Neither path expands the configured additional-scope budget.
+
+Vault and profile replacement are separate writes under the shared operation lock. A disk
+failure after the vault commit can leave the profile configuration unchanged; the command
+fails and same-account login can recover. There is no cross-file rollback journal. CLI output
+contains metadata only; browser cookies remain in the browser, and credentials are encrypted
+only in the opted-in vault. JWT claims inspection does not validate the signature.
+
+The [sanitized v0.36 validation report](native-profile-browser-validation-2026-10-11.json)
+records Linux cold/warm/cache and Graph identity proofs for both lab accounts. The headless
+proof kept the passkey-derived cookie in its PowerShell driver and sent only authorization
+URLs and completion signals over a private Unix socket; it did not exercise browser UI.
+The inventory observation date was preserved under an explicit 168-hour lab age limit.

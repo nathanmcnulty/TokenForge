@@ -67,7 +67,7 @@ internal static class NativeTokenCommand
         finally { Console.CancelKeyPress -= cancel; }
         } catch (Exception error) { throw new NativeTokenException(stage, error.Message); }
     }
-    private static OAuthResult AcquireBrowser(OAuthRequest request,string? hint,int timeout,bool silent,CancellationToken cancellation)
+    internal static OAuthResult AcquireBrowser(OAuthRequest request,string? hint,int timeout,bool silent,CancellationToken cancellation)
     {
         using var authorization=OAuthBrowserAuthorization.Authorize(request,uri=>OpenBrowser(uri,cancellation),hint,timeout,silent,cancellation);
         cancellation.ThrowIfCancellationRequested();

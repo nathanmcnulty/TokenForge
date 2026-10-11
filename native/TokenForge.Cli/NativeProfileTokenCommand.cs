@@ -10,17 +10,17 @@ internal static class NativeProfileTokenCommand
  internal static bool TryRun(string[] args,out int exit)
  {
   exit=0;
-  // Existing browser and interactive passphrase paths remain in the bundled adapter.
-  if(args.Contains("--login-hint",StringComparer.Ordinal) || args.Contains("--prompt-passphrase",StringComparer.Ordinal))return false;
   var options=new Dictionary<string,string>(StringComparer.Ordinal);var seen=new HashSet<string>(StringComparer.Ordinal);
-  var allowed=new HashSet<string>(new[]{"--profile","--root","--resource","--resource-id","--scope","--api-uri","--max-candidates","--max-redirects"},StringComparer.Ordinal);
-  bool stdin=false;
+  var allowed=new HashSet<string>(new[]{"--profile","--root","--resource","--resource-id","--scope","--api-uri","--max-candidates","--max-redirects","--login-hint","--timeout-seconds"},StringComparer.Ordinal);
+  bool stdin=false,prompt=false,browser=false;
   for(int i=2;i<args.Length;i++)
   {
    string option=args[i];if(!seen.Add(option))throw new InvalidOperationException();
-   if(option=="--json")continue;if(option=="--stdin"){stdin=true;continue;}
+   if(option=="--json")continue;if(option=="--browser"){browser=true;continue;}if(option=="--prompt-passphrase"){prompt=true;continue;}if(option=="--stdin"){stdin=true;continue;}
    if(!allowed.Contains(option) || ++i==args.Length || args[i].StartsWith('-') || args[i].Length is <1 or >4096)throw new InvalidOperationException();options[option]=args[i];
   }
+  if(stdin && prompt || options.TryGetValue("--login-hint",out var hint) && (hint.Length>320 || hint.Any(char.IsControl)))throw new InvalidOperationException();
+  int timeout=300;if(options.TryGetValue("--timeout-seconds",out var timeoutText) && (!int.TryParse(timeoutText,out timeout) || timeout is <30 or >900))throw new InvalidOperationException();
   if(!options.TryGetValue("--scope",out var scope))throw new InvalidOperationException();
   var scopes=scope.Split(',');
   if(scopes.Length is <1 or >256 || scopes.Any(s=>s is "openid" or "profile" or "email" or "offline_access" or ".default" || !Regex.IsMatch(s,@"\A[A-Za-z0-9_.-]{1,256}\z")))throw new InvalidOperationException();
@@ -39,30 +39,30 @@ internal static class NativeProfileTokenCommand
   string name=options.GetValueOrDefault("--profile") ?? "default",root=options.GetValueOrDefault("--root")!;
   string configJson=ProfileStore.Read(name,root);using var configuration=JsonDocument.Parse(configJson);var p=configuration.RootElement;
   string storage=p.GetProperty("Storage").GetString()!;
-  if(storage=="Memory"){if(stdin)throw new InvalidOperationException();return false;}
-  if(storage=="Passphrase" && !stdin)return false;
-  if(storage=="OperatingSystem" && stdin)throw new InvalidOperationException();
-  using SecureString? password=stdin?NativeTokenCommand.ReadCredential(true,12,1024,"Vault passphrase (hidden): "):null;
+  if(storage=="Memory"){if(stdin || prompt)throw new InvalidOperationException();return false;}
+  if(storage=="Passphrase" && !stdin && !prompt)return false;
+  if(storage=="OperatingSystem" && (stdin || prompt))throw new InvalidOperationException();
+  using SecureString? password=storage=="Passphrase"?NativeTokenCommand.ReadCredential(stdin,12,1024,"Vault passphrase (hidden): "):null;
   using var cancellation=new CancellationTokenSource();ConsoleCancelEventHandler cancel=(_,e)=>{e.Cancel=true;cancellation.Cancel();};
-  Console.CancelKeyPress+=cancel;bool browserRequired=false;
+  Console.CancelKeyPress+=cancel;
   try
   {
    using var result=ProfileTokenLifecycle.Acquire(name,root,resource,scopes,password,input=>
    {
-    if(input.Cookie==null){browserRequired=true;throw new InvalidOperationException();}
+    bool useBrowser=browser || input.Cookie==null || options.ContainsKey("--login-hint") || options.ContainsKey("--timeout-seconds");
     string state=p.GetProperty("StatePath").GetString()!,inventory=NativeScopeCommand.ReadJson(Path.Combine(state,"inventory.json"));
     string sqlite=Path.Combine(state,"scopes.sqlite"),json=Path.Combine(state,"scopes.json"),database;
     bool useSqlite=File.Exists(sqlite),existed=useSqlite || File.Exists(json);
     if(useSqlite){using var store=new EvidenceStore(sqlite,true);database=store.Export(latest:false,tenant:p.GetProperty("ExpectedTenantFingerprint").GetString(),principal:p.GetProperty("ExpectedPrincipalFingerprint").GetString(),resource:resource);}
     else {PrivateFiles.Resolve(json,false);database=existed?NativeScopeCommand.ReadJson(json):"{\"SchemaVersion\":1,\"Observations\":[],\"RegistrationAttempts\":[]}";}
-    return ProfileScopeAcquisition.Acquire(name,configJson,inventory,database,resource,input.Scopes,input.Cookie,input.CookieName,maxCandidates,maxRedirects,
-        checkpoint:observation=>Checkpoint(state,useSqlite?sqlite:json,useSqlite,existed,observation,cancellation.Token),cancellation:cancellation.Token);
+    return ProfileScopeAcquisition.Acquire(name,configJson,inventory,database,resource,input.Scopes,useBrowser?null:input.Cookie,input.CookieName,maxCandidates,maxRedirects,
+        execute:useBrowser?row=>{using var issued=NativeTokenCommand.AcquireBrowser(row.ToTransport(),options.GetValueOrDefault("--login-hint"),timeout,true,cancellation.Token);return new ProfileCredentialToken(row.ToTransport(),issued.AccessToken,issued.RefreshToken,issued.ExpiresAt,issued.AdditionalScopes.Length);}:null,
+        checkpoint:observation=>Checkpoint(state,useSqlite?sqlite:json,useSqlite,existed,observation,cancellation.Token),cancellation:cancellation.Token,browser:useBrowser);
    },cancellation:cancellation.Token,expectedProfileJson:configJson);
    var apiCheck=api==null?null:ProfileTokenApi.Check(result.AccessToken,resource,api,cancellation.Token);
    Console.WriteLine(JsonSerializer.Serialize(new{SchemaVersion=1,Profile=name,ClientId=result.Request.ClientId,ResourceId=result.Request.ResourceId,
        RequestedScopes=result.Request.Scopes,IssuedScopes=result.TokenClaims.Scopes,result.ExpiresAt,result.Evidence,ApiCheck=apiCheck,CredentialOutput=false}));return true;
   }
-  catch when(browserRequired && !stdin && !cancellation.IsCancellationRequested){return false;}
   finally{Console.CancelKeyPress-=cancel;}
  }
  private static void Checkpoint(string state,string path,bool sqlite,bool existed,string observation,CancellationToken cancellation)

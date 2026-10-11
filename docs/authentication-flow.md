@@ -128,3 +128,12 @@ Memory-only does not mean inaccessible or securely erased. The passkey helper, H
 Disposal is local cleanup. It does not revoke the Entra session, unregister the passkey, revoke issued tokens, or sign out the browser.
 
 The [session vault guide](session-vault.md) explains the opt-in encrypted store, account isolation, expiry, concurrency, removal, and native CLI roadmap. [OS-backed key protection](os-backed-vault.md) is available explicitly through Windows Credential Manager and Linux Secret Service. macOS Keychain support remains deferred. The metadata database must not be used as a credential store.
+
+Native browser profiles use the same authorization-code flow described above. `login --browser`
+confirms the account through Graph and saves an encrypted session with an empty token cache,
+without copying browser cookies. A subsequent `token get` reuses the browser's existing session
+to request the selected app's token; accepted access/refresh tokens enter the opted-in vault.
+Later requests can use the cache or renew through the same client. See the
+[native browser profile guide](native-cli.md#browser-profile-login-and-acquisition) for input,
+retention, platform support, and recovery boundaries. Software passkey login still uses the
+PowerShell adapter.

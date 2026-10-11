@@ -17,6 +17,7 @@ ProfileScopeAcquisitionChecks.Run(Check,Reject);
 VaultEnvelopeChecks.Run(Check,Reject);
 ProfilePolicyChecks.Run(Check,Reject);
 ProfileStoreChecks.Run(Check,Reject);
+ProfileLoginChecks.Run(Check,Reject);
 VaultFileChecks.Run(Check,Reject);
 PrivatePublicationChecks.Run(Check,Reject);
 var now=DateTimeOffset.UtcNow;
@@ -73,6 +74,7 @@ finally{Directory.Delete(root,true);}
 // Explicit synthetic integration checks: no tenant authentication or production credentials.
 if(args.Contains("--os-store"))
 {
+ ProfileLoginChecks.RunOsStore(Check,Reject);
  var handle=Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
  var other=Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
  try

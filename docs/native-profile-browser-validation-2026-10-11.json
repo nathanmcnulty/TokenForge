@@ -1,0 +1,71 @@
+{
+  "Date": "2026-10-11",
+  "CookieTransfer": "Cookie remained in PowerShell driver; socket carried authorization URL and completion only",
+  "Accounts": [
+    {
+      "TokenOutput": false,
+      "ConfiguredInventoryMaxAgeHours": 168,
+      "VaultTokenCount": 1,
+      "Account": "nora",
+      "BrowserDriver": "HeadlessCookieRedirectViaPrivateUnixSocket",
+      "NativeLogin": true,
+      "CookieSaved": false,
+      "Warm": "SilentExplicitScopeAcquisition",
+      "SignatureValidated": false,
+      "MaximumBootstrapAdditionalScopes": 128,
+      "MaximumAdditionalScopes": 128,
+      "InventoryObservation": "2026-10-07",
+      "ApiStatuses": [
+        200,
+        200,
+        200
+      ],
+      "ConsentChangePerformed": false,
+      "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+      "Cache": "CachedVerifiedContextNotNewIssuance",
+      "BrowserUiExercised": false,
+      "GraphIdentityConfirmed": true,
+      "Storage": "Passphrase"
+    },
+    {
+      "TokenOutput": false,
+      "ConfiguredInventoryMaxAgeHours": 168,
+      "VaultTokenCount": 1,
+      "Account": "secadmin",
+      "BrowserDriver": "HeadlessCookieRedirectViaPrivateUnixSocket",
+      "NativeLogin": true,
+      "CookieSaved": false,
+      "Warm": "SilentExplicitScopeAcquisition",
+      "SignatureValidated": false,
+      "MaximumBootstrapAdditionalScopes": 128,
+      "MaximumAdditionalScopes": 128,
+      "InventoryObservation": "2026-10-07",
+      "ApiStatuses": [
+        200,
+        200,
+        200
+      ],
+      "ConsentChangePerformed": false,
+      "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+      "Cache": "CachedVerifiedContextNotNewIssuance",
+      "BrowserUiExercised": false,
+      "GraphIdentityConfirmed": true,
+      "Storage": "Passphrase"
+    }
+  ],
+  "Version": "0.36.0",
+  "NativeCoreChecks": 842,
+  "FocusedLoginChecks": 44,
+  "IsolatedLinuxOsStoreLoginChecks": 8,
+  "AddedBrowserScopeChecks": 8,
+  "PackagedProfileTokenBootstrapPassed": 31,
+  "PackagedPlatformSkipped": 1,
+  "IndependentReview": "Sol source review found no remaining blocker; exact-head platform gates pending",
+  "Limitations": [
+    "Headless authorization driver; browser UI not exercised",
+    "Live accounts tested on Linux with Passphrase storage",
+    "Historical inventory accepted under explicit 168-hour lab profile policy",
+    "Cross-file vault/profile updates have no rollback journal",
+    "JWT signatures not validated by claims inspection"
+  ]
+}

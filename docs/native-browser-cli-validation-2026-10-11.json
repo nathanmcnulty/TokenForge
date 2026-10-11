@@ -1,0 +1,63 @@
+{
+  "Date": "2026-10-11",
+  "Accounts": [
+    {
+      "NativeSelfContained": true,
+      "Succeeded": true,
+      "NativeIssuedTokenPolicyPassed": true,
+      "RequestedScope": "User.Read",
+      "CredentialOperation": "browser",
+      "SignatureValidated": false,
+      "AdditionalResponseScopes": 107,
+      "Launcher": "/usr/bin/xdg-open",
+      "Account": "nora",
+      "BrowserUiExercised": false,
+      "ApiAuthorization": "NotEstablished",
+      "MaximumAdditionalScopes": 4096,
+      "CredentialsPersisted": false,
+      "AuthorizationDriver": "HeadlessCookieHttpRedirectViaPrivateUnixSocket",
+      "TokensReturned": false
+    },
+    {
+      "NativeSelfContained": true,
+      "Succeeded": true,
+      "NativeIssuedTokenPolicyPassed": true,
+      "RequestedScope": "User.Read",
+      "CredentialOperation": "browser",
+      "SignatureValidated": false,
+      "AdditionalResponseScopes": 107,
+      "Launcher": "/usr/bin/xdg-open",
+      "Account": "secadmin",
+      "BrowserUiExercised": false,
+      "ApiAuthorization": "NotEstablished",
+      "MaximumAdditionalScopes": 4096,
+      "CredentialsPersisted": false,
+      "AuthorizationDriver": "HeadlessCookieHttpRedirectViaPrivateUnixSocket",
+      "TokensReturned": false
+    }
+  ],
+  "CookieTransfer": "Cookie stayed in the PowerShell proof process; private Unix socket carried authorization URL and completion only",
+  "Version": "0.33.0",
+  "Validation": {
+    "NativeCoreChecks": 728,
+    "SourcePester": {
+      "Passed": 399,
+      "Failed": 0,
+      "Skipped": 72
+    },
+    "PackagedLinuxPester": {
+      "Passed": 178,
+      "Failed": 0,
+      "Skipped": 3
+    },
+    "ActionlintPassed": true
+  },
+  "Limitations": [
+    "The Linux launcher used a headless redirect fixture; browser UI was not exercised.",
+    "Nora and secadmin were tested in one existing tenant.",
+    "Decoded claims do not establish JWT signature validity or API authorization.",
+    "Profile browser login and passkey enrollment still require PowerShell.",
+    "Actual Windows and macOS browser launching has not been exercised locally."
+  ],
+  "ScopePolicy": "The proof explicitly allowed 4096 additional scopes and received 107 additional response scopes for each account. The earlier Nora allowance of 32 was rejected at TokenPolicyRejected. Production policy was not changed."
+}

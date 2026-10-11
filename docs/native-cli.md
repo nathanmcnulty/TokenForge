@@ -1,10 +1,10 @@
 # Native CLI and evidence store
 
 The native CLI is a self-contained .NET executable per OS and architecture. Evidence commands
-run directly in the shared core with bundled SQLite. Profile login and browser/interactive adapters invoke the packaged PowerShell 7.4+ module;
+run directly in the shared core with bundled SQLite. Profile login and profile browser/interactive adapters invoke the packaged PowerShell 7.4+ module;
 install `pwsh` and keep `src/` and `scripts/` beside the executable for those commands.
 Version 0.18 adds direct native `token acquire`, and PowerShell uses the same C# OAuth transport
-and issued-token policy. Native acquisition does not itself provide browser/passkey login or a keystore.
+and issued-token policy. Version 0.33 adds native system-browser PKCE to advanced `token acquire`. Profile login and passkey enrollment still use PowerShell.
 Version 0.19 also shares vault envelope encryption with the native core; profile storage and
 login still use PowerShell. See [shared vault validation](vault-core-validation-2026-10-08.json).
 Version 0.20 shares profile configuration validation between PowerShell and the native core.
@@ -107,13 +107,14 @@ JWT signature validity, or API authorization. Explanation does not perform or co
 
 The planner returns metadata only. Account fingerprints, arbitrary input properties, cookies,
 and token values are excluded. Timestamps retain their instants across PowerShell projections and are emitted as UTC strings.
-Fresh token acquisition and its existing warm/cold redirect rules still use PowerShell; this
-milestone moves explanation and evidence ranking, not browser login or the complete CLI token path.
+Saved-cookie profile acquisition, including warm/cold request planning, runs natively.
+Profile login and its browser/passkey adapters still require PowerShell. Explanation itself
+is offline and performs no authentication or token acquisition.
 
 ## Direct native acquisition
 
 `token acquire` is an advanced validation and teaching command. Give it an explicit request
-and the expected account context, then supply an existing ESTSAUTH cookie or refresh token.
+and the expected account context, then supply an existing ESTSAUTH cookie, refresh token, or choose system-browser authorization.
 It runs entirely inside the native executable. It returns policy-checked metadata, disposes
 the acquired tokens, and saves no credentials. Use `token get` and the module API for the
 existing profile and Graph PowerShell workflows.
@@ -121,7 +122,21 @@ existing profile and Graph PowerShell workflows.
 ```sh
 tokenforge token acquire --plan /private/native/request.json --credential cookie
 tokenforge token acquire --plan /private/native/request.json --credential refresh
+tokenforge token acquire --plan /private/native/browser-request.json --credential browser
+tokenforge token acquire --plan /private/native/browser-request.json --credential browser --interactive --login-hint observer@example.test --timeout-seconds 300
 ```
+
+Browser acquisition requires a published `http://localhost` root callback for a public
+native client. It uses silent authorization by default; an existing browser session and
+prior authorization are required. `--interactive` explicitly permits an account selection
+prompt. No mode automatically retries interactively or approves consent. Browser cookies
+stay with the user's browser; TokenForge receives the authorization code through its bounded
+loopback listener, redeems it with PKCE, validates the expected context and scopes, and disposes
+the tokens after printing metadata. Browser mode rejects `--stdin`; browser-only flags are
+rejected for cookie and refresh acquisition. The browser timeout accepts 30–900 seconds.
+The OS browser launcher has a separate ten-second bound and suppresses its child output.
+
+The [0.33 validation report](native-browser-cli-validation-2026-10-11.json) records real Entra code redemption through the self-contained Linux CLI for Nora and secadmin, using a headless redirect fixture. Both responses included 107 additional API scopes. A plan allowing only 32 was rejected; the positive proof explicitly allowed 4096. Choose an additional-scope budget deliberately: requesting User.Read alone does not guarantee that Entra issues only that scope.
 
 The credential prompt does not echo. An explicit `--stdin` accepts one credential followed
 by EOF, optionally with trailing line endings; never put credentials in command arguments,

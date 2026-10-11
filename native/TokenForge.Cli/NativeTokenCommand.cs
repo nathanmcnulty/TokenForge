@@ -24,8 +24,8 @@ internal static class NativeTokenCommand
     {
         var stage = "InvalidPlan";
         try {
-        if(args.Length<6 || args[2]!="--plan" || args[4]!="--credential" || args[5] is not ("cookie" or "refresh" or "browser"))throw new InvalidOperationException();
-        bool browser=args[5]=="browser",stdin=false,interactive=false;string? hint=null;int timeout=300;
+        if(args.Length<6 || args[2]!="--plan" || args[4]!="--credential" || args[5] is not ("cookie" or "refresh" or "browser" or "passkey"))throw new InvalidOperationException();
+        bool browser=args[5]=="browser",passkey=args[5]=="passkey",stdin=false,interactive=false;string? hint=null,keyPath=null;int timeout=300;
         if(browser){
             var seen=new HashSet<string>(StringComparer.Ordinal);
             for(int i=6;i<args.Length;i++){
@@ -35,6 +35,9 @@ internal static class NativeTokenCommand
                 if(option=="--login-hint"){hint=args[i];if(hint.Length>320 || hint.Any(char.IsControl))throw new InvalidOperationException();}
                 else if(!int.TryParse(args[i],System.Globalization.NumberStyles.None,System.Globalization.CultureInfo.InvariantCulture,out timeout) || timeout is <30 or >900)throw new InvalidOperationException();
             }
+        }else if(passkey){
+            if(args.Length!=8 || args[6]!="--passkey-file" || args[7].Length is <1 or >4096 || args[7].StartsWith('-'))throw new InvalidOperationException();
+            keyPath=args[7];
         }else{
             if(args.Length>7 || args.Length==7 && args[6]!="--stdin")throw new InvalidOperationException();
             stdin=args.Length==7;if(!stdin && Console.IsInputRedirected)throw new InvalidOperationException();
@@ -44,13 +47,13 @@ internal static class NativeTokenCommand
         using var cancellation = new CancellationTokenSource();
         ConsoleCancelEventHandler cancel = (_, e) => { e.Cancel = true; cancellation.Cancel(); };
         stage = "CredentialInputFailed";
-        using var secret = browser ? null : ReadCredential(stdin);
+        using var secret = browser || passkey ? null : ReadCredential(stdin);
         Console.CancelKeyPress += cancel;
         try
         {
             cancellation.Token.ThrowIfCancellationRequested();
             stage = "TokenAcquisitionFailed";
-            using var result = browser ? AcquireBrowser(plan.Request,hint,timeout,!interactive,cancellation.Token) :
+            using var result = passkey ? AcquirePasskey(plan.Request,keyPath!,cancellation.Token) : browser ? AcquireBrowser(plan.Request,hint,timeout,!interactive,cancellation.Token) :
                 args[5] == "cookie" ? OAuthTransport.Cookie(plan.Request, secret!, cancellation: cancellation.Token) : OAuthTransport.Refresh(plan.Request, secret!, cancellation.Token);
             var claims = result.TokenClaims;
             stage = "TokenPolicyRejected";
@@ -66,6 +69,12 @@ internal static class NativeTokenCommand
         }
         finally { Console.CancelKeyPress -= cancel; }
         } catch (Exception error) { throw new NativeTokenException(stage, error.Message); }
+    }
+    internal static OAuthResult AcquirePasskey(OAuthRequest request,string path,CancellationToken cancellation)
+    {
+        using var signer=SoftwarePasskey.Open(path);
+        using var session=signer.Authenticate(cancellation);
+        return OAuthTransport.Cookie(request,session.Cookie,session.CookieName,cancellation);
     }
     internal static OAuthResult AcquireBrowser(OAuthRequest request,string? hint,int timeout,bool silent,CancellationToken cancellation)
     {

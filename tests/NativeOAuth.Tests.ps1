@@ -113,7 +113,15 @@ finally:os._exit(0)
   $result.Failure.Code|Should -Be TokenAcquisitionFailed
   $result.Failure.IdentityErrorCodes|Should -BeNullOrEmpty
  }
- It 'does not create a missing context plan' {
+ It 'rejects passkey options and invalid plans before credential file access: <Case>' -ForEach @(
+  @{Case='MissingPath';Options=@('--credential','passkey','--passkey-file')},
+  @{Case='Stdin';Options=@('--credential','passkey','--stdin')},
+  @{Case='Duplicate';Options=@('--credential','passkey','--passkey-file','synthetic-private-key','--passkey-file','synthetic-private-key')},
+  @{Case='InvalidPlan';Options=@('--credential','passkey','--passkey-file','synthetic-private-key')}) {
+  if($Case -eq 'InvalidPlan'){$plan.Request.Protocol='INVALID';$plan|ConvertTo-Json -Depth 8|Set-Content $path}
+  Invoke-NativeReject $path $Options
+ }
+ It 'does not create a missing context plan'  {
   $missing=Join-Path $root missing.json;Invoke-NativeReject $missing;Test-Path $missing|Should -BeFalse
  }
  It 'rejects a linked plan' -Skip:$IsWindows {

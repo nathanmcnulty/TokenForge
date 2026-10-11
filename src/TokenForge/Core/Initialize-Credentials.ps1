@@ -1,7 +1,7 @@
 # Shared bootstrap for module and CI state. Credentials never cross a process boundary.
 & {
- $expectedVersion='0.36.1'
- $types=@('TokenForge.Core.CredentialRuntime','TokenForge.Core.ProfileLogin','TokenForge.Core.ProfileLoginResult','TokenForge.Core.MaintenanceBackup','TokenForge.Core.MaintenanceBackupResult','TokenForge.Core.OAuthBrowserAuthorization','TokenForge.Core.BrowserAuthorization','TokenForge.Core.ScopePlanning','TokenForge.Core.ProfileScopeAcquisition','TokenForge.Core.ProfileTokenApi','TokenForge.Core.ProfileTokenLifecycle','TokenForge.Core.ProfileCredentialToken','TokenForge.Core.ProfileStore','TokenForge.Core.VaultInspection',
+ $expectedVersion='0.37.0'
+ $types=@('TokenForge.Core.SoftwarePasskey','TokenForge.Core.SoftwarePasskeySession','TokenForge.Core.CredentialRuntime','TokenForge.Core.ProfileLogin','TokenForge.Core.ProfileLoginResult','TokenForge.Core.MaintenanceBackup','TokenForge.Core.MaintenanceBackupResult','TokenForge.Core.OAuthBrowserAuthorization','TokenForge.Core.BrowserAuthorization','TokenForge.Core.ScopePlanning','TokenForge.Core.ProfileScopeAcquisition','TokenForge.Core.ProfileTokenApi','TokenForge.Core.ProfileTokenLifecycle','TokenForge.Core.ProfileCredentialToken','TokenForge.Core.ProfileStore','TokenForge.Core.VaultInspection',
   'TokenForge.Core.V0250.VaultRecordPolicy','TokenForge.Core.V0240.TimestampPolicy','TokenForge.Core.V0230.ProfileKeyIdentity',
   'TokenForge.Core.V0220.PrivateFiles','TokenForge.Core.V0220.VaultFileTransaction','TokenForge.Core.V0200.ProfilePolicy',
   'TokenForge.Core.V0190.VaultEnvelope','TokenForge.Core.V0100.TokenPolicy','TokenForge.Core.V0110.PlatformVaultKey','TokenForge.Core.V0180.OAuthTransport')

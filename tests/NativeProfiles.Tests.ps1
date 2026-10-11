@@ -146,6 +146,7 @@ Describe 'Native profile configuration interoperability' -Skip:(-not $nativeAvai
    } $vault $password
    $before=(Get-FileHash $vault).Hash
    $view=Invoke-NativeProfile @('profile','inspect-vault','--profile','lab','--root',$root,'--stdin','--json') 0 'synthetic-inspection-passphrase'
+   $view.Protection|Should -Be Passphrase-AES-256-GCM
    $view.Sessions[0].Name|Should -Be lab;$view.Sessions[0].HasCookie|Should -BeTrue
    $view.Sessions[0].Tokens[0].HasRefreshToken|Should -BeTrue
    $view.Sessions[0].Tokens[0].RequestedScopes|Should -Be @('User.Read')

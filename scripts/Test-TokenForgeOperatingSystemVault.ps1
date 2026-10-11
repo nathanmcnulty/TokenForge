@@ -24,7 +24,7 @@ function Invoke-NativeFixtureProfile([string]$Name='fixture',[int]$ExpectedExit=
             if($errorText){throw 'Native synthetic deletion returned unexpected diagnostics.'}
             $result=$text|ConvertFrom-Json
             if($Logout){if($result.Profile -ne $Name -or -not $result.Removed -or $result.Evidence -ne 'LocalLogoutNotServerRevocation'){throw 'Native synthetic logout metadata mismatched.'};return $result}
-            if($Inspect){if($result.Sessions.Count -ne 0 -or $result.Evidence -ne 'StoredMetadataNotNewIssuanceOrApiAuthorization'){throw 'Native synthetic inspection metadata mismatched.'};return $result}
+            if($Inspect){if($result.Protection -ne $(if($IsWindows){'WindowsCredentialManager-AES-256-GCM'}else{'LinuxSecretService-AES-256-GCM'})){throw 'Native synthetic inspection key protection mismatched.'};if($result.Sessions.Count -ne 0 -or $result.Evidence -ne 'StoredMetadataNotNewIssuanceOrApiAuthorization'){throw 'Native synthetic inspection metadata mismatched.'};return $result}
             if($result.Profile -ne $Name -or -not $result.VaultRemoved -or $result.KeyRemoved -eq [bool]$Partial -or $result.Evidence -ne 'LocalDeletionNotServerRevocation'){throw 'Native synthetic deletion metadata mismatched.'}
             return $result
         }

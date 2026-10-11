@@ -54,7 +54,9 @@ public static class ProfileStore
     }
     public sealed record LogoutResult(string Profile, bool Removed, string Evidence);
     public static VaultInspection InspectVault(string name, string? root = null, SecureString? password = null) =>
-        WithVault(name,root,password,null,"Read",false,(transaction,key,configuration)=>VaultInspector.Inspect(transaction!,key!,name,configuration.GetProperty("ExpectedTenantFingerprint").GetString(),configuration.GetProperty("ExpectedPrincipalFingerprint").GetString(),DateTimeOffset.UtcNow));
+        WithVault(name,root,password,null,"Read",false,(transaction,key,configuration)=>
+            VaultInspector.Inspect(transaction!,key!,name,configuration.GetProperty("ExpectedTenantFingerprint").GetString(),configuration.GetProperty("ExpectedPrincipalFingerprint").GetString(),DateTimeOffset.UtcNow)
+                with { Protection = configuration.GetProperty("Storage").GetString()=="OperatingSystem" ? PlatformVaultKey.Backend+"-AES-256-GCM" : "Passphrase-AES-256-GCM" });
     public static LogoutResult Logout(string name, string? root = null, SecureString? password = null, Func<SecureString>? passwordProvider = null) =>
         WithVault(name,root,password,passwordProvider,"Update",true,(transaction,key,configuration)=>
         {

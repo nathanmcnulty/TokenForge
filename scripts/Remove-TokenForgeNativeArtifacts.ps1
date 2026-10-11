@@ -3,7 +3,7 @@
 param([Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$')][string]$Repository, [ValidateRange(0,9223372036854775807)][long]$CurrentRunId=0)
 $ErrorActionPreference='Stop'
 function Select-TfSupersededNativeArtifacts($Artifacts,[long]$WorkflowId,[hashtable]$Runs,[long]$CurrentRunId=0) {
- $names=@('tokenforge-linux-x64','tokenforge-win-x64','tokenforge-osx-arm64')
+ $names=@('tokenforge-linux-x64','tokenforge-win-x64','tokenforge-osx-arm64','tokenforge-linux-arm64','tokenforge-win-arm64','tokenforge-osx-x64')
  $native=@($Artifacts|Where-Object {$_.name -cin $names -and $Runs[[string]$_.workflow_run.id].WorkflowId -eq $WorkflowId -and -not $_.expired})
  $candidates=@($native|Where-Object {
   $run=$Runs[[string]$_.workflow_run.id]
@@ -23,7 +23,7 @@ function Select-TfSupersededNativeArtifacts($Artifacts,[long]$WorkflowId,[hashta
   $boundary=($build|ForEach-Object {[DateTimeOffset]$_.created_at}|Sort-Object|Select-Object -First 1)
   break
  }
- if($keep.Count -ne 3){throw 'Successful main packages are incomplete; no artifacts will be removed.'}
+ if($keep.Count -ne $names.Count){throw 'Successful main packages are incomplete; no artifacts will be removed.'}
  # Leave unfinished runs untouched, including packages uploaded during enumeration.
  @($native|Where-Object {-not $keep.ContainsKey([string]$_.id) -and $Runs[[string]$_.workflow_run.id].Status -ceq 'completed' -and ([DateTimeOffset]$_.created_at) -lt $boundary})
 }
@@ -40,7 +40,7 @@ try{
   $page++
  }while($response.artifacts.Count -eq 100)
  $runWorkflows=@{}
- foreach($artifact in @($items.Values|Where-Object {$_.name -cin @('tokenforge-linux-x64','tokenforge-win-x64','tokenforge-osx-arm64')})){
+ foreach($artifact in @($items.Values|Where-Object {$_.name -cin @('tokenforge-linux-x64','tokenforge-win-x64','tokenforge-osx-arm64','tokenforge-linux-arm64','tokenforge-win-arm64','tokenforge-osx-x64')})){
   $runId=[string]$artifact.workflow_run.id
   if($runId -notmatch '^[1-9][0-9]*$'){throw 'Invalid artifact run identity.'}
   if($runWorkflows.ContainsKey($runId)){continue}
@@ -57,5 +57,5 @@ try{
    $removed++;$bytes+=[long]$artifact.size_in_bytes
   }
  }
- [pscustomobject]@{RemovedNativePackages=$removed;BytesRemoved=$bytes;LatestMainPackagesPreserved=3}
+ [pscustomobject]@{RemovedNativePackages=$removed;BytesRemoved=$bytes;LatestMainPackagesPreserved=6}
 }catch{throw 'Native artifact maintenance failed; details suppressed. Research and maintenance snapshots are excluded.'}

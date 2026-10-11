@@ -1,4 +1,7 @@
 using System.Security;
+using System.Diagnostics;
+using System.Security.Cryptography;
+using TokenForge.Core;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -21,20 +24,34 @@ internal static class NativeTokenCommand
     {
         var stage = "InvalidPlan";
         try {
-        if (args.Length is not (6 or 7) || args[2] != "--plan" || args[4] != "--credential" || args[5] is not ("cookie" or "refresh") || args.Length == 7 && args[6] != "--stdin") throw new InvalidOperationException();
-        var plan = ReadPlan(args[3]);
-        bool stdin = args.Length == 7;
-        if (!stdin && Console.IsInputRedirected) throw new InvalidOperationException();
+        if(args.Length<6 || args[2]!="--plan" || args[4]!="--credential" || args[5] is not ("cookie" or "refresh" or "browser"))throw new InvalidOperationException();
+        bool browser=args[5]=="browser",stdin=false,interactive=false;string? hint=null;int timeout=300;
+        if(browser){
+            var seen=new HashSet<string>(StringComparer.Ordinal);
+            for(int i=6;i<args.Length;i++){
+                string option=args[i];if(!seen.Add(option))throw new InvalidOperationException();
+                if(option=="--interactive"){interactive=true;continue;}
+                if(option is not ("--login-hint" or "--timeout-seconds") || ++i>=args.Length)throw new InvalidOperationException();
+                if(option=="--login-hint"){hint=args[i];if(hint.Length>320 || hint.Any(char.IsControl))throw new InvalidOperationException();}
+                else if(!int.TryParse(args[i],System.Globalization.NumberStyles.None,System.Globalization.CultureInfo.InvariantCulture,out timeout) || timeout is <30 or >900)throw new InvalidOperationException();
+            }
+        }else{
+            if(args.Length>7 || args.Length==7 && args[6]!="--stdin")throw new InvalidOperationException();
+            stdin=args.Length==7;if(!stdin && Console.IsInputRedirected)throw new InvalidOperationException();
+        }
+        var plan=ReadPlan(args[3]);
+        if(browser){var callback=new Uri(plan.Request.RedirectUri);if(plan.Request.Spa || callback.Scheme!="http" || callback.Host!="localhost" || callback.AbsolutePath!="/" || callback.Query.Length!=0 || callback.Fragment.Length!=0 || callback.UserInfo.Length!=0)throw new InvalidOperationException();}
         using var cancellation = new CancellationTokenSource();
         ConsoleCancelEventHandler cancel = (_, e) => { e.Cancel = true; cancellation.Cancel(); };
         stage = "CredentialInputFailed";
-        using var secret = ReadCredential(stdin);
+        using var secret = browser ? null : ReadCredential(stdin);
         Console.CancelKeyPress += cancel;
         try
         {
             cancellation.Token.ThrowIfCancellationRequested();
             stage = "TokenAcquisitionFailed";
-            using var result = args[5] == "cookie" ? OAuthTransport.Cookie(plan.Request, secret, cancellation: cancellation.Token) : OAuthTransport.Refresh(plan.Request, secret, cancellation.Token);
+            using var result = browser ? AcquireBrowser(plan.Request,hint,timeout,!interactive,cancellation.Token) :
+                args[5] == "cookie" ? OAuthTransport.Cookie(plan.Request, secret!, cancellation: cancellation.Token) : OAuthTransport.Refresh(plan.Request, secret!, cancellation.Token);
             var claims = result.TokenClaims;
             stage = "TokenPolicyRejected";
             TokenPolicy.Validate(claims.TenantFingerprint!, claims.PrincipalFingerprint!, claims.ClientId!, claims.Audience!, plan.ExpectedTenantFingerprint, plan.ExpectedPrincipalFingerprint, plan.Request.ClientId, plan.Request.ResourceId, claims.Scopes, plan.Request.Scopes, claims.HasDelegatedScopeClaim, claims.ExpiresAt, result.ExpiresAt, plan.MaximumAdditionalScopes, result.AdditionalScopes.Length, false, DateTimeOffset.UtcNow);
@@ -49,6 +66,36 @@ internal static class NativeTokenCommand
         }
         finally { Console.CancelKeyPress -= cancel; }
         } catch (Exception error) { throw new NativeTokenException(stage, error.Message); }
+    }
+    private static OAuthResult AcquireBrowser(OAuthRequest request,string? hint,int timeout,bool silent,CancellationToken cancellation)
+    {
+        using var authorization=OAuthBrowserAuthorization.Authorize(request,uri=>OpenBrowser(uri,cancellation),hint,timeout,silent,cancellation);
+        cancellation.ThrowIfCancellationRequested();
+        return OAuthTransport.RedeemCode(request,authorization.Code,authorization.Verifier,authorization.RedirectUri,cancellation);
+    }
+    private static void OpenBrowser(Uri uri,CancellationToken cancellation)
+    {
+        try{
+            cancellation.ThrowIfCancellationRequested();
+            if(OperatingSystem.IsWindows()){
+                using var launched=Process.Start(new ProcessStartInfo(uri.AbsoluteUri){UseShellExecute=true});
+                return;
+            }
+            var info=new ProcessStartInfo(OperatingSystem.IsMacOS()?"/usr/bin/open":"/usr/bin/xdg-open"){
+                UseShellExecute=false,RedirectStandardOutput=true,RedirectStandardError=true,CreateNoWindow=true};
+            info.ArgumentList.Add(uri.AbsoluteUri);
+            using var process=Process.Start(info)??throw new InvalidOperationException();
+            using var deadline=CancellationTokenSource.CreateLinkedTokenSource(cancellation);deadline.CancelAfter(TimeSpan.FromSeconds(10));
+            async Task Drain(Stream stream){var bytes=new byte[1024];try{while(await stream.ReadAsync(bytes.AsMemory(),deadline.Token)!=0){}}finally{CryptographicOperations.ZeroMemory(bytes);}}
+            Task output=Drain(process.StandardOutput.BaseStream),errors=Drain(process.StandardError.BaseStream);
+            try{process.WaitForExitAsync(deadline.Token).GetAwaiter().GetResult();if(process.ExitCode!=0)throw new InvalidOperationException();}
+            finally{
+                deadline.Cancel();
+                if(!process.HasExited){try{process.Kill();}catch{}}
+                try{Task.WhenAll(output,errors).GetAwaiter().GetResult();}catch(OperationCanceledException){}
+            }
+        }catch(OperationCanceledException){if(cancellation.IsCancellationRequested)throw;throw new InvalidOperationException("Browser launcher timed out. Details suppressed.");}
+        catch{throw new InvalidOperationException("Unable to open the system browser. Details suppressed.");}
     }
     private static Plan ReadPlan(string path)
     {
@@ -107,7 +154,7 @@ internal sealed class NativeTokenException : Exception
     public NativeTokenException(string code, string diagnostic)
     {
         Code = code;
-        Reason = diagnostic.StartsWith("Silent authorization", StringComparison.Ordinal) ? "SilentAuthorizationDeclined" : diagnostic.StartsWith("Identity transport", StringComparison.Ordinal) ? "TransportFailed" : diagnostic.StartsWith("Token request failed", StringComparison.Ordinal) ? "TokenEndpointRejected" : "ValidationFailed";
+        Reason = (diagnostic.StartsWith("Silent authorization", StringComparison.Ordinal) || diagnostic.StartsWith("Silent browser authorization", StringComparison.Ordinal)) ? "SilentAuthorizationDeclined" : diagnostic.StartsWith("Identity transport", StringComparison.Ordinal) ? "TransportFailed" : diagnostic.StartsWith("Token request failed", StringComparison.Ordinal) ? "TokenEndpointRejected" : "ValidationFailed";
         IdentityErrorCodes = Regex.Matches(diagnostic, @"\bAADSTS([0-9]{4,9})\b").Select(m => m.Groups[1].Value).Distinct().Take(5).ToArray();
         var status = Regex.Match(diagnostic, @"\bHTTP ([1-5][0-9]{2})\b");
         HttpStatus = status.Success ? int.Parse(status.Groups[1].Value) : null;

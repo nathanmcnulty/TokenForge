@@ -4,13 +4,14 @@ using TokenForge.Core;
 
 try
 {
-    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.20.0",AuthenticationDependency="Profile login and storage: PowerShell 7.4+; token acquire: native"}));return 0;}
+    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.21.0",AuthenticationDependency="Profile login and credential storage: PowerShell 7.4+; profile create/show and token acquire: native"}));return 0;}
     if (args.Length == 0 || args[0] is "help" or "--help")
     {
-        Console.WriteLine("TokenForge: profile create/show/forget-key, login, status, doctor, logout, scopes explain, token get/acquire, graph permissions; research report/weekly/export-flows/backup; evidence import/update/export/plan/cohort/cohort-export/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Profile login and storage require PowerShell 7.4+; token acquire runs natively.");
+        Console.WriteLine("TokenForge: profile create/show/forget-key, login, status, doctor, logout, scopes explain, token get/acquire, graph permissions; research report/weekly/export-flows/backup; evidence import/update/export/plan/cohort/cohort-export/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Profile login and credential storage require PowerShell 7.4+; profile create/show and token acquire run natively.");
         return 0;
     }
     if (args.Length > 1 && args[0] == "token" && args[1] == "acquire") return NativeTokenCommand.Run(args);
+    if (args.Length > 1 && args[0] == "profile" && args[1] is "create" or "show") return NativeProfileCommand.Run(args);
     if (args[0] == "catalog")
     {
         if(args.Length<4 || args[2]!="--database")throw new InvalidOperationException();
@@ -150,7 +151,6 @@ try
         var value = args[index++]; if (value.StartsWith('-') || value.Length > 4096) throw new InvalidOperationException();
         start.ArgumentList.Add("-"+parameter); start.ArgumentList.Add(value);
     }
-    if (args[0] == "profile" && args.Length > 1 && args[1] == "create" && !seen.Contains("--storage")) { start.ArgumentList.Add("-Storage"); start.ArgumentList.Add("Passphrase"); }
     using var process = Process.Start(start) ?? throw new InvalidOperationException();
     await process.WaitForExitAsync(); return process.ExitCode;
 }

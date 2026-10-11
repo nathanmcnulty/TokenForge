@@ -8,6 +8,7 @@ void Check(bool condition){if(!condition) throw new Exception("Check failed.");c
 void Reject(Action action){try{action();}catch{count++;return;}throw new Exception("Expected rejection.");}
 VaultEnvelopeChecks.Run(Check,Reject);
 ProfilePolicyChecks.Run(Check,Reject);
+ProfileStoreChecks.Run(Check,Reject);
 var now=DateTimeOffset.UtcNow;
 int Policy(string tenant="a",string audience="https://graph.microsoft.com",string[]? scopes=null,int extras=0,DateTimeOffset? expiry=null) =>
  TokenPolicy.Validate(tenant,"b","c",audience,"a","b","c","00000003-0000-0000-c000-000000000000",scopes??new[]{"User.Read","openid"},new[]{"User.Read"},true,expiry??now.AddHours(1),now.AddHours(1),0,extras,false,now);

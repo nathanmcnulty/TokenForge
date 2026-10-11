@@ -1,55 +1,12 @@
-# These helpers share the private-path and encrypted transaction boundary used by all vault operations.
+# Shared private-path and exclusive-file policy used by all vault operations.
 function Resolve-TokenForgeVaultPath {
     param([string]$Path,[switch]$CreateDirectory)
     $full=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
-    if($full.StartsWith('\\')){throw 'Vaults require a local filesystem path.'}
-    $parent=[IO.Path]::GetDirectoryName($full)
-    for($part=$full;$part;$part=[IO.Path]::GetDirectoryName($part)){
-        $item=Get-Item -LiteralPath $part -Force -ErrorAction SilentlyContinue
-        if($item -and ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'Vault paths must not contain links or reparse points.'}
-    }
-    if(-not [IO.Directory]::Exists($parent)){
-        if(-not $CreateDirectory){throw 'Vault directory does not exist.'}
-        if($IsWindows){
-            $security=[Security.AccessControl.DirectorySecurity]::new()
-            $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User
-            $security.SetOwner($sid);$security.SetAccessRuleProtection($true,$false)
-            $security.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($sid,'FullControl','ContainerInherit,ObjectInherit','None','Allow'))
-            [IO.FileSystemAclExtensions]::Create([IO.DirectoryInfo]::new($parent),$security)
-        }else{$null=[IO.Directory]::CreateDirectory($parent,[IO.UnixFileMode]448)}
-    }
-    foreach($part in @($parent,$full)){
-        $item=Get-Item -LiteralPath $part -Force -ErrorAction SilentlyContinue
-        if(-not $item){continue}
-        if($part -eq $full -and $item.PSIsContainer){throw 'Vault path must be a regular file.'}
-        if(-not $IsWindows){
-            if(([int]$item.UnixFileMode -band 63)){throw 'Vault files and their directory must exclude group and other access.'}
-        }else{
-            $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-            $acl=Get-Acl -LiteralPath $part
-            if($acl.GetOwner([Security.Principal.SecurityIdentifier]).Value -notin @($sid,'S-1-5-18','S-1-5-32-544')){throw 'Vault path is owned by another identity.'}
-            foreach($rule in $acl.GetAccessRules($true,$true,[Security.Principal.SecurityIdentifier])){
-                if($rule.AccessControlType -eq 'Allow' -and $rule.IdentityReference.Value -notin @($sid,'S-1-5-18','S-1-5-32-544')){throw 'Vault ACL permits another identity.'}
-            }
-        }
-    }
-    $full
+    [TokenForge.Core.V0210.PrivateFiles]::Resolve($full,[bool]$CreateDirectory)
 }
-
 function Open-TokenForgeVaultFile {
     param([string]$Path,[switch]$Create)
-    if($Create -and $IsWindows){
-        $security=[Security.AccessControl.FileSecurity]::new()
-        $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User
-        $security.SetOwner($sid);$security.SetAccessRuleProtection($true,$false)
-        $security.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($sid,'FullControl','Allow'))
-        return [IO.FileSystemAclExtensions]::Create([IO.FileInfo]::new($Path),[IO.FileMode]::CreateNew,[Security.AccessControl.FileSystemRights]::FullControl,[IO.FileShare]::None,4096,[IO.FileOptions]::None,$security)
-    }
-    $options=[IO.FileStreamOptions]::new()
-    $options.Mode=if($Create){[IO.FileMode]::CreateNew}else{[IO.FileMode]::Open}
-    $options.Access=[IO.FileAccess]::ReadWrite;$options.Share=[IO.FileShare]::None
-    if($Create -and -not $IsWindows){$options.UnixCreateMode=[IO.UnixFileMode]384}
-    [IO.FileStream]::new($Path,$options)
+    [TokenForge.Core.V0210.PrivateFiles]::Open($Path,[bool]$Create)
 }
 
 function Invoke-TokenForgeVaultTransaction {

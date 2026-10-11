@@ -1,14 +1,19 @@
 # Native CLI and evidence store
 
 The native CLI is a self-contained .NET executable per OS and architecture. Evidence commands
-run directly in the shared core with bundled SQLite. Profile login, storage, and `token get` currently invoke the packaged PowerShell 7.4+ module;
+run directly in the shared core with bundled SQLite. Profile login, credential storage, and `token get` currently invoke the packaged PowerShell 7.4+ module;
 install `pwsh` and keep `src/` and `scripts/` beside the executable for those commands.
 Version 0.18 adds direct native `token acquire`, and PowerShell uses the same C# OAuth transport
 and issued-token policy. Native acquisition does not itself provide browser/passkey login or a keystore.
 Version 0.19 also shares vault envelope encryption with the native core; profile storage and
 login still use PowerShell. See [shared vault validation](vault-core-validation-2026-10-08.json).
 Version 0.20 shares profile configuration validation between PowerShell and the native core.
-Profile file operations, credential lifecycle, and login still use PowerShell. See [profile policy validation](profile-core-validation-2026-10-10.json).
+See [profile policy validation](profile-core-validation-2026-10-10.json).
+Version 0.21 runs `profile create` and `profile show` directly in the executable. These commands
+need neither PowerShell nor the packaged scripts. Credential lifecycle and login still use PowerShell.
+The module and native CLI share private-file permission and link checks. See
+[native profile validation](native-profile-validation-2026-10-10.json) for both-account Linux proof
+and configuration interoperability checks.
 
 ```sh
 tokenforge profile create --profile lab --tenant example.onmicrosoft.com --state-path /private/evidence
@@ -20,6 +25,11 @@ tokenforge logout --profile lab --prompt-passphrase
 ```
 
 Use `--login-hint user@example.onmicrosoft.com` for browser login or token acquisition when the browser has multiple accounts. The hint helps account selection; the bound profile fingerprints still enforce identity.
+
+Omitting `--profile` selects `default`. Creation refuses to overwrite an existing profile.
+`profile show` validates configuration without creating missing directories. Creation stores
+configuration only: selecting `--storage OperatingSystem` does not create or open a keystore key.
+Use `--max-age-hours` and `--session-retention-hours` to configure inventory age and session retention.
 
 Native profile creation defaults to explicit passphrase storage because each CLI invocation is
 its own process. The module still defaults to memory storage. Passphrases are read without echo

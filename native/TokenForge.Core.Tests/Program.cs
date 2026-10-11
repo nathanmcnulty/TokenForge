@@ -7,6 +7,7 @@ using TokenForge.Core.V0220;
 var count=0;
 void Check(bool condition){if(!condition) throw new Exception("Check failed.");count++;}
 void Reject(Action action){try{action();}catch{count++;return;}throw new Exception("Expected rejection.");}
+NativeTokenDiagnosticChecks.Run(Check);
 TimestampPolicyChecks.Run(Check,Reject);
 VaultRecordPolicyChecks.Run(Check,Reject);
 VaultInspectionChecks.Run(Check,Reject);

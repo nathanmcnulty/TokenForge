@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Runtime.Versioning;
+using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Security.Principal;
 
@@ -54,6 +55,19 @@ namespace TokenForge.Core.V0220
             if (create && !OperatingSystem.IsWindows()) options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
             return new FileStream(path, options);
         }
+        // Caller owns a complete private temporary file and removes it in finally.
+        // Unix rename can overwrite a destination created after File.Move's check.
+        internal static void PublishNew(string source, string target)
+        {
+            if (OperatingSystem.IsWindows()) { File.Move(source, target, false); return; }
+            int result = OperatingSystem.IsLinux() ? LinuxLink(source, target) :
+                OperatingSystem.IsMacOS() ? MacLink(source, target) : throw new PlatformNotSupportedException();
+            if (result != 0) throw new IOException("Private file publication failed.");
+        }
+        [DllImport("libc", EntryPoint="link", SetLastError=true)]
+        private static extern int LinuxLink([MarshalAs(UnmanagedType.LPUTF8Str)] string source, [MarshalAs(UnmanagedType.LPUTF8Str)] string target);
+        [DllImport("libSystem.B.dylib", EntryPoint="link", SetLastError=true)]
+        private static extern int MacLink([MarshalAs(UnmanagedType.LPUTF8Str)] string source, [MarshalAs(UnmanagedType.LPUTF8Str)] string target);
         private static FileAttributes? Attributes(string path)
         {
             try { return File.GetAttributes(path); }
@@ -133,7 +147,9 @@ namespace TokenForge.Core.V0220
                 using (var output = PrivateFiles.Open(PrivateFiles.Resolve(temporary, false), true))
                 { output.Write(envelope); output.Flush(true); }
                 PrivateFiles.Resolve(path, false);
-                File.Move(temporary, path, mode == "Update"); temporary = null; committed = true;
+                if (mode == "Update") { File.Move(temporary, path, true); temporary = null; }
+                else PrivateFiles.PublishNew(temporary, path);
+                committed = true;
             }
             catch { throw Failure(); }
             finally { if (temporary != null) { try { File.Delete(temporary); } catch { } } }

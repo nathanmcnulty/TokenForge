@@ -1,0 +1,52 @@
+{
+  "Version": "0.35.1",
+  "EncryptedBackupsRemainInPrivateLocalState": true,
+  "Accounts": [
+    {
+      "CiphertextBytesIdentical": true,
+      "FreshLoginPerformed": false,
+      "Account": "nora",
+      "Authenticated": false,
+      "FirstCopySaved": true,
+      "NativeSelfContained": true,
+      "PowerShellOnNativeProcessPath": false,
+      "SecondCopyDeduplicated": true,
+      "Source": "ExistingEncryptedMaintenanceSnapshotFrom2026-10-07"
+    },
+    {
+      "CiphertextBytesIdentical": true,
+      "FreshLoginPerformed": false,
+      "Account": "secadmin",
+      "Authenticated": false,
+      "FirstCopySaved": true,
+      "NativeSelfContained": true,
+      "PowerShellOnNativeProcessPath": false,
+      "SecondCopyDeduplicated": true,
+      "Source": "ExistingEncryptedMaintenanceSnapshotFrom2026-10-07"
+    }
+  ],
+  "Date": "2026-10-11",
+  "CredentialsOrKeysCopied": false,
+  "Validation": {
+    "NativeCoreChecks": 790,
+    "NewPrivatePublicationChecks": 40,
+    "ConcurrentRounds": 10,
+    "WritersPerRound": 8,
+    "DifferentPayloads": true,
+    "ExactlyOnePublisherPerRound": true,
+    "ExistingFileDirectoryAndUnixSymlinkPreserved": true,
+    "UncooperativeVaultCreatorPreserved": true,
+    "OldUnixMoveFailedSameInvariant": true,
+    "PackagedLinuxPester": {
+      "Passed": 66,
+      "Failed": 0,
+      "Skipped": 2
+    },
+    "ActionlintPassed": true
+  },
+  "Limitations": [
+    "Local tests and snapshot-copy proof ran on Linux; hosted Windows/macOS checks remain required before merge.",
+    "Unix profile/vault/backup creation requires hard-link-capable private local storage.",
+    "Snapshot proofs copied existing encrypted metadata without key reads, decryption, login or payload authentication."
+  ]
+}

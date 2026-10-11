@@ -37,9 +37,9 @@ function Export-TokenForgeFlowEvidence {
     $seen=@{}
     $rows=@(foreach($row in $db.Attempts){
         if($row.Outcome -ne 'Succeeded'){continue}
-        $key=$row.ClientId+'|'+$row.ResourceId+'|'+$row.Protocol+'|'+[int]$row.Spa+'|'+(@($row.ScpScopes|Sort-Object -Unique) -join ' ')
+        $key=$row.ClientId+'|'+$row.ResourceId+'|'+$row.Protocol+'|'+[int]$row.Spa+'|'+(@($row.ScpScopes|Sort-Object -Unique -CaseSensitive) -join ' ')
         if($seen.ContainsKey($key)){continue};$seen[$key]=$true
-        [ordered]@{ClientId=$row.ClientId;ResourceId=$row.ResourceId;Protocol=$row.Protocol;Spa=$row.Spa;Scopes=@($row.ScpScopes|Sort-Object -Unique);SignatureValidated=$false;Evidence='AnonymousObservedFlowNotUniversalCapability'}
+        [ordered]@{ClientId=$row.ClientId;ResourceId=$row.ResourceId;Protocol=$row.Protocol;Spa=$row.Spa;Scopes=@($row.ScpScopes|Sort-Object -Unique -CaseSensitive);SignatureValidated=$false;Evidence='AnonymousObservedFlowNotUniversalCapability'}
     })
     Save-TokenForgeDocument -Path $OutputPath -Document @{Format='TokenForgeAnonymousFlows';SchemaVersion=1;Observations=$rows;Disclaimer='Account/session/tenant-dependent observations, not universal support or consent.'}
 }

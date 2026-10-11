@@ -197,4 +197,39 @@ Describe 'Single-command scoped tokens' {
   $issued.TokenClaims.Audience='https://management.core.windows.net/';$issued.TokenClaims.Scopes=@('user_impersonation')
   (Get-TokenForgeScopedToken @options).Request.ResourceId|Should -Be $arm
  }
+ It 'preserves case-distinct explicit scope names through shared request construction' {
+  $observation.ScpScopes=@('User.Read','user.read');$options.Scope=@('User.Read','user.read','User.Read')
+  $issued=New-WorkflowToken $client $tid $oid @('User.Read','user.read')
+  $result=Get-TokenForgeScopedToken @options
+  $result.Request.Scopes|Should -Be @('User.Read','user.read')
+  $result.Request.OAuthScopes|Should -Be @("$graph/User.Read","$graph/user.read")
+ }
+ It 'stops later redirects when inventory expires during an earlier attempt' {
+  Mock Get-TokenForgeToken -ModuleName TokenForge {
+   param($Request)
+   if($Request.ClientId -eq $bootstrapId){return $bootstrap}
+   $inventory.CapturedAt=[DateTimeOffset]::UtcNow.AddDays(-2).ToString('o')
+   throw 'AADSTS65002 synthetic request failure'
+  }
+  {Get-TokenForgeScopedToken @options -MaxRedirects 2}|Should -Throw '*No candidate*'
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 2 -Exactly
+ }
+
+ It 'uses distinct vault token IDs for requests with case-distinct scope sets' {
+  $path=Join-Path $vaultRoot 'case-sensitive/session.tfvault';$password=ConvertTo-SecureString synthetic-unlock-passphrase -AsPlainText -Force
+  $null=New-TokenForgeVault $path $password
+  $first=$null;$second=$null
+  try{
+   $first=Get-TokenForgeScopedToken @options -VaultPath $path -VaultPassword $password -SessionName test
+   $bootstrap=New-WorkflowToken $bootstrapId $tid $oid
+   $issued=New-WorkflowToken $client $tid $oid @('User.Read','user.read')
+   $observation.ScpScopes=@('User.Read','user.read');$options.Scope=@('User.Read','user.read')
+   $second=Get-TokenForgeScopedToken @options -VaultPath $path -VaultPassword $password -SessionName test
+   $second.VaultTokenId|Should -Not -Be $first.VaultTokenId
+   (Get-TokenForgeVault $path $password).Sessions[0].Tokens.Count|Should -Be 2
+  }finally{
+   foreach($token in @($first,$second)){if($token){$token.AccessToken.Dispose();$token.RefreshToken.Dispose()}};$password.Dispose()
+  }
+ }
+
 }

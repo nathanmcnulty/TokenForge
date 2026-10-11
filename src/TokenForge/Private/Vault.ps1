@@ -46,7 +46,7 @@ function Invoke-TokenForgeVaultTransaction {
 function Save-TokenForgeScopedCredential {
     param([string]$Path,[securestring]$Password,[string]$SessionName,[securestring]$Cookie,[string]$CookieName,$Token,[int]$RetentionHours,$ExpectedRevision,[switch]$ReuseSession)
     $now=[DateTimeOffset]::UtcNow;$claims=$Token.TokenClaims;$request=$Token.Request
-    $id=Get-TokenForgeFingerprint -Value (@($claims.TenantFingerprint,$claims.PrincipalFingerprint,$request.Tenant,$request.ClientId,$request.ResourceId,(@($request.Scopes|Sort-Object -Unique) -join ' '),$request.RedirectUri,[string]$request.Spa,$Token.Protocol,(@($request.OAuthScopes) -ccontains 'offline_access')) -join '|')
+    $id=Get-TokenForgeFingerprint -Value (@($claims.TenantFingerprint,$claims.PrincipalFingerprint,$request.Tenant,$request.ClientId,$request.ResourceId,(@($request.Scopes|Sort-Object -Unique -CaseSensitive) -join ' '),$request.RedirectUri,[string]$request.Spa,$Token.Protocol,(@($request.OAuthScopes) -ccontains 'offline_access')) -join '|')
     Invoke-TokenForgeVaultTransaction -Path $Path -Password $Password -Mode Update -Update {
         param($document)
         $old=$document.Sessions[$SessionName]

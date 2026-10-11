@@ -56,10 +56,10 @@ function Add-TokenForgeScopeObservation {
     }
     foreach ($field in @('RequestedScopes','ResponseScopes','ScpScopes')) {
         if ($clean.Contains($field)) {
-            $clean[$field] = @($clean[$field] | Where-Object { $_ -is [string] -and $_ -match '^[A-Za-z0-9_.:/-]{1,256}$' } | Sort-Object -Unique)
+            $clean[$field] = @($clean[$field] | Where-Object { $_ -is [string] -and $_ -match '^[A-Za-z0-9_.:/-]{1,256}$' } | Sort-Object -Unique -CaseSensitive)
         }
     }
-    if ($clean.Contains('ErrorCodes')) { $clean.ErrorCodes = @($clean.ErrorCodes | Where-Object { [string]$_ -match '^[0-9]{4,9}$' } | Sort-Object -Unique) }
+    if ($clean.Contains('ErrorCodes')) { $clean.ErrorCodes = @($clean.ErrorCodes | Where-Object { [string]$_ -match '^[0-9]{4,9}$' } | Sort-Object -Unique -CaseSensitive) }
     $clean.SignatureValidated = $false
     if ($Path -and $Path.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)) {
         $checkpoint=New-TokenForgeScopeDatabase;$checkpoint.Observations=@([pscustomobject]$clean)
@@ -86,7 +86,7 @@ function Compare-TokenForgeScopeDatabase {
         }
         $index++
     }
-    foreach ($key in @(@($maps[0].Keys) + @($maps[1].Keys) | Sort-Object -Unique)) {
+    foreach ($key in @(@($maps[0].Keys) + @($maps[1].Keys) | Sort-Object -Unique -CaseSensitive)) {
         $old = $maps[0][$key]; $new = $maps[1][$key]
         $oldScopes = @(if ($old -and $old.Outcome -eq 'Succeeded') { $old.ScpScopes })
         $newScopes = @(if ($new -and $new.Outcome -eq 'Succeeded') { $new.ScpScopes })
@@ -112,7 +112,7 @@ function Export-TokenForgeScopeDatabase {
         if (-not [guid]::TryParse([string]$observation.ClientId,[ref]$client) -or -not [guid]::TryParse([string]$observation.ResourceId,[ref]$resource) -or -not [TokenForge.Core.V0240.TimestampPolicy]::TryParse($observation.ObservedAt,[ref]$time) -or @($observation.ScpScopes | Where-Object { $_ -isnot [string] -or $_ -notmatch '^[A-Za-z0-9_.-]{1,256}$' }).Count) { throw 'Export contains invalid public scope evidence. No export written.' }
         [pscustomobject]@{
             ClientId = $client.ToString(); ResourceId = $resource.ToString()
-            ObservedAt = $time.ToUniversalTime().ToString('o'); Scopes = @($observation.ScpScopes | Sort-Object -Unique)
+            ObservedAt = $time.ToUniversalTime().ToString('o'); Scopes = @($observation.ScpScopes | Sort-Object -Unique -CaseSensitive)
             Evidence = 'AnonymousTenantTokenObservation'; SignatureValidated = $false
         }
     }

@@ -5,7 +5,7 @@ using TokenForge.Core;
 try
 {
     if(args.Length>=2 && args[0]=="scopes" && args[1]=="explain")return NativeScopeCommand.Run(args);
-    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.29.0",AuthenticationDependency="Profile login, fresh profile acquisition and CLI token get: PowerShell 7.4+; persisted cache/renewal/storage: shared native core; scopes explain, profile create/show/forget-key/inspect-vault, logout and token acquire: native"}));return 0;}
+    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.30.0",AuthenticationDependency="Profile login, fresh profile acquisition and CLI token get: PowerShell 7.4+; persisted cache/renewal/storage: shared native core; scopes explain, profile create/show/forget-key/inspect-vault, logout and token acquire: native"}));return 0;}
     if (args.Length == 0 || args[0] is "help" or "--help")
     {
         Console.WriteLine("TokenForge: profile create/show/forget-key/inspect-vault, login, status, doctor, logout, scopes explain, token get/acquire, graph permissions; research report/weekly/export-flows/backup; evidence import/update/export/plan/cohort/cohort-export/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Profile login, fresh profile acquisition and CLI token get require PowerShell 7.4+; persisted cache, renewal and storage use the shared native core. Scopes explain, profile create/show/forget-key/inspect-vault, logout and token acquire run natively.");

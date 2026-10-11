@@ -26,7 +26,7 @@ function Get-TokenForgeTenantInventory {
                 if (-not $client -or -not $resource -or $client['appOwnerOrganizationId'] -notin $script:MicrosoftOwnerTenants -or $resource['appOwnerOrganizationId'] -notin $script:MicrosoftOwnerTenants) { continue }
                 [pscustomobject]@{
                     ClientId = [string]$client['appId']; ResourceId = [string]$resource['appId']
-                    Scopes = @(([string]$grant['scope']) -split '\s+' | Where-Object { $_ } | Sort-Object -Unique)
+                    Scopes = @(([string]$grant['scope']) -split '\s+' | Where-Object { $_ } | Sort-Object -Unique -CaseSensitive)
                     PrincipalFingerprint = if ($grant['consentType'] -eq 'Principal' -and $grant['principalId']) { Get-TokenForgeFingerprint -Value "$($payload['tid'])/$($grant['principalId'])" } else { $null }
                     ConsentType = [string]$grant['consentType']
                     AppliesToCurrentPrincipal = $grant['consentType'] -eq 'AllPrincipals' -or ($principal -and $grant['principalId'] -eq $principal)
@@ -50,7 +50,7 @@ function Get-TokenForgeTenantInventory {
         $candidate = $candidates[$id]; $sp = $byApp[$id]
         $verified = $sp -and $sp['appOwnerOrganizationId'] -in $script:MicrosoftOwnerTenants
         $redirects = @($candidate.RedirectUris)
-        if ($verified) { $redirects = @(@($sp['replyUrls']) + $redirects | Where-Object { $_ -is [string] -and $_ } | Sort-Object -Unique) }
+        if ($verified) { $redirects = @(@($sp['replyUrls']) + $redirects | Where-Object { $_ -is [string] -and $_ } | Sort-Object -Unique -CaseSensitive) }
         $definitions = @()
         if ($verified) {
             $definitions = @(foreach ($scope in @($sp['oauth2PermissionScopes'])) {
@@ -72,7 +72,7 @@ function Get-TokenForgeTenantInventory {
             RedirectUris = $redirects; TenantRedirectUris = @(if ($verified) { @($sp['replyUrls']) }); PreferredRedirectUri = $candidate.PreferredRedirectUri
             PublishedGrants = $candidate.Grants; DelegatedScopeDefinitions = $definitions
             AppRoleDefinitions = @(if($verified){foreach($role in @($sp['appRoles'])){if($role -and $role['value']){[pscustomobject]@{Id=[string]$role['id'];Value=[string]$role['value'];DisplayName=[string]$role['displayName'];Description=[string]$role['description'];AllowedMemberTypes=@($role['allowedMemberTypes']);Enabled=$role['isEnabled'] -eq $true}}}})
-            IdentifierUris = @(@($candidate.IdentifierUris) + @(if ($verified) { $sp['servicePrincipalNames'] }) | Where-Object { $_ -is [string] -and $_ } | Sort-Object -Unique)
+            IdentifierUris = @(@($candidate.IdentifierUris) + @(if ($verified) { $sp['servicePrincipalNames'] }) | Where-Object { $_ -is [string] -and $_ } | Sort-Object -Unique -CaseSensitive)
             IsResourceCandidate = $candidate.IsResourceCandidate -or $definitions.Count -gt 0
         }
     }

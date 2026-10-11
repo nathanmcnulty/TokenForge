@@ -52,5 +52,41 @@ static class ScopePlanningChecks
   reject(()=>ScopePlanning.Coverage(Database().ToJsonString(),resource,new[]{"User.Read\n"},tenant,principal));
   inventory=Inventory();db=Database();inventory["Applications"]![0]!["Cookie"]="synthetic-private-secret";db["Observations"]![0]!["AccessToken"]="synthetic-private-secret";
   string output=Candidates(inventory,db).ToJsonString();check(!output.Contains("synthetic-private-secret") && !output.Contains("Fingerprint"));
+  JsonArray Requests(JsonObject inv,JsonObject database,bool warm=true,bool browser=false,int clients=1,int redirects=2,bool offline=true)=>
+   JsonNode.Parse(ScopePlanning.BuildRequests(inv.ToJsonString(),database.ToJsonString(),resource,new[]{"User.Read"},principal,"example.test",warm,browser,offline,clients,redirects,24,now))!.AsArray();
+  const string native="https://login.microsoftonline.com/common/oauth2/nativeclient",callback="https://example.test/callback";
+  inventory=Inventory();db=Database();inventory["Applications"]![1]!["RedirectUris"]=new JsonArray("urn:ietf:wg:oauth:2.0:oob",native,callback,"http://localhost/path","http://localhost:8080/","http://localhost:9090/","https://evil.test/?private=secret","https://user@evil.test/");
+  db["Observations"]![0]!["RedirectFingerprint"]=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(callback))).ToLowerInvariant();
+  db["Observations"]![0]!["Spa"]=true;db["Observations"]![0]!["Protocol"]="OAuth2V1Implicit";
+  var requests=Requests(inventory,db);row=requests[0]!;
+  check(row["RedirectUri"]!.GetValue<string>()==callback && row["Spa"]!.GetValue<bool>());
+  check(row["Protocol"]!.GetValue<string>()=="OAuth2V2Pkce" && row["ResourceUri"]!.GetValue<string>()==resource);
+  check(row["OAuthScopes"]!.AsArray().Select(x=>x!.GetValue<string>()).SequenceEqual(new[]{resource+"/User.Read","offline_access"}));
+  check(requests.Count==2 && row["Source"]!.GetValue<string>()=="VerifiedPrivateScopeObservation");
+  requests=Requests(inventory,db,redirects:8);check(requests.Count==6 && requests.Any(x=>x!["RedirectUri"]!.GetValue<string>().StartsWith("urn:")));
+  check(requests.Where(x=>!x!["RedirectUri"]!.GetValue<string>().StartsWith("https:")).All(x=>!x!["Spa"]!.GetValue<bool>()));
+  requests=Requests(inventory,db,browser:true,redirects:8);check(requests.Count==2 && requests.All(x=>!x!["Spa"]!.GetValue<bool>()));
+  requests=Requests(inventory,db,warm:false,redirects:8);check(requests.Count==1 && requests[0]!["RedirectUri"]!.GetValue<string>()==native && !requests[0]!["Spa"]!.GetValue<bool>());
+  check(requests[0]!["ObservedAt"]==null && requests[0]!["Source"]!.GetValue<string>()=="PublishedOrConfiguredHintNotProvenConsent");
+  requests=Requests(inventory,db,warm:false,browser:true,redirects:1);check(requests.Count==1 && requests[0]!["RedirectUri"]!.GetValue<string>()=="http://localhost:8080/");
+  requests=Requests(inventory,db,offline:false);check(!requests[0]!["OAuthScopes"]!.AsArray().Any(x=>x!.GetValue<string>()=="offline_access"));
+  inventory["Applications"]![1]!["RedirectUris"]=new JsonArray("https://login.microsoftonline.com:443/common/oauth2/nativeclient","https://login.microsoftonline.com/common/oauth2/nativeclient/");
+  check(Requests(inventory,db,warm:false).Count==0);
+  inventory=Inventory();db=Database();var better=Observation();better["ClientId"]=other;better["ScpScopes"]=new JsonArray("User.Read");db["Observations"]!.AsArray().Add(better);
+  inventory["Applications"]![0]!["RedirectUris"]=new JsonArray("https://evil.test/?query=not-eligible");
+  check(Requests(inventory,db)[0]!["ClientId"]!.GetValue<string>()==client);
+  inventory["Applications"]![0]!["RedirectUris"]=new JsonArray(native);inventory["Applications"]![1]!["RedirectUris"]=new JsonArray(native);
+  check(Requests(inventory,db)[0]!["ClientId"]!.GetValue<string>()==other); // Coverage extras, not client ID, determine warm order.
+  requests=Requests(inventory,db,clients:2);check(requests.Count==2 && requests.Select(x=>x!["ClientId"]!.GetValue<string>()).Distinct().Count()==2);
+  inventory["Applications"]![0]!["AccountEnabled"]=false;check(Requests(inventory,db)[0]!["ClientId"]!.GetValue<string>()==client);
+  var newer=Observation();newer["Outcome"]="Failed";db["Observations"]!.AsArray().Add(newer);check(Requests(inventory,db).Count==0);
+  inventory=Inventory();db=Database();inventory["CapturedAt"]=now.AddDays(-2).ToString("o");reject(()=>Requests(inventory,db));
+  inventory=Inventory();inventory["Applications"]![2]!["AccountEnabled"]=false;reject(()=>Requests(inventory,db));
+  inventory=Inventory();reject(()=>ScopePlanning.BuildRequests(inventory.ToJsonString(),db.ToJsonString(),resource,new[]{"User.Read"},principal,"example.test\n",true,now:now));
+  reject(()=>Requests(inventory,db,clients:0));reject(()=>Requests(inventory,db,redirects:9));
+  db["Observations"]![0]!["ScpScopes"]=new JsonArray("User.Read","user.read");
+  requests=JsonNode.Parse(ScopePlanning.BuildRequests(inventory.ToJsonString(),db.ToJsonString(),resource,new[]{"user.read","User.Read","User.Read"},principal,"example.test",true,now:now))!.AsArray();
+  check(requests[0]!["Scopes"]!.AsArray().Select(x=>x!.GetValue<string>()).SequenceEqual(new[]{"User.Read","user.read"}));
+
  }
 }

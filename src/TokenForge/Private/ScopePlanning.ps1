@@ -33,3 +33,15 @@ function ConvertFrom-TokenForgePlanningResult {
   }
  }finally{$document.Dispose()}
 }
+
+function New-TokenForgePlannedScopeRequests {
+ param($Inventory,$Database,[string]$ResourceId,[string[]]$Scope,[string]$PrincipalFingerprint,[string]$Tenant,
+  [bool]$Warm,[bool]$Browser=$false,[bool]$OfflineAccess=$false,[int]$MaxCandidates=8,[int]$MaxRedirects=2,[int]$MaxAgeHours=24)
+ $json=[TokenForge.Core.ScopePlanning]::BuildRequests((ConvertTo-TokenForgePlanningInventory $Inventory),(ConvertTo-TokenForgePlanningDatabase $Database),
+  $ResourceId,$Scope,$PrincipalFingerprint,$Tenant,$Warm,$Browser,$OfflineAccess,$MaxCandidates,$MaxRedirects,$MaxAgeHours)
+ foreach($request in @(ConvertFrom-TokenForgePlanningResult $json)){
+  $request.PSObject.TypeNames.Insert(0,'TokenForge.Request')
+  if($null -eq $request.ObservedAt){$request.PSObject.Properties.Remove('ObservedAt')}
+  $request
+ }
+}

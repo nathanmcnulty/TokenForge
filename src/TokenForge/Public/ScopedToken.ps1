@@ -91,44 +91,36 @@ function Get-TokenForgeScopedToken {
         $bootstrap.AccessToken.Dispose();if($bootstrap.RefreshToken){$bootstrap.RefreshToken.Dispose()};$bootstrap=$null;$payload=$null;$me=$null
         $candidates=@(Get-TokenForgeAssessmentCoverage -Database $Database -ResourceId $ResourceId -Scope $Scope -TenantFingerprint $tenantFingerprint -PrincipalFingerprint $principal -MaxAgeHours $MaxAgeHours|Where-Object CoversAll)
         if(-not $candidates.Count){throw 'No fresh coverage for the authenticated observer; run scope discovery for this account.'}
-        $candidateCount=0
-        foreach($candidate in $candidates){
-            if($candidateCount -ge $MaxCandidates){break}
-            $app=@($Inventory.Applications|Where-Object {$_.AppId -eq $candidate.ClientId -and $_.Registration -eq 'Present' -and $_.Ownership -eq 'VerifiedMicrosoftOwner' -and $_.AccountEnabled})
-            if($app.Count -ne 1){continue}
-            $redirects=@($app[0].RedirectUris|Where-Object {
-                $u=$null
-                [uri]::TryCreate($_,[UriKind]::Absolute,[ref]$u) -and -not $u.UserInfo -and -not $u.Query -and -not $u.Fragment -and
-                $(if($Browser){$u.Scheme -eq 'http' -and $u.Host -eq 'localhost' -and $u.AbsolutePath -eq '/'}else{($u.Scheme -eq 'https') -or ($u.Scheme -eq 'http' -and $u.Host -eq 'localhost') -or ($u.Scheme -eq 'urn')})
-            }|Sort-Object @{Expression={if($candidate.RedirectFingerprint -and (Get-TokenForgeFingerprint -Value $_) -eq $candidate.RedirectFingerprint){0}else{1}}},@{Expression={$_}}|Select-Object -First $MaxRedirects)
-            if(-not $redirects.Count){continue}
-            $candidateCount++
-            foreach($redirect in $redirects){
-                try{
-                    $spa= -not $Browser -and [bool]$candidate.Spa -and ([uri]$redirect).Scheme -eq 'https'
-                    $request=New-TokenForgeTenantRequest -Inventory $Inventory -Database $Database -PrincipalFingerprint $principal -ClientId $candidate.ClientId -ResourceId $ResourceId -Scope $Scope -RedirectUri $redirect -Tenant $tid.ToString() -Spa:$spa -OfflineAccess:$OfflineAccess -MaxAgeHours $MaxAgeHours
-                    $selected=Get-TokenForgeToken -Request $request @authentication
-                    $actual=$selected.TokenClaims
-                    $audiences=@($ResourceId.ToString())+@($resource[0].IdentifierUris)
-                    if($ResourceId.ToString() -eq $graphId){$audiences+=@('https://graph.microsoft.com')}
-                    if($ResourceId.ToString() -eq '797f4846-ba00-4fd7-ba43-dac1f8f63013'){$audiences+=@('https://management.azure.com','https://management.core.windows.net')}
-                    if($actual.TenantFingerprint -ne $tenantFingerprint -or $actual.PrincipalFingerprint -ne $principal -or $actual.ClientId -ne $candidate.ClientId -or -not $actual.Audience -or $actual.Audience.TrimEnd('/') -notin @($audiences|ForEach-Object {([string]$_).TrimEnd('/')}) -or
-                       -not $actual.HasDelegatedScopeClaim -or @($Scope|Where-Object {$actual.Scopes -cnotcontains $_}).Count){throw 'Issued token context or scope mismatch.'}
-                    $extra=@($actual.Scopes|Where-Object {$_ -cnotin @('openid','profile','email','offline_access') -and $Scope -cnotcontains $_})
-                    if($extra.Count -gt $MaxAdditionalScopes -or @($selected.AdditionalScopes).Count -gt $MaxAdditionalScopes){throw 'Issued token exceeds the additional-scope limit.'}
-                    $selected|Add-Member Request $request
-                    $selected|Add-Member SelectionEvidence 'FreshObserverScopeCoverageWithMatchedIssuedContext'
-                    $selected|Add-Member ConsentEvidence 'SilentAuthorizationSucceededForThisRequest'
-                    $selected|Add-Member BootstrapEvidence ([pscustomobject]@{ClientId=$BootstrapClientId.ToString();AdditionalScopeCount=$bootstrapExtras.Count;IdentityConfirmedByGraph=$true})
-                    $selected|Add-Member ObservedAdditionalScopeCount $extra.Count
-                    $selected|Add-Member AttemptSummary @($attempts.ToArray())
-                    $selected|Add-Member ApiCheck $(if($ApiUri){try{Test-TokenForgeTokenAccess -Token $selected -Uri $ApiUri}catch{[pscustomobject]@{Status=$null;Accepted=$false;Evidence='TransportFailureDetailsSuppressed'}}}else{$null})
-                    if($VaultPath){
-                        try{
-                            $tokenId=Save-TokenForgeScopedCredential -Path $VaultPath -Password $VaultPassword -SessionName $SessionName -Cookie $(if($Browser){$null}else{$EstsAuth}) -CookieName $CookieName -Token $selected -RetentionHours $SessionRetentionHours -ExpectedRevision $(if($vaultContext){$vaultContext.Revision}else{$null}) -ReuseSession:($PSCmdlet.ParameterSetName -eq 'Vault')
-                            $selected|Add-Member VaultTokenId $tokenId
-                        }catch{
-                            $failure=[InvalidOperationException]::new('Token was acquired but vault persistence failed; token discarded. Details suppressed.')
+        $plans=@(New-TokenForgePlannedScopeRequests -Inventory $Inventory -Database $Database -ResourceId $ResourceId -Scope $Scope -PrincipalFingerprint $principal -Tenant $tid.ToString() -Warm $true -Browser ([bool]$Browser) -OfflineAccess ([bool]$OfflineAccess) -MaxCandidates $MaxCandidates -MaxRedirects $MaxRedirects -MaxAgeHours $MaxAgeHours)
+        foreach($request in $plans){
+            try{
+                $instant=[DateTimeOffset]::UtcNow
+                foreach($stamp in @($Inventory.CapturedAt,$request.ObservedAt)){
+                    $date=[TokenForge.Core.V0240.TimestampPolicy]::Parse($stamp)
+                    if($date -lt $instant.AddHours(-$MaxAgeHours) -or $date -gt $instant.AddMinutes(5)){throw 'Request evidence expired during acquisition.'}
+                }
+                $selected=Get-TokenForgeToken -Request $request @authentication
+                $actual=$selected.TokenClaims
+                $audiences=@($ResourceId.ToString())+@($resource[0].IdentifierUris)
+                if($ResourceId.ToString() -eq $graphId){$audiences+=@('https://graph.microsoft.com')}
+                if($ResourceId.ToString() -eq '797f4846-ba00-4fd7-ba43-dac1f8f63013'){$audiences+=@('https://management.azure.com','https://management.core.windows.net')}
+                if($actual.TenantFingerprint -ne $tenantFingerprint -or $actual.PrincipalFingerprint -ne $principal -or $actual.ClientId -ne $request.ClientId -or -not $actual.Audience -or $actual.Audience.TrimEnd('/') -notin @($audiences|ForEach-Object {([string]$_).TrimEnd('/')}) -or
+                   -not $actual.HasDelegatedScopeClaim -or @($Scope|Where-Object {$actual.Scopes -cnotcontains $_}).Count){throw 'Issued token context or scope mismatch.'}
+                $extra=@($actual.Scopes|Where-Object {$_ -cnotin @('openid','profile','email','offline_access') -and $Scope -cnotcontains $_})
+                if($extra.Count -gt $MaxAdditionalScopes -or @($selected.AdditionalScopes).Count -gt $MaxAdditionalScopes){throw 'Issued token exceeds the additional-scope limit.'}
+                $selected|Add-Member Request $request
+                $selected|Add-Member SelectionEvidence 'FreshObserverScopeCoverageWithMatchedIssuedContext'
+                $selected|Add-Member ConsentEvidence 'SilentAuthorizationSucceededForThisRequest'
+                $selected|Add-Member BootstrapEvidence ([pscustomobject]@{ClientId=$BootstrapClientId.ToString();AdditionalScopeCount=$bootstrapExtras.Count;IdentityConfirmedByGraph=$true})
+                $selected|Add-Member ObservedAdditionalScopeCount $extra.Count
+                $selected|Add-Member AttemptSummary @($attempts.ToArray())
+                $selected|Add-Member ApiCheck $(if($ApiUri){try{Test-TokenForgeTokenAccess -Token $selected -Uri $ApiUri}catch{[pscustomobject]@{Status=$null;Accepted=$false;Evidence='TransportFailureDetailsSuppressed'}}}else{$null})
+                if($VaultPath){
+                    try{
+                        $tokenId=Save-TokenForgeScopedCredential -Path $VaultPath -Password $VaultPassword -SessionName $SessionName -Cookie $(if($Browser){$null}else{$EstsAuth}) -CookieName $CookieName -Token $selected -RetentionHours $SessionRetentionHours -ExpectedRevision $(if($vaultContext){$vaultContext.Revision}else{$null}) -ReuseSession:($PSCmdlet.ParameterSetName -eq 'Vault')
+                        $selected|Add-Member VaultTokenId $tokenId
+                    }catch{
+                        $failure=[InvalidOperationException]::new('Token was acquired but vault persistence failed; token discarded. Details suppressed.')
                             $failure.Data['TokenForgeVaultPersistence']=$true;throw $failure
                         }
                     }
@@ -136,10 +128,9 @@ function Get-TokenForgeScopedToken {
                     return $selected
                 }catch{
                     if($_.Exception.Data['TokenForgeVaultPersistence']){throw}
-                    $attempts.Add([pscustomobject]@{ClientId=$candidate.ClientId;Outcome='RequestRejectedOrContextMismatch';EntraCodes=@([regex]::Matches($_.Exception.Message,'\bAADSTS[0-9]{4,9}\b')|ForEach-Object Value|Sort-Object -Unique)})
+                    $attempts.Add([pscustomobject]@{ClientId=$request.ClientId;Outcome='RequestRejectedOrContextMismatch';EntraCodes=@([regex]::Matches($_.Exception.Message,'\bAADSTS[0-9]{4,9}\b')|ForEach-Object Value|Sort-Object -Unique)})
                     if($selected){$selected.AccessToken.Dispose();if($selected.RefreshToken){$selected.RefreshToken.Dispose()};$selected=$null}
                 }
-            }
         }
         $failure=[InvalidOperationException]::new('No candidate completed an explicit scoped request with matching issued context; no token returned.')
         $failure.Data['TokenForgeAttempts']=$attempts.ToArray()

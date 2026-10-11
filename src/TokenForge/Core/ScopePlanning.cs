@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Security.Cryptography;
 using TokenForge.Core.V0240;
 
 namespace TokenForge.Core;
@@ -49,32 +50,94 @@ public static class ScopePlanning
             ValidateRequest(ref resource,ref scopes,inventory.Tenant,principal,maxAgeHours);
             var instant=now ?? DateTimeOffset.UtcNow;
             var latest=Latest(ParseObservations(databaseJson),resource,inventory.Tenant,principal);
-            var coverage=CoverageRows(latest,resource,scopes,maxAgeHours,instant).ToDictionary(x=>x.ClientId,StringComparer.Ordinal);
-            bool fresh=Fresh(inventory.Captured,instant,maxAgeHours);
-            bool resourceEligible=inventory.Apps.Any(a=>a.Id==resource && Eligible(a));
-            var grantScopes=inventory.Grants.Where(g=>g.Resource==resource && (g.Consent=="AllPrincipals" || g.Consent=="Principal" && g.Principal==principal))
-                .GroupBy(g=>g.Client,StringComparer.Ordinal).ToDictionary(g=>g.Key,g=>Canonical(g.SelectMany(x=>x.Scopes)),StringComparer.Ordinal);
-            var rows=new List<CandidateRow>();
-            foreach(var app in inventory.Apps)
-            {
-                var published=app.Published.GetValueOrDefault(resource) ?? System.Array.Empty<string>();
-                var grants=grantScopes.GetValueOrDefault(app.Id) ?? System.Array.Empty<string>();
-                latest.TryGetValue(app.Id,out var observation);coverage.TryGetValue(app.Id,out var observed);
-                if(published.Length==0 && grants.Length==0 && observation==null)continue;
-                var publishedMissing=Missing(scopes,published);var grantedMissing=Missing(scopes,grants);
-                string grantStatus=grants.Length!=0 && grantedMissing.Length==0?"Covered":inventory.Enumeration!="Complete"?"Unknown":grants.Length!=0?"Partial":"NotPresent";
-                var observedScopes=observed==null?System.Array.Empty<string>():Canonical(scopes.Except(observed.MissingScopes,StringComparer.Ordinal).Concat(observed.AdditionalScopes));
-                string status=observed!=null?(observed.CoversAll?"FreshCoverage":"FreshPartialCoverage"):observation==null?"NotObserved":observation.Date>instant.AddMinutes(5)?"FutureDated":observation.Outcome!="Succeeded"?"LatestAttemptUnsuccessful":observation.Date<instant.AddHours(-maxAgeHours)?"Stale":"Unverified";
-                bool eligible=fresh && resourceEligible && Eligible(app);
-                int rank=eligible && observed?.CoversAll==true?0:eligible && grants.Length!=0 && grantedMissing.Length==0?1:eligible && published.Length!=0 && publishedMissing.Length==0?2:3;
-                rows.Add(new CandidateRow(app.Id,app.Name,resource,app.Registration,app.Ownership,app.Enabled,fresh,inventory.Captured.ToUniversalTime().ToString("o"),resourceEligible,inventory.Enumeration,
-                    published,publishedMissing,grants,grantStatus,grantStatus=="Unknown"?null:grantedMissing,observedScopes,Missing(scopes,observedScopes),observed?.AdditionalScopeCount,Eligible(app),
-                    status,observation?.Outcome ?? "NotObserved",observation?.Date.ToUniversalTime().ToString("o"),observation?.Protocol ?? "Unknown",observation?.Requested ?? System.Array.Empty<string>(),app.Redirects.Any(BrowserCallback),rank));
-            }
-            return JsonSerializer.Serialize(rows.OrderBy(r=>r.CandidateRank).ThenBy(r=>r.ObservedAdditionalScopeCount ?? int.MaxValue).ThenBy(r=>r.ClientId,StringComparer.Ordinal));
+            return JsonSerializer.Serialize(CandidateRows(inventory,latest,resource,scopes,principal,maxAgeHours,instant));
         }
         catch{throw new InvalidOperationException("Scope planning failed. Details suppressed.");}
     }
+    private static CandidateRow[] CandidateRows(Inventory inventory,Dictionary<string,Observation> latest,string resource,string[] scopes,string principal,int maxAgeHours,DateTimeOffset instant)
+    {
+        var coverage=CoverageRows(latest,resource,scopes,maxAgeHours,instant).ToDictionary(x=>x.ClientId,StringComparer.Ordinal);
+        bool fresh=Fresh(inventory.Captured,instant,maxAgeHours);
+        bool resourceEligible=inventory.Apps.Any(a=>a.Id==resource && Eligible(a));
+        var grantScopes=inventory.Grants.Where(g=>g.Resource==resource && (g.Consent=="AllPrincipals" || g.Consent=="Principal" && g.Principal==principal))
+            .GroupBy(g=>g.Client,StringComparer.Ordinal).ToDictionary(g=>g.Key,g=>Canonical(g.SelectMany(x=>x.Scopes)),StringComparer.Ordinal);
+        var rows=new List<CandidateRow>();
+        foreach(var app in inventory.Apps)
+        {
+            var published=app.Published.GetValueOrDefault(resource) ?? System.Array.Empty<string>();
+            var grants=grantScopes.GetValueOrDefault(app.Id) ?? System.Array.Empty<string>();
+            latest.TryGetValue(app.Id,out var observation);coverage.TryGetValue(app.Id,out var observed);
+            if(published.Length==0 && grants.Length==0 && observation==null)continue;
+            var publishedMissing=Missing(scopes,published);var grantedMissing=Missing(scopes,grants);
+            string grantStatus=grants.Length!=0 && grantedMissing.Length==0?"Covered":inventory.Enumeration!="Complete"?"Unknown":grants.Length!=0?"Partial":"NotPresent";
+            var observedScopes=observed==null?System.Array.Empty<string>():Canonical(scopes.Except(observed.MissingScopes,StringComparer.Ordinal).Concat(observed.AdditionalScopes));
+            string status=observed!=null?(observed.CoversAll?"FreshCoverage":"FreshPartialCoverage"):observation==null?"NotObserved":observation.Date>instant.AddMinutes(5)?"FutureDated":observation.Outcome!="Succeeded"?"LatestAttemptUnsuccessful":observation.Date<instant.AddHours(-maxAgeHours)?"Stale":"Unverified";
+            bool eligible=fresh && resourceEligible && Eligible(app);
+            int rank=eligible && observed?.CoversAll==true?0:eligible && grants.Length!=0 && grantedMissing.Length==0?1:eligible && published.Length!=0 && publishedMissing.Length==0?2:3;
+            rows.Add(new CandidateRow(app.Id,app.Name,resource,app.Registration,app.Ownership,app.Enabled,fresh,inventory.Captured.ToUniversalTime().ToString("o"),resourceEligible,inventory.Enumeration,
+                published,publishedMissing,grants,grantStatus,grantStatus=="Unknown"?null:grantedMissing,observedScopes,Missing(scopes,observedScopes),observed?.AdditionalScopeCount,Eligible(app),
+                status,observation?.Outcome ?? "NotObserved",observation?.Date.ToUniversalTime().ToString("o"),observation?.Protocol ?? "Unknown",observation?.Requested ?? System.Array.Empty<string>(),app.Redirects.Any(BrowserCallback),rank));
+        }
+        return rows.OrderBy(r=>r.CandidateRank).ThenBy(r=>r.ObservedAdditionalScopeCount ?? int.MaxValue).ThenBy(r=>r.ClientId,StringComparer.Ordinal).ToArray();
+    }
+    public sealed record RequestRow(string ClientId,string ResourceId,string ResourceUri,string[] Scopes,string[] OAuthScopes,
+        string RedirectUri,string Tenant,bool Spa,string Protocol,string Evidence,string Source,string? ObservedAt,string? ContentSha256=null);
+
+    // Warm observed coverage and cold hints have deliberately different redirect eligibility/order.
+    // This constructs explicit metadata requests only; execution must verify current issued context.
+    public static string BuildRequests(string inventoryJson,string databaseJson,string resource,string[] scopes,string principal,
+        string tenant,bool warm,bool browser=false,bool offlineAccess=false,int maxCandidates=8,int maxRedirects=2,
+        int maxAgeHours=24,DateTimeOffset? now=null)
+    {
+        try
+        {
+            var inventory=ParseInventory(inventoryJson);
+            ValidateRequest(ref resource,ref scopes,inventory.Tenant,principal,maxAgeHours);
+            if(tenant==null || !Regex.IsMatch(tenant,@"\A(organizations|common|consumers|[A-Za-z0-9][A-Za-z0-9.-]{0,252})\z") ||
+                maxCandidates is <1 or >100 || maxRedirects is <1 or >8)throw new InvalidOperationException();
+            var instant=now ?? DateTimeOffset.UtcNow;
+            if(!Fresh(inventory.Captured,instant,maxAgeHours) || !inventory.Apps.Any(a=>a.Id==resource && Eligible(a)))throw new InvalidOperationException();
+            var latest=Latest(ParseObservations(databaseJson),resource,inventory.Tenant,principal);
+            var apps=inventory.Apps.ToDictionary(a=>a.Id,StringComparer.Ordinal);
+            var order=warm?CoverageRows(latest,resource,scopes,maxAgeHours,instant).Where(r=>r.CoversAll).Select(r=>r.ClientId):
+                CandidateRows(inventory,latest,resource,scopes,principal,maxAgeHours,instant).Where(r=>r.CandidateRank<=2).Select(r=>r.ClientId);
+            var result=new List<RequestRow>();int selected=0;
+            foreach(var client in order)
+            {
+                if(!apps.TryGetValue(client,out var app) || !Eligible(app))continue;
+                latest.TryGetValue(client,out var observation);
+                IEnumerable<string> redirects=app.Redirects.Where(text=>SupportedRedirect(text,warm,browser));
+                if(warm)redirects=redirects.OrderBy(text=>observation?.Redirect==Fingerprint(text)?0:1).ThenBy(text=>text,StringComparer.Ordinal);
+                var callbacks=redirects.Take(maxRedirects).ToArray();
+                if(callbacks.Length==0)continue;
+                if(selected++>=maxCandidates)break;
+                foreach(var redirect in callbacks)
+                {
+                    var oauth=scopes.Select(scope=>resource+"/"+scope).Concat(offlineAccess?new[]{"offline_access"}:System.Array.Empty<string>()).ToArray();
+                    TokenForge.Core.V0180.OAuthTransport.ValidateRequest(new TokenForge.Core.V0180.OAuthRequest
+                    {
+                        ClientId=client,ResourceId=resource,ResourceUri=resource,Scopes=scopes.ToArray(),OAuthScopes=oauth,
+                        RedirectUri=redirect,Tenant=tenant,Spa=warm && !browser && observation?.Spa==true && new Uri(redirect).Scheme=="https"
+                    });
+                    result.Add(new RequestRow(client,resource,resource,scopes.ToArray(),oauth,redirect,tenant,
+                        warm && !browser && observation?.Spa==true && new Uri(redirect).Scheme=="https","OAuth2V2Pkce",
+                        warm?"MatchedObservedScpNotGuaranteedExplicitAuthorization":"PublishedMetadata",
+                        warm?"VerifiedPrivateScopeObservation":"PublishedOrConfiguredHintNotProvenConsent",
+                        warm?observation?.Date.ToUniversalTime().ToString("o"):null));
+                }
+            }
+            return JsonSerializer.Serialize(result);
+        }
+        catch{throw new InvalidOperationException("Explicit request planning failed. Details suppressed.");}
+    }
+    private static bool SupportedRedirect(string text,bool warm,bool browser)
+    {
+        if(text.Length>2048 || !Uri.TryCreate(text,UriKind.Absolute,out var uri) || uri.UserInfo.Length!=0 || uri.Query.Length!=0 || uri.Fragment.Length!=0)return false;
+        if(browser)return BrowserCallback(text);
+        return warm?(uri.Scheme=="https" || uri.Scheme=="http" && uri.Host=="localhost" || uri.Scheme=="urn"):
+            text=="https://login.microsoftonline.com/common/oauth2/nativeclient";
+    }
+    private static string Fingerprint(string text)=>Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text))).ToLowerInvariant();
     private static CoverageRow[] CoverageRows(Dictionary<string,Observation> latest,string resource,string[] scopes,int hours,DateTimeOffset now)
     {
         return latest.Values.Where(o=>o.Client!=Guid.Empty.ToString() && o.Namespace=="Matched" && o.Request=="Matched" && o.Outcome=="Succeeded" && Fresh(o.Date,now,hours)).Select(o=>
@@ -109,7 +172,7 @@ public static class ScopePlanning
         {
             var grants=Array(a,"PublishedGrants",100000).GroupBy(g=>Id(g,"ResourceId"),StringComparer.Ordinal)
                 .ToDictionary(g=>g.Key,g=>Canonical(g.SelectMany(x=>Strings(x,"Scopes"))),StringComparer.Ordinal);
-            return new Application(Id(a,"AppId",allowEmpty:true),Text(a,"Name"),Text(a,"Registration"),Text(a,"Ownership"),Boolean(a,"AccountEnabled"),Strings(a,"RedirectUris",true),grants);
+            return new Application(Id(a,"AppId",allowEmpty:true),Text(a,"Name"),Text(a,"Registration"),Text(a,"Ownership"),Boolean(a,"AccountEnabled"),Strings(a,"RedirectUris",true,preserveOrder:true),grants);
         }).ToArray();
         if(apps.Select(a=>a.Id).Distinct(StringComparer.Ordinal).Count()!=apps.Length)throw new InvalidOperationException();
         var tenant=Fingerprint(root,"TenantFingerprint") ?? throw new InvalidOperationException();
@@ -149,13 +212,14 @@ public static class ScopePlanning
     {
         var text=Text(value,field);if(text!=null && !Regex.IsMatch(text,@"\A[a-f0-9]{64}\z"))throw new InvalidOperationException();return text;
     }
-    private static string[] Strings(JsonElement value,string field,bool redirects=false)
+    private static string[] Strings(JsonElement value,string field,bool redirects=false,bool preserveOrder=false)
     {
-        return Canonical(Array(value,field,4096).Select(e=>
+        var values=Array(value,field,4096).Select(e=>
         {
             string text=e.GetString() ?? throw new InvalidOperationException();
             if(redirects?text.Length>4096:!Regex.IsMatch(text,@"\A[A-Za-z0-9_.:/-]{1,256}\z"))throw new InvalidOperationException();return text;
-        }));
+        });
+        return preserveOrder?values.Distinct(StringComparer.Ordinal).ToArray():Canonical(values);
     }
     private static void ValidateRequest(ref string resource,ref string[] scopes,string tenant,string principal,int hours)
     {

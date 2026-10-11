@@ -1,0 +1,86 @@
+{
+  "DateUTC": "2026-10-11",
+  "Version": "0.25.0",
+  "Scope": "Shared decrypted vault record validation; Linux live credential lifecycle compatibility",
+  "SharedCore": "TokenForge.Core.V0250.VaultRecordPolicy",
+  "SchemaVersionUnchanged": 1,
+  "ValidationBoundaries": [
+    "Decrypted bytes before PowerShell JSON projection",
+    "Serialized bytes before encryption and atomic commit"
+  ],
+  "LegacyMixedCaseSessionNamesPreserved": true,
+  "LegacyCurrentCultureDatesPreserved": true,
+  "NullableUnknownExpiryPreserved": true,
+  "MalformedRecordBaseline": {
+    "SyntheticOnly": true,
+    "NetworkRequests": 0,
+    "AuthenticatedNestedConsentEvidenceAppearedInMetadataOnV024": true,
+    "CorrectedReadAndRetrievalRejected": true,
+    "AttackerWithoutKeyForgeryClaim": false
+  },
+  "InvalidWritePreservesCiphertext": true,
+  "NativeChecksPassed": 477,
+  "FocusedTests": {
+    "Passed": 63,
+    "Failed": 0,
+    "Skipped": 2
+  },
+  "IndependentSolTestsPassed": 10,
+  "FullSuite": {
+    "Passed": 380,
+    "Failed": 0,
+    "Skipped": 44
+  },
+  "PackagedTests": {
+    "Passed": 49,
+    "Failed": 0,
+    "Skipped": 2
+  },
+  "PlatformProof": "Linux local; Windows/macOS hosted CI required before merge",
+  "InventoryProofPolicy": "Prior October 7 inventory with explicit MaxAgeHours=168; production default remains 24",
+  "Accounts": [
+    {
+      "AccountLabel": "nora",
+      "ExpectedAccountNamespaceMatched": true,
+      "Storage": "LinuxSecretService",
+      "Fresh": "BoundedTargetedSilentExplicitScopeAcquisition",
+      "FreshApiStatus": 200,
+      "ReopenedCache": "CachedVerifiedContextNotNewIssuance",
+      "ReopenedApiStatus": 200,
+      "Renewal": "SameClientRefreshMatchedIssuedContext",
+      "RenewedApiStatus": 200,
+      "AdditionalApiScopes": 0,
+      "RetentionPreserved": true,
+      "IdentityConfirmationTimePreserved": true,
+      "GraphSdkReadSucceeded": true,
+      "VaultRemoved": true,
+      "KeyRemoved": true
+    },
+    {
+      "AccountLabel": "secadmin",
+      "ExpectedAccountNamespaceMatched": true,
+      "Storage": "LinuxSecretService",
+      "Fresh": "BoundedTargetedSilentExplicitScopeAcquisition",
+      "FreshApiStatus": 200,
+      "ReopenedCache": "CachedVerifiedContextNotNewIssuance",
+      "ReopenedApiStatus": 200,
+      "Renewal": "SameClientRefreshMatchedIssuedContext",
+      "RenewedApiStatus": 200,
+      "AdditionalApiScopes": 0,
+      "RetentionPreserved": true,
+      "IdentityConfirmationTimePreserved": true,
+      "GraphSdkReadSucceeded": true,
+      "VaultRemoved": true,
+      "KeyRemoved": true
+    }
+  ],
+  "TokenSignatureValidated": false,
+  "NativeLoginImplemented": false,
+  "ManagedStringImmediateErasureGuaranteed": false,
+  "Cleanup": "Both fresh proof vaults and OS keys removed; owned SecureString instances disposed",
+  "SourceSha256": {
+    "src/TokenForge/Core/VaultRecordPolicy.cs": "d5a4ba312f085f5c0271c6fda9c553c7b7f855923673e68210a13ae4fe61e2b0",
+    "src/TokenForge/Private/Vault.ps1": "20c6751a11e144f0a0267975ffdeb3c1cc32ecb752496a48e2a72d91d746eec1",
+    "src/TokenForge/TokenForge.psm1": "94d650cd8e27f20234003ceb1edcd84a8bd9e81917dfbd572a58bfec90c45a3b"
+  }
+}

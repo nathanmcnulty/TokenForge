@@ -1,16 +1,6 @@
 Set-StrictMode -Version Latest
-if(-not ('TokenForge.Core.V0250.VaultRecordPolicy' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot 'Core/VaultRecordPolicy.cs')}
-if(-not ('TokenForge.Core.V0240.TimestampPolicy' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot 'Core/TimestampPolicy.cs')}
-if(-not ('TokenForge.Core.V0230.ProfileKeyIdentity' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot 'Core/ProfileKeyIdentity.cs')}
-if(-not ('TokenForge.Core.V0220.PrivateFiles' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot 'Core/PrivateFiles.cs')}
-if(-not ('TokenForge.Core.V0200.ProfilePolicy' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot 'Core/ProfilePolicy.cs')}
-if(-not ('TokenForge.Core.V0190.VaultEnvelope' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot 'Core/VaultEnvelope.cs')}
+. (Join-Path $PSScriptRoot 'Core/Initialize-Credentials.ps1')
 $script:ModuleRoot=$PSScriptRoot
-if(-not ('TokenForge.Core.V0100.TokenPolicy' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot 'Core/TokenPolicy.cs')}
-
-if(-not ('TokenForge.Core.V0110.PlatformVaultKey' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot 'Core/PlatformVaultKey.cs')}
-
-if(-not ('TokenForge.Core.V0180.OAuthTransport' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot 'Core/OAuthTransport.cs')}
 
 $script:CatalogUrl = 'https://raw.githubusercontent.com/dirkjanm/ROADtools/master/roadtx/roadtools/roadtx/firstpartyscopes.json'
 $script:CatalogPath = if ($IsWindows) { Join-Path $env:LOCALAPPDATA 'TokenForge/catalog.json' } else { Join-Path $HOME '.cache/TokenForge/catalog.json' }

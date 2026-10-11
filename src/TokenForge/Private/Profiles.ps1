@@ -25,7 +25,7 @@ function Read-TokenForgeProfile {
         $p=$json|ConvertFrom-Json -AsHashtable -Depth 4
         # Keep the PowerShell configuration projection's historical UTC date strings.
         foreach($key in @('CreatedAt','UpdatedAt')){if($p[$key] -is [datetime]){$p[$key]=$p[$key].ToUniversalTime().ToString('o')}}
-        [pscustomobject]@{Configuration=$p;Path=$path;Directory=(Split-Path $path -Parent);VaultPath=(Join-Path (Split-Path $path -Parent) 'session.tfvault');ContextKey=$path}
+        [pscustomobject]@{Configuration=$p;ConfigurationJson=$json;Path=$path;Directory=(Split-Path $path -Parent);VaultPath=(Join-Path (Split-Path $path -Parent) 'session.tfvault');ContextKey=$path}
     }catch{throw 'Profile cannot be read; check its name, private path, format, and policy. Details suppressed.'}
 }
 function Clear-TokenForgeProfileContext {
@@ -60,28 +60,18 @@ function Assert-TokenForgeProfileToken {
     }catch{throw 'Token does not satisfy the profile identity, client, resource, scope, or lifetime policy.'}
     $claims
 }
-function Save-TokenForgeProfileToken {
-    param($Record,[securestring]$Password,[string]$SessionName,[string]$ExpectedRevision,$Token,[string]$ReplaceTokenId)
-    $request=$Token.Request;$claims=$Token.TokenClaims;$now=[DateTimeOffset]::UtcNow
-    $id=Get-TokenForgeFingerprint -Value ($request.ClientId+'|'+$request.ResourceId+'|'+(@($request.Scopes|Sort-Object -Unique) -join ' ')+'|'+$request.RedirectUri+'|'+[string]$request.Spa)
-    Invoke-TokenForgeVaultTransaction $Record.VaultPath $Password -Mode Update -Update {
-        param($vault)
-        $session=$vault.Sessions[$SessionName]
-        if(-not $session -or $session.Revision -ne $ExpectedRevision -or ([DateTimeOffset]$session.RetainUntil) -le $now -or $session.TenantFingerprint -ne $claims.TenantFingerprint -or $session.PrincipalFingerprint -ne $claims.PrincipalFingerprint){throw 'Session changed or expired during acquisition.'}
-        $expiry=@([DateTimeOffset]$Token.ExpiresAt,[DateTimeOffset]$claims.ExpiresAt)|Sort-Object|Select-Object -First 1
-        $session.Tokens[$id]=@{Id=$id;ClientId=$request.ClientId;ResourceId=$request.ResourceId;Tenant=$request.Tenant;Audience=$claims.Audience;
-            Scopes=@($request.Scopes);IssuedScopes=@($claims.Scopes);AdditionalScopeCount=@($claims.Scopes|Where-Object {$_ -cnotin $request.Scopes -and $_ -cnotin @('openid','profile','email','offline_access')}).Count;
-            RedirectUri=$request.RedirectUri;Spa=[bool]$request.Spa;OfflineAccess=@($request.OAuthScopes) -ccontains 'offline_access';Protocol=$Token.Protocol;
-            AcquiredAt=$now.ToString('o');ExpiresAt=$expiry.ToString('o');AccessToken=[Net.NetworkCredential]::new('', $Token.AccessToken).Password;
-            RefreshToken=$(if($Token.RefreshToken){[Net.NetworkCredential]::new('', $Token.RefreshToken).Password}else{$null});ConsentEvidence=$Token.Evidence}
-        if($ReplaceTokenId -and $ReplaceTokenId -ne $id){$null=$session.Tokens.Remove($ReplaceTokenId)}
-        # Do not update Cookie, RetainUntil, or LastConfirmedAt: renewal is not a new login.
-        $session.Revision=[guid]::NewGuid().ToString()
-    }
-    $id
-}
 function Request-TokenForgeProfileScope {
     param($Profile,$Inventory,$Database,[string]$DatabasePath,[guid]$ResourceId,[string[]]$Scope,$Authentication,[int]$MaxCandidates,[int]$MaxRedirects)
+    if(-not $Inventory){$Inventory=Get-Content -LiteralPath (Resolve-TokenForgeVaultPath (Join-Path $Profile.StatePath 'inventory.json')) -Raw|ConvertFrom-Json}
+    if(-not $DatabasePath){$DatabasePath=Join-Path $Profile.StatePath $(if(Test-Path (Join-Path $Profile.StatePath 'scopes.sqlite')){'scopes.sqlite'}else{'scopes.json'})}
+    if(-not $Database){$Database=Get-TokenForgeScopeDatabase -Path (Resolve-TokenForgeVaultPath $DatabasePath) -Latest -TenantFingerprint $Profile.ExpectedTenantFingerprint -PrincipalFingerprint $Profile.ExpectedPrincipalFingerprint -ResourceId $ResourceId}
+    $coverage=@(Get-TokenForgeAssessmentCoverage -Database $Database -ResourceId $ResourceId -Scope $Scope -TenantFingerprint $Profile.ExpectedTenantFingerprint -PrincipalFingerprint $Profile.ExpectedPrincipalFingerprint -MaxAgeHours $Profile.MaxAgeHours|Where-Object CoversAll)
+    if($coverage.Count){
+        $Authentication.Remove('NoConsent')
+        $token=Get-TokenForgeScopedToken -Inventory $Inventory -Database $Database -ResourceId $ResourceId -Scope $Scope @Authentication -Tenant $Profile.Tenant -BootstrapClientId $Profile.BootstrapClientId -MaxBootstrapAdditionalScopes $Profile.MaxBootstrapAdditionalScopes -MaxAdditionalScopes $Profile.MaxAdditionalScopes -MaxAgeHours $Profile.MaxAgeHours -MaxCandidates $MaxCandidates -MaxRedirects $MaxRedirects -OfflineAccess
+        $token|Add-Member Evidence 'SilentExplicitScopeAcquisition' -Force
+        return $token
+    }
     if($Inventory.TenantFingerprint -ne $Profile.ExpectedTenantFingerprint -or ([DateTimeOffset]$Inventory.CapturedAt) -lt [DateTimeOffset]::UtcNow.AddHours(-$Profile.MaxAgeHours) -or ([DateTimeOffset]$Inventory.CapturedAt) -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Inventory must be fresh and match the profile tenant.'}
     $resource=@($Inventory.Applications|Where-Object {$_.AppId -eq $ResourceId.ToString() -and $_.Registration -eq 'Present' -and $_.Ownership -eq 'VerifiedMicrosoftOwner' -and $_.AccountEnabled})
     if($resource.Count -ne 1){throw 'Enabled ownership-verified target resource required.'}

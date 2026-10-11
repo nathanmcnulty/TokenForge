@@ -25,29 +25,23 @@ function Get-TokenForgeProfileToken {
     }
     $record=Read-TokenForgeProfile $Name $Root;$p=$record.Configuration
     if(-not $p.ExpectedTenantFingerprint -or -not $p.ExpectedPrincipalFingerprint){throw 'Log in to bind the profile account before requesting tokens.'}
+    if($p.Storage -ne 'Memory'){
+        if($p.Storage -eq 'OperatingSystem' -and $VaultPassword){throw 'OS-backed profiles do not accept a vault passphrase.'}
+        $context=$script:ProfileContexts[$record.ContextKey]
+        $password=if($VaultPassword){$VaultPassword}elseif($context){$context.Password}else{$null}
+        $token=$null;$returned=$false
+        try{
+            $token=Get-TokenForgePersistedProfileToken -Record $record -Name $Name -Root $Root -Password $password -LoginHint $LoginHint -ResourceId $ResourceId -Scope $Scope -MaxCandidates $MaxCandidates -MaxRedirects $MaxRedirects
+            $token|Add-Member ApiCheck $(if($ApiUri){try{Test-TokenForgeTokenAccess -Token $token -Uri $ApiUri}catch{[pscustomobject]@{Status=$null;Accepted=$false;Evidence='TransportFailureDetailsSuppressed'}}}else{$null}) -Force
+            $returned=$true;return $token
+        }finally{if($token -and -not $returned){$token.AccessToken.Dispose();if($token.RefreshToken){$token.RefreshToken.Dispose()}}}
+    }
     $lock=Open-TokenForgeProfileOperation $record.Directory
-    $token=$null;$savedToken=$null;$ownedCookie=$null;$ownedPassword=$null;$returned=$false;$vault=$null;$session=$null
+    $token=$null;$savedToken=$null;$ownedCookie=$null;$returned=$false;$session=$null
     try{
         $context=$script:ProfileContexts[$record.ContextKey]
-        if($p.Storage -eq 'OperatingSystem' -and $VaultPassword){throw 'OS-backed profiles do not accept a vault passphrase.'}
-        $password=if($VaultPassword){$VaultPassword}elseif($context){$context.Password}else{$null}
         $key=Get-TokenForgeFingerprint -Value ($ResourceId.ToString()+'|'+($Scope -join ' '))
-        $entry=$null;$entryId=$null
-        if($p.Storage -ne 'Memory'){
-            if($p.Storage -eq 'OperatingSystem'){$ownedPassword=Open-TokenForgeProfilePlatformKey $record;$password=$ownedPassword}
-            if(-not $password){throw 'Unlock the persisted profile with its vault passphrase.'}
-            $vault=Invoke-TokenForgeVaultTransaction $record.VaultPath $password
-            $session=$vault.Sessions[$Name]
-            if($session){
-                $entries=@($session.Tokens.Values|Where-Object {$_.ResourceId -eq $ResourceId.ToString() -and (@($_.Scopes|Sort-Object -Unique) -join ' ') -ceq ($Scope -join ' ')}|Sort-Object AcquiredAt -Descending)
-                if($entries.Count){
-                    $entry=$entries[0];$entryId=$entry.Id
-                    $request=[pscustomobject]@{ClientId=$entry.ClientId;ResourceId=$entry.ResourceId;ResourceUri=$entry.ResourceId;Tenant=$entry.Tenant;Scopes=@($entry.Scopes);OAuthScopes=@($entry.Scopes|ForEach-Object {"$($entry.ResourceId)/$_"})+@(if($entry.OfflineAccess){'offline_access'});RedirectUri=$entry.RedirectUri;Spa=[bool]$entry.Spa;Protocol=$entry.Protocol}
-                    $savedToken=[pscustomobject]@{AccessToken=(ConvertTo-SecureString $entry.AccessToken -AsPlainText -Force);RefreshToken=$(if($entry.RefreshToken){ConvertTo-SecureString $entry.RefreshToken -AsPlainText -Force}else{$null});ExpiresAt=$entry.ExpiresAt;Request=$request;ClientId=$entry.ClientId;ResourceId=$entry.ResourceId;Protocol=$entry.Protocol}
-                }
-                if($session.Cookie){$ownedCookie=ConvertTo-SecureString $session.Cookie -AsPlainText -Force}
-            }
-        }elseif($context -and $context.Revision -eq $p.Revision){
+        if($context -and $context.Revision -eq $p.Revision){
             $session=$context.Session
             if($context.Tokens[$key]){$savedToken=Copy-TokenForgeCredentialResult $context.Tokens[$key] 'InternalCredentialCopy'}
             if($context.Cookie){$ownedCookie=$context.Cookie.Copy()}
@@ -75,18 +69,8 @@ function Get-TokenForgeProfileToken {
             }
         }
         if(-not $token){
-            $inventory=Get-Content -LiteralPath (Resolve-TokenForgeVaultPath (Join-Path $p.StatePath 'inventory.json')) -Raw|ConvertFrom-Json
-            $scopePath=Join-Path $p.StatePath $(if(Test-Path (Join-Path $p.StatePath 'scopes.sqlite')){'scopes.sqlite'}else{'scopes.json'})
-            $database=Get-TokenForgeScopeDatabase -Path (Resolve-TokenForgeVaultPath $scopePath) -Latest -TenantFingerprint $p.ExpectedTenantFingerprint -PrincipalFingerprint $p.ExpectedPrincipalFingerprint -ResourceId $ResourceId
             $auth=if($ownedCookie){@{EstsAuth=$ownedCookie;CookieName=$cookieName}}else{@{Browser=$true;NoConsent=$true;LoginHint=$LoginHint}}
-            $coverage=@(Get-TokenForgeAssessmentCoverage -Database $database -ResourceId $ResourceId -Scope $Scope -TenantFingerprint $p.ExpectedTenantFingerprint -PrincipalFingerprint $p.ExpectedPrincipalFingerprint -MaxAgeHours $p.MaxAgeHours|Where-Object CoversAll)
-            if(-not $coverage.Count){
-                $token=Request-TokenForgeProfileScope -Profile $p -Inventory $inventory -Database $database -DatabasePath $scopePath -ResourceId $ResourceId -Scope $Scope -Authentication $auth -MaxCandidates $MaxCandidates -MaxRedirects $MaxRedirects
-            }else{
-                $auth.Remove('NoConsent')
-                $token=Get-TokenForgeScopedToken -Inventory $inventory -Database $database -ResourceId $ResourceId -Scope $Scope @auth -Tenant $p.Tenant -BootstrapClientId $p.BootstrapClientId -MaxBootstrapAdditionalScopes $p.MaxBootstrapAdditionalScopes -MaxAdditionalScopes $p.MaxAdditionalScopes -MaxAgeHours $p.MaxAgeHours -MaxCandidates $MaxCandidates -MaxRedirects $MaxRedirects -OfflineAccess
-                $token|Add-Member Evidence 'SilentExplicitScopeAcquisition' -Force
-            }
+            $token=Request-TokenForgeProfileScope -Profile $p -ResourceId $ResourceId -Scope $Scope -Authentication $auth -MaxCandidates $MaxCandidates -MaxRedirects $MaxRedirects
         }
         $token.Request|Add-Member Protocol $token.Protocol -Force
         $claims=Assert-TokenForgeProfileToken $token $p $Scope $token.Request.ClientId $ResourceId.ToString() $p.MaxAdditionalScopes
@@ -94,14 +78,10 @@ function Get-TokenForgeProfileToken {
         $current=Read-TokenForgeProfile $Name $Root
         if((ConvertTo-Json $current.Configuration -Depth 4 -Compress) -cne (ConvertTo-Json $p -Depth 4 -Compress)){throw 'Profile changed during token acquisition; result discarded.'}
         if($token.Evidence -ne 'CachedVerifiedContextNotNewIssuance'){
-            if($p.Storage -ne 'Memory'){
-                $null=Save-TokenForgeProfileToken -Record $record -Password $password -SessionName $Name -ExpectedRevision $sessionRevision -Token $token -ReplaceTokenId $entryId
-            }else{
-                if(-not [object]::ReferenceEquals($script:ProfileContexts[$record.ContextKey],$context) -or ([DateTimeOffset]$context.Session.RetainUntil) -le [DateTimeOffset]::UtcNow -or $context.Revision -ne $p.Revision -or $context.Session.Revision -ne $sessionRevision){throw 'Session changed during token acquisition.'}
-                if($context.Tokens[$key]){foreach($secret in @($context.Tokens[$key].AccessToken,$context.Tokens[$key].RefreshToken)){if($secret){$secret.Dispose()}}}
-                $context.Tokens[$key]=Copy-TokenForgeCredentialResult $token $token.Evidence
-                $context.Session.Revision=[guid]::NewGuid().ToString()
-            }
+            if(-not [object]::ReferenceEquals($script:ProfileContexts[$record.ContextKey],$context) -or ([DateTimeOffset]$context.Session.RetainUntil) -le [DateTimeOffset]::UtcNow -or $context.Revision -ne $p.Revision -or $context.Session.Revision -ne $sessionRevision){throw 'Session changed during token acquisition.'}
+            if($context.Tokens[$key]){foreach($secret in @($context.Tokens[$key].AccessToken,$context.Tokens[$key].RefreshToken)){if($secret){$secret.Dispose()}}}
+            $context.Tokens[$key]=Copy-TokenForgeCredentialResult $token $token.Evidence
+            $context.Session.Revision=[guid]::NewGuid().ToString()
         }
         $token|Add-Member ApiCheck $(if($ApiUri){try{Test-TokenForgeTokenAccess -Token $token -Uri $ApiUri}catch{[pscustomobject]@{Status=$null;Accepted=$false;Evidence='TransportFailureDetailsSuppressed'}}}else{$null}) -Force
         $returned=$true
@@ -109,7 +89,7 @@ function Get-TokenForgeProfileToken {
     }finally{
         if($savedToken){foreach($secret in @($savedToken.AccessToken,$savedToken.RefreshToken)){if($secret){$secret.Dispose()}}}
         if($token -and -not $returned){foreach($secret in @($token.AccessToken,$token.RefreshToken)){if($secret){$secret.Dispose()}}}
-        if($ownedCookie){$ownedCookie.Dispose()};if($ownedPassword){$ownedPassword.Dispose()}
-        $vault=$null;$session=$null;$entry=$null;$entries=$null;$lock.Dispose()
+        if($ownedCookie){$ownedCookie.Dispose()}
+        $session=$null;$lock.Dispose()
     }
 }

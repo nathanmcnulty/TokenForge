@@ -56,8 +56,12 @@
       "tokenforge.core": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.Data.Sqlite": "[10.0.12, )"
+          "Microsoft.Data.Sqlite": "[10.0.12, )",
+          "TokenForge.Credentials": "[0.28.0, )"
         }
+      },
+      "tokenforge.credentials": {
+        "type": "Project"
       }
     },
     "net10.0/linux-arm64": {

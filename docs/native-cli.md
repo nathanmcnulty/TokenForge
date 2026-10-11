@@ -1,7 +1,7 @@
 # Native CLI and evidence store
 
 The native CLI is a self-contained .NET executable per OS and architecture. Evidence commands
-run directly in the shared core with bundled SQLite. Profile login, credential storage, and `token get` currently invoke the packaged PowerShell 7.4+ module;
+run directly in the shared core with bundled SQLite. Profile login and `token get` currently invoke the packaged PowerShell 7.4+ module;
 install `pwsh` and keep `src/` and `scripts/` beside the executable for those commands.
 Version 0.18 adds direct native `token acquire`, and PowerShell uses the same C# OAuth transport
 and issued-token policy. Native acquisition does not itself provide browser/passkey login or a keystore.
@@ -34,6 +34,19 @@ tokenforge logout --profile lab
 ```
 
 Passphrase profiles use a hidden prompt, or explicit `--stdin` with a 12–1024 character passphrase followed by EOF. `--prompt-passphrase` remains accepted; it cannot be combined with `--stdin`. OS-backed profiles reject either credential-input flag. Logout emits only local-removal metadata. It does not revoke server sessions or clear credentials already held by another process. Owned plaintext and rewrite byte arrays are cleared; managed strings and library internals are not guaranteed immediate erasure. If rewriting exceeds the bounded record size, the operation fails without replacing ciphertext. See the [sanitized logout validation report](native-logout-validation-2026-10-11.json).
+
+Version 0.28 moves persisted-profile cache selection, same-client renewal, issued-token checks,
+and atomic credential writes into the shared native core. The module calls these operations
+in process through `TokenForge.Credentials.dll`; credentials do not cross a subprocess JSON
+boundary. Fresh candidate planning, browser/passkey login, Memory sessions, and the CLI
+`token get` adapter still use PowerShell. See the [persisted lifecycle validation report](native-profile-lifecycle-validation-2026-10-11.json).
+
+Packages include a BCL-only .NET 8 credential assembly, separate from SQLite evidence storage.
+A source checkout compiles the same explicit source list once with `Add-Type`; it needs no SDK
+for module import. Both package builders need the .NET SDK and validate that their compiled
+source list matches the module list. A present invalid DLL fails without source fallback.
+Restart PowerShell when changing credential runtime versions; already loaded legacy or mixed
+credential assemblies are rejected rather than silently reused.
 
 Version 0.22 also shares vault-file transactions: exclusive locks, bounded ciphertext reads,
 private temporary files, and atomic publication. The transaction API handles ciphertext only;

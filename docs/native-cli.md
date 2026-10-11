@@ -19,6 +19,14 @@ and unsupported platforms before deletion. Forgetting local credentials does not
 already-issued tokens or erase copies held by other processes. See
 [native key-removal validation](native-forget-key-validation-2026-10-10.json).
 
+Version 0.26 runs `profile inspect-vault` natively. It unlocks the existing encrypted vault and returns only the selected profile session's metadata, after checking its account binding. It never returns credentials, renews tokens, creates an OS key, or changes ciphertext. Use the hidden native passphrase prompt for Passphrase profiles; explicit `--stdin` accepts a bounded passphrase followed by EOF. OS-backed profiles read the existing Windows/Linux key without accepting stdin. Memory profiles and unsupported OS stores are refused. Expired sessions are shown as expired rather than renewed.
+
+```sh
+tokenforge profile inspect-vault --profile lab --json
+```
+
+Inspection uses both operation and vault locks, validates decrypted records, and clears its owned plaintext buffer. Metadata reports stored lifetime and scope observations, not new issuance or API authorization. The underlying record validator can allocate managed strings; this is not a guarantee of immediate erasure of every in-memory copy. Normal login, `token get`, and logout still use PowerShell.
+
 Version 0.22 also shares vault-file transactions: exclusive locks, bounded ciphertext reads,
 private temporary files, and atomic publication. The transaction API handles ciphertext only;
 callers still authenticate envelopes and validate credential records and account policy.

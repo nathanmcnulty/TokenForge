@@ -71,7 +71,7 @@ internal static class NativeTokenCommand
             foreach (var field in element.EnumerateObject()) { if (!keys.Add(field.Name)) throw new InvalidOperationException(); UniqueKeys(field.Value); }
         } else if (element.ValueKind == JsonValueKind.Array) foreach (var item in element.EnumerateArray()) UniqueKeys(item);
     }
-    private static SecureString ReadCredential(bool stdin)
+    internal static SecureString ReadCredential(bool stdin, int minimum = 1, int maximum = 65536, string prompt = "Credential (hidden): ")
     {
         var result = new SecureString();
         try {
@@ -79,20 +79,20 @@ internal static class NativeTokenCommand
                 bool ended = false; int value;
                 while ((value = Console.In.Read()) >= 0) {
                     if (value is '\r' or '\n') { ended = true; continue; }
-                    if (ended || char.IsControl((char)value) || result.Length >= 65536) throw new InvalidOperationException();
+                    if (ended || char.IsControl((char)value) || result.Length >= maximum) throw new InvalidOperationException();
                     result.AppendChar((char)value);
                 }
             } else {
-                Console.Error.Write("Credential (hidden): ");
+                Console.Error.Write(prompt);
                 while (true) {
                     var key = Console.ReadKey(true);
                     if (key.Key == ConsoleKey.Enter) { Console.Error.WriteLine(); break; }
                     if (key.Key == ConsoleKey.Backspace) { if (result.Length > 0) result.RemoveAt(result.Length - 1); continue; }
-                    if (char.IsControl(key.KeyChar) || result.Length >= 65536) throw new InvalidOperationException();
+                    if (char.IsControl(key.KeyChar) || result.Length >= maximum) throw new InvalidOperationException();
                     result.AppendChar(key.KeyChar);
                 }
             }
-            if (result.Length == 0) throw new InvalidOperationException();
+            if (result.Length < minimum) throw new InvalidOperationException();
             result.MakeReadOnly(); return result;
         } catch { result.Dispose(); throw; }
     }

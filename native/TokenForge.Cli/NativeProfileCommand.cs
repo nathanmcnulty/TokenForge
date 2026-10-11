@@ -14,7 +14,7 @@ internal static class NativeProfileCommand
         for (int i = 2; i < args.Length; i++)
         {
             string option = args[i]; if (!seen.Add(option)) throw new InvalidOperationException();
-            if (option == "--json") continue;
+            if (option == "--json" || operation == "inspect-vault" && option == "--stdin") continue;
             if (!allowed.Contains(option) || ++i == args.Length || args[i].StartsWith('-') || args[i].Length > 4096) throw new InvalidOperationException();
             values[option] = args[i];
         }
@@ -22,6 +22,21 @@ internal static class NativeProfileCommand
         string? Optional(string option) => values.GetValueOrDefault(option);
         int Number(string option, int fallback) => values.TryGetValue(option, out string? value) ? int.Parse(value, NumberStyles.None, CultureInfo.InvariantCulture) : fallback;
         string name = values.ContainsKey("--profile") ? Required("--profile") : "default";
+        if (operation == "inspect-vault")
+        {
+            using var configuration = JsonDocument.Parse(ProfileStore.Read(name,Optional("--root")));
+            string storage = configuration.RootElement.GetProperty("Storage").GetString()!;
+            bool stdin = seen.Contains("--stdin");
+            if (storage == "Memory" || stdin && storage != "Passphrase") throw new InvalidOperationException();
+            if (storage == "Passphrase")
+            {
+                if (!stdin && Console.IsInputRedirected) throw new InvalidOperationException();
+                using var password = NativeTokenCommand.ReadCredential(stdin,12,1024,"Vault passphrase (hidden): ");
+                Console.WriteLine(JsonSerializer.Serialize(ProfileStore.InspectVault(name,Optional("--root"),password)));
+            }
+            else Console.WriteLine(JsonSerializer.Serialize(ProfileStore.InspectVault(name,Optional("--root"))));
+            return 0;
+        }
         if (operation == "forget-key")
         {
             var removed = ProfileStore.ForgetKey(name, Optional("--root"));

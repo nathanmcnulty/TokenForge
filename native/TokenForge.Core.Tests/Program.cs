@@ -8,6 +8,7 @@ void Check(bool condition){if(!condition) throw new Exception("Check failed.");c
 void Reject(Action action){try{action();}catch{count++;return;}throw new Exception("Expected rejection.");}
 TimestampPolicyChecks.Run(Check,Reject);
 VaultRecordPolicyChecks.Run(Check,Reject);
+VaultInspectionChecks.Run(Check,Reject);
 VaultEnvelopeChecks.Run(Check,Reject);
 ProfilePolicyChecks.Run(Check,Reject);
 ProfileStoreChecks.Run(Check,Reject);

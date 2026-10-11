@@ -1,0 +1,184 @@
+name: Release packages
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+      - 'scripts/Test-TokenForgeReleaseAssets.ps1'
+      - 'tests/ReleaseAssets.Tests.ps1'
+      - 'scripts/Test-TokenForgeReleaseSource.ps1'
+      - 'tests/ReleaseSource.Tests.ps1'
+      - 'scripts/Build-TokenForgeNative.ps1'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish a new versioned release from this exact main commit'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            runtime: linux-x64
+          - os: ubuntu-24.04-arm
+            runtime: linux-arm64
+          - os: windows-latest
+            runtime: win-x64
+          - os: windows-11-arm
+            runtime: win-arm64
+          - os: macos-15-intel
+            runtime: osx-x64
+          - os: macos-latest
+            runtime: osx-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          dotnet-version: 10.0.401
+      - name: Run shared core checks on the target architecture
+        shell: pwsh
+        run: |
+          dotnet restore native/TokenForge.Core.Tests --locked-mode
+          if ($LASTEXITCODE) { throw 'Locked restore failed.' }
+          dotnet run --project native/TokenForge.Core.Tests --no-restore
+          if ($LASTEXITCODE) { throw 'Core checks failed.' }
+      - name: Build, archive, extract, and smoke-test the package
+        shell: pwsh
+        env:
+          PACKAGE_RUNTIME: ${{ matrix.runtime }}
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          $runtime=$env:PACKAGE_RUNTIME
+          $version=(Import-PowerShellDataFile ./src/TokenForge/TokenForge.psd1).ModuleVersion
+          if($version -notmatch '^\d+\.\d+\.\d+$'){throw 'Invalid release version.'}
+          $build=./scripts/Build-TokenForgeNative.ps1 -Runtime $runtime
+          $dir=Split-Path $build.Path -Parent
+          $null=New-Item -ItemType Directory ./dist/release-assets
+          $extension=if($IsWindows){'zip'}else{'tar.gz'}
+          $name="TokenForge-$version-$runtime.$extension"
+          $archive=Join-Path (Resolve-Path ./dist/release-assets) $name
+          if($IsWindows){Compress-Archive -Path (Join-Path $dir '*') -DestinationPath $archive}
+          else{tar -czf $archive -C $dir .; if($LASTEXITCODE){throw 'Archive failed.'}}
+          $extract=Join-Path $env:RUNNER_TEMP 'release-extracted'
+          $null=New-Item -ItemType Directory $extract
+          if($IsWindows){Expand-Archive -LiteralPath $archive -DestinationPath $extract}
+          else{tar -xzf $archive -C $extract; if($LASTEXITCODE){throw 'Extraction failed.'}}
+          $exe=Join-Path $extract $(if($IsWindows){'tokenforge.exe'}else{'tokenforge'})
+          $actual=(& $exe --version)|ConvertFrom-Json
+          if($LASTEXITCODE -or $actual.Name -cne 'TokenForge' -or $actual.Version -cne $version){throw 'Extracted executable version failed.'}
+          if((Get-FileHash $exe).Hash -cne (Get-FileHash $build.Path).Hash){throw 'Extraction changed executable bytes.'}
+          $profileRoot=Join-Path $env:RUNNER_TEMP 'release-smoke-profile'
+          & $exe profile create --profile smoke --tenant example.test --root $profileRoot --json
+          if($LASTEXITCODE){throw 'Extracted profile creation failed.'}
+          & $exe profile show --profile smoke --root $profileRoot --json
+          if($LASTEXITCODE){throw 'Extracted profile inspection failed.'}
+          Import-Module (Join-Path $extract src/TokenForge/TokenForge.psd1) -Force
+          if(-not (Get-Command Get-TokenForgeScopedToken -ErrorAction SilentlyContinue)){throw 'Extracted PowerShell adapter failed.'}
+          $hash=(Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          @{SchemaVersion=1;Runtime=$runtime;Version=$version;SourceCommit=$env:SOURCE_COMMIT;Archive=$name;Sha256=$hash}|ConvertTo-Json|Set-Content -LiteralPath "$archive.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-${{ matrix.runtime }}
+          path: dist/release-assets/*
+          if-no-files-found: error
+          retention-days: 1
+  verify:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.verify.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-assets
+      - name: Validate complete source-bound package set
+        id: verify
+        shell: pwsh
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          $version=(Import-PowerShellDataFile ./src/TokenForge/TokenForge.psd1).ModuleVersion
+          $report=./scripts/Test-TokenForgeReleaseAssets.ps1 -AssetPath ./release-assets -Version $version -SourceCommit $env:SOURCE_COMMIT
+          $report|ConvertTo-Json -Depth 5|Set-Content ./release-assets/release-manifest.json
+          ($report.Archives|ForEach-Object {"$($_.Sha256)  $($_.Archive)"})|Set-Content ./release-assets/SHA256SUMS
+          "version=$version"|Out-File $env:GITHUB_OUTPUT -Append
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: verified-release
+          path: release-assets/*
+          retention-days: 1
+          if-no-files-found: error
+  publish:
+    needs: verify
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+      attestations: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: verified-release
+          path: release-assets
+      - name: Require exact main source and all six existing validation gates
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          $version=(Import-PowerShellDataFile ./src/TokenForge/TokenForge.psd1).ModuleVersion
+          ./scripts/Test-TokenForgeReleaseSource.ps1 -Repository $env:GITHUB_REPOSITORY -SourceCommit $env:SOURCE_COMMIT -Version $version
+          $version=(Import-PowerShellDataFile ./src/TokenForge/TokenForge.psd1).ModuleVersion
+          Remove-Item ./release-assets/SHA256SUMS,./release-assets/release-manifest.json
+          $report=./scripts/Test-TokenForgeReleaseAssets.ps1 -AssetPath ./release-assets -Version $version -SourceCommit $env:SOURCE_COMMIT
+          $report|ConvertTo-Json -Depth 5|Set-Content ./release-assets/release-manifest.json
+          ($report.Archives|ForEach-Object {"$($_.Sha256)  $($_.Archive)"})|Set-Content ./release-assets/SHA256SUMS
+      - name: Attest the six archives and release manifest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: |
+            release-assets/*.zip
+            release-assets/*.tar.gz
+            release-assets/release-manifest.json
+      - name: Create and publish the versioned release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          $version=(Import-PowerShellDataFile ./src/TokenForge/TokenForge.psd1).ModuleVersion
+          $tag="v$version"
+          $assets=@(Get-ChildItem ./release-assets -File|Where-Object {$_.Extension -cne '.json' -or $_.Name -ceq 'release-manifest.json'}|ForEach-Object {$_.FullName})
+          foreach($asset in $assets|Where-Object {[IO.Path]::GetFileName($_) -cne 'SHA256SUMS'}){
+            gh attestation verify $asset --repo $env:GITHUB_REPOSITORY --signer-workflow "$env:GITHUB_REPOSITORY/.github/workflows/release.yml" --source-digest $env:SOURCE_COMMIT --source-ref refs/heads/main --deny-self-hosted-runners
+            if($LASTEXITCODE){throw 'Build provenance verification failed.'}
+          }
+          @("TokenForge $version",'',"Source commit: $env:SOURCE_COMMIT",'', 'Six self-contained native packages for Windows, macOS, and Linux on x64 and ARM64. Extract the complete archive before running. Passkey login and some research commands still require PowerShell 7.4+. Windows/Linux OS storage is supported; macOS OS storage remains unavailable.', '', 'SHA256SUMS and release-manifest.json identify package bytes. GitHub build provenance is available for each archive; these binaries are not Windows Authenticode signed or macOS Developer ID signed/notarized.', '', 'Verify: gh attestation verify <archive> --repo nathanmcnulty/TokenForge --signer-workflow nathanmcnulty/TokenForge/.github/workflows/release.yml')|Set-Content release-notes.md
+          gh release create $tag @assets --repo $env:GITHUB_REPOSITORY --target $env:SOURCE_COMMIT --draft --title "TokenForge $version" --notes-file release-notes.md
+          if($LASTEXITCODE){throw 'Draft release creation failed; do not overwrite existing releases.'}
+          gh release edit $tag --repo $env:GITHUB_REPOSITORY --draft=false
+          if($LASTEXITCODE){throw 'Release remains a draft; manual recovery is required.'}

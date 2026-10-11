@@ -117,3 +117,5 @@ Explicit Windows/Linux OS-backed profile storage is documented in [OS-backed vau
 Research categorization, individual flow attempts, and exhaustive bounded probing are documented in [Application research catalog](docs/research-catalog.md).
 
 [Weekly research CI](docs/weekly-ci.md) tracks frozen public-catalog coverage; [private maintenance](docs/private-maintenance.md) refreshes tenant metadata into encrypted recovery snapshots.
+
+Read [native releases](docs/native-releases.md) for versioned downloads, package verification, and the release process.

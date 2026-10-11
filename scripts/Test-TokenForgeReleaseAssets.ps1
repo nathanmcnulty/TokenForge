@@ -1,0 +1,28 @@
+#Requires -Version 7.4
+[CmdletBinding()]
+param([Parameter(Mandatory)][string]$AssetPath,[Parameter(Mandatory)][ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version,
+ [Parameter(Mandatory)][ValidatePattern('^[a-f0-9]{40}$')][string]$SourceCommit)
+$ErrorActionPreference='Stop'
+$root=(Get-Item -LiteralPath $AssetPath -Force)
+if(-not $root.PSIsContainer -or $root.LinkType){throw 'Release assets must be a regular directory.'}
+$runtimes=@('linux-x64','linux-arm64','win-x64','win-arm64','osx-x64','osx-arm64')
+$expected=@($runtimes|ForEach-Object { $extension=if($_.StartsWith('win-')){'zip'}else{'tar.gz'}; "TokenForge-$Version-$_.${extension}"; "TokenForge-$Version-$_.${extension}.json" })
+$files=@(Get-ChildItem -LiteralPath $root.FullName -Force)
+if($files.Count -ne $expected.Count){throw 'Release must contain exactly six archives and six receipts.'}
+foreach($file in $files){if($file.PSIsContainer -or $file.LinkType -or $file.Name -cnotin $expected){throw 'Unexpected release asset.'}}
+$entries=@(foreach($runtime in $runtimes){
+ $extension=if($runtime.StartsWith('win-')){'zip'}else{'tar.gz'}
+ $name="TokenForge-$Version-$runtime.$extension"
+ $file=Get-Item -LiteralPath (Join-Path $root.FullName $name)
+ if($file.Length -le 0 -or $file.Length -gt 512MB){throw 'Release archive size is outside its bound.'}
+ $receipt=Get-Item -LiteralPath "$($file.FullName).json"
+ if($receipt.Length -gt 16KB){throw 'Release receipt is too large.'}
+ $record=Get-Content -LiteralPath $receipt.FullName -Raw|ConvertFrom-Json
+ $fields=@($record.PSObject.Properties.Name)
+ if($fields.Count -ne 6 -or @('SchemaVersion','Runtime','Version','SourceCommit','Archive','Sha256'|Where-Object {$_ -cnotin $fields}).Count){throw 'Unexpected release receipt schema.'}
+ if($record.SchemaVersion -isnot [long] -or @('Runtime','Version','SourceCommit','Archive','Sha256'|Where-Object {$record.$_ -isnot [string]}).Count){throw 'Unexpected release receipt field types.'}
+ $hash=(Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+ if($record.SchemaVersion -ne 1 -or $record.Runtime -cne $runtime -or $record.Version -cne $Version -or $record.SourceCommit -cne $SourceCommit -or $record.Archive -cne $name -or $record.Sha256 -cne $hash){throw 'Release receipt does not match its expected source and archive.'}
+ [pscustomobject]@{Runtime=$runtime;Archive=$name;Sha256=$hash;Bytes=$file.Length}
+})
+[pscustomobject]@{SchemaVersion=1;Version=$Version;SourceCommit=$SourceCommit;Archives=$entries}

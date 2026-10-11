@@ -52,19 +52,19 @@ function Get-TokenForgeMaintenanceReport {
         [ValidateRange(1,8760)][int]$MaxAgeHours = 24
     )
     $latest = @{}
-    foreach ($observation in @($Database.Observations | Sort-Object { [DateTimeOffset]::Parse($_.ObservedAt).UtcDateTime })) {
+    foreach ($observation in @($Database.Observations | Sort-Object { [TokenForge.Core.V0240.TimestampPolicy]::Parse($_.ObservedAt).UtcDateTime })) {
         if ($observation.TenantFingerprint -eq $Inventory.TenantFingerprint -and $observation.PrincipalFingerprint -eq $PrincipalFingerprint) { $latest["$($observation.ClientId)/$($observation.ResourceId)"] = $observation }
     }
     $now = [DateTimeOffset]::UtcNow
     $queue = foreach ($pair in Get-TokenForgeProbePlan -Inventory $Inventory -PrincipalFingerprint $PrincipalFingerprint) {
         $observation = $latest["$($pair.ClientId)/$($pair.ResourceId)"]
         $reason = if (-not $observation) { 'NotObserved' }
-        elseif ([DateTimeOffset]::Parse($observation.ObservedAt) -lt $now.AddHours(-$MaxAgeHours)) { 'Stale' }
-        elseif ([DateTimeOffset]::Parse($observation.ObservedAt) -gt $now.AddMinutes(5)) { 'InvalidFutureTimestamp' }
+        elseif ([TokenForge.Core.V0240.TimestampPolicy]::Parse($observation.ObservedAt) -lt $now.AddHours(-$MaxAgeHours)) { 'Stale' }
+        elseif ([TokenForge.Core.V0240.TimestampPolicy]::Parse($observation.ObservedAt) -gt $now.AddMinutes(5)) { 'InvalidFutureTimestamp' }
         elseif ($observation.Outcome -ne 'Succeeded') { 'Unavailable' }
         elseif (-not $observation.PSObject.Properties['NamespaceVerification'] -or $observation.NamespaceVerification -ne 'Matched' -or -not $observation.PSObject.Properties['RequestVerification'] -or $observation.RequestVerification -ne 'Matched') { 'Unverified' }
         else { $null }
         if ($reason) { [pscustomobject]@{ClientId=$pair.ClientId;ResourceId=$pair.ResourceId;Reason=$reason;ObservedAt=if($observation){$observation.ObservedAt}else{$null}} }
     }
-    [pscustomobject]@{ SchemaVersion=1; GeneratedAt=$now.ToString('o'); TenantFingerprint=$Inventory.TenantFingerprint; PrincipalFingerprint=$PrincipalFingerprint; MaxAgeHours=$MaxAgeHours; InventoryCapturedAt=$Inventory.CapturedAt; InventoryRefreshRequired=([DateTimeOffset]::Parse($Inventory.CapturedAt) -lt $now.AddHours(-$MaxAgeHours) -or [DateTimeOffset]::Parse($Inventory.CapturedAt) -gt $now.AddMinutes(5)); ProbeQueue=@($queue) }
+    [pscustomobject]@{ SchemaVersion=1; GeneratedAt=$now.ToString('o'); TenantFingerprint=$Inventory.TenantFingerprint; PrincipalFingerprint=$PrincipalFingerprint; MaxAgeHours=$MaxAgeHours; InventoryCapturedAt=$Inventory.CapturedAt; InventoryRefreshRequired=([TokenForge.Core.V0240.TimestampPolicy]::Parse($Inventory.CapturedAt) -lt $now.AddHours(-$MaxAgeHours) -or [TokenForge.Core.V0240.TimestampPolicy]::Parse($Inventory.CapturedAt) -gt $now.AddMinutes(5)); ProbeQueue=@($queue) }
 }

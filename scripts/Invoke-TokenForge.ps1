@@ -124,7 +124,7 @@ if($RefreshDiscovery) {
 $report=Get-TokenForgeMaintenanceReport -Inventory $inventory -Database $database -PrincipalFingerprint $PrincipalFingerprint -MaxAgeHours $MaxAgeHours
 $discovery=Get-Content -LiteralPath $discoveryPath -Raw|ConvertFrom-Json
 $report|Add-Member SourceDrift @($drift)
-$report|Add-Member DiscoveryRefreshRequired ([DateTimeOffset]::Parse($discovery.FetchedAt) -lt [DateTimeOffset]::UtcNow.AddHours(-$MaxAgeHours) -or [DateTimeOffset]::Parse($discovery.FetchedAt) -gt [DateTimeOffset]::UtcNow.AddMinutes(5))
+$report|Add-Member DiscoveryRefreshRequired ([TokenForge.Core.V0240.TimestampPolicy]::Parse($discovery.FetchedAt) -lt [DateTimeOffset]::UtcNow.AddHours(-$MaxAgeHours) -or [TokenForge.Core.V0240.TimestampPolicy]::Parse($discovery.FetchedAt) -gt [DateTimeOffset]::UtcNow.AddMinutes(5))
 $report|Add-Member InventoryDiscoveryMismatch ($inventory.DiscoveryCatalogHash -ne $discovery.CatalogContentSha256)
 $report|Add-Member ObservationDrift @(if($BeforeDatabasePath){Compare-TokenForgeScopeDatabase -Before (Get-TokenForgeScopeDatabase -Path $BeforeDatabasePath) -After $database})
 $report

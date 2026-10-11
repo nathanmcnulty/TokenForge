@@ -80,7 +80,7 @@ function Compare-TokenForgeScopeDatabase {
     $maps = @(@{},@{})
     $index = 0
     foreach ($database in @($Before,$After)) {
-        foreach ($observation in @($database.Observations | Sort-Object { [DateTimeOffset]::Parse($_.ObservedAt).UtcDateTime })) {
+        foreach ($observation in @($database.Observations | Sort-Object { [TokenForge.Core.V0240.TimestampPolicy]::Parse($_.ObservedAt).UtcDateTime })) {
             $key = "$($observation.TenantFingerprint)/$($observation.PrincipalFingerprint)/$($observation.ClientId)/$($observation.ResourceId)"
             $maps[$index][$key] = $observation
         }
@@ -109,7 +109,7 @@ function Export-TokenForgeScopeDatabase {
         if ($observation.Outcome -ne 'Succeeded' -or -not $observation.PSObject.Properties['RequestVerification'] -or $observation.RequestVerification -ne 'Matched') { continue }
         if (-not $observation.PSObject.Properties['NamespaceVerification'] -or $observation.NamespaceVerification -ne 'Matched') { continue }
         $client = [guid]::Empty; $resource = [guid]::Empty; $time = [DateTimeOffset]::MinValue
-        if (-not [guid]::TryParse([string]$observation.ClientId,[ref]$client) -or -not [guid]::TryParse([string]$observation.ResourceId,[ref]$resource) -or -not [DateTimeOffset]::TryParse([string]$observation.ObservedAt,[ref]$time) -or @($observation.ScpScopes | Where-Object { $_ -isnot [string] -or $_ -notmatch '^[A-Za-z0-9_.-]{1,256}$' }).Count) { throw 'Export contains invalid public scope evidence. No export written.' }
+        if (-not [guid]::TryParse([string]$observation.ClientId,[ref]$client) -or -not [guid]::TryParse([string]$observation.ResourceId,[ref]$resource) -or -not [TokenForge.Core.V0240.TimestampPolicy]::TryParse($observation.ObservedAt,[ref]$time) -or @($observation.ScpScopes | Where-Object { $_ -isnot [string] -or $_ -notmatch '^[A-Za-z0-9_.-]{1,256}$' }).Count) { throw 'Export contains invalid public scope evidence. No export written.' }
         [pscustomobject]@{
             ClientId = $client.ToString(); ResourceId = $resource.ToString()
             ObservedAt = $time.ToUniversalTime().ToString('o'); Scopes = @($observation.ScpScopes | Sort-Object -Unique)
@@ -136,13 +136,13 @@ function Get-TokenForgeAssessmentCoverage {
         [ValidateRange(1,8760)][int]$MaxAgeHours = 24
     )
     $latest = @{}
-    foreach ($observation in @($Database.Observations | Sort-Object { [DateTimeOffset]::Parse($_.ObservedAt).UtcDateTime })) {
+    foreach ($observation in @($Database.Observations | Sort-Object { [TokenForge.Core.V0240.TimestampPolicy]::Parse($_.ObservedAt).UtcDateTime })) {
         if ($observation.ResourceId -eq $ResourceId.ToString() -and $observation.TenantFingerprint -eq $TenantFingerprint -and $observation.PrincipalFingerprint -eq $PrincipalFingerprint) { $latest[$observation.ClientId] = $observation }
     }
     $rows = foreach ($observation in $latest.Values) {
         if (-not $observation.PSObject.Properties['NamespaceVerification'] -or $observation.NamespaceVerification -ne 'Matched') { continue }
         if (-not $observation.PSObject.Properties['RequestVerification'] -or $observation.RequestVerification -ne 'Matched') { continue }
-        if ($observation.Outcome -ne 'Succeeded' -or [DateTimeOffset]::Parse($observation.ObservedAt) -lt [DateTimeOffset]::UtcNow.AddHours(-$MaxAgeHours) -or [DateTimeOffset]::Parse($observation.ObservedAt) -gt [DateTimeOffset]::UtcNow.AddMinutes(5)) { continue }
+        if ($observation.Outcome -ne 'Succeeded' -or [TokenForge.Core.V0240.TimestampPolicy]::Parse($observation.ObservedAt) -lt [DateTimeOffset]::UtcNow.AddHours(-$MaxAgeHours) -or [TokenForge.Core.V0240.TimestampPolicy]::Parse($observation.ObservedAt) -gt [DateTimeOffset]::UtcNow.AddMinutes(5)) { continue }
         $apiScopes = @($observation.ScpScopes | Where-Object { $_ -cnotin @('openid','profile','email','offline_access') })
         $missing = @($Scope | Where-Object { $apiScopes -cnotcontains $_ })
         $additional = @($apiScopes | Where-Object { $Scope -cnotcontains $_ })

@@ -17,14 +17,14 @@ function Get-TokenForgeScopeCandidates {
     )
     if(@($Scope|Where-Object {$_ -notmatch '^[A-Za-z0-9_-][A-Za-z0-9_.-]*$' -or $_ -cin @('openid','profile','email','offline_access')}).Count){throw 'Provide explicit API scope names.'}
     $now=[DateTimeOffset]::UtcNow
-    $captured=[DateTimeOffset]::Parse($Inventory.CapturedAt)
+    $captured=[TokenForge.Core.V0240.TimestampPolicy]::Parse($Inventory.CapturedAt)
     $inventoryFresh=$captured -ge $now.AddHours(-$MaxAgeHours) -and $captured -le $now.AddMinutes(5)
     $resource=@($Inventory.Applications|Where-Object {$_.AppId -eq $ResourceId.ToString() -and $_.Registration -eq 'Present' -and $_.Ownership -eq 'VerifiedMicrosoftOwner' -and $_.AccountEnabled})
     $resourceEligible=$resource.Count -eq 1
     $coverage=@{}
     foreach($row in @(Get-TokenForgeAssessmentCoverage -Database $Database -ResourceId $ResourceId -Scope $Scope -TenantFingerprint $Inventory.TenantFingerprint -PrincipalFingerprint $PrincipalFingerprint -MaxAgeHours $MaxAgeHours)){$coverage[$row.ClientId]=$row}
     $latest=@{}
-    foreach($observation in @($Database.Observations|Where-Object {$_.ResourceId -eq $ResourceId.ToString() -and $_.TenantFingerprint -eq $Inventory.TenantFingerprint -and $_.PrincipalFingerprint -eq $PrincipalFingerprint}|Sort-Object {[DateTimeOffset]::Parse($_.ObservedAt).UtcDateTime})){$latest[$observation.ClientId]=$observation}
+    foreach($observation in @($Database.Observations|Where-Object {$_.ResourceId -eq $ResourceId.ToString() -and $_.TenantFingerprint -eq $Inventory.TenantFingerprint -and $_.PrincipalFingerprint -eq $PrincipalFingerprint}|Sort-Object {[TokenForge.Core.V0240.TimestampPolicy]::Parse($_.ObservedAt).UtcDateTime})){$latest[$observation.ClientId]=$observation}
     $grantEnumeration=if($Inventory.PSObject.Properties['GrantEnumeration']){$Inventory.GrantEnumeration}else{'Unknown'}
     $rows=foreach($app in $Inventory.Applications){
         $published=@($app.PublishedGrants|Where-Object ResourceId -eq $ResourceId.ToString()|ForEach-Object Scopes|Sort-Object -Unique)
@@ -40,7 +40,7 @@ function Get-TokenForgeScopeCandidates {
         $grantStatus=if($granted.Count -and -not $grantedMissing.Count){'Covered'}elseif($grantEnumeration -ne 'Complete'){'Unknown'}elseif($granted.Count){'Partial'}else{'NotPresent'}
         $observedScopes=@(if($observed){@($Scope|Where-Object {$observed.MissingScopes -cnotcontains $_})+@($observed.AdditionalScopes)})
         $observedMissing=@($Scope|Where-Object {$observedScopes -cnotcontains $_})
-        $observationStatus=if($observed){if($observed.CoversAll){'FreshCoverage'}else{'FreshPartialCoverage'}}elseif(-not $observation){'NotObserved'}elseif([DateTimeOffset]::Parse($observation.ObservedAt) -gt $now.AddMinutes(5)){'FutureDated'}elseif($observation.Outcome -ne 'Succeeded'){'LatestAttemptUnsuccessful'}elseif([DateTimeOffset]::Parse($observation.ObservedAt) -lt $now.AddHours(-$MaxAgeHours)){'Stale'}else{'Unverified'}
+        $observationStatus=if($observed){if($observed.CoversAll){'FreshCoverage'}else{'FreshPartialCoverage'}}elseif(-not $observation){'NotObserved'}elseif([TokenForge.Core.V0240.TimestampPolicy]::Parse($observation.ObservedAt) -gt $now.AddMinutes(5)){'FutureDated'}elseif($observation.Outcome -ne 'Succeeded'){'LatestAttemptUnsuccessful'}elseif([TokenForge.Core.V0240.TimestampPolicy]::Parse($observation.ObservedAt) -lt $now.AddHours(-$MaxAgeHours)){'Stale'}else{'Unverified'}
         $eligible=$inventoryFresh -and $resourceEligible -and $app.Registration -eq 'Present' -and $app.Ownership -eq 'VerifiedMicrosoftOwner' -and $app.AccountEnabled
         $rank=if($eligible -and $observed -and $observed.CoversAll){0}elseif($eligible -and $granted.Count -and -not $grantedMissing.Count){1}elseif($eligible -and $published.Count -and -not $publishedMissing.Count){2}else{3}
         [pscustomobject]@{

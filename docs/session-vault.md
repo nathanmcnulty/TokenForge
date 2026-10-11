@@ -135,3 +135,8 @@ belong to the caller, which must clear them. PowerShell record serialization sti
 credential strings, and buffer cleanup does not guarantee every process-memory copy is erased.
 The [sanitized validation report](vault-core-validation-2026-10-08.json) includes independent
 compatibility tests and both-account Linux acquisition/reopen/renewal/SDK/deletion checks.
+
+Vault retention and token-expiry checks preserve UTC timestamps after JSON parsing, including
+both `Z` and explicit-offset forms. They do not reinterpret UTC date objects in the machine's
+local timezone. The same shared timestamp policy protects evidence freshness and public export
+chronology; legacy string dates retain their existing culture-dependent parsing rules.

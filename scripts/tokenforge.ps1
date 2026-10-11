@@ -66,7 +66,7 @@ try{
      # Get-TfCiReport validates the complete frozen recipe once before deriving counts.
      $report=Get-TfCiReport $state
      if($state.Recipe.Mode -cne $mode){throw 'Weekly filename and recipe mode differ.'}
-     if($state.Recipe.Week -cgt $week -or [DateTimeOffset]::Parse($state.Recipe.CreatedAt) -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Weekly recipe is from the future.'}
+     if($state.Recipe.Week -cgt $week -or [TokenForge.Core.V0240.TimestampPolicy]::Parse($state.Recipe.CreatedAt) -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Weekly recipe is from the future.'}
      Assert-TfCiReport $report
      $report.PlanId=$state.PlanId
      $report.CurrentWeek=$report.Week -ceq $week

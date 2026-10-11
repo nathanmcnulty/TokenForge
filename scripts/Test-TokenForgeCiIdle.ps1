@@ -18,7 +18,7 @@ foreach($mode in @('Shallow','Deep')){
  $state=Get-Content -LiteralPath $path -Raw|ConvertFrom-Json -AsHashtable -Depth 100
  $report=Get-TfCiReport $state -Now $Now
  if($report.Mode -cne $mode){throw 'Idle-check state mode mismatch.'}
- $created=[DateTimeOffset]::Parse($state.Recipe.CreatedAt)
+ $created=[TokenForge.Core.V0240.TimestampPolicy]::Parse($state.Recipe.CreatedAt)
  if($created -gt $Now.AddMinutes(5) -or (Get-TfCiWeek $created) -cne $report.Week){throw 'Invalid idle-check recipe date.'}
  if($report.Week -cne $week -or -not $report.Complete){return $false}
 }
@@ -31,6 +31,6 @@ $origin=$catalog.Origins['Discovery///']
 # Require a matching completed source observation, not merely today's import date.
 $run=@($catalog.Runs|Where-Object {$_.Id -ceq $origin.LastRunId -and $_.Kind -ceq 'Discovery'})
 if($run.Count -ne 1){throw 'Idle-check discovery run mismatch.'}
-$observed=[DateTimeOffset]::Parse($origin.LastObservedAt)
-if($observed -ne [DateTimeOffset]::Parse($run[0].ObservedAt) -or $observed -gt $Now){throw 'Invalid idle-check discovery date.'}
+$observed=[TokenForge.Core.V0240.TimestampPolicy]::Parse($origin.LastObservedAt)
+if($observed -ne [TokenForge.Core.V0240.TimestampPolicy]::Parse($run[0].ObservedAt) -or $observed -gt $Now){throw 'Invalid idle-check discovery date.'}
 $observed.UtcDateTime.Date -eq $Now.UtcDateTime.Date

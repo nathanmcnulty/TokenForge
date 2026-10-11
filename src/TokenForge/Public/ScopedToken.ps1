@@ -37,7 +37,7 @@ function Get-TokenForgeScopedToken {
     if(@($Scope|Where-Object {$_ -notmatch '^[A-Za-z0-9_-][A-Za-z0-9_.-]*$' -or $_ -cin @('openid','profile','email','offline_access')}).Count){throw 'Provide explicit API scope names.'}
     if(($VaultPath -or $VaultPassword -or $SessionName) -and (-not $VaultPath -or -not $VaultPassword -or -not $SessionName)){throw 'Vault persistence requires VaultPath, VaultPassword, and an explicit SessionName.'}
     $now=[DateTimeOffset]::UtcNow
-    $captured=[DateTimeOffset]::Parse($Inventory.CapturedAt)
+    $captured=[TokenForge.Core.V0240.TimestampPolicy]::Parse($Inventory.CapturedAt)
     if($captured -lt $now.AddHours(-$MaxAgeHours) -or $captured -gt $now.AddMinutes(5)){throw 'Inventory is stale or future-dated; refresh it before requesting tokens.'}
     if($ApiUri){
         $hostName=switch($ResourceId.ToString()){'00000003-0000-0000-c000-000000000000'{'graph.microsoft.com'} '797f4846-ba00-4fd7-ba43-dac1f8f63013'{'management.azure.com'} default {throw 'No API host mapping is defined for this resource.'}}
@@ -62,7 +62,7 @@ function Get-TokenForgeScopedToken {
             $saved=$vault.Sessions[$SessionName]
             if($saved){$vaultContext=@{TenantFingerprint=$saved.TenantFingerprint;PrincipalFingerprint=$saved.PrincipalFingerprint;Revision=$saved.Revision}}
             if($PSCmdlet.ParameterSetName -eq 'Vault'){
-                if(-not $saved -or -not $saved.Cookie -or [DateTimeOffset]::Parse($saved.RetainUntil) -le [DateTimeOffset]::UtcNow){throw 'Selected vault session has no reusable cookie or its local retention deadline passed; authenticate explicitly.'}
+                if(-not $saved -or -not $saved.Cookie -or [TokenForge.Core.V0240.TimestampPolicy]::Parse($saved.RetainUntil) -le [DateTimeOffset]::UtcNow){throw 'Selected vault session has no reusable cookie or its local retention deadline passed; authenticate explicitly.'}
                 if($saved.CookieName -notin @('ESTSAUTH','ESTSAUTHPERSISTENT')){throw 'Unsupported saved session cookie name.'}
                 $ownedCookie=ConvertTo-SecureString $saved.Cookie -AsPlainText -Force;$EstsAuth=$ownedCookie;$CookieName=$saved.CookieName
             }

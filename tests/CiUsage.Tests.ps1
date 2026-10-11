@@ -140,4 +140,49 @@ Describe 'Read-only weekly Actions usage' {
   {& $runner -WeekStart $week -Now $now}|Should -Throw '*recognized conclusion*'
  }
 
+ It 'preserves week membership and recent job times outside UTC' -Skip:($IsWindows) {
+  $child=Join-Path $TestDrive 'usage-timezone.ps1'
+  @'
+param([string]$Runner)
+function global:gh {
+ param([string]$Command,[string]$Endpoint)
+ $global:LASTEXITCODE=0
+ $runs=@(
+  @{id=101L;created_at='2026-10-05T00:30:00Z';path='.github/workflows/discovery.yml';head_sha='a'*40;run_attempt=1;status='completed'},
+  @{id=102L;created_at='2026-10-11T23:30:00Z';path='.github/workflows/discovery.yml';head_sha='a'*40;run_attempt=1;status='completed'}
+ )
+ $response=switch -Regex ($Endpoint) {
+  '/workflows/discovery.yml/runs\?' {@{total_count=2;workflow_runs=$runs};break}
+  '/runs/(101|102)/attempts/1/jobs' {
+   $run=$runs|Where-Object id -EQ ([long]$Matches[1])
+   $finish=([DateTimeOffset]$run.created_at).AddMinutes(1).ToString('o')
+   @{total_count=1;jobs=@(@{id=([long]$run.id+1000);name='prepare';status='completed';conclusion='success';started_at=$run.created_at;completed_at=$finish})};break
+  }
+  '/artifacts\?' {@{total_count=0;artifacts=@()};break}
+  '/runs/(101|102)$' {$runs|Where-Object id -EQ ([long]$Matches[1]);break}
+  default {throw 'Unexpected fixture endpoint.'}
+ }
+ ConvertTo-Json $response -Depth 10 -Compress
+}
+& $Runner -WeekStart '2026-10-05T00:00:00Z' -Now '2026-10-12T00:00:00Z'|ConvertTo-Json -Depth 10 -Compress
+'@|Set-Content $child
+  foreach($zone in @('America/Anchorage','Asia/Tokyo')){
+   $start=[Diagnostics.ProcessStartInfo]::new((Get-Process -Id $PID).Path)
+   $start.UseShellExecute=$false;$start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
+   $start.Environment['TZ']=$zone
+   foreach($arg in @('-NoProfile','-File',$child,$runner)){$start.ArgumentList.Add($arg)}
+   $process=[Diagnostics.Process]::Start($start)
+   try{
+    $stdout=$process.StandardOutput.ReadToEndAsync();$stderr=$process.StandardError.ReadToEndAsync()
+    if(-not $process.WaitForExit(30000)){$process.Kill($true);throw 'Timezone fixture timed out.'}
+    $process.ExitCode|Should -Be 0 -Because $stderr.GetAwaiter().GetResult()
+    $report=$stdout.GetAwaiter().GetResult()|ConvertFrom-Json
+    $report.RunCount|Should -Be 2 -Because $zone
+    $report.TimedJobs|Should -Be 2 -Because $zone
+    $report.TotalRunnerMinutes|Should -Be 2 -Because $zone
+    $report.ObservationComplete|Should -BeTrue -Because $zone
+   }finally{$process.Dispose()}
+  }
+ }
+
 }

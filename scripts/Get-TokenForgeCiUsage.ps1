@@ -46,8 +46,9 @@ for($day=$WeekStart;$day -lt $observedEnd;$day=$day.AddDays(1)){
  $queryEnd=if($day.AddDays(1) -gt $observedEnd){$observedEnd}else{$day.AddDays(1)}
  $range=[uri]::EscapeDataString($day.ToString('yyyy-MM-ddTHH:mm:ssZ')+'..'+$queryEnd.ToString('yyyy-MM-ddTHH:mm:ssZ'))
  foreach($run in @(Get-TfUsagePages "repos/$Repository/actions/workflows/$Workflow/runs?created=$range" workflow_runs)){
-  $id=[long]$run.id;$created=[DateTimeOffset]::Parse($run.created_at)
+  $id=[long]$run.id;$created=[DateTimeOffset]$run.created_at
   if($id -le 0 -or $run.path -cne ".github/workflows/$Workflow" -or $run.head_sha -cnotmatch '^[a-f0-9]{40}$' -or $run.run_attempt -lt 1 -or $run.run_attempt -gt 100){throw 'Invalid Actions usage run.'}
+  # Cast parsed DateTime values directly to preserve their UTC Kind; stringifying loses it.
   # GitHub's search range is inclusive. Keep exact half-open membership and deduplicate midnight.
   if($created -ge $WeekStart -and $created -lt $observedEnd){$runs[$id]=$run}
  }
@@ -71,7 +72,7 @@ foreach($run in @($runs.Values|Sort-Object id)){
    $seconds=$null
    if($job.status -ceq 'completed' -and $job.conclusion -cne 'skipped'){
     if(-not $job.started_at -or -not $job.completed_at){throw 'Completed Actions job has no timing.'}
-    $start=[DateTimeOffset]::Parse($job.started_at);$finish=[DateTimeOffset]::Parse($job.completed_at)
+    $start=[DateTimeOffset]$job.started_at;$finish=[DateTimeOffset]$job.completed_at
     if($finish -lt $start -or $finish -gt $Now.AddMinutes(5)){throw 'Invalid Actions usage timing.'}
     $seconds=($finish-$start).TotalSeconds
    }

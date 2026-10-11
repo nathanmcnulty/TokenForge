@@ -68,6 +68,22 @@ Describe 'Encrypted session vault' {
   try{{Get-TokenForgeVault -Path $path -Password $password}|Should -Throw '*Details suppressed*'}finally{$lock.Dispose()}
   (Get-FileHash $path).Hash|Should -Be $before
  }
+ It 'uses the shared transaction lock across the public module and core API' {
+  $transaction=[TokenForge.Core.V0220.VaultFileTransaction]::Begin($path,'Read')
+  try{{Get-TokenForgeVault -Path $path -Password $password}|Should -Throw '*Details suppressed*'}finally{$transaction.Dispose()}
+  (Get-TokenForgeVault -Path $path -Password $password).Sessions.Count|Should -Be 0
+ }
+ It 'reads and rewrites a module-created envelope through the shared core' {
+  $before=(Get-FileHash $path).Hash;$plain=$null
+  $transaction=[TokenForge.Core.V0220.VaultFileTransaction]::Begin($path,'Update')
+  try {
+   {$transaction.Commit([byte[]]::new(100))}|Should -Throw '*Details suppressed*'
+   $plain=[TokenForge.Core.V0190.VaultEnvelope]::Decrypt($transaction.ReadEnvelope(),$password)
+   $transaction.Commit([TokenForge.Core.V0190.VaultEnvelope]::Encrypt($plain,$password))
+  }finally{if($plain){[Array]::Clear($plain)};$transaction.Dispose()}
+  (Get-FileHash $path).Hash|Should -Not -Be $before
+  (Get-TokenForgeVault -Path $path -Password $password).Sessions.Count|Should -Be 0
+ }
  It 'preserves the original when a transaction fails and suppresses exception details' {
   $before=(Get-FileHash $path).Hash
   InModuleScope TokenForge -Parameters @{Path=$path;Password=$password} {

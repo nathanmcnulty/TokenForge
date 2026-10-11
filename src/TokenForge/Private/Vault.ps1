@@ -2,33 +2,25 @@
 function Resolve-TokenForgeVaultPath {
     param([string]$Path,[switch]$CreateDirectory)
     $full=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
-    [TokenForge.Core.V0210.PrivateFiles]::Resolve($full,[bool]$CreateDirectory)
+    [TokenForge.Core.V0220.PrivateFiles]::Resolve($full,[bool]$CreateDirectory)
 }
 function Open-TokenForgeVaultFile {
     param([string]$Path,[switch]$Create)
-    [TokenForge.Core.V0210.PrivateFiles]::Open($Path,[bool]$Create)
+    [TokenForge.Core.V0220.PrivateFiles]::Open($Path,[bool]$Create)
 }
 
 function Invoke-TokenForgeVaultTransaction {
     param([string]$Path,[securestring]$Password,[ValidateSet('Read','Create','Update')][string]$Mode='Read',[scriptblock]$Update)
-    $lock=$null;$stream=$null;$plainBytes=$null;$temporary=$null;$document=$null
+    $transaction=$null;$plainBytes=$null;$document=$null
     try{
         if(-not $Password -or $Password.Length -lt 12 -or $Password.Length -gt 1024){throw 'Vault passphrase must contain 12 to 1024 characters.'}
         if(-not [Security.Cryptography.AesGcm]::IsSupported){throw 'Authenticated vault encryption is unavailable on this platform.'}
-        $full=Resolve-TokenForgeVaultPath -Path $Path -CreateDirectory:($Mode -eq 'Create')
-        $lockPath=Resolve-TokenForgeVaultPath -Path "$full.lock"
-        if(-not [IO.File]::Exists($lockPath)){
-            try{$lock=Open-TokenForgeVaultFile -Path $lockPath -Create}catch [IO.IOException]{}
-        }
-        if(-not $lock){try{$lock=Open-TokenForgeVaultFile -Path $lockPath}catch{throw 'Vault is unavailable or in use by another operation.'}}
+        $full=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
+        $transaction=[TokenForge.Core.V0220.VaultFileTransaction]::Begin($full,$Mode)
         if($Mode -eq 'Create'){
-            if([IO.File]::Exists($full)){throw 'Vault already exists; refusing to overwrite.'}
             $document=@{SchemaVersion=1;Sessions=@{}}
         }else{
-            if(-not [IO.File]::Exists($full)){throw 'Vault does not exist; initialize it explicitly.'}
-            $stream=Open-TokenForgeVaultFile -Path $full
-            if($stream.Length -gt 16777216 -or $stream.Length -lt 100){throw 'Invalid vault envelope size.'}
-            $bytes=[byte[]]::new([int]$stream.Length);$stream.ReadExactly($bytes);$stream.Dispose();$stream=$null
+            $bytes=$transaction.ReadEnvelope()
             $plainBytes=[TokenForge.Core.V0190.VaultEnvelope]::Decrypt($bytes,$Password)
             $document=[Text.Encoding]::UTF8.GetString($plainBytes)|ConvertFrom-Json -AsHashtable -Depth 32 -ErrorAction Stop
             [Array]::Clear($plainBytes);$plainBytes=$null
@@ -37,19 +29,14 @@ function Invoke-TokenForgeVaultTransaction {
         if($Mode -eq 'Read'){return $document}
         if($Update){$null=& $Update $document}
         $plainBytes=[Text.Encoding]::UTF8.GetBytes(($document|ConvertTo-Json -Depth 32 -Compress))
-        if($plainBytes.Length -gt 8388608){throw 'Vault exceeds its 8 MiB record limit.'}
         $encoded=[TokenForge.Core.V0190.VaultEnvelope]::Encrypt($plainBytes,$Password)
-        $temporary=Join-Path ([IO.Path]::GetDirectoryName($full)) ([guid]::NewGuid().ToString()+'.tmp')
-        $stream=Open-TokenForgeVaultFile -Path $temporary -Create
-        $stream.Write($encoded);$stream.Flush($true);$stream.Dispose();$stream=$null
-        [IO.File]::Move($temporary,$full,($Mode -eq 'Update'));$temporary=$null
+        $transaction.Commit($encoded)
     }catch{
         # Never forward JSON parser/crypto/IO exceptions, which can retain credential content.
         throw 'Vault operation failed; check passphrase, format, private path permissions, size, and writer availability. Details suppressed.'
     }finally{
-        if($stream){$stream.Dispose()};if($lock){$lock.Dispose()}
         if($plainBytes){[Array]::Clear($plainBytes)}
-        if($temporary){Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue}
+        if($transaction){$transaction.Dispose()}
         $document=$null
     }
 }

@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using TokenForge.Core;
-using TokenForge.Core.V0210;
+using TokenForge.Core.V0220;
 
 internal static class ProfileStoreChecks
 {

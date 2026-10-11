@@ -11,6 +11,10 @@ Version 0.20 shares profile configuration validation between PowerShell and the 
 See [profile policy validation](profile-core-validation-2026-10-10.json).
 Version 0.21 runs `profile create` and `profile show` directly in the executable. These commands
 need neither PowerShell nor the packaged scripts. Credential lifecycle and login still use PowerShell.
+Version 0.22 also shares vault-file transactions: exclusive locks, bounded ciphertext reads,
+private temporary files, and atomic publication. The transaction API handles ciphertext only;
+callers still authenticate envelopes and validate credential records and account policy.
+See [shared transaction validation](vault-file-validation-2026-10-10.json).
 The module and native CLI share private-file permission and link checks. See
 [native profile validation](native-profile-validation-2026-10-10.json) for both-account Linux proof
 and configuration interoperability checks.

@@ -1,0 +1,55 @@
+{
+  "ModuleVersion": "0.37.0",
+  "SchemaVersion": 1,
+  "SoftwarePasskeySourceSha256": "ddc29e5ca8c5b4a0240c1456b35b98ac4bf701a3024164a52769a75042242aa3",
+  "Scope": "BoundedTwoAccountLinuxSoftwarePasskeyProof",
+  "OriginalPasskeysModified": false,
+  "DateUTC": "2026-10-11",
+  "Accounts": [
+    {
+      "GraphMeStatus": 200,
+      "NativeChildWithoutPowerShell": true,
+      "CookieAcquired": true,
+      "Account": "nora",
+      "TokensReturned": false,
+      "CredentialsPersisted": false,
+      "AdditionalScopeCount": 107,
+      "SignatureValidated": false,
+      "TokenPolicyPassed": true,
+      "ExpectedUserMatched": true
+    },
+    {
+      "GraphMeStatus": 200,
+      "NativeChildWithoutPowerShell": true,
+      "CookieAcquired": true,
+      "Account": "secadmin",
+      "TokensReturned": false,
+      "CredentialsPersisted": false,
+      "AdditionalScopeCount": 107,
+      "SignatureValidated": false,
+      "TokenPolicyPassed": true,
+      "ExpectedUserMatched": true
+    }
+  ],
+  "ExecutableSha256": "aae9a99032336094194a995259b702df2bc7ea89dd2aecd36718eafc3acfc24f",
+  "SoftwareCredentialCopiesRemoved": true,
+  "CredentialAssemblySha256": "6eb7c85368c5dffcb507460c02895a934b27eeac5b2be3512bafae8d67d8266c",
+  "Limitations": [
+    "Linux live validation only; other platforms require live account testing",
+    "Microsoft Graph User.Read for one published client; not universal app or flow support",
+    "Decoded claims are unverified; Graph HTTP 200 is separate resource API evidence",
+    "Advanced acquisition only; profile passkey login and enrollment remain PowerShell adapters"
+  ],
+  "FocusedBoundaryChecks": 63,
+  "Review": "Sol: no remaining source or packaging blocker",
+  "ConsentChangePerformed": false,
+  "LocalNativeRegressionChecks": 905,
+  "PackagedNativeOAuthCases": {
+    "Passed": 22,
+    "Failed": 0,
+    "Skipped": 1
+  },
+  "SourceImplementationCommit": "8ce1ac9cce64e37bdb08d677b544cc3644004c1b",
+  "CredentialBootstrapCasesPassed": 7,
+  "MaximumAdditionalScopesInLiveProof": 128
+}

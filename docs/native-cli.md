@@ -187,6 +187,55 @@ clearing request dictionaries, and zeroing byte buffers reduces lifetime but doe
 that every immutable string is erased from process memory. An OS vault protects persisted
 credentials separately. See [native validation](native-oauth-validation-2026-10-08.json).
 
+## Native local software-passkey acquisition
+
+Version 0.37 adds an explicit local software-passkey credential to advanced acquisition:
+
+```sh
+tokenforge token acquire --plan /private/request.json --credential passkey --passkey-file /private/Test.json
+```
+
+The plan follows the account, tenant, client, resource and scope policy described above.
+The key file and its immediate parent must be private to the current user; linked paths
+are rejected. The command validates the plan before opening the key or contacting Entra.
+It runs without PowerShell, returns only the usual sanitized token metadata, and persists
+neither the cookie nor access/refresh tokens. Profile passkey login and enrollment still
+use the existing PowerShell workflow.
+
+The flow is:
+
+1. Import the explicitly supplied local P-256 software key and credential metadata.
+2. Obtain an Entra challenge for that credential's account and sign a WebAuthn assertion.
+3. Complete the known account-selection and stay-signed-in pages to obtain an in-memory
+   ESTS session cookie. Ambiguous accounts, consent pages and unknown interactions fail.
+4. Use that cookie for the plan's explicit authorization-code/PKCE request. The cookie
+   authenticates the session; Entra determines which scopes the selected app can receive.
+5. Check the resulting token's decoded account, audience, client, scopes and lifetime
+   against the plan, emit metadata, then dispose the owned key and credentials.
+
+The [sanitized live report](native-software-passkey-validation-2026-10-11.json) records
+Linux proofs for Nora and secadmin: native child acquisition with no PowerShell on
+PATH, policy acceptance, and separate Graph `/me` HTTP 200 identity confirmation.
+Temporary key copies were removed and the originals remained unchanged. This does
+not establish live Windows/macOS authentication or other apps/resources. The proof
+explicitly allowed up to 128 additional scopes; both responses reported 107. The
+default cap of zero rejects such broader tokens rather than accepting them silently.
+
+This adapter supports the public Microsoft cloud and `login.microsoft.com` RP, local
+PKCS#8 P-256 credentials, and a zero signature counter. It never updates the key file.
+It supports the existing `username`/`userName`, `credentialId`/`methodId` and
+`privateKey`/`keyValue` formats, with required `userHandle`; conflicting aliases fail.
+Nonzero counters, Key Vault references and other curves are unsupported.
+
+This is a software authenticator for lab credentials. Its user-presence and
+user-verification flags emulate the research authenticator; they do not prove a
+hardware touch, biometric check or OS WebAuthn verification. Hardware passkeys and
+native enrollment are separate work. Sensitive response bodies and assertions briefly
+exist as managed strings; clearing owned buffers and disposing key handles reduces
+lifetime but cannot guarantee immediate erasure of every string. The cookie stays in
+this operation's memory rather than a saved browser cookie jar. Decoded token checks
+are not JWT signature validation or a substitute for a resource API check.
+
 ## Durable private evidence
 
 SQLite is an opt-in evidence workspace. Existing discovery still writes JSON and updates the

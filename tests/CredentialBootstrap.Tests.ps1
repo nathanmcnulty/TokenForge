@@ -4,6 +4,7 @@ BeforeDiscovery {
 Describe 'Unified in-process credential runtime bootstrap' {
  BeforeAll {
   $manifest=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1'))
+  $expectedVersion=(Import-PowerShellDataFile -LiteralPath $manifest).ModuleVersion
   $ci=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../scripts/TokenForgeCiState.ps1'))
   function Quote-BootstrapPath([string]$Path){"'"+$Path.Replace("'","''")+"'"}
   function Invoke-Bootstrap([string]$Code,[int]$ExitCode=0){
@@ -22,8 +23,8 @@ Describe 'Unified in-process credential runtime bootstrap' {
   }
  }
  It 'compiles one BCL source assembly with module-first initialization and repeated imports' {
-  $result=Invoke-Bootstrap ("Import-Module "+(Quote-BootstrapPath $manifest)+"; . "+(Quote-BootstrapPath $ci)+"; Import-Module "+(Quote-BootstrapPath $manifest)+" -Force; @{Version=[TokenForge.Core.CredentialRuntime]::Version;SameAssembly=([TokenForge.Core.ProfileTokenLifecycle].Assembly -eq [TokenForge.Core.V0240.TimestampPolicy].Assembly);SqliteDependency=@([TokenForge.Core.ProfileTokenLifecycle].Assembly.GetReferencedAssemblies()|Where-Object Name -Like '*Sqlite*').Count}|ConvertTo-Json")
-  $result.Version|Should -Be '0.36.1';$result.SameAssembly|Should -BeTrue;$result.SqliteDependency|Should -Be 0
+  $result=Invoke-Bootstrap ("Import-Module "+(Quote-BootstrapPath $manifest)+"; . "+(Quote-BootstrapPath $ci)+"; Import-Module "+(Quote-BootstrapPath $manifest)+" -Force; @{Version=[TokenForge.Core.CredentialRuntime]::Version;SameAssembly=([TokenForge.Core.ProfileTokenLifecycle].Assembly -eq [TokenForge.Core.V0240.TimestampPolicy].Assembly -and [TokenForge.Core.SoftwarePasskey].Assembly -eq [TokenForge.Core.ProfileTokenLifecycle].Assembly);SqliteDependency=@([TokenForge.Core.ProfileTokenLifecycle].Assembly.GetReferencedAssemblies()|Where-Object Name -Like '*Sqlite*').Count}|ConvertTo-Json")
+  $result.Version|Should -Be $expectedVersion;$result.SameAssembly|Should -BeTrue;$result.SqliteDependency|Should -Be 0
  }
  It 'allows CI-state-first initialization without a separately compiled timestamp type' {
   $result=Invoke-Bootstrap (". "+(Quote-BootstrapPath $ci)+"; Import-Module "+(Quote-BootstrapPath $manifest)+"; @{SameAssembly=([TokenForge.Core.V0240.TimestampPolicy].Assembly -eq [TokenForge.Core.ProfileStore].Assembly);Week=(Get-TfCiWeek ([DateTimeOffset]'2026-10-07T00:00:00Z'))}|ConvertTo-Json")
@@ -45,7 +46,7 @@ Describe 'Unified in-process credential runtime bootstrap' {
  It 'loads the packaged BCL DLL in a fresh process' -Skip:(-not $nativeAvailable) {
   $packaged=Join-Path (Split-Path $env:TOKENFORGE_TEST_NATIVE -Parent) 'src/TokenForge/TokenForge.psd1'
   $result=Invoke-Bootstrap ("Import-Module "+(Quote-BootstrapPath $packaged)+"; @{Name=[TokenForge.Core.ProfileTokenLifecycle].Assembly.GetName().Name;Version=[TokenForge.Core.CredentialRuntime]::Version;SqliteDependency=@([TokenForge.Core.ProfileTokenLifecycle].Assembly.GetReferencedAssemblies()|Where-Object Name -Like '*Sqlite*').Count}|ConvertTo-Json")
-  $result.Name|Should -Be TokenForge.Credentials;$result.Version|Should -Be '0.36.1';$result.SqliteDependency|Should -Be 0
+  $result.Name|Should -Be TokenForge.Credentials;$result.Version|Should -Be $expectedVersion;$result.SqliteDependency|Should -Be 0
  }
  It 'refuses an invalid bundled DLL without source fallback' {
   $copy=Join-Path $TestDrive brokenmodule

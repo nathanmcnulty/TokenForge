@@ -23,7 +23,7 @@ script that actually runs continues to update the metadata ledger.
 On a full production snapshot, the idle check returned true in 26.60 seconds locally. This
 single measurement excludes hosted setup and is not a revised full-week runner cost. The
 change removes source downloads, plan generation, transport artifacts, and the separate writer
-from that scheduled idle path; hosted scheduled timing remains to be measured.
+from that scheduled idle path. Hosted scheduled results are recorded below.
 
 The `discovery-data` branch must already be initialized. The final branch-writing job is the only job with `contents: write`; workers and the report publisher have read access and do not receive the branch-writing credential. Source code with credential access runs only from `main`, with pinned actions. Nora's passkey values, expected account fingerprints, and checkpoint key are repository **secrets**.
 
@@ -200,3 +200,20 @@ After the indexed membership/report reuse change, [run 37718137655](https://gith
 passed the same publication checks and used 3.48 runner-minutes (169 seconds preparation,
 40 seconds writer). This is one uncontrolled no-worker sample; it is not a complete weekly
 cost or a controlled comparison of publication routes.
+
+## Hosted scheduled idle and daily refresh
+
+Three scheduled runs on the merged idle-check source completed preparation in **38, 29,
+and 29 seconds**: [38032181451](https://github.com/nathanmcnulty/TokenForge/actions/runs/38032181451),
+[38052913508](https://github.com/nathanmcnulty/TokenForge/actions/runs/38052913508), and
+[38076521526](https://github.com/nathanmcnulty/TokenForge/actions/runs/38076521526).
+Actions API inspection verified that planning and recipe upload were skipped, every token worker,
+publisher, and writer was skipped, and the runs exposed no artifacts. The source commit was
+`63b66ce1d7cb6b2b742e330db06902dec1eb9285` in all three cases.
+
+The next UTC-day scheduled [run 38101290383](https://github.com/nathanmcnulty/TokenForge/actions/runs/38101290383)
+resumed normal source refresh and publication: 95 seconds preparation and 29 seconds writer,
+with the token workers and separate publisher skipped. Both jobs succeeded and produced the
+normal recipe and validated-data artifacts. These observed job durations include runner setup
+and exclude queue time. They verify both scheduled routes; they do not measure a complete
+weekly cycle or compare identical workloads. See the [sanitized report](weekly-ci-validation-2026-10-07.json).

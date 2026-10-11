@@ -740,5 +740,100 @@
     ],
     "TotalRunnerMinutes": 3.4833333333333334,
     "Scope": "OneHostedNoWorkerSampleNotControlledComparisonOrCompleteWeek"
+  },
+  "HostedScheduledIdleValidation": {
+    "VerifiedAt": "2026-10-11T04:02:51.136102+00:00",
+    "Checks": "Actions run, job, step, and artifact API inspection; source SHA and scheduled event pinned",
+    "Runs": [
+      {
+        "RunId": 38032181451,
+        "Url": "https://github.com/nathanmcnulty/TokenForge/actions/runs/38032181451",
+        "Event": "schedule",
+        "SourceCommit": "63b66ce1d7cb6b2b742e330db06902dec1eb9285",
+        "StartedAt": "2026-10-10T06:48:00Z",
+        "Idle": true,
+        "JobResults": {
+          "prepare": "success",
+          "publish": "skipped",
+          "worker": "skipped",
+          "push": "skipped"
+        },
+        "SuccessfulJobSeconds": {
+          "prepare": 38.0
+        },
+        "TotalRunnerSeconds": 38.0,
+        "ObservedArtifactCount": 0,
+        "PlanningSkipped": true,
+        "RecipeUploadSkipped": true
+      },
+      {
+        "RunId": 38052913508,
+        "Url": "https://github.com/nathanmcnulty/TokenForge/actions/runs/38052913508",
+        "Event": "schedule",
+        "SourceCommit": "63b66ce1d7cb6b2b742e330db06902dec1eb9285",
+        "StartedAt": "2026-10-10T12:42:00Z",
+        "Idle": true,
+        "JobResults": {
+          "prepare": "success",
+          "publish": "skipped",
+          "worker": "skipped",
+          "push": "skipped"
+        },
+        "SuccessfulJobSeconds": {
+          "prepare": 29.0
+        },
+        "TotalRunnerSeconds": 29.0,
+        "ObservedArtifactCount": 0,
+        "PlanningSkipped": true,
+        "RecipeUploadSkipped": true
+      },
+      {
+        "RunId": 38076521526,
+        "Url": "https://github.com/nathanmcnulty/TokenForge/actions/runs/38076521526",
+        "Event": "schedule",
+        "SourceCommit": "63b66ce1d7cb6b2b742e330db06902dec1eb9285",
+        "StartedAt": "2026-10-10T18:37:26Z",
+        "Idle": true,
+        "JobResults": {
+          "prepare": "success",
+          "worker": "skipped",
+          "publish": "skipped",
+          "push": "skipped"
+        },
+        "SuccessfulJobSeconds": {
+          "prepare": 29.0
+        },
+        "TotalRunnerSeconds": 29.0,
+        "ObservedArtifactCount": 0,
+        "PlanningSkipped": true,
+        "RecipeUploadSkipped": true
+      },
+      {
+        "RunId": 38101290383,
+        "Url": "https://github.com/nathanmcnulty/TokenForge/actions/runs/38101290383",
+        "Event": "schedule",
+        "SourceCommit": "63b66ce1d7cb6b2b742e330db06902dec1eb9285",
+        "StartedAt": "2026-10-11T01:16:41Z",
+        "Idle": false,
+        "JobResults": {
+          "prepare": "success",
+          "push": "success",
+          "worker": "skipped",
+          "publish": "skipped"
+        },
+        "SuccessfulJobSeconds": {
+          "prepare": 95.0,
+          "push": 29.0
+        },
+        "TotalRunnerSeconds": 124.0,
+        "ObservedArtifactCount": 2,
+        "PlanningSkipped": false,
+        "RecipeUploadSkipped": false
+      }
+    ],
+    "IdleArtifactsAndPublicationSkipped": true,
+    "NextUtcDayRefreshSucceeded": true,
+    "FullWeeklyCostMeasured": false,
+    "TimingMethod": "Sum successful job completed_at minus started_at; skipped jobs excluded. Setup included; queue time excluded. Different scheduled paths, not a controlled benchmark."
   }
 }

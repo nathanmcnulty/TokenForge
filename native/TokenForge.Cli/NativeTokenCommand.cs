@@ -144,19 +144,3 @@ internal static class NativeTokenCommand
         } catch { result.Dispose(); throw; }
     }
 }
-
-internal sealed class NativeTokenException : Exception
-{
-    public string Code { get; }
-    public string Reason { get; }
-    public string[] IdentityErrorCodes { get; }
-    public int? HttpStatus { get; }
-    public NativeTokenException(string code, string diagnostic)
-    {
-        Code = code;
-        Reason = (diagnostic.StartsWith("Silent authorization", StringComparison.Ordinal) || diagnostic.StartsWith("Silent browser authorization", StringComparison.Ordinal)) ? "SilentAuthorizationDeclined" : diagnostic.StartsWith("Identity transport", StringComparison.Ordinal) ? "TransportFailed" : diagnostic.StartsWith("Token request failed", StringComparison.Ordinal) ? "TokenEndpointRejected" : "ValidationFailed";
-        IdentityErrorCodes = Regex.Matches(diagnostic, @"\bAADSTS([0-9]{4,9})\b").Select(m => m.Groups[1].Value).Distinct().Take(5).ToArray();
-        var status = Regex.Match(diagnostic, @"\bHTTP ([1-5][0-9]{2})\b");
-        HttpStatus = status.Success ? int.Parse(status.Groups[1].Value) : null;
-    }
-}

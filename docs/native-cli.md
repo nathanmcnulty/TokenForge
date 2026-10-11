@@ -306,3 +306,18 @@ tokenforge research backup --snapshot-path /private/maintenance.sealed --backup-
 The command copies ciphertext into a private directory under its SHA-256 content identity. Existing identical copies are reused; corrupt or conflicting files are never overwritten. Concurrent identical copies converge on one saved file. It rejects linked or broadly accessible paths, malformed envelope headers and oversized inputs. Output contains copy metadata and Authenticated=false: size, version and hash checks do not authenticate the encrypted payload. Keep the decryption key separately; account-bound authenticated restoration remains in the repository maintenance workflow. See [private maintenance](private-maintenance.md).
 
 The [0.34 validation report](native-maintenance-backup-validation-2026-10-11.json) records native copies and deduplicated repeats of existing Nora and secadmin maintenance snapshots, plus bounded corruption, concurrency and private-path fixtures. The native child ran without PowerShell on its PATH. These copy proofs do not refresh metadata or authenticate the ciphertext.
+
+## Native acquisition failure reasons
+
+Version 0.35 keeps issued-token policy enforcement unchanged and distinguishes its failures in JSON. Use Code and Reason rather than parsing the suppressed diagnostic message.
+
+| Code | Reason | Meaning |
+| --- | --- | --- |
+| TokenPolicyRejected | IdentityOrClientMismatch | The issued tenant, account, or client differs from the expected context. |
+| TokenPolicyRejected | ScopeOrResourceMismatch | The audience or delegated scope claim does not satisfy the request. |
+| TokenPolicyRejected | TokenLifetimeInsufficient | The token has unknown or insufficient remaining lifetime. |
+| TokenPolicyRejected | AdditionalScopePolicyExceeded | Extra permissions exceed the plan's explicit allowance. |
+
+Unknown failures retain ValidationFailed. Identity-service transport and authorization failure reasons remain separate. No raw exception, token, cookie, account identifier, or rejected claim is included in this diagnostic projection. An additional-scope rejection is a local policy decision after issuance, not evidence that Entra denied consent. Review scope observations and consider a narrower client before deliberately changing an allowance; the CLI never changes it automatically.
+
+The [0.35 native policy diagnostic report](native-token-policy-validation-2026-10-11.json) records local rejection after actual Entra code redemption for both lab accounts. Neither proof returned tokens or changed consent.

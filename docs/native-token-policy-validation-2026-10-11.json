@@ -1,0 +1,46 @@
+{
+  "Accounts": [
+    {
+      "CredentialOutput": false,
+      "MaximumAdditionalScopes": 32,
+      "TokenOutput": false,
+      "AuthorizationDriver": "HeadlessCookieHttpRedirectViaPrivateUnixSocket",
+      "Code": "TokenPolicyRejected",
+      "Reason": "AdditionalScopePolicyExceeded",
+      "JwtSignatureValidated": false,
+      "LocalPolicyAfterIssuance": true,
+      "BrowserUiExercised": false,
+      "Account": "nora",
+      "NativeSelfContained": true,
+      "CredentialsPersisted": false,
+      "ConsentChangePerformed": false
+    },
+    {
+      "CredentialOutput": false,
+      "MaximumAdditionalScopes": 32,
+      "TokenOutput": false,
+      "AuthorizationDriver": "HeadlessCookieHttpRedirectViaPrivateUnixSocket",
+      "Code": "TokenPolicyRejected",
+      "Reason": "AdditionalScopePolicyExceeded",
+      "JwtSignatureValidated": false,
+      "LocalPolicyAfterIssuance": true,
+      "BrowserUiExercised": false,
+      "Account": "secadmin",
+      "NativeSelfContained": true,
+      "CredentialsPersisted": false,
+      "ConsentChangePerformed": false
+    }
+  ],
+  "CookieTransfer": "Cookie stayed in the PowerShell proof process; private Unix socket carried authorization URL and completion only",
+  "Date": "2026-10-11",
+  "Version": "0.35.0",
+  "Validation": {
+    "NativeDiagnosticCoreChecksAdded": 22,
+    "PreviousGenericReasonRegressionVerified": true
+  },
+  "Limitations": [
+    "Local Linux proof used actual Entra authorization, loopback callback and native code redemption through a headless redirect driver; browser UI was not exercised.",
+    "No token was returned because the local additional-scope budget rejected the issued response.",
+    "This proof does not establish JWT signature validation or API authorization."
+  ]
+}

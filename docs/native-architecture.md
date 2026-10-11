@@ -2,7 +2,7 @@
 
 Use one shared .NET core with platform adapters, a CLI first, and a metadata-only visualization
 surface later. Do not maintain separate OAuth policy implementations for each operating system.
-The PowerShell workflow is the compatibility surface while code moves into the shared core. Shared timestamp projection and profile configuration and decrypted credential-record validation, private-file checks, vault-file transactions, issued-token policy, OAuth transport, vault envelope encryption, SQLite evidence import/export and checkpoints, and native CLI packages are implemented. Profile create/show, vault inspection, logout, OS-key forgetting, and direct token acquisition run natively; persisted-profile cache selection, same-client renewal, and credential writes also run in the shared native core. Browser/passkey login, fresh candidate planning, Memory sessions, and the CLI token-get adapter still use PowerShell. See [Native CLI](native-cli.md) for current dependencies.
+The PowerShell workflow is the compatibility surface while code moves into the shared core. Shared timestamp projection and profile configuration and decrypted credential-record validation, private-file checks, vault-file transactions, issued-token policy, OAuth transport, vault envelope encryption, SQLite evidence import/export and checkpoints, and native CLI packages are implemented. Scope explanation, profile create/show, vault inspection, logout, OS-key forgetting, and direct token acquisition run natively; persisted-profile cache selection, same-client renewal, and credential writes also run in the shared native core. Browser/passkey login, fresh request construction and iteration, Memory sessions, and the CLI token-get adapter still use PowerShell. Coverage and candidate ranking use the shared native planner. See [Native CLI](native-cli.md) for current dependencies.
 
 The security boundary is a credential service that exposes scoped acquisition operations and
 metadata, not a general cookie jar export. Windows Credential Manager and Linux Secret Service adapters now protect a random vault password
@@ -13,7 +13,9 @@ OS stores protect credentials at rest but do not isolate every process running a
 The module loads one BCL-only .NET 8 credential assembly in process. Source checkouts compile
 the same explicit sources together; distributed packages contain the prebuilt assembly. This
 keeps SecureString handoff inside the caller and avoids coupling credential operations to SQLite.
-A loaded incompatible runtime requires a fresh PowerShell process.
+A loaded incompatible runtime requires a fresh PowerShell process. The shared BCL scope planner
+also supplies coverage and candidate ranking to both the module and native `scopes explain`;
+SQLite history is read by the evidence core and passed as metadata.
 
 Keep three interfaces small:
 

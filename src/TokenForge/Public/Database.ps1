@@ -135,25 +135,8 @@ function Get-TokenForgeAssessmentCoverage {
         [Parameter(Mandatory)][ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,
         [ValidateRange(1,8760)][int]$MaxAgeHours = 24
     )
-    $latest = @{}
-    foreach ($observation in @($Database.Observations | Sort-Object { [TokenForge.Core.V0240.TimestampPolicy]::Parse($_.ObservedAt).UtcDateTime })) {
-        if ($observation.ResourceId -eq $ResourceId.ToString() -and $observation.TenantFingerprint -eq $TenantFingerprint -and $observation.PrincipalFingerprint -eq $PrincipalFingerprint) { $latest[$observation.ClientId] = $observation }
-    }
-    $rows = foreach ($observation in $latest.Values) {
-        if (-not $observation.PSObject.Properties['NamespaceVerification'] -or $observation.NamespaceVerification -ne 'Matched') { continue }
-        if (-not $observation.PSObject.Properties['RequestVerification'] -or $observation.RequestVerification -ne 'Matched') { continue }
-        if ($observation.Outcome -ne 'Succeeded' -or [TokenForge.Core.V0240.TimestampPolicy]::Parse($observation.ObservedAt) -lt [DateTimeOffset]::UtcNow.AddHours(-$MaxAgeHours) -or [TokenForge.Core.V0240.TimestampPolicy]::Parse($observation.ObservedAt) -gt [DateTimeOffset]::UtcNow.AddMinutes(5)) { continue }
-        $apiScopes = @($observation.ScpScopes | Where-Object { $_ -cnotin @('openid','profile','email','offline_access') })
-        $missing = @($Scope | Where-Object { $apiScopes -cnotcontains $_ })
-        $additional = @($apiScopes | Where-Object { $Scope -cnotcontains $_ })
-        [pscustomobject]@{
-            ClientId = $observation.ClientId; ResourceId = $observation.ResourceId
-            CoversAll = $missing.Count -eq 0; MissingScopes = $missing; AdditionalScopes = $additional
-            AdditionalScopeCount = $additional.Count; ObservedApiScopeCount = $apiScopes.Count
-            RedirectFingerprint = if ($observation.PSObject.Properties['RedirectFingerprint']) { $observation.RedirectFingerprint } else { $null }; ObservedAt = $observation.ObservedAt; Protocol = if ($observation.PSObject.Properties['Protocol']) { $observation.Protocol } else { 'Unknown' }; Spa = if ($observation.PSObject.Properties['Spa']) { $observation.Spa } else { $null }; Evidence = 'ObservedScpNotApiAuthorization'
-        }
-    }
-    @($rows | Sort-Object @{ Expression = { $_.MissingScopes.Count } }, AdditionalScopeCount, ObservedApiScopeCount, ClientId)
+    $json=ConvertTo-TokenForgePlanningDatabase $Database
+    ConvertFrom-TokenForgePlanningResult ([TokenForge.Core.ScopePlanning]::Coverage($json,$ResourceId.ToString(),[string[]]$Scope,$TenantFingerprint,$PrincipalFingerprint,$MaxAgeHours,$null))
 }
 
 function Import-TokenForgeScopeDatabase {

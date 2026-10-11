@@ -79,6 +79,37 @@ parser has no raw-cookie, token, or passphrase argument. Token output contains m
 Use the in-process module API for Graph SDK handoff; an SDK connection in a finished child
 process cannot authenticate the caller's PowerShell process.
 
+## Native scope explanation
+
+Version 0.29 runs `scopes explain` directly in the executable, using the same BCL planner
+as `Get-TokenForgeScopeCandidates` and `Get-TokenForgeAssessmentCoverage`.
+
+```sh
+tokenforge scopes explain --profile lab --resource graph --scope User.Read,Mail.Read --json
+```
+
+The profile must already have a confirmed tenant/account binding. This command reads private
+`inventory.json` and `scopes.sqlite` (preferred) or `scopes.json` from its state folder. Missing
+or malformed evidence fails without creating a store. It accepts Graph and ARM resource aliases,
+requires explicit API scope names, and accepts no authentication or passphrase options. It
+unlocks no vault, requests no tokens, makes no network calls, and launches no PowerShell process.
+SQLite uses an existing-file read-only connection; SQLite may manage its normal sidecar files.
+
+The result separates published hints, grants applicable to the profile's observer, and fresh
+matched scope observations. Confirmed observations rank first, then applicable grants, then
+published hints, subject to fresh inventory and enabled Microsoft-owned client/resource records.
+A newer unsuccessful observation, including the last input at an equal timestamp, suppresses
+older coverage. Ordinal scope matching preserves case. Duplicate canonical app IDs and duplicate
+JSON property names are rejected. `ClientEligible` describes structural eligibility; all-zero
+placeholder IDs remain visible for learning but are never eligible clients or fresh coverage.
+Neither hints nor observed scopes guarantee silent consent,
+JWT signature validity, or API authorization. Explanation does not perform or confirm a new login.
+
+The planner returns metadata only. Account fingerprints, arbitrary input properties, cookies,
+and token values are excluded. Timestamps retain their instants across PowerShell projections and are emitted as UTC strings.
+Fresh token acquisition and its existing warm/cold redirect rules still use PowerShell; this
+milestone moves explanation and evidence ranking, not browser login or the complete CLI token path.
+
 ## Direct native acquisition
 
 `token acquire` is an advanced validation and teaching command. Give it an explicit request
@@ -228,3 +259,5 @@ tokenforge research weekly --state-path /path/to/discovery-data --json
 The PowerShell entry point is `./scripts/tokenforge.ps1 research weekly -StatePath /path/to/discovery-data -Json`. No profile or login is required. The command reads the two frozen weekly recipe files, validates their hashes and coverage, and recomputes reports rather than relying on cached report files. It writes no files. Unrelated checkout files are not inspected or endorsed by this command.
 
 Reports distinguish source catalog, selected applications, successful applications, and app/resource pairs. They include remaining applications/pairs, pending/exhausted batches, observation dates, and next-step guidance. An older recipe is marked `CurrentWeek=false`; refresh the checkout and inspect scheduling before assuming the current week has run. Future-week recipes and creation times more than five minutes ahead are rejected. Assessment includes structural exclusions, and successful token observations do not establish universal support or API authorization. The packaged native command uses its PowerShell adapter, so PowerShell 7.4+ is required.
+
+The [v0.29 scope-planning validation report](native-scope-planning-validation-2026-10-11.json) records the sanitized two-account Linux proof and package checks.

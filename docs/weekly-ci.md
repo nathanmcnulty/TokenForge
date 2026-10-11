@@ -217,3 +217,34 @@ with the token workers and separate publisher skipped. Both jobs succeeded and p
 normal recipe and validated-data artifacts. These observed job durations include runner setup
 and exclude queue time. They verify both scheduled routes; they do not measure a complete
 weekly cycle or compare identical workloads. See the [sanitized report](weekly-ci-validation-2026-10-07.json).
+
+## Repeatable weekly usage reports
+
+The **Weekly discovery usage report** workflow runs on Monday after the previous UTC week
+ends. It reads Actions run, job, and artifact metadata with `actions: read`; it does not
+log in to Entra, download logs or artifact contents, or modify the catalog. Its JSON report
+is retained for eight days. Manual dispatch accepts an optional Monday date (`YYYY-MM-DD`).
+
+To generate the same observation locally with an authenticated GitHub CLI:
+
+```powershell
+./scripts/Get-TokenForgeCiUsage.ps1 -WeekStart '2026-10-05T00:00:00Z' |
+    ConvertTo-Json -Depth 10 | Set-Content discovery-usage.json
+```
+
+The cohort contains discovery workflow runs **created** in the half-open UTC week. Every
+available attempt is inspected, including reruns that execute outside that creation week.
+Each distinct physical job ID is counted once; failed and cancelled completed jobs contribute
+their measured duration, and skipped jobs do not. Runner time includes setup and excludes
+queue time. Unfinished jobs contribute no duration and make the observation incomplete.
+A current-week report is also incomplete until the week ends. These are measured seconds,
+not invoice minutes, calendar-week execution attribution, or elapsed catalog-cycle time.
+
+A complete observation means the selected runs and jobs finished; it does **not** establish
+that shallow/deep catalog recipes completed. Check the catalog's weekly reports separately.
+The artifact section is the current unexpired byte count for the selected runs, not total
+repository storage, historical byte-hours, or a billing estimate. Deleted/expired history
+cannot be reconstructed from this metadata. Daily run-search partitions, pagination and count
+checks refuse oversized, truncated, or visibly changing responses rather than report false
+coverage. A report is an API observation, not a transactionally frozen GitHub snapshot;
+rerun it after workflows settle when comparing weeks.

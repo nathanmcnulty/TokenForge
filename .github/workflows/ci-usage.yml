@@ -1,0 +1,54 @@
+name: Weekly discovery usage report
+on:
+  schedule:
+    - cron: '47 4 * * 1'
+  workflow_dispatch:
+    inputs:
+      week_start:
+        description: 'Optional Monday in UTC (YYYY-MM-DD); blank reports the previous complete week'
+        required: false
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: discovery-usage-report
+  cancel-in-progress: false
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Read workflow run, job, and artifact metadata
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TF_USAGE_REPOSITORY: ${{ github.repository }}
+          TF_USAGE_WEEK_START: ${{ inputs.week_start }}
+        run: |
+          $parameters=@{Repository=$env:TF_USAGE_REPOSITORY}
+          if($env:TF_USAGE_WEEK_START){
+            $week=[DateTimeOffset]::MinValue
+            $styles=[Globalization.DateTimeStyles]::AssumeUniversal -bor [Globalization.DateTimeStyles]::AdjustToUniversal
+            if(-not [DateTimeOffset]::TryParseExact($env:TF_USAGE_WEEK_START,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture,$styles,[ref]$week)){throw 'Use YYYY-MM-DD for week_start.'}
+            $parameters.WeekStart=$week
+          }
+          $report=./scripts/Get-TokenForgeCiUsage.ps1 @parameters
+          $report|ConvertTo-Json -Depth 10|Set-Content -LiteralPath discovery-usage.json -Encoding utf8
+          @(
+            '### Discovery usage observation'
+            "UTC week: $($report.WeekStart) through $($report.WeekEnd)"
+            "Observed runs: $($report.RunCount); attempts: $($report.AttemptCount)"
+            "Completed-job runner minutes: $($report.TotalRunnerMinutes)"
+            "Observation complete: $($report.ObservationComplete); catalog completion is not verified by this report."
+            'Includes failures and reruns. Excludes queues and unfinished jobs. Artifact bytes are a current snapshot, not billed storage. See discovery-usage.json for scope and details.'
+          )|Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: discovery-usage
+          path: discovery-usage.json
+          if-no-files-found: error
+          retention-days: 8

@@ -81,11 +81,40 @@ public static class ScopePlanning
         return rows.OrderBy(r=>r.CandidateRank).ThenBy(r=>r.ObservedAdditionalScopeCount ?? int.MaxValue).ThenBy(r=>r.ClientId,StringComparer.Ordinal).ToArray();
     }
     public sealed record RequestRow(string ClientId,string ResourceId,string ResourceUri,string[] Scopes,string[] OAuthScopes,
-        string RedirectUri,string Tenant,bool Spa,string Protocol,string Evidence,string Source,string? ObservedAt,string? ContentSha256=null);
+        string RedirectUri,string Tenant,bool Spa,string Protocol,string Evidence,string Source,string? ObservedAt,string? ContentSha256=null)
+    {
+        public TokenForge.Core.V0180.OAuthRequest ToTransport()=>new(){ClientId=ClientId,ResourceId=ResourceId,ResourceUri=ResourceUri,
+            Scopes=Scopes.ToArray(),OAuthScopes=OAuthScopes.ToArray(),RedirectUri=RedirectUri,Tenant=Tenant,Spa=Spa,Protocol=Protocol};
+    }
 
     // Warm observed coverage and cold hints have deliberately different redirect eligibility/order.
     // This constructs explicit metadata requests only; execution must verify current issued context.
     public static string BuildRequests(string inventoryJson,string databaseJson,string resource,string[] scopes,string principal,
+        string tenant,bool warm,bool browser=false,bool offlineAccess=false,int maxCandidates=8,int maxRedirects=2,
+        int maxAgeHours=24,DateTimeOffset? now=null)=>JsonSerializer.Serialize(PlanRequests(inventoryJson,databaseJson,resource,scopes,principal,
+            tenant,warm,browser,offlineAccess,maxCandidates,maxRedirects,maxAgeHours,now));
+
+    public static RequestRow BootstrapRequest(string inventoryJson,string tenant,string client,int maxAgeHours=24,DateTimeOffset? now=null)
+    {
+        try
+        {
+            const string graph="00000003-0000-0000-c000-000000000000";
+            var inventory=ParseInventory(inventoryJson);var instant=now ?? DateTimeOffset.UtcNow;
+            if(!Guid.TryParse(client,out var clientId) || clientId==Guid.Empty || maxAgeHours is <1 or >8760 || !Fresh(inventory.Captured,instant,maxAgeHours))throw new InvalidOperationException();
+            var application=inventory.Apps.Single(a=>a.Id==clientId.ToString() && Eligible(a));
+            inventory.Apps.Single(a=>a.Id==graph && Eligible(a));
+            using var parsed=Parse(inventoryJson);
+            var resource=Array(parsed.RootElement,"Applications",100000).Single(a=>Id(a,"AppId")==graph);
+            if(!Array(resource,"DelegatedScopeDefinitions",4096).Any(d=>Text(d,"Value")=="User.Read" && Boolean(d,"Enabled")==true))throw new InvalidOperationException();
+            // Warm bootstrap keeps its published HTTPS nativeclient suffix rule; cold planning is stricter.
+            var redirect=application.Redirects.FirstOrDefault(text=>SupportedRedirect(text,true,false) && new Uri(text).Scheme=="https" && new Uri(text).AbsolutePath.EndsWith("/nativeclient",StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException();
+            var request=new RequestRow(clientId.ToString(),graph,graph,new[]{"User.Read"},new[]{graph+"/User.Read"},redirect,tenant,false,"OAuth2V2Pkce",
+                "TenantResourceScopeDefinitionNotClientConsent","VerifiedTenantScopeDefinitions",null);
+            TokenForge.Core.V0180.OAuthTransport.ValidateRequest(request.ToTransport());return request;
+        }
+        catch{throw new InvalidOperationException("Observer bootstrap planning failed. Details suppressed.");}
+    }
+    public static RequestRow[] PlanRequests(string inventoryJson,string databaseJson,string resource,string[] scopes,string principal,
         string tenant,bool warm,bool browser=false,bool offlineAccess=false,int maxCandidates=8,int maxRedirects=2,
         int maxAgeHours=24,DateTimeOffset? now=null)
     {
@@ -126,7 +155,7 @@ public static class ScopePlanning
                         warm?observation?.Date.ToUniversalTime().ToString("o"):null));
                 }
             }
-            return JsonSerializer.Serialize(result);
+            return result.ToArray();
         }
         catch{throw new InvalidOperationException("Explicit request planning failed. Details suppressed.");}
     }

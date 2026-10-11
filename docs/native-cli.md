@@ -1,7 +1,7 @@
 # Native CLI and evidence store
 
 The native CLI is a self-contained .NET executable per OS and architecture. Evidence commands
-run directly in the shared core with bundled SQLite. Profile login and `token get` currently invoke the packaged PowerShell 7.4+ module;
+run directly in the shared core with bundled SQLite. Profile login and browser/interactive adapters invoke the packaged PowerShell 7.4+ module;
 install `pwsh` and keep `src/` and `scripts/` beside the executable for those commands.
 Version 0.18 adds direct native `token acquire`, and PowerShell uses the same C# OAuth transport
 and issued-token policy. Native acquisition does not itself provide browser/passkey login or a keystore.
@@ -25,7 +25,7 @@ Version 0.26 runs `profile inspect-vault` natively. It unlocks the existing encr
 tokenforge profile inspect-vault --profile lab --json
 ```
 
-Inspection uses both operation and vault locks, validates decrypted records, and clears its owned plaintext buffer. Metadata reports stored lifetime and scope observations, not new issuance or API authorization. The underlying record validator can allocate managed strings; this is not a guarantee of immediate erasure of every in-memory copy. Normal login and `token get` still use PowerShell.
+Inspection uses both operation and vault locks, validates decrypted records, and clears its owned plaintext buffer. Metadata reports stored lifetime and scope observations, not new issuance or API authorization. The underlying record validator can allocate managed strings; this is not a guarantee of immediate erasure of every in-memory copy. Normal login remains PowerShell-based; version 0.31 adds native saved-cookie profile acquisition.
 
 Version 0.27 runs `logout` natively. It removes the selected persisted session, including its cookie and tokens, while preserving profile configuration, unrelated sessions, and the OS encryption key. Expired or stale account bindings do not prevent deliberate cleanup. Missing vaults and Memory profiles complete without unlocking or creating storage. Existing vaults require both locks and valid decrypted records before any write.
 
@@ -261,3 +261,21 @@ The PowerShell entry point is `./scripts/tokenforge.ps1 research weekly -StatePa
 Reports distinguish source catalog, selected applications, successful applications, and app/resource pairs. They include remaining applications/pairs, pending/exhausted batches, observation dates, and next-step guidance. An older recipe is marked `CurrentWeek=false`; refresh the checkout and inspect scheduling before assuming the current week has run. Future-week recipes and creation times more than five minutes ahead are rejected. Assessment includes structural exclusions, and successful token observations do not establish universal support or API authorization. The packaged native command uses its PowerShell adapter, so PowerShell 7.4+ is required.
 
 The [v0.29 scope-planning validation report](native-scope-planning-validation-2026-10-11.json) records the sanitized two-account Linux proof and package checks.
+
+## Native saved-cookie profile acquisition
+
+Version 0.31 runs `token get` inside the executable for OperatingSystem profiles and for Passphrase profiles using explicit `--stdin`. It opens the encrypted session, validates its account binding and retention, then selects an exact-scope cached token or redeems its same-client refresh token. Fresh acquisition uses the saved ESTSAUTH cookie with bounded published callbacks and explicit scopes. It never requests consent.
+
+```sh
+tokenforge token get --profile lab --scope User.Read --api-uri https://graph.microsoft.com/v1.0/me --json
+```
+
+Passphrase input uses `--stdin`, with a 12–1024 character passphrase followed by EOF; it is never accepted in arguments or environment variables. OS-backed profiles reject stdin. `--resource graph|arm` selects the standard resources; `--resource-id GUID` selects another resource and cannot be combined with `--resource`. API checks are restricted to Graph or ARM HTTPS endpoints. `--max-candidates` (1–100, default 8) and `--max-redirects` (1–8, default 2) bound fresh requests. Output contains only metadata.
+
+With fresh observed scope coverage, the tool first obtains a bounded Graph `User.Read` bootstrap token and confirms `/me.id` against its validated account. It disposes that bootstrap token before trying the observed clients. A failed warm bootstrap or acquisition stops; it does not switch to cold hints. Without matching coverage, enabled Microsoft-owned clients with published or configured hints form the cold candidate set. A successful cold token must satisfy identity, client, resource, exact scope case, expiry and additional-scope limits before metadata is checkpointed.
+
+Cold checkpoint writes take the cooperating state writer lock and reread current JSON history or append transactionally to the existing SQLite store. A deleted or truncated existing SQLite store fails rather than being initialized again. Initially absent JSON history can be created. Checkpoint failure discards the token without trying another candidate. Credential persistence remains a separate final vault/profile comparison-and-swap: a successful metadata checkpoint can remain if subsequent cancellation, retention or concurrent profile changes prevent the credential commit.
+
+Memory profiles, `--login-hint`, and `--prompt-passphrase` retain the existing PowerShell adapter. If an OS-backed session needs fresh browser authentication because it has no cookie, the native operation releases its locks before invoking that adapter. Explicit stdin cannot be replayed into a browser fallback; use the existing interactive/module workflow. Login and passkey enrollment still require PowerShell. Windows and Linux OS stores are supported; macOS requires the existing signed-helper work. JWT payload checks do not establish signature verification.
+
+The [sanitized live report](native-fresh-acquisition-validation-2026-10-11.json) records Linux native cold/warm/cache/renewal Graph `/me` checks with Nora and secadmin, each HTTP 200, with PowerShell absent from the native commands’ PATH. Both sessions and OS keys were removed afterward. This is bounded Graph evidence, not proof for every app/resource or live Windows/macOS authentication.

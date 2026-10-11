@@ -1,0 +1,48 @@
+{
+  "CredentialsPersistedAfterProof": false,
+  "SignatureValidated": false,
+  "Accounts": [
+    {
+      "RenewEvidence": "SameClientRefreshMatchedIssuedContext",
+      "CleanupCompleted": true,
+      "Account": "nora",
+      "CachedEvidence": "CachedVerifiedContextNotNewIssuance",
+      "CredentialOutput": false,
+      "CachedStatus": 200,
+      "ColdEvidence": "BoundedTargetedSilentExplicitScopeAcquisition",
+      "RenewStatus": 200,
+      "NativePathWithoutPowerShell": true,
+      "WarmEvidence": "SilentExplicitScopeAcquisition",
+      "ColdStatus": 200,
+      "WarmStatus": 200
+    },
+    {
+      "RenewEvidence": "SameClientRefreshMatchedIssuedContext",
+      "CleanupCompleted": true,
+      "Account": "secadmin",
+      "CachedEvidence": "CachedVerifiedContextNotNewIssuance",
+      "CredentialOutput": false,
+      "CachedStatus": 200,
+      "ColdEvidence": "BoundedTargetedSilentExplicitScopeAcquisition",
+      "RenewStatus": 200,
+      "NativePathWithoutPowerShell": true,
+      "WarmEvidence": "SilentExplicitScopeAcquisition",
+      "ColdStatus": 200,
+      "WarmStatus": 200
+    }
+  ],
+  "ApiAuthorization": "OnlyTestedGraphMe",
+  "Date": "2026-10-11",
+  "Version": "0.31.0",
+  "OfflineValidation": {
+    "NativeCoreChecks": 688,
+    "SourcePesterPassed": 397,
+    "SourcePesterFailed": 0,
+    "SourcePesterSkipped": 62,
+    "PackagedFocusedPesterPassed": 69,
+    "PackagedFocusedPesterFailed": 0,
+    "PackagedFocusedPesterSkipped": 3,
+    "IndependentSolNativeProfileTestsPassed": 5,
+    "IndependentSolNativeProfileTestsFailed": 0
+  }
+}

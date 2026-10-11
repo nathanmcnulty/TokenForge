@@ -7,7 +7,8 @@ function ConvertTo-TokenForgePlanningDatabase {
 function ConvertTo-TokenForgePlanningInventory {
  param($Inventory)
  $apps=@(foreach($app in $Inventory.Applications){
-  $row=$app|Select-Object AppId,Name,Registration,Ownership,AccountEnabled,RedirectUris,PublishedGrants
+  $row=$app|Select-Object AppId,Name,Registration,Ownership,AccountEnabled,RedirectUris,PublishedGrants,DelegatedScopeDefinitions
+  $row.DelegatedScopeDefinitions=@($row.DelegatedScopeDefinitions|Where-Object {$null -ne $_}|Select-Object Value,Enabled)
   $row.PublishedGrants=@($row.PublishedGrants|Where-Object {$null -ne $_}|Select-Object ResourceId,Scopes)
   $row
  })

@@ -1,6 +1,7 @@
 function Invoke-TokenForgeNativeEvidence {
     param([string]$Path,[ValidateSet('import','export','plan','attempt','update','cohort','cohort-export','pending','checkpoint')][string]$Operation,
-        $Document,[string]$PlanFingerprint,[string]$NativeExecutablePath,[switch]$Latest,[string]$TenantFingerprint,[string]$PrincipalFingerprint,[ValidateSet('flows','catalog','evidence')][string]$Domain='flows',[guid]$AppId=[guid]::Empty,[switch]$CurrentOnly,[guid]$ResourceId=[guid]::Empty,[string]$SourcePath,[int]$BatchSize,[guid]$ClientId=[guid]::Empty,[string]$Outcome,[string]$FlowPlanFingerprint)
+        $Document,[string]$PlanFingerprint,[string]$NativeExecutablePath,[switch]$Latest,[string]$TenantFingerprint,[string]$PrincipalFingerprint,[ValidateSet('flows','catalog','evidence')][string]$Domain='flows',[guid]$AppId=[guid]::Empty,[switch]$CurrentOnly,[guid]$ResourceId=[guid]::Empty,[string]$SourcePath,[int]$BatchSize,[guid]$ClientId=[guid]::Empty,[string]$Outcome,[string]$FlowPlanFingerprint,[switch]$RequireExisting)
+    if($RequireExisting -and ($Domain -ne 'evidence' -or $Operation -ne 'update')){throw 'Existing-store writes require evidence update.'}
     $full=Resolve-TokenForgeVaultPath $Path -CreateDirectory
     if(-not $NativeExecutablePath){$NativeExecutablePath=Join-Path $script:ModuleRoot $(if($IsWindows){'../../tokenforge.exe'}else{'../../tokenforge'})}
     if(-not(Test-Path -LiteralPath $NativeExecutablePath -PathType Leaf)){throw 'SQLite metadata requires the native TokenForge executable. Supply NativeExecutablePath or use a native package.'}
@@ -15,6 +16,7 @@ function Invoke-TokenForgeNativeEvidence {
             try{$bytes=[Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $Document -Depth 32 -Compress));$stream.Write($bytes,0,$bytes.Length)}finally{$stream.Dispose()}
             $start.ArgumentList.Add('--input');$start.ArgumentList.Add($temporary)
         }
+        if($RequireExisting){$start.ArgumentList.Add('--require-existing')}
         if($BatchSize){$start.ArgumentList.Add('--batch-size');$start.ArgumentList.Add($BatchSize.ToString([Globalization.CultureInfo]::InvariantCulture))}
         if($SourcePath){$start.ArgumentList.Add('--source');$start.ArgumentList.Add($SourcePath)}
         if($TenantFingerprint){$start.ArgumentList.Add('--tenant');$start.ArgumentList.Add($TenantFingerprint)}

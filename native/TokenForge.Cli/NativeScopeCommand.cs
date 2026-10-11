@@ -38,7 +38,7 @@ internal static class NativeScopeCommand
         Console.WriteLine(ScopePlanning.Candidates(inventoryJson,databaseJson,resource,scope.Split(','),principal,profile.GetProperty("MaxAgeHours").GetInt32()));
         return 0;
     }
-    private static string ReadJson(string path)
+    internal static string ReadJson(string path)
     {
         path=PrivateFiles.Resolve(path,false);
         using var file=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read);

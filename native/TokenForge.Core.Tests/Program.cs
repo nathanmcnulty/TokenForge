@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using TokenForge.Core;
 using TokenForge.Core.V0100;
+using TokenForge.Core.V0220;
 
 var count=0;
 void Check(bool condition){if(!condition) throw new Exception("Check failed.");count++;}
@@ -11,6 +12,7 @@ VaultRecordPolicyChecks.Run(Check,Reject);
 VaultInspectionChecks.Run(Check,Reject);
 ProfileTokenLifecycleChecks.Run(Check,Reject);
 ScopePlanningChecks.Run(Check,Reject);
+ProfileScopeAcquisitionChecks.Run(Check,Reject);
 VaultEnvelopeChecks.Run(Check,Reject);
 ProfilePolicyChecks.Run(Check,Reject);
 ProfileStoreChecks.Run(Check,Reject);
@@ -27,6 +29,9 @@ var row=new Dictionary<string,object?>{{"ClientId","11111111-1111-1111-1111-1111
 string Input(params object[] rows)=>JsonSerializer.Serialize(new{SchemaVersion=1,Observations=rows,RegistrationAttempts=Array.Empty<object>()});
 try
 {
+ Reject(()=>new EvidenceStore(path,requireExisting:true));Check(!File.Exists(path));
+ var emptyPath=PrivateFiles.Resolve(Path.Combine(root,"empty.sqlite"),true);using(var empty=PrivateFiles.Open(emptyPath,true)){}
+ Reject(()=>new EvidenceStore(emptyPath,requireExisting:true));Check(new FileInfo(emptyPath).Length==0);
  using(var store=new EvidenceStore(path))
  {
   var legacy=JsonSerializer.Serialize(new{SchemaVersion=1,Observations=Array.Empty<object>(),RegistrationAttempts=new[]{new{AppId=Guid.Empty.ToString(),TenantFingerprint=new string('a',64),AttemptedAt=now.ToString("o"),Outcome="Failed",HttpStatus=400}}});

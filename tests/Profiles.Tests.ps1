@@ -151,7 +151,7 @@ Describe 'Named profile sessions and managed tokens' {
   $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie -VaultPassword $password
   $issued=New-ProfileTestToken
   $issued|Add-Member Request ([pscustomobject]@{ClientId=$profile.BootstrapClientId;ResourceId=$issued.ResourceId;Tenant='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';Scopes=@('User.Read');OAuthScopes=@('User.Read','offline_access');RedirectUri='https://login.microsoftonline.com/common/oauth2/nativeclient';Spa=$false;Protocol='OAuth2V2Pkce'})
-  Mock Get-TokenForgeScopedToken -ModuleName TokenForge {$null=Remove-TokenForgeVaultEntry "$root/lab/session.tfvault" $password -SessionName lab;return $issued}
+  Mock Get-TokenForgeToken -ModuleName TokenForge {$null=Remove-TokenForgeVaultEntry "$root/lab/session.tfvault" $password -SessionName lab;return $issued}
   {Get-TokenForgeProfileToken lab -Root $root -VaultPassword $password -Scope User.Read}|Should -Throw
   (Get-TokenForgeVault "$root/lab/session.tfvault" $password).Sessions.Count|Should -Be 0
   {[Net.NetworkCredential]::new('', $issued.AccessToken).Password}|Should -Throw
@@ -193,16 +193,16 @@ Describe 'Named profile sessions and managed tokens' {
   $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie -VaultPassword $password
   $issued=New-ProfileTestToken
   $issued|Add-Member Request ([pscustomobject]@{ClientId=$profile.BootstrapClientId;ResourceId=$issued.ResourceId;Tenant='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';Scopes=@('User.Read');OAuthScopes=@("$($issued.ResourceId)/User.Read",'offline_access');RedirectUri='https://login.microsoftonline.com/common/oauth2/nativeclient';Spa=$false;Protocol='OAuth2V2Pkce'})
-  Mock Get-TokenForgeScopedToken -ModuleName TokenForge {return $issued}
+  Mock Get-TokenForgeToken -ModuleName TokenForge {return $issued}
   $first=Get-TokenForgeProfileToken lab -Root $root -Scope User.Read
-  $first.Evidence|Should -Be SilentExplicitScopeAcquisition
+  $first.Evidence|Should -Be BoundedTargetedSilentExplicitScopeAcquisition
   $before=(Get-FileHash "$root/lab/session.tfvault").Hash
   $first.AccessToken.Dispose();$first.RefreshToken.Dispose()
   $cached=Get-TokenForgeProfileToken lab -Root $root -Scope User.Read
   try{$cached.Evidence|Should -Be CachedVerifiedContextNotNewIssuance;$cached.AccessToken.Length|Should -BeGreaterThan 0}
   finally{$cached.AccessToken.Dispose();$cached.RefreshToken.Dispose()}
   (Get-FileHash "$root/lab/session.tfvault").Hash|Should -Be $before
-  Should -Invoke Get-TokenForgeScopedToken -ModuleName TokenForge -Times 1 -Exactly
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 2 -Exactly
   {[Net.NetworkCredential]::new('', $issued.AccessToken).Password}|Should -Throw
  }
  It 'uses native persisted renewal while preserving deadlines and an omitted replacement refresh token' {
@@ -211,7 +211,7 @@ Describe 'Named profile sessions and managed tokens' {
   $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie -VaultPassword $password
   $issued=New-ProfileTestToken
   $issued|Add-Member Request ([pscustomobject]@{ClientId=$profile.BootstrapClientId;ResourceId=$issued.ResourceId;Tenant='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';Scopes=@('User.Read');OAuthScopes=@("$($issued.ResourceId)/User.Read",'offline_access');RedirectUri='https://login.microsoftonline.com/common/oauth2/nativeclient';Spa=$false;Protocol='OAuth2V2Pkce'})
-  Mock Get-TokenForgeScopedToken -ModuleName TokenForge {return $issued}
+  Mock Get-TokenForgeToken -ModuleName TokenForge {return $issued}
   $first=Get-TokenForgeProfileToken lab -Root $root -Scope User.Read
   $first.AccessToken.Dispose();$first.RefreshToken.Dispose()
   $before=(Get-TokenForgeVault "$root/lab/session.tfvault" $password).Sessions[0]
@@ -224,7 +224,38 @@ Describe 'Named profile sessions and managed tokens' {
   $after=(Get-TokenForgeVault "$root/lab/session.tfvault" $password).Sessions[0]
   $after.RetainUntil|Should -Be $before.RetainUntil;$after.LastConfirmedAt|Should -Be $before.LastConfirmedAt
   $after.Tokens.Count|Should -Be 1;$after.Tokens[0].HasRefreshToken|Should -BeTrue
-  Should -Invoke Get-TokenForgeScopedToken -ModuleName TokenForge -Times 1 -Exactly
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 3 -Exactly
+ }
+
+ It 'runs persisted warm acquisition through shared bootstrap and verifies Graph identity' {
+  Remove-Item "$root/lab/profile.json"
+  $profile=New-TokenForgeProfile lab example.test -Root $root -Storage Passphrase -StatePath $profile.StatePath
+  $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie -VaultPassword $password
+  $bound=Get-TokenForgeProfile lab -Root $root
+  $databasePath=Join-Path $profile.StatePath scopes.json
+  $db=Get-TokenForgeScopeDatabase $databasePath
+  $observation=[pscustomobject]@{ClientId=$profile.BootstrapClientId;ResourceId='00000003-0000-0000-c000-000000000000';Outcome='Succeeded';TenantFingerprint=$bound.ExpectedTenantFingerprint;PrincipalFingerprint=$bound.ExpectedPrincipalFingerprint;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o');ScpScopes=@('User.Read');RequestedScopes=@('User.Read');NamespaceVerification='Matched';RequestVerification='Matched';Protocol='OAuth2V2Pkce'}
+  $null=Add-TokenForgeScopeObservation $db $observation -Path $databasePath
+  Mock Get-TokenForgeToken -ModuleName TokenForge {New-ProfileTestToken}
+  $token=Get-TokenForgeProfileToken lab -Root $root -Scope User.Read
+  try{$token.Evidence|Should -Be SilentExplicitScopeAcquisition}finally{$token.AccessToken.Dispose();$token.RefreshToken.Dispose()}
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 3 -Exactly
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 2 -Exactly
+ }
+ It 'preserves metadata added during persisted cold acquisition' {
+  Remove-Item "$root/lab/profile.json"
+  $profile=New-TokenForgeProfile lab example.test -Root $root -Storage Passphrase -StatePath $profile.StatePath
+  $null=Connect-TokenForgeProfile lab -Root $root -EstsAuth $cookie -VaultPassword $password
+  $databasePath=Join-Path $profile.StatePath scopes.json;$bound=Get-TokenForgeProfile lab -Root $root
+  Mock Get-TokenForgeToken -ModuleName TokenForge {
+   $new=[pscustomobject]@{ClientId='11111111-1111-1111-1111-111111111111';ResourceId='00000003-0000-0000-c000-000000000000';Outcome='Failed';TenantFingerprint=$bound.ExpectedTenantFingerprint;PrincipalFingerprint=$bound.ExpectedPrincipalFingerprint;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')}
+   $db=Get-TokenForgeScopeDatabase $databasePath;$null=Add-TokenForgeScopeObservation $db $new -Path $databasePath
+   New-ProfileTestToken
+  }
+  $token=Get-TokenForgeProfileToken lab -Root $root -Scope User.Read
+  try{$token.Evidence|Should -Be BoundedTargetedSilentExplicitScopeAcquisition}finally{$token.AccessToken.Dispose();$token.RefreshToken.Dispose()}
+  $rows=(Get-TokenForgeScopeDatabase $databasePath).Observations
+  $rows.Count|Should -Be 2;$rows[0].Outcome|Should -Be Failed;$rows[1].Outcome|Should -Be Succeeded
  }
 
  It 'preserves case-distinct profile scopes before cold request planning' {

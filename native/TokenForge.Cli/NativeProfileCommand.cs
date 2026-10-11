@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using TokenForge.Core;
 
 internal static class NativeProfileCommand
@@ -21,6 +22,11 @@ internal static class NativeProfileCommand
         string? Optional(string option) => values.GetValueOrDefault(option);
         int Number(string option, int fallback) => values.TryGetValue(option, out string? value) ? int.Parse(value, NumberStyles.None, CultureInfo.InvariantCulture) : fallback;
         string name = values.ContainsKey("--profile") ? Required("--profile") : "default";
+        if (operation == "forget-key")
+        {
+            var removed = ProfileStore.ForgetKey(name, Optional("--root"));
+            Console.WriteLine(JsonSerializer.Serialize(removed)); return removed.KeyRemoved ? 0 : 1;
+        }
         string json = operation == "show" ? ProfileStore.Read(name, Optional("--root")) : ProfileStore.Create(name, Required("--tenant"), Optional("--root"), Optional("--state-path"),
             Optional("--storage") ?? "Passphrase", Optional("--bootstrap-client") ?? "038ddad9-5bbe-4f64-b0cd-12434d1e633b", Number("--max-extra-scopes",0), Number("--max-bootstrap-extra-scopes",0),
             Number("--max-age-hours",24), Number("--session-retention-hours",8), Optional("--passkey-path") ?? "", Optional("--xdr-module-path") ?? "");

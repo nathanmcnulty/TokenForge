@@ -4,6 +4,7 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using TokenForge.Core;
 using TokenForge.Core.V0220;
+using TokenForge.Core.V0230;
 
 internal static class ProfileStoreChecks
 {
@@ -13,6 +14,13 @@ internal static class ProfileStoreChecks
         if (OperatingSystem.IsMacOS() && root.StartsWith("/var/")) root = "/private" + root;
         try
         {
+            const string identity="0123456789abcdef0123456789abcdef";
+            string identityDirectory=Path.Combine(root,"lab");
+            string handle=ProfileKeyIdentity.Compute(identityDirectory,identity);
+            check(handle.Length==64);check(ProfileKeyIdentity.Compute(Path.Combine(identityDirectory,"..","lab"),identity)==handle);
+            check(ProfileKeyIdentity.Compute(Path.Combine(root,"LAB"),identity)==handle == OperatingSystem.IsWindows());
+            check(ProfileKeyIdentity.Compute(Path.Combine(root,"other"),identity)!=handle);
+            foreach(string key in new[]{"",new string('0',32),identity.ToUpperInvariant(),"invalid"}) reject(()=>ProfileKeyIdentity.Compute(identityDirectory,key));
             string missing = Path.Combine(root,"missing");
             reject(()=>ProfileStore.Read("lab",missing)); check(!Directory.Exists(root));
             reject(()=>ProfileStore.Create("../lab","example.onmicrosoft.com",root));

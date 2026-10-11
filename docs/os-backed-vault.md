@@ -80,3 +80,14 @@ Implementation references: [Credential Manager](https://learn.microsoft.com/en-u
 [libsecret storage](https://gnome.pages.gitlab.gnome.org/libsecret/func.password_storev_sync.html),
 [locked-item searches](https://gnome.pages.gitlab.gnome.org/libsecret/method.Service.search_sync.html), and
 [Apple keychain accessibility](https://developer.apple.com/documentation/security/ksecattraccessiblewhenunlockedthisdeviceonly).
+
+## Native key forgetting
+
+Version 0.23 runs `tokenforge profile forget-key --profile lab --root /private/profiles --json`
+directly in the compiled CLI on Windows and Linux. It shares the existing directory/key-ID
+binding and cooperative locks with PowerShell, and deletes encrypted vault bytes before
+deleting the OS key. If key deletion fails, the output reports `VaultRemoved=true` and
+`KeyRemoved=false`, with exit code 1; retry when the store is available. The profile metadata
+remains available for explicit login. macOS OS-backed profiles remain unsupported; the
+native command preserves their ciphertext and fails. This is local deletion, without server
+revocation or access to other processes’ credential copies.

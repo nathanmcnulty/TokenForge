@@ -134,9 +134,7 @@ function Request-TokenForgeProfileScope {
 function Get-TokenForgeProfileKeyHandle {
     param($Record)
     # A moved profile is not an automatic key migration.
-    $directory=[IO.Path]::GetFullPath($Record.Directory)
-    if($IsWindows){$directory=$directory.ToLowerInvariant()}
-    Get-TokenForgeFingerprint ($directory+'|'+$Record.Configuration.KeyId)
+    [TokenForge.Core.V0230.ProfileKeyIdentity]::Compute($Record.Directory,$Record.Configuration.KeyId)
 }
 function Open-TokenForgeProfilePlatformKey {
     param($Record,[switch]$Create)

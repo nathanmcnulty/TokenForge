@@ -44,6 +44,24 @@ Describe 'Scope candidate evidence' {
   $row.ObservationStatus|Should -Be LatestAttemptUnsuccessful
   $row.FreshObservedScopes.Count|Should -Be 0
  }
+ It 'keeps planner timestamps as strings without a local timezone round trip' {
+  $observation.ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')
+  $row=Get-TokenForgeScopeCandidates @options
+  $row.ObservedAt|Should -BeOfType string
+  ([DateTimeOffset]$row.ObservedAt).UtcTicks|Should -Be ([DateTimeOffset]$observation.ObservedAt).UtcTicks
+  $coverage=Get-TokenForgeAssessmentCoverage -Database $db -ResourceId $graph -Scope User.Read -TenantFingerprint ('a'*64) -PrincipalFingerprint ('c'*64)
+  $coverage.ObservedAt|Should -BeOfType string
+  $coverage.ObservedAt|Should -Be $observation.ObservedAt
+ }
+ It 'uses the last equal-time observation before success filtering' {
+  $failed=$observation.PSObject.Copy();$failed.Outcome='Failed';$db.Observations+=$failed
+  (Get-TokenForgeScopeCandidates @options).ObservationStatus|Should -Be LatestAttemptUnsuccessful
+  @(Get-TokenForgeAssessmentCoverage -Database $db -ResourceId $graph -Scope User.Read -TenantFingerprint ('a'*64) -PrincipalFingerprint ('c'*64)).Count|Should -Be 0
+ }
+ It 'rejects duplicate canonical app IDs rather than selecting conflicting metadata' {
+  $copy=$app.PSObject.Copy();$copy.AppId=$app.AppId.ToUpperInvariant();$inventory.Applications+=$copy
+  {Get-TokenForgeScopeCandidates @options}|Should -Throw '*Scope planning failed*'
+ }
  It 'isolates tenant and observer namespaces' {
   $observation.PrincipalFingerprint='b'*64
   (Get-TokenForgeScopeCandidates @options).ObservationStatus|Should -Be NotObserved

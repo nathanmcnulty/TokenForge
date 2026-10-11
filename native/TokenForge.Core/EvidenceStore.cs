@@ -13,7 +13,7 @@ public sealed class EvidenceStore : IDisposable
     {
         if(readOnly && !File.Exists(path)) throw new InvalidOperationException("Evidence database does not exist.");
         var wasEmpty=!File.Exists(path) || new FileInfo(path).Length==0;
-        path = PrivatePath.Prepare(path);
+        path = readOnly ? PrivatePath.ValidateExisting(path) : PrivatePath.Prepare(path);
         connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false, DefaultTimeout = 5, Mode = readOnly ? SqliteOpenMode.ReadOnly : SqliteOpenMode.ReadWrite }.ToString());
         connection.Open();
         using var command = connection.CreateCommand();

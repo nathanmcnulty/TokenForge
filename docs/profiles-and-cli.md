@@ -130,6 +130,13 @@ versions; mixed or incompatible credential types fail with a fresh-process instr
 
 See the [both-account validation report](native-profile-lifecycle-validation-2026-10-11.json).
 
+Version 0.29 shares coverage and candidate ranking with the native `scopes explain` command.
+Published hints, applicable tenant grants and fresh matched observations remain separate.
+Planner timestamps are emitted as UTC strings, and a later failed observation suppresses older
+coverage, including the last input at an equal timestamp. Structural placeholder IDs remain
+visible but ineligible. Request construction, bounded callback attempts and browser/passkey
+login still use PowerShell. See [native scope explanation](native-cli.md#native-scope-explanation).
+
 ## Graph PowerShell
 
 Use a dedicated PowerShell process because Graph owns one process-wide authentication context.

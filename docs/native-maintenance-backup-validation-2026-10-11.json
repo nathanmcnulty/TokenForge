@@ -1,0 +1,52 @@
+{
+  "Version": "0.34.0",
+  "CredentialsOrKeysCopied": false,
+  "EncryptedBackupsRemainInPrivateLocalState": true,
+  "Accounts": [
+    {
+      "Authenticated": false,
+      "PowerShellOnNativeProcessPath": false,
+      "Source": "ExistingEncryptedMaintenanceSnapshotFrom2026-10-07",
+      "FreshLoginPerformed": false,
+      "FirstCopySaved": true,
+      "NativeSelfContained": true,
+      "CiphertextBytesIdentical": true,
+      "Account": "nora",
+      "SecondCopyDeduplicated": true
+    },
+    {
+      "Authenticated": false,
+      "PowerShellOnNativeProcessPath": false,
+      "Source": "ExistingEncryptedMaintenanceSnapshotFrom2026-10-07",
+      "FreshLoginPerformed": false,
+      "FirstCopySaved": true,
+      "NativeSelfContained": true,
+      "CiphertextBytesIdentical": true,
+      "Account": "secadmin",
+      "SecondCopyDeduplicated": true
+    }
+  ],
+  "Date": "2026-10-11",
+  "Validation": {
+    "NativeCoreChecks": 728,
+    "SourcePester": {
+      "Passed": 399,
+      "Failed": 0,
+      "Skipped": 87
+    },
+    "PackagedLinuxPester": {
+      "Passed": 193,
+      "Failed": 0,
+      "Skipped": 3
+    },
+    "NativeBackupFixtureChecks": 15,
+    "ActionlintPassed": true
+  },
+  "Limitations": [
+    "This proof copied existing encrypted snapshots from 2026-10-07; it did not refresh their metadata.",
+    "Envelope size, version and SHA-256 checks do not authenticate or decrypt the payload.",
+    "The source key was neither read nor copied. Authenticated restoration retains its original key/account requirements.",
+    "Local proof ran on Linux; Windows and macOS remain subject to hosted synthetic platform validation.",
+    "Private copies on the same local disk are recovery backups, not protection against loss of that disk."
+  ]
+}

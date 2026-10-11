@@ -304,3 +304,5 @@ tokenforge research backup --snapshot-path /private/maintenance.sealed --backup-
 ~~~
 
 The command copies ciphertext into a private directory under its SHA-256 content identity. Existing identical copies are reused; corrupt or conflicting files are never overwritten. Concurrent identical copies converge on one saved file. It rejects linked or broadly accessible paths, malformed envelope headers and oversized inputs. Output contains copy metadata and Authenticated=false: size, version and hash checks do not authenticate the encrypted payload. Keep the decryption key separately; account-bound authenticated restoration remains in the repository maintenance workflow. See [private maintenance](private-maintenance.md).
+
+The [0.34 validation report](native-maintenance-backup-validation-2026-10-11.json) records native copies and deduplicated repeats of existing Nora and secadmin maintenance snapshots, plus bounded corruption, concurrency and private-path fixtures. The native child ran without PowerShell on its PATH. These copy proofs do not refresh metadata or authenticate the ciphertext.

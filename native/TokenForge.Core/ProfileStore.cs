@@ -5,12 +5,48 @@ using System.Text.RegularExpressions;
 using TokenForge.Core.V0110;
 using TokenForge.Core.V0200;
 using TokenForge.Core.V0220;
+using TokenForge.Core.V0230;
 
 namespace TokenForge.Core;
 
-// Configuration files only. Creating/reading profiles never accesses keys, credentials, or network services.
+// Create/read handle configuration only. ForgetKey explicitly removes ciphertext and its OS key; no network services are used.
 public static class ProfileStore
 {
+    public sealed record KeyRemoval(string Profile, bool VaultRemoved, bool KeyRemoved, string NextStep, string Evidence);
+
+    public static KeyRemoval ForgetKey(string name, string? root = null)
+    {
+        try
+        {
+            string initial = Read(name, root);
+            using var initialProfile = JsonDocument.Parse(initial);
+            if (initialProfile.RootElement.GetProperty("Storage").GetString() != "OperatingSystem" || PlatformVaultKey.Backend == "Unsupported") throw new InvalidOperationException();
+            string directory = Path.Combine(Root(root, false), name);
+            string operationPath = PrivateFiles.Resolve(Path.Combine(directory, ".operation.lock"), false);
+            FileStream operation;
+            try { operation = PrivateFiles.Open(operationPath, true); }
+            catch (IOException) { operation = PrivateFiles.Open(operationPath, false); }
+            using (operation)
+            {
+                // A login/configuration change between the initial read and lock must be retried.
+                if (Read(name, root) != initial) throw new InvalidOperationException();
+                string vaultLockPath = PrivateFiles.Resolve(Path.Combine(directory, "session.tfvault.lock"), false);
+                FileStream vaultLock;
+                try { vaultLock = PrivateFiles.Open(vaultLockPath, true); }
+                catch (IOException) { vaultLock = PrivateFiles.Open(vaultLockPath, false); }
+                using (vaultLock)
+                {
+                    string handle = ProfileKeyIdentity.Compute(directory, initialProfile.RootElement.GetProperty("KeyId").GetString()!);
+                    string vault = PrivateFiles.Resolve(Path.Combine(directory, "session.tfvault"), false);
+                    File.Delete(vault); // Missing ciphertext is already removed; never open or decrypt it.
+                    bool removed = true;
+                    try { PlatformVaultKey.Delete(handle); } catch { removed = false; }
+                    return new KeyRemoval(name, true, removed, removed ? "Log in explicitly to create a new local session." : "Vault removed; retry this operation to delete the remaining OS key.", "LocalDeletionNotServerRevocation");
+                }
+            }
+        }
+        catch { throw new InvalidOperationException("Profile key removal failed. Details suppressed."); }
+    }
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
     private static void Name(string name)
     {

@@ -80,7 +80,8 @@ updates leave the original ciphertext intact. Envelope encryption and credential
 validation remain separate layers, and the public listing still exposes metadata only.
 
 The file lock coordinates TokenForge operations. It does not isolate other processes running
-as the same operating-system user. Native login and credential lifecycle remain future work.
+as the same operating-system user. Native login and credential record handling remain future work. OS-profile key forgetting
+runs natively; see [native key removal](os-backed-vault.md#native-key-forgetting).
 
 | Boundary | Implemented behavior |
 | --- | --- |

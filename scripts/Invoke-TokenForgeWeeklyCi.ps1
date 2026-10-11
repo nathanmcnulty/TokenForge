@@ -121,8 +121,8 @@ if($Action -eq 'Prepare'){
     Assert-TfCiKeys $row @('ClientId','ResourceId','ObservedAt','Scopes','Evidence','SignatureValidated')
     if($row.ClientId -notin $members -or $row.ResourceId -cnotin $resources -or $row.Evidence -cne 'AnonymousTenantTokenObservation' -or $row.SignatureValidated -isnot [bool] -or $row.SignatureValidated -or $row.Scopes -isnot [array] -or @($row.Scopes|Where-Object {$_ -isnot [string] -or $_ -notmatch '^[A-Za-z0-9_.-]{1,256}$'}).Count){throw 'Private or foreign anonymous observation.'}
     $pair=$row.ClientId+'/'+$row.ResourceId;if($seenPairs.ContainsKey($pair)){throw 'Duplicate anonymous worker pair.'};$seenPairs[$pair]=$true
-    $observed=[DateTimeOffset]::Parse([string]$row.ObservedAt)
-    if($observed -lt [DateTimeOffset]::Parse($state.Recipe.CreatedAt) -or $observed -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Stale or future worker observation.'}
+    $observed=[TokenForge.Core.V0240.TimestampPolicy]::Parse($row.ObservedAt)
+    if($observed -lt [TokenForge.Core.V0240.TimestampPolicy]::Parse($state.Recipe.CreatedAt) -or $observed -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Stale or future worker observation.'}
    }
    if(@($export.Observations|ForEach-Object ClientId|Sort-Object -Unique).Count -ne $receipt.Successful){throw 'Success receipt does not match export.'}
    if($state.SchemaVersion -eq 2 -and $export.Observations.Count -ne $receipt.SuccessfulPairs){throw 'Pair success receipt does not match export.'}

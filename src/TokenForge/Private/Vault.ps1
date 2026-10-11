@@ -51,8 +51,8 @@ function Save-TokenForgeScopedCredential {
         $old=$document.Sessions[$SessionName]
         if($ExpectedRevision -and (-not $old -or $old.Revision -ne $ExpectedRevision)){throw 'Saved session changed during token acquisition.'}
         if($old -and ($old.TenantFingerprint -ne $claims.TenantFingerprint -or $old.PrincipalFingerprint -ne $claims.PrincipalFingerprint)){throw 'Session name already belongs to another account or tenant.'}
-        $retainCookie=$old -and $old.Cookie -and [DateTimeOffset]::Parse($old.RetainUntil) -gt $now
-        $expiry=@($Token.ExpiresAt,$claims.ExpiresAt|Where-Object {$_}|ForEach-Object {[DateTimeOffset]::Parse([string]$_)}|Sort-Object|Select-Object -First 1)
+        $retainCookie=$old -and $old.Cookie -and [TokenForge.Core.V0240.TimestampPolicy]::Parse($old.RetainUntil) -gt $now
+        $expiry=@($Token.ExpiresAt,$claims.ExpiresAt|Where-Object {$_}|ForEach-Object {[TokenForge.Core.V0240.TimestampPolicy]::Parse($_)}|Sort-Object|Select-Object -First 1)
         $session=@{
             TenantFingerprint=$claims.TenantFingerprint;PrincipalFingerprint=$claims.PrincipalFingerprint;Revision=[guid]::NewGuid().ToString()
             CreatedAt=if($old){$old.CreatedAt}else{$now.ToString('o')};LastConfirmedAt=$now.ToString('o')

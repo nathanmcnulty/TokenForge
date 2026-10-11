@@ -210,31 +210,31 @@ function Update-TokenForgeApplicationMetadata {
             }
             if(-not $catalog.Applications.Contains($appId)){$catalog.Applications[$appId]=@{AppId=$appId;FirstSeenAt=$date.ToString('o');LastSeenAt=$date.ToString('o');Records=@{}}}
             $app=$catalog.Applications[$appId]
-            if($date -lt [DateTimeOffset]::Parse($app.FirstSeenAt)){$app.FirstSeenAt=$date.ToString('o')}
-            if($date -gt [DateTimeOffset]::Parse($app.LastSeenAt)){$app.LastSeenAt=$date.ToString('o')}
+            if($date -lt [TokenForge.Core.V0240.TimestampPolicy]::Parse($app.FirstSeenAt)){$app.FirstSeenAt=$date.ToString('o')}
+            if($date -gt [TokenForge.Core.V0240.TimestampPolicy]::Parse($app.LastSeenAt)){$app.LastSeenAt=$date.ToString('o')}
             $previousOrigin=$catalog.Origins[$origin]
-            $currentSnapshot= -not $previousOrigin -or $observed -ge [DateTimeOffset]::Parse($previousOrigin.LastObservedAt)
+            $currentSnapshot= -not $previousOrigin -or $observed -ge [TokenForge.Core.V0240.TimestampPolicy]::Parse($previousOrigin.LastObservedAt)
             $old=$app.Records[$origin]
             if(-not $old){$app.Records[$origin]=@{Kind=$Kind;TenantFingerprint=$rowTenant;PrincipalFingerprint=$principal;ResourceId=$resource;FirstSeenAt=$date.ToString('o');LastSeenAt=$date.ToString('o');PresentInLatestRun=$currentSnapshot;CurrentVersionFirstSeenAt=$date.ToString('o');Attributes=$attributes;Sources=$sources;ContentSha256=$hash;PreviousVersions=@()}}
-            elseif($date -ge [DateTimeOffset]::Parse($old.LastSeenAt)){
+            elseif($date -ge [TokenForge.Core.V0240.TimestampPolicy]::Parse($old.LastSeenAt)){
                 if($old.ContentSha256 -cne $hash){$old.PreviousVersions+=@{FirstSeenAt=$old.CurrentVersionFirstSeenAt;LastSeenAt=$old.LastSeenAt;Attributes=$old.Attributes;Sources=$old.Sources;ContentSha256=$old.ContentSha256};$old.CurrentVersionFirstSeenAt=$date.ToString('o')}
                 $old.Attributes=$attributes;$old.Sources=$sources;$old.ContentSha256=$hash;$old.LastSeenAt=$date.ToString('o');if($currentSnapshot){$old.PresentInLatestRun=$true}
-                if($date -lt [DateTimeOffset]::Parse($old.FirstSeenAt)){$old.FirstSeenAt=$date.ToString('o')}
+                if($date -lt [TokenForge.Core.V0240.TimestampPolicy]::Parse($old.FirstSeenAt)){$old.FirstSeenAt=$date.ToString('o')}
             }
-            if($old -and $date -lt [DateTimeOffset]::Parse($old.FirstSeenAt)){$old.FirstSeenAt=$date.ToString('o')}
+            if($old -and $date -lt [TokenForge.Core.V0240.TimestampPolicy]::Parse($old.FirstSeenAt)){$old.FirstSeenAt=$date.ToString('o')}
             $seen["$origin|$appId"]=$true;$affectedOrigins[$origin]=$true;$count++
         }
         # Complete snapshots can mark absence. Scope databases can be partial/batched, so do not mark their unseen pairs absent.
         if(-not $sqlite -and $Kind -notin @('ScopeObservations','RegistrationAttempts','FlowAttempts')){
             $origin=@($Kind,$tenant,$null,$null) -join '/';$affectedOrigins[$origin]=$true
             $previous=$catalog.Origins[$origin]
-            if(-not $previous -or $observed -ge [DateTimeOffset]::Parse($previous.LastObservedAt)){
+            if(-not $previous -or $observed -ge [TokenForge.Core.V0240.TimestampPolicy]::Parse($previous.LastObservedAt)){
                 foreach($app in $catalog.Applications.Values){if($app.Records.Contains($origin) -and -not $seen.ContainsKey("$origin|$($app.AppId)")){$app.Records[$origin].PresentInLatestRun=$false}}
             }
         }
         foreach($origin in $affectedOrigins.Keys){
             $previous=$catalog.Origins[$origin]
-            if(-not $previous -or $observed -ge [DateTimeOffset]::Parse($previous.LastObservedAt)){$catalog.Origins[$origin]=@{Kind=$Kind;LastObservedAt=$observed.ToString('o');LastRunId=$runId}}
+            if(-not $previous -or $observed -ge [TokenForge.Core.V0240.TimestampPolicy]::Parse($previous.LastObservedAt)){$catalog.Origins[$origin]=@{Kind=$Kind;LastObservedAt=$observed.ToString('o');LastRunId=$runId}}
         }
         $run=@{Id=$runId;Kind=$Kind;ObservedAt=$observed.ToString('o');RecordedAt=$now;ApplicationRecordCount=$count;IgnoredEmptyAppIdCount=$emptyIds;TenantFingerprint=$tenant}
         if($Kind -eq 'Discovery'){$run.SourceSnapshots=@($Document.SourceSnapshots|ForEach-Object {[ordered]@{Location=$_.Location;Sha256=$_.Sha256;HashKind=$_.HashKind}})}

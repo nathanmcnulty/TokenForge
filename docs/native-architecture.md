@@ -2,7 +2,7 @@
 
 Use one shared .NET core with platform adapters, a CLI first, and a metadata-only visualization
 surface later. Do not maintain separate OAuth policy implementations for each operating system.
-The PowerShell workflow is the compatibility surface while code moves into the shared core. Shared profile configuration validation, private-file checks, vault-file transactions, issued-token policy, OAuth transport, vault envelope encryption, SQLite evidence import/export and checkpoints, and native CLI packages are implemented. Profile create/show, OS-key forgetting, and direct token acquisition run natively; browser/passkey login, credential records, and logout still use PowerShell. See [Native CLI](native-cli.md) for current dependencies.
+The PowerShell workflow is the compatibility surface while code moves into the shared core. Shared timestamp projection and profile configuration validation, private-file checks, vault-file transactions, issued-token policy, OAuth transport, vault envelope encryption, SQLite evidence import/export and checkpoints, and native CLI packages are implemented. Profile create/show, OS-key forgetting, and direct token acquisition run natively; browser/passkey login, credential records, and logout still use PowerShell. See [Native CLI](native-cli.md) for current dependencies.
 
 The security boundary is a credential service that exposes scoped acquisition operations and
 metadata, not a general cookie jar export. Windows Credential Manager and Linux Secret Service adapters now protect a random vault password

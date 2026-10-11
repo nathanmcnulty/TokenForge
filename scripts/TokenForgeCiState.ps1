@@ -1,5 +1,6 @@
 # Shared, credential-free weekly state and authenticated-encryption operations.
 Set-StrictMode -Version Latest
+if(-not ('TokenForge.Core.V0240.TimestampPolicy' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot '../src/TokenForge/Core/TimestampPolicy.cs')}
 function Get-TfCiHash($Value) {
  $json=ConvertTo-Json -InputObject $Value -Depth 100 -Compress
  # Date parsing uses the host time zone. Convert parsed dates to UTC offsets
@@ -118,8 +119,8 @@ function Merge-TfCiReceipt($State,$Receipt) {
   foreach($field in @('Assessed','Successful','AssessedPairs','SuccessfulPairs')){if($Receipt[$field] -isnot [int] -and $Receipt[$field] -isnot [long]){throw 'Invalid resource receipt counts.'}}
   if($Receipt.AssessedPairs -ne $Receipt.Assessed*$resources.Count -or $Receipt.SuccessfulPairs -lt $Receipt.Successful -or $Receipt.SuccessfulPairs -gt $Receipt.Successful*$resources.Count -or $Receipt.SuccessfulPairs -gt $Receipt.AssessedPairs){throw 'Invalid resource receipt coverage.'}
  }
- $date=[DateTimeOffset]::Parse($Receipt.ObservedAt)
- if($date -lt [DateTimeOffset]::Parse($State.Recipe.CreatedAt) -or $date -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Invalid receipt observation date.'}
+ $date=[TokenForge.Core.V0240.TimestampPolicy]::Parse($Receipt.ObservedAt)
+ if($date -lt [TokenForge.Core.V0240.TimestampPolicy]::Parse($State.Recipe.CreatedAt) -or $date -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Invalid receipt observation date.'}
  $State.Batches[$index]=[ordered]@{Index=$index;Status=$Receipt.Status;Attempts=$Receipt.Attempt;Assessed=$Receipt.Assessed;Successful=$Receipt.Successful;DurationSeconds=$Receipt.DurationSeconds;ObservedAt=$date.ToUniversalTime().ToString('o')}
  if($State.SchemaVersion -eq 2){$State.Batches[$index].AssessedPairs=$Receipt.AssessedPairs;$State.Batches[$index].SuccessfulPairs=$Receipt.SuccessfulPairs}
 }
@@ -162,7 +163,7 @@ function Get-TfCiReport($State,[DateTimeOffset]$Now=[DateTimeOffset]::UtcNow) {
   Complete=($pending.Count -eq 0)
   OldestCompletedAssessmentAt=$oldest
   LatestCompletedAssessmentAt=$latest
-  OldestPendingHours=$(if($pending.Count){[Math]::Round(($Now-[DateTimeOffset]::Parse($State.Recipe.CreatedAt)).TotalHours,2)}else{0})
+  OldestPendingHours=$(if($pending.Count){[Math]::Round(($Now-[TokenForge.Core.V0240.TimestampPolicy]::Parse($State.Recipe.CreatedAt)).TotalHours,2)}else{0})
   MedianBatchSeconds=$median
   P95BatchSeconds=$p95
   EstimatedRemainingRunnerSeconds=$(if($null -ne $median){$median*$pending.Count}else{$null})
@@ -195,7 +196,7 @@ function Assert-TfCiScopeExport($Document) {
   $id=[guid]::Empty
   if($row.ClientId -isnot [string] -or -not [guid]::TryParse($row.ClientId,[ref]$id) -or $id -eq [guid]::Empty -or $row.ResourceId -isnot [string] -or -not [guid]::TryParse($row.ResourceId,[ref]$id) -or $id -eq [guid]::Empty -or $row.Scopes -isnot [array] -or @($row.Scopes|Where-Object {$_ -isnot [string] -or $_ -notmatch '^[A-Za-z0-9_.-]{1,256}$'}).Count -or $row.Evidence -cne 'AnonymousTenantTokenObservation' -or $row.SignatureValidated -isnot [bool] -or $row.SignatureValidated){throw 'Invalid public observation.'}
   if($row.ObservedAt -isnot [string] -and $row.ObservedAt -isnot [datetime]){throw 'Invalid public date.'}
-  $null=[DateTimeOffset]::Parse([string]$row.ObservedAt)
+  $null=[TokenForge.Core.V0240.TimestampPolicy]::Parse($row.ObservedAt)
  }
 }
 function Get-TfCiPublicStagePaths([string]$Path){
@@ -226,8 +227,8 @@ function Assert-TfCiReport($Report){
  if($Report -is [Collections.IDictionary] -and $Report.SchemaVersion -eq 3){$fields+=@('ResourceIds','SelectedPairs','AssessedPairs','SuccessfulPairs')}
  Assert-TfCiKeys $Report $fields
  if($Report.SchemaVersion -notin @(1,2,3) -or $Report.Week -notmatch '^\d{4}-W\d{2}$' -or $Report.Mode -notin @('Shallow','Deep') -or $Report.GeneratedAt -isnot [string] -and $Report.GeneratedAt -isnot [datetime] -or $Report.Complete -isnot [bool] -or $Report.Evidence -cne 'AssessedForOneAccountNotUniversalSupport' -or $Report.SuccessfulScopeFreshness -cne 'InspectAnonymousObservationDates'){throw 'Invalid public coverage report.'}
- $null=[DateTimeOffset]::Parse([string]$Report.GeneratedAt)
- foreach($field in @('OldestCompletedAssessmentAt','LatestCompletedAssessmentAt')){if($null -ne $Report[$field]){if($Report[$field] -isnot [string] -and $Report[$field] -isnot [datetime]){throw 'Invalid assessment date.'};$null=[DateTimeOffset]::Parse([string]$Report[$field])}}
+ $null=[TokenForge.Core.V0240.TimestampPolicy]::Parse($Report.GeneratedAt)
+ foreach($field in @('OldestCompletedAssessmentAt','LatestCompletedAssessmentAt')){if($null -ne $Report[$field]){if($Report[$field] -isnot [string] -and $Report[$field] -isnot [datetime]){throw 'Invalid assessment date.'};$null=[TokenForge.Core.V0240.TimestampPolicy]::Parse($Report[$field])}}
  foreach($field in @('OldestPendingHours','PublishedApplications','AssessedApplications','SuccessfulApplications','TotalBatches','CompletedBatches','PendingBatches','ExhaustedBatches','MedianBatchSeconds','P95BatchSeconds','EstimatedRemainingRunnerSeconds')){
   $value=$Report[$field]
   if($null -eq $value -and $field -in @('MedianBatchSeconds','P95BatchSeconds','EstimatedRemainingRunnerSeconds')){continue}

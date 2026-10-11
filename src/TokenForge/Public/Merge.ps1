@@ -11,7 +11,7 @@ function Merge-TokenForgeScopeDatabase {
         foreach ($observation in $source.Observations) {
             $temporary = Add-TokenForgeScopeObservation -Database (New-TokenForgeScopeDatabase) -Observation $observation
             $clean = $temporary.Observations[0]
-            $clean.ObservedAt = [DateTimeOffset]::Parse($clean.ObservedAt).ToUniversalTime().ToString('o')
+            $clean.ObservedAt = [TokenForge.Core.V0240.TimestampPolicy]::Parse($clean.ObservedAt).ToUniversalTime().ToString('o')
             $key = 'scope/' + (Get-TokenForgeFingerprint -Value ($clean | ConvertTo-Json -Depth 20 -Compress))
             if ($seen.Add($key)) { $result.Observations += $clean }
         }
@@ -25,7 +25,7 @@ function Merge-TokenForgeScopeDatabase {
                 if (-not [int]::TryParse([string]$attempt.HttpStatus,[ref]$number) -or $number -lt 100 -or $number -gt 599) { throw 'Invalid registration HTTP status.' }
                 $status = $number
             }
-            $clean = [pscustomobject]@{ AppId=$id.ToString(); TenantFingerprint=[string]$attempt.TenantFingerprint; AttemptedAt=[DateTimeOffset]::Parse($attempt.AttemptedAt).ToUniversalTime().ToString('o'); Outcome=[string]$attempt.Outcome; HttpStatus=$status }
+            $clean = [pscustomobject]@{ AppId=$id.ToString(); TenantFingerprint=[string]$attempt.TenantFingerprint; AttemptedAt=[TokenForge.Core.V0240.TimestampPolicy]::Parse($attempt.AttemptedAt).ToUniversalTime().ToString('o'); Outcome=[string]$attempt.Outcome; HttpStatus=$status }
             $key = 'registration/' + (Get-TokenForgeFingerprint -Value ($clean | ConvertTo-Json -Compress))
             if ($seen.Add($key)) { $result.RegistrationAttempts += $clean }
         }

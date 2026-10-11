@@ -20,13 +20,13 @@ function Get-TokenForgeVault {
                 Name=$name;TenantFingerprint=$session.TenantFingerprint;PrincipalFingerprint=$session.PrincipalFingerprint
                 CookieName=$session.CookieName;HasCookie=[bool]$session.Cookie;CreatedAt=$session.CreatedAt
                 LastConfirmedAt=$session.LastConfirmedAt;RetainUntil=$session.RetainUntil
-                RetentionExpired=[DateTimeOffset]::Parse($session.RetainUntil) -le $now
+                RetentionExpired=[TokenForge.Core.V0240.TimestampPolicy]::Parse($session.RetainUntil) -le $now
                 Tokens=@(foreach($entry in @($session.Tokens.Values|Sort-Object ClientId,ResourceId,Id)){
                     [pscustomobject]@{
                         Id=$entry.Id;ClientId=$entry.ClientId;ResourceId=$entry.ResourceId;Audience=$entry.Audience
                         RequestedScopes=@($entry.Scopes);IssuedScopes=@($entry.IssuedScopes);AdditionalScopeCount=$entry.AdditionalScopeCount
                         AcquiredAt=$entry.AcquiredAt;ExpiresAt=$entry.ExpiresAt;HasRefreshToken=[bool]$entry.RefreshToken
-                        ExpiryStatus=if(-not $entry.ExpiresAt){'Unknown'}elseif([DateTimeOffset]::Parse($entry.ExpiresAt) -le $now.AddMinutes(2)){'ExpiredOrNearExpiry'}else{'WithinReportedLifetime'}
+                        ExpiryStatus=if(-not $entry.ExpiresAt){'Unknown'}elseif([TokenForge.Core.V0240.TimestampPolicy]::Parse($entry.ExpiresAt) -le $now.AddMinutes(2)){'ExpiredOrNearExpiry'}else{'WithinReportedLifetime'}
                         Protocol=$entry.Protocol;ConsentEvidence=$entry.ConsentEvidence;SignatureValidated=$false
                     }
                 })
@@ -76,12 +76,12 @@ function Get-TokenForgeVaultToken {
     $access=$null;$refresh=$null;$returned=$false
     try{
         $session=$document.Sessions[$SessionName]
-        if(-not $session -or [DateTimeOffset]::Parse($session.RetainUntil) -le [DateTimeOffset]::UtcNow){throw 'Saved session is absent or its local retention deadline passed.'}
+        if(-not $session -or [TokenForge.Core.V0240.TimestampPolicy]::Parse($session.RetainUntil) -le [DateTimeOffset]::UtcNow){throw 'Saved session is absent or its local retention deadline passed.'}
         $entry=$session.Tokens[$TokenId]
         if(-not $entry){throw 'Saved token not found.'}
         if($RefreshOnly){if(-not $entry.RefreshToken){throw 'Saved token has no refresh token.'}}
         else{
-            if(-not $entry.ExpiresAt -or [DateTimeOffset]::Parse($entry.ExpiresAt) -le [DateTimeOffset]::UtcNow.AddMinutes(2)){throw 'Saved access token is expired, near expiry, or has unknown expiry; acquire a new token.'}
+            if(-not $entry.ExpiresAt -or [TokenForge.Core.V0240.TimestampPolicy]::Parse($entry.ExpiresAt) -le [DateTimeOffset]::UtcNow.AddMinutes(2)){throw 'Saved access token is expired, near expiry, or has unknown expiry; acquire a new token.'}
             $access=ConvertTo-SecureString $entry.AccessToken -AsPlainText -Force
             $claims=Get-TokenForgeTokenClaims -AccessToken $access
             if($claims.ExpiresAt -and $claims.ExpiresAt -le [DateTimeOffset]::UtcNow.AddMinutes(2)){throw 'Saved access token JWT lifetime has elapsed.'}

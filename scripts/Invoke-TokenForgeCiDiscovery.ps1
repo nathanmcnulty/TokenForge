@@ -28,7 +28,7 @@ function Assert-PublicScopeExports {
   foreach($row in $doc.Observations){
    if(@($row.Keys|Where-Object {$_ -cnotin @('ClientId','ResourceId','ObservedAt','Scopes','Evidence','SignatureValidated')}).Count -or $row.Evidence -cne 'AnonymousTenantTokenObservation' -or $row.SignatureValidated -ne $false){throw 'Private or invalid export fields.'}
    $date=[DateTimeOffset]::MinValue
-   if($row.ObservedAt -isnot [string] -and $row.ObservedAt -isnot [datetime] -or -not [DateTimeOffset]::TryParse([string]$row.ObservedAt,[ref]$date) -or $row.Scopes -isnot [array] -or $row.SignatureValidated -isnot [bool]){throw 'Invalid anonymous scope value types.'}
+   if($row.ObservedAt -isnot [string] -and $row.ObservedAt -isnot [datetime] -or -not [TokenForge.Core.V0240.TimestampPolicy]::TryParse($row.ObservedAt,[ref]$date) -or $row.Scopes -isnot [array] -or $row.SignatureValidated -isnot [bool]){throw 'Invalid anonymous scope value types.'}
    $client=[guid]::Empty;$resource=[guid]::Empty
    if($row.ClientId -isnot [string] -or $row.ResourceId -isnot [string] -or -not [guid]::TryParse($row.ClientId,[ref]$client) -or -not [guid]::TryParse($row.ResourceId,[ref]$resource) -or @($row.Scopes|Where-Object {$_ -isnot [string] -or $_ -notmatch '^[A-Za-z0-9_.-]{1,256}$'}).Count){throw 'Invalid public scope attributes.'}
   }

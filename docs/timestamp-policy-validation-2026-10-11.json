@@ -1,0 +1,80 @@
+{
+  "DateUTC": "2026-10-11",
+  "Version": "0.24.0",
+  "Scope": "UTC timestamp projection at vault, freshness, public export and CI boundaries; Linux live token lifecycle proof",
+  "SharedCore": "TokenForge.Core.V0240.TimestampPolicy",
+  "LegacyCurrentCultureStringsPreserved": true,
+  "SchemasAndFrozenRecipeHashingUnchanged": true,
+  "SyntheticExpiredUtcZVault": {
+    "Baseline": "Expired deadline reported available and refresh credential returned in Anchorage",
+    "Corrected": "Expired deadline reported expired and refresh-only retrieval refused",
+    "TestedTimeZones": [
+      "America/Anchorage",
+      "Asia/Tokyo"
+    ],
+    "NetworkRequests": 0,
+    "RealCredentialsUsed": false
+  },
+  "ExportUtcProjectionIndependentlyVerifiedBySol": true,
+  "NativeChecksPassed": 430,
+  "FocusedTestsPassed": 60,
+  "FocusedTestsSkipped": 1,
+  "FullSuite": {
+    "Passed": 370,
+    "Failed": 0,
+    "Skipped": 44
+  },
+  "PackagedTests": {
+    "Passed": 49,
+    "Failed": 0,
+    "Skipped": 2
+  },
+  "PlatformProof": "Linux local; Windows/macOS hosted CI required before merge",
+  "InventoryProofPolicy": "Prior October 7 inventory with explicit MaxAgeHours=168; production default remains 24",
+  "Accounts": [
+    {
+      "AccountLabel": "nora",
+      "ExpectedAccountNamespaceMatched": true,
+      "Storage": "LinuxSecretService",
+      "Fresh": "BoundedTargetedSilentExplicitScopeAcquisition",
+      "FreshApiStatus": 200,
+      "ReopenedCache": "CachedVerifiedContextNotNewIssuance",
+      "ReopenedApiStatus": 200,
+      "Renewal": "SameClientRefreshMatchedIssuedContext",
+      "RenewedApiStatus": 200,
+      "AdditionalApiScopes": 0,
+      "RetentionPreserved": true,
+      "IdentityConfirmationTimePreserved": true,
+      "GraphSdkReadSucceeded": true,
+      "VaultRemoved": true,
+      "KeyRemoved": true
+    },
+    {
+      "AccountLabel": "secadmin",
+      "ExpectedAccountNamespaceMatched": true,
+      "Storage": "LinuxSecretService",
+      "Fresh": "BoundedTargetedSilentExplicitScopeAcquisition",
+      "FreshApiStatus": 200,
+      "ReopenedCache": "CachedVerifiedContextNotNewIssuance",
+      "ReopenedApiStatus": 200,
+      "Renewal": "SameClientRefreshMatchedIssuedContext",
+      "RenewedApiStatus": 200,
+      "AdditionalApiScopes": 0,
+      "RetentionPreserved": true,
+      "IdentityConfirmationTimePreserved": true,
+      "GraphSdkReadSucceeded": true,
+      "VaultRemoved": true,
+      "KeyRemoved": true
+    }
+  ],
+  "TokenSignatureValidated": false,
+  "NativeLoginImplemented": false,
+  "Cleanup": "Both fresh proof vaults and OS keys deleted; owned SecureString instances disposed",
+  "SourceSha256": {
+    "src/TokenForge/Core/TimestampPolicy.cs": "e9335797b9bd1de5808745cecda0aadb370bba1f52d7c4bdc383f61e54fdd84d",
+    "src/TokenForge/Private/Vault.ps1": "0237768fb8aa01ec8e8c052fd31e96bc15d54bc4cc2cb00f0392a28ac33356a0",
+    "src/TokenForge/Public/Vault.ps1": "e80e300ccc9cb3ee24df4489841dc1fb6645de4641238f85f9017ba610a1f30f",
+    "src/TokenForge/Public/Database.ps1": "7f423e329cec9e393e59644df21d807772d4fdab97bbf049de0582233722ac5c",
+    "scripts/TokenForgeCiState.ps1": "74893c5bf9390c7dd3c265ff7325c1d1d38e752424a21ded122f265f41dc8f94"
+  }
+}

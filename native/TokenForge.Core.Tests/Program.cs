@@ -6,6 +6,7 @@ using TokenForge.Core.V0100;
 var count=0;
 void Check(bool condition){if(!condition) throw new Exception("Check failed.");count++;}
 void Reject(Action action){try{action();}catch{count++;return;}throw new Exception("Expected rejection.");}
+TimestampPolicyChecks.Run(Check,Reject);
 VaultEnvelopeChecks.Run(Check,Reject);
 ProfilePolicyChecks.Run(Check,Reject);
 ProfileStoreChecks.Run(Check,Reject);

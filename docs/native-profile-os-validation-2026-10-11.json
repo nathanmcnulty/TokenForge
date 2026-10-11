@@ -1,0 +1,82 @@
+{
+  "CookieTransfer": "Cookie remained in PowerShell driver; socket carried authorization URL and completion only",
+  "Accounts": [
+    {
+      "BrowserDriver": "HeadlessCookieRedirectViaPrivateUnixSocket",
+      "CookieSaved": false,
+      "OsKeyRemoved": true,
+      "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+      "MaximumAdditionalScopes": 128,
+      "ConsentChangePerformed": false,
+      "Warm": "SilentExplicitScopeAcquisition",
+      "ApiStatuses": [
+        200,
+        200,
+        200
+      ],
+      "Storage": "LinuxSecretService",
+      "VaultTokenCount": 1,
+      "TokenOutput": false,
+      "RefreshTokenSaved": true,
+      "NativeLogin": true,
+      "ConfiguredInventoryMaxAgeHours": 168,
+      "Account": "nora",
+      "GraphIdentityConfirmed": true,
+      "Cache": "CachedVerifiedContextNotNewIssuance",
+      "InventoryObservation": "2026-10-07",
+      "SignatureValidated": false,
+      "BrowserUiExercised": false,
+      "MaximumBootstrapAdditionalScopes": 128,
+      "BeforeFixInspectionProtection": "Passphrase-AES-256-GCM"
+    },
+    {
+      "BrowserDriver": "HeadlessCookieRedirectViaPrivateUnixSocket",
+      "CookieSaved": false,
+      "OsKeyRemoved": true,
+      "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+      "MaximumAdditionalScopes": 128,
+      "ConsentChangePerformed": false,
+      "Warm": "SilentExplicitScopeAcquisition",
+      "ApiStatuses": [
+        200,
+        200,
+        200
+      ],
+      "Storage": "LinuxSecretService",
+      "VaultTokenCount": 1,
+      "TokenOutput": false,
+      "RefreshTokenSaved": true,
+      "NativeLogin": true,
+      "ConfiguredInventoryMaxAgeHours": 168,
+      "Account": "secadmin",
+      "GraphIdentityConfirmed": true,
+      "Cache": "CachedVerifiedContextNotNewIssuance",
+      "InventoryObservation": "2026-10-07",
+      "SignatureValidated": false,
+      "BrowserUiExercised": false,
+      "MaximumBootstrapAdditionalScopes": 128,
+      "BeforeFixInspectionProtection": "Passphrase-AES-256-GCM"
+    }
+  ],
+  "Date": "2026-10-11",
+  "Version": "0.36.1",
+  "LiveAuthenticationVersion": "0.36.0",
+  "FixedInspectionVersion": "0.36.1",
+  "NativeCoreChecks": 842,
+  "IsolatedOsProfileChecks": 9,
+  "PackagedProfileBootstrapPassed": 26,
+  "PackagedPlatformSkipped": 1,
+  "FixedLinuxInspection": {
+    "Protection": "LinuxSecretService-AES-256-GCM",
+    "ReadOnly": true,
+    "PowerShellOnChildPath": false,
+    "Fixture": "Empty encrypted vault with disposable OS key"
+  },
+  "Review": "Independent Sol source review: no remaining blocker; hosted gates recorded separately in the pull request",
+  "Limitations": [
+    "Headless Linux live authentication; no visible browser UI or live Windows/macOS account proof",
+    "Historical inventory accepted under explicit 168-hour lab policy",
+    "No JWT signature validation claim",
+    "OS keyring and profile vaults were disposable; all were removed"
+  ]
+}

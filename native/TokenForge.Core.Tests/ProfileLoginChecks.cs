@@ -110,6 +110,8 @@ static class ProfileLoginChecks
     try{using var create=VaultFileTransaction.Begin(vault,"Create");create.Commit(VaultEnvelope.Encrypt(plain,key));}
     finally{CryptographicOperations.ZeroMemory(plain);}
    }
+   var inspection=ProfileStore.InspectVault("lab",root);
+   check(inspection.Protection==(OperatingSystem.IsWindows()?"WindowsCredentialManager-AES-256-GCM":"LinuxSecretService-AES-256-GCM") && inspection.Sessions.Length==0);
    PlatformVaultKey.Delete(handle);byte[] before=File.ReadAllBytes(vault);
    reject(()=>ProfileLogin.Login("lab",root,Inventory(),acquire));check(calls==0 && File.ReadAllBytes(vault).SequenceEqual(before));
    reject(()=>PlatformVaultKey.Open(handle,false));check(!Directory.EnumerateFiles(Path.Combine(root,"lab"),".login-*.tmp").Any());

@@ -97,3 +97,15 @@ revocation or access to other processes’ credential copies.
 Version 0.35.1 shares one no-overwrite publication primitive across profile creation, vault creation and encrypted maintenance backups. Linux/macOS publish a complete, flushed private temporary file with an atomic hard link; Windows uses a no-overwrite move. Existing files, including files created concurrently, are preserved. Each caller removes its temporary file. Vault updates retain their separate replace behavior under the transaction lock. Unix profile/vault storage must support hard links as well as private permissions; unsupported storage fails without an overwrite fallback.
 
 The [0.35.1 publication report](private-file-publication-validation-2026-10-11.json) records competing-writer preservation, the old-move regression, packaged profile/vault checks and existing encrypted snapshot copies.
+
+Native `profile inspect-vault` identifies the configured key provider in `Protection`:
+`WindowsCredentialManager-AES-256-GCM`, `LinuxSecretService-AES-256-GCM`, or
+`Passphrase-AES-256-GCM`. These labels describe how the key was obtained for the
+inspection; all three use the same AES-GCM vault envelope. They do not assert server
+revocation, JWT signature validity, or recovery from a missing OS key.
+
+The [native OS-profile validation report](native-profile-os-validation-2026-10-11.json)
+records browser login, cold/warm acquisition, cache reuse, refresh-token storage and explicit
+key/vault removal for both lab accounts in disposable Linux Secret Service stores. It also
+records the pre-fix inspection label and the corrected native read-only fixture. The headless
+proof does not establish visible browser UI or live Windows/macOS account support.

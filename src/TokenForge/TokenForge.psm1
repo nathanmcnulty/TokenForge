@@ -225,7 +225,7 @@ function Get-TokenForgeToken {
         $verifier = $null; $redirect = $null
         if ($mode -eq 'Browser') {
             $authority = "https://login.microsoftonline.com/$($plan.Tenant)/oauth2/v2.0"
-            $authorization = Invoke-TokenForgeBrowserAuthorization -Request $Request -Authority $authority -LoginHint $LoginHint -TimeoutSeconds $TimeoutSeconds -NoConsent:$NoConsent
+            $authorization = Invoke-TokenForgeBrowserAuthorization -Request $plan -Authority $authority -LoginHint $LoginHint -TimeoutSeconds $TimeoutSeconds -NoConsent:$NoConsent
             $mode = 'Code'; $credential = $authorization.Code; $verifier = $authorization.Verifier; $redirect = $authorization.RedirectUri
         }
         $result = [TokenForge.Core.V0180.OAuthTransport]::AcquireForAdapter($plan, $mode, $credential, $verifier, $redirect, $CookieName, $adapter)

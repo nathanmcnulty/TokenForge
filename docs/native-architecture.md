@@ -71,3 +71,32 @@ execution is implemented; native browser/passkey login remains unfinished.
 The [v0.30 validation report](native-request-planning-validation-2026-10-11.json) records the sanitized two-account cold/warm acquisition proof and checks.
 
 The [v0.31 validation report](native-fresh-acquisition-validation-2026-10-11.json) records native saved-cookie cold/warm/cache/renewal proofs. Metadata checkpoints precede the separate final credential commit and may remain when that later commit fails. See [native CLI](native-cli.md#native-saved-cookie-profile-acquisition) for the supported storage modes and remaining adapters.
+
+Browser callback acquisition uses the shared BCL credential runtime.
+The service derives the Microsoft authority from the validated request, starts an
+IPv4 loopback listener on a random port, and binds authorization-code callbacks to
+an unpredictable state and a PKCE S256 verifier. It accepts only bounded ASCII HTTP
+headers, the exact localhost authority, and an unambiguous decoded query. Invalid
+callbacks can be retried within the original deadline. Silent authorization uses
+`prompt=none`; it never retries interactively. The caller must explicitly choose
+interactive authorization.
+
+The browser-launch adapter must return promptly. The monotonic authorization
+deadline includes launcher execution; socket accept, reads, and writes use bounded
+cancellation. A trusted adapter that blocks synchronously cannot be interrupted by
+the service. Code and verifier results are caller-owned secure strings excluded
+from JSON. Owned byte buffers are cleared; managed strings and browser-held
+credentials cannot be immediately erased by this service. The PowerShell command
+continues to launch the browser while sharing this callback service; native profile
+login and passkey handling remain separate work.
+
+The [sanitized validation report](browser-service-validation-2026-10-11.json)
+records successful silent `User.Read` acquisition and matching Graph identity
+confirmation for Nora and secadmin using Microsoft Graph PowerShell. A headless
+HTTP redirect driver supplied an existing passkey-derived cookie and delivered
+Entra's callback through the real loopback listener; this does not establish a
+visible browser UI or native passkey-login proof. Azure CLI declined the same
+explicit scope for Nora with `AADSTS65002`; the service returned a sanitized error
+without consent or an interactive retry. Offline delayed-I/O regressions fail
+against the old direct `ValueTask.GetResult` pattern and pass with task-based
+waiting, including the shared Graph identity response reader.

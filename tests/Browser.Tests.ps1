@@ -5,7 +5,7 @@ BeforeAll {
 Describe 'System-browser PKCE callback' {
  InModuleScope TokenForge {
   BeforeEach {
-   $request=[pscustomobject]@{ClientId='11111111-1111-1111-1111-111111111111';RedirectUri='http://localhost';Spa=$false;OAuthScopes=@('https://graph.microsoft.com/User.Read')}
+   $request=[pscustomobject]@{ClientId='11111111-1111-1111-1111-111111111111';ResourceId='00000003-0000-0000-c000-000000000000';ResourceUri='https://graph.microsoft.com';Tenant='organizations';Scopes=@('User.Read');Protocol='OAuth2V2Pkce';Discovery=$false;RedirectUri='http://localhost';Spa=$false;OAuthScopes=@('https://graph.microsoft.com/User.Read')}
   }
   It 'rejects unsupported callback platforms before launching' {
    Mock Open-TokenForgeBrowser {throw 'must not launch'}
@@ -14,6 +14,16 @@ Describe 'System-browser PKCE callback' {
     {Invoke-TokenForgeBrowserAuthorization $request 'https://login.microsoftonline.com/organizations/oauth2/v2.0' '' 1}|Should -Throw '*published*'
    }
    Should -Invoke Open-TokenForgeBrowser -Times 0
+  }
+  It 'rejects an authority outside the request before launching' {
+   Mock Open-TokenForgeBrowser {throw 'must not launch'}
+   {Invoke-TokenForgeBrowserAuthorization $request 'https://evil.example.test/organizations/oauth2/v2.0' '' 1}|Should -Throw '*authority does not match*'
+   Should -Invoke Open-TokenForgeBrowser -Times 0
+  }
+  It 'suppresses browser-launch exception details' {
+   Mock Open-TokenForgeBrowser {throw 'synthetic-private-url-and-code'}
+   {Invoke-TokenForgeBrowserAuthorization $request 'https://login.microsoftonline.com/organizations/oauth2/v2.0' '' 1}|Should -Throw 'Browser authorization failed. Details suppressed.'
+   Should -Invoke Open-TokenForgeBrowser -Times 1
   }
   It 'accepts the matched callback and returns only secure code material' {
    Mock Open-TokenForgeBrowser {

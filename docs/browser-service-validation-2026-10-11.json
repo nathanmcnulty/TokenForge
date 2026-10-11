@@ -1,0 +1,64 @@
+{
+  "CredentialOutput": false,
+  "BrowserUiExercised": false,
+  "Accounts": [
+    {
+      "CredentialsPersisted": false,
+      "TokensReturned": false,
+      "GraphIdentityConfirmed": true,
+      "Succeeded": true,
+      "SignatureValidated": false,
+      "Silent": true,
+      "PkceRedemption": true,
+      "Account": "nora",
+      "AuthorizationDriver": "HeadlessCookieHttpRedirectThroughActualLoopbackListener",
+      "RequestedScope": "User.Read"
+    },
+    {
+      "CredentialsPersisted": false,
+      "TokensReturned": false,
+      "GraphIdentityConfirmed": true,
+      "Succeeded": true,
+      "SignatureValidated": false,
+      "Silent": true,
+      "PkceRedemption": true,
+      "Account": "secadmin",
+      "AuthorizationDriver": "HeadlessCookieHttpRedirectThroughActualLoopbackListener",
+      "RequestedScope": "User.Read"
+    }
+  ],
+  "Date": "2026-10-11",
+  "Version": "0.32.0",
+  "ClientId": "14d82eec-204b-4c2f-b7e8-296a70dab67e",
+  "OfflineValidation": {
+    "NativeChecks": 728,
+    "SourcePesterPassed": 399,
+    "SourcePesterFailed": 0,
+    "SourcePesterSkipped": 62,
+    "FocusedDelayedIoChecks": 40,
+    "OldGraphReadPatternFailedRegression": true,
+    "OldBrowserReadPatternFailedRegression": true,
+    "ExactLinuxPackagedPesterPassed": 168,
+    "ExactLinuxPackagedPesterFailed": 0,
+    "ExactLinuxPackagedPesterSkipped": 3,
+    "ModuleArchiveLinkedReportsVerified": true
+  },
+  "NegativeLiveValidation": {
+    "Account": "nora",
+    "ClientId": "04b07795-8ddb-461a-bbee-02f9e1bf7b46",
+    "Scope": "User.Read",
+    "ErrorCode": "AADSTS65002",
+    "ConsentRequested": false,
+    "InteractiveFallback": false
+  },
+  "PrivateAuthenticationLogsRemoved": true,
+  "CompiledPackageLiveValidation": {
+    "Version": "0.32.0",
+    "Accounts": [
+      "nora",
+      "secadmin"
+    ],
+    "BothSuccessful": true,
+    "BrowserUiExercised": false
+  }
+}

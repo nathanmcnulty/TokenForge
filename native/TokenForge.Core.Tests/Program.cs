@@ -96,6 +96,7 @@ if(args.Contains("--os-store"))
 Reject(()=>TokenForge.Core.V0110.PlatformVaultKey.Open("invalid",true));
 
 OAuthTransportTests.Run(Check, Reject);
+BrowserAuthorizationTests.Run(Check, Reject);
 FlowEvidenceTests.Run(Check, Reject);
 ApplicationCatalogTests.Run(Check,Reject);
 count+=ScopeHistoryTests.Run();

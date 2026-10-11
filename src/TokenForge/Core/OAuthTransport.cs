@@ -126,12 +126,12 @@ namespace TokenForge.Core.V0180
             // Validate only the owned snapshot; a caller may mutate its original concurrently.
             p = new OAuthRequest { ClientId = p.ClientId, ResourceId = p.ResourceId, ResourceUri = p.ResourceUri, Tenant = p.Tenant, RedirectUri = p.RedirectUri, Scopes = (p.Scopes ?? Array.Empty<string>()).ToArray(), OAuthScopes = (p.OAuthScopes ?? Array.Empty<string>()).ToArray(), Spa = p.Spa, Discovery = p.Discovery, Protocol = p.Protocol };
             if (p == null || !Guid.TryParse(p.ClientId, out var client) || client == Guid.Empty || !Guid.TryParse(p.ResourceId, out var resource) || resource == Guid.Empty ||
-                !Regex.IsMatch(p.Tenant ?? "", @"^(organizations|common|consumers|[a-zA-Z0-9][a-zA-Z0-9.-]{0,252})$")) throw new InvalidOperationException("Invalid request client or tenant.");
+                !Regex.IsMatch(p.Tenant ?? "", @"\A(organizations|common|consumers|[a-zA-Z0-9][a-zA-Z0-9.-]{0,252})\z")) throw new InvalidOperationException("Invalid request client or tenant.");
             Uri uri = Redirect(p.RedirectUri);
             if (p.Spa && uri.Scheme != "https") throw new InvalidOperationException("SPA requests require HTTPS.");
             string[] scopes = (p.Scopes ?? Array.Empty<string>()).ToArray(), oauth = (p.OAuthScopes ?? Array.Empty<string>()).ToArray();
             if (scopes.Length > 1024 || oauth.Length > 1025 || string.IsNullOrEmpty(p.ResourceUri) || p.ResourceUri.Length > 2048) throw new InvalidOperationException("Invalid request scopes.");
-            if (!p.Discovery && (scopes.Length == 0 || scopes.Any(s => s == null || s.Length > 256 || !Regex.IsMatch(s, @"^[A-Za-z0-9_-][A-Za-z0-9_.-]*$") || Oidc.Contains(s, StringComparer.Ordinal)))) throw new InvalidOperationException("Invalid request scope names.");
+            if (!p.Discovery && (scopes.Length == 0 || scopes.Any(s => s == null || s.Length > 256 || !Regex.IsMatch(s, @"\A[A-Za-z0-9_-][A-Za-z0-9_.-]*\z") || Oidc.Contains(s, StringComparer.Ordinal)))) throw new InvalidOperationException("Invalid request scope names.");
             if (p.Discovery && (scopes.Length != 0 || p.ResourceUri != p.ResourceId)) throw new InvalidOperationException("Discovery requests must use one resource application ID and no asserted API scopes.");
             var expected = p.Discovery ? new[] { p.ResourceId + "/.default" } : scopes.Select(s => p.ResourceUri.TrimEnd('/') + "/" + s).ToArray();
             if (oauth.Length == 0 || oauth.Any(s => s == null || (s != "offline_access" && !expected.Contains(s, StringComparer.Ordinal))) || expected.Any(s => !oauth.Contains(s, StringComparer.Ordinal))) throw new InvalidOperationException("Request OAuth scopes do not match the plan.");

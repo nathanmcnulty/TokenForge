@@ -4,7 +4,7 @@
     {
       "ClientId": "3420270d-958d-47dd-b212-d94442460036",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:29:28.1814543+00:00",
+      "ObservedAt": "2026-10-12T13:09:20.2443991+00:00",
       "Scopes": [
         "email",
         "GroupMember.Read.All",
@@ -19,7 +19,7 @@
     {
       "ClientId": "3530b95b-aca8-4164-b78e-0c07cbfd0681",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:29:52.4485581+00:00",
+      "ObservedAt": "2026-10-12T13:09:52.1931472+00:00",
       "Scopes": [
         "email",
         "Group.Read.All",
@@ -33,7 +33,7 @@
     {
       "ClientId": "36c50012-7aa1-4bff-9ff8-51c75190ae4d",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:30:08.8598887+00:00",
+      "ObservedAt": "2026-10-12T13:10:10.5423256+00:00",
       "Scopes": [
         "email",
         "MultiTenantOrganization.ReadBasic.All",
@@ -46,7 +46,7 @@
     {
       "ClientId": "373aedd7-18be-428f-81e6-8174c02cf6d8",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:30:20.3236631+00:00",
+      "ObservedAt": "2026-10-12T13:10:25.4994189+00:00",
       "Scopes": [
         "Calendars.Read",
         "Chat.Read",

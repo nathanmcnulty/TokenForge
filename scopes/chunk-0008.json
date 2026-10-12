@@ -4,7 +4,7 @@
     {
       "ClientId": "268761a2-03f3-40df-8a8b-c3db24145b6b",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:24:58.1729666+00:00",
+      "ObservedAt": "2026-10-12T13:09:23.9151629+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -17,7 +17,7 @@
     {
       "ClientId": "26a7ee05-5602-4d76-a7ba-eae8b7b67941",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:24:59.7366227+00:00",
+      "ObservedAt": "2026-10-12T13:09:25.8554435+00:00",
       "Scopes": [
         "email",
         "Files.Read.All",
@@ -32,7 +32,7 @@
     {
       "ClientId": "27922004-5251-4030-b22d-91ecd9a37ea4",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:25:12.4865471+00:00",
+      "ObservedAt": "2026-10-12T13:09:40.6704415+00:00",
       "Scopes": [
         "Content.Process.User",
         "email",
@@ -59,7 +59,7 @@
     {
       "ClientId": "2793995e-0a7d-40d7-bd35-6968ba142197",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:25:13.2175741+00:00",
+      "ObservedAt": "2026-10-12T13:09:41.6472209+00:00",
       "Scopes": [
         "AgentIdentity.Read.All",
         "Application.ReadWrite.All",
@@ -76,7 +76,7 @@
     {
       "ClientId": "29d9ed98-a469-4536-ade2-f981bc1d605e",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:25:37.2714856+00:00",
+      "ObservedAt": "2026-10-12T13:10:11.2563474+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -90,7 +90,7 @@
     {
       "ClientId": "29eb068f-2f54-4fda-a8be-32f37312678a",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:25:39.3671054+00:00",
+      "ObservedAt": "2026-10-12T13:10:13.5990809+00:00",
       "Scopes": [
         "email",
         "Files.Read.All",

@@ -4,7 +4,7 @@
     {
       "ClientId": "18e271e7-a818-46ad-8e73-07cb0ae64328",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:25:00.3925151+00:00",
+      "ObservedAt": "2026-10-12T07:12:52.0016945+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -17,7 +17,7 @@
     {
       "ClientId": "18ed3507-a475-4ccb-b669-d66bc9f2a36e",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:25:02.8100229+00:00",
+      "ObservedAt": "2026-10-12T07:12:55.3313919+00:00",
       "Scopes": [
         "AdministrativeUnit.Read.All",
         "AdministrativeUnit.ReadWrite.All",
@@ -73,7 +73,7 @@
     {
       "ClientId": "18fbca16-2224-45f6-85b0-f7bf2b39b3f3",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:25:04.5808135+00:00",
+      "ObservedAt": "2026-10-12T07:12:58.0645083+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -86,7 +86,7 @@
     {
       "ClientId": "19db86c3-b2b9-44cc-b339-36da233a3be2",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:25:15.6931145+00:00",
+      "ObservedAt": "2026-10-12T07:13:13.4667631+00:00",
       "Scopes": [
         "AgentIdentity.Read.All",
         "AuditLog.Read.All",
@@ -109,7 +109,7 @@
     {
       "ClientId": "19f7f505-34aa-44a4-9dcc-6a768854d2ea",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:25:22.6309685+00:00",
+      "ObservedAt": "2026-10-12T07:13:24.6044807+00:00",
       "Scopes": [
         "Application.Read.All",
         "email",
@@ -123,7 +123,7 @@
     {
       "ClientId": "1a20851a-696e-4c7e-96f4-c282dfe48872",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:25:24.4604336+00:00",
+      "ObservedAt": "2026-10-12T07:13:27.5619088+00:00",
       "Scopes": [
         "email",
         "openid",

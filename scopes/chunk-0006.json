@@ -4,7 +4,7 @@
     {
       "ClientId": "1c083171-cb2d-4bd1-8da2-6f1ffea5d94c",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:25:04.0631342+00:00",
+      "ObservedAt": "2026-10-12T07:12:43.4550279+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -17,7 +17,7 @@
     {
       "ClientId": "1dee7b72-b80d-4e56-933d-8b6b04f9a3e2",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:25:18.2087123+00:00",
+      "ObservedAt": "2026-10-12T07:12:57.8661276+00:00",
       "Scopes": [
         "Device.Read.All",
         "DeviceManagementConfiguration.Read.All",
@@ -40,7 +40,7 @@
     {
       "ClientId": "1f7f6f43-2f81-429c-8499-293566d0ab0c",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:25:40.4810227+00:00",
+      "ObservedAt": "2026-10-12T07:13:20.8445937+00:00",
       "Scopes": [
         "_A.AA",
         "_B.AC",
@@ -56,7 +56,7 @@
     {
       "ClientId": "1fec8e78-bce4-4aaf-ab1b-5451cc387264",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:25:44.5443796+00:00",
+      "ObservedAt": "2026-10-12T07:13:25.1544313+00:00",
       "Scopes": [
         "AppCatalog.Read.All",
         "Calendars.Read",
@@ -100,7 +100,7 @@
     {
       "ClientId": "203f1145-856a-4232-83d4-a43568fba23d",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:25:48.542908+00:00",
+      "ObservedAt": "2026-10-12T07:13:29.1397138+00:00",
       "Scopes": [
         "email",
         "openid",

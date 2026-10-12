@@ -4,7 +4,7 @@
     {
       "ClientId": "0140a36d-95e1-4df5-918c-ca7ccd1fafc9",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:56:23.8949335+00:00",
+      "ObservedAt": "2026-10-12T01:23:38.4266724+00:00",
       "Scopes": [
         "Application.Read.All",
         "email",
@@ -20,7 +20,7 @@
     {
       "ClientId": "038ddad9-5bbe-4f64-b0cd-12434d1e633b",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:56:30.2111625+00:00",
+      "ObservedAt": "2026-10-12T01:24:05.9393212+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -33,7 +33,7 @@
     {
       "ClientId": "04045bf5-8e9f-4019-8613-af68af46ff56",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:56:46.6010169+00:00",
+      "ObservedAt": "2026-10-12T01:24:28.4057223+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -46,7 +46,7 @@
     {
       "ClientId": "041e4c2d-ba3e-46a1-9347-5bc4054c8af4",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:56:48.4028639+00:00",
+      "ObservedAt": "2026-10-12T01:24:38.3960764+00:00",
       "Scopes": [
         "Contacts.Read",
         "email",

@@ -4,7 +4,7 @@
     {
       "ClientId": "0dc2408a-bbc0-4238-871e-13b372f0200f",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:17:49.632674+00:00",
+      "ObservedAt": "2026-10-12T01:22:18.7841819+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -17,7 +17,7 @@
     {
       "ClientId": "0e25d998-b19a-4080-811c-d74d60d65e42",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:17:51.4223213+00:00",
+      "ObservedAt": "2026-10-12T01:22:20.7517976+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -30,7 +30,7 @@
     {
       "ClientId": "0e90d0b8-039a-4936-a6f4-d25dd510be5d",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:17:55.3954293+00:00",
+      "ObservedAt": "2026-10-12T01:22:24.9983065+00:00",
       "Scopes": [
         "email",
         "Mail.ReadWrite",
@@ -47,7 +47,7 @@
     {
       "ClientId": "0ec893e0-5785-4de6-99da-4ed124e5296c",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:18:02.305402+00:00",
+      "ObservedAt": "2026-10-12T01:22:33.5720518+00:00",
       "Scopes": [
         "_A.CG",
         "Calendars.ReadBasic",
@@ -78,7 +78,7 @@
     {
       "ClientId": "120d688d-1518-4cf7-bd38-182f158850b6",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:18:34.7947555+00:00",
+      "ObservedAt": "2026-10-12T01:23:13.0460646+00:00",
       "Scopes": [
         "email",
         "GroupMember.Read.All",
@@ -92,7 +92,7 @@
     {
       "ClientId": "12128f48-ec9e-42f0-b203-ea49fb6af367",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:18:35.8057134+00:00",
+      "ObservedAt": "2026-10-12T01:23:14.275441+00:00",
       "Scopes": [
         "AppCatalog.ReadWrite.All",
         "Channel.Create",

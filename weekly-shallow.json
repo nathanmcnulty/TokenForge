@@ -1,10 +1,10 @@
 {
   "SchemaVersion": 1,
-  "PlanId": "9aff933cbc55ff40d40fc7d50644417908b3a6d442862756096c53aa1cfabf70",
+  "PlanId": "ad9d352715730ce194e3a2985b120893ce29198813199043b16168c34bc1f7b4",
   "Recipe": {
     "SchemaVersion": 1,
-    "Week": "2026-W41",
-    "CreatedAt": "2026-10-07T20:09:09.902178+00:00",
+    "Week": "2026-W42",
+    "CreatedAt": "2026-10-12T01:21:01.1045677+00:00",
     "Mode": "Shallow",
     "ChunkSize": 100,
     "MaxRedirects": 2,
@@ -3177,6 +3177,7 @@
       "931466dd-cb91-4cdb-97ec-207749475be1",
       "9315aedd-209b-43b3-b149-2abff6a95d59",
       "931e4a88-a67f-48b5-814f-16a5f1e6028d",
+      "9324e81a-10cf-4694-a355-4dae0905638c",
       "93283d0a-6322-4fa8-966b-8c121624760d",
       "932ad362-64a8-4783-9106-97849a1a30b9",
       "9334c44b-a7c6-4350-8036-6bf8e02b4c1f",
@@ -5466,23 +5467,23 @@
     ],
     "Discovery": {
       "SchemaVersion": 1,
-      "FetchedAt": "2026-10-07T20:08:53.1298194+00:00",
+      "FetchedAt": "2026-10-12T01:20:27.2656764+00:00",
       "Sources": [
         "https://raw.githubusercontent.com/dirkjanm/ROADtools/master/roadtx/roadtools/roadtx/firstpartyscopes.json",
         "https://raw.githubusercontent.com/merill/microsoft-info/main/_info/MicrosoftApps.json",
         "https://raw.githubusercontent.com/f-bader/entrascopes.com/main/resources.json"
       ],
-      "CatalogContentSha256": "ae53b957aa69a525d66651c053629f507be4351ebfe803c3780738d8dc27861a",
+      "CatalogContentSha256": "bffe0af453d42347dc9e6fd13f476f677abf1429d690e91426a0900bbde1ce07",
       "InvalidSourceRecordCount": 2,
       "SourceSnapshots": [
         {
           "Location": "https://raw.githubusercontent.com/dirkjanm/ROADtools/master/roadtx/roadtools/roadtx/firstpartyscopes.json",
-          "Sha256": "ae53b957aa69a525d66651c053629f507be4351ebfe803c3780738d8dc27861a",
+          "Sha256": "bffe0af453d42347dc9e6fd13f476f677abf1429d690e91426a0900bbde1ce07",
           "HashKind": "CatalogSnapshot"
         },
         {
           "Location": "https://raw.githubusercontent.com/merill/microsoft-info/main/_info/MicrosoftApps.json",
-          "Sha256": "10b78de2f1bf15cfe8fd674162247f141425123e3663fa504a7aa5d281cf5407",
+          "Sha256": "e010d35d6a986eaf846ae9801a71eb5cf32706865a519d0bb44bdc0e1c1e826d",
           "HashKind": "NormalizedJson"
         },
         {
@@ -132618,6 +132619,26 @@
           "IdentifierUris": []
         },
         {
+          "AppId": "9324e81a-10cf-4694-a355-4dae0905638c",
+          "Name": "SQL ADX Proxy",
+          "OwnerTenantId": "f8cdef31-a31e-4b4a-93e4-5f571e91255a",
+          "Ownership": "PublishedMicrosoftOwner",
+          "Sources": [
+            {
+              "Name": "https://raw.githubusercontent.com/merill/microsoft-info/main/_info/MicrosoftApps.json",
+              "Location": "https://raw.githubusercontent.com/merill/microsoft-info/main/_info/MicrosoftApps.json",
+              "Evidence": "PublishedGraph"
+            }
+          ],
+          "PublicClient": null,
+          "Foci": null,
+          "RedirectUris": [],
+          "PreferredRedirectUri": "",
+          "Grants": [],
+          "IsResourceCandidate": false,
+          "IdentifierUris": []
+        },
+        {
           "AppId": "93283d0a-6322-4fa8-966b-8c121624760d",
           "Name": "AttackSimulation.Read.All - Application",
           "OwnerTenantId": null,
@@ -222853,8 +222874,8 @@
       "Attempts": 1,
       "Assessed": 100,
       "Successful": 4,
-      "DurationSeconds": 184.883,
-      "ObservedAt": "2026-10-07T20:13:09+00:00"
+      "DurationSeconds": 166.511,
+      "ObservedAt": "2026-10-12T01:24:40.2902856+00:00"
     },
     {
       "Index": 1,
@@ -222862,8 +222883,8 @@
       "Attempts": 1,
       "Assessed": 100,
       "Successful": 4,
-      "DurationSeconds": 114.195,
-      "ObservedAt": "2026-10-07T20:19:21+00:00"
+      "DurationSeconds": 96.595,
+      "ObservedAt": "2026-10-12T01:23:33.6551673+00:00"
     },
     {
       "Index": 2,
@@ -222871,8 +222892,8 @@
       "Attempts": 1,
       "Assessed": 100,
       "Successful": 4,
-      "DurationSeconds": 74.224,
-      "ObservedAt": "2026-10-07T20:18:47+00:00"
+      "DurationSeconds": 96.787,
+      "ObservedAt": "2026-10-12T01:23:29.6690131+00:00"
     },
     {
       "Index": 3,
@@ -222880,467 +222901,467 @@
       "Attempts": 1,
       "Assessed": 100,
       "Successful": 6,
-      "DurationSeconds": 70.542,
-      "ObservedAt": "2026-10-07T20:18:38+00:00"
+      "DurationSeconds": 84.565,
+      "ObservedAt": "2026-10-12T01:23:17.8318023+00:00"
     },
     {
       "Index": 4,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 4,
-      "DurationSeconds": 106.609,
-      "ObservedAt": "2026-10-07T20:19:22+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 5,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 6,
-      "DurationSeconds": 62.3,
-      "ObservedAt": "2026-10-07T20:25:32+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 6,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 80.363,
-      "ObservedAt": "2026-10-07T20:25:52+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 7,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 3,
-      "DurationSeconds": 67.033,
-      "ObservedAt": "2026-10-07T20:25:32+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 8,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 6,
-      "DurationSeconds": 73.887,
-      "ObservedAt": "2026-10-07T20:25:42+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 9,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 109.972,
-      "ObservedAt": "2026-10-07T20:30:37+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 10,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 1,
-      "DurationSeconds": 89.667,
-      "ObservedAt": "2026-10-07T20:30:17+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 11,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 4,
-      "DurationSeconds": 81.948,
-      "ObservedAt": "2026-10-07T20:30:22+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 12,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 6,
-      "DurationSeconds": 97.328,
-      "ObservedAt": "2026-10-07T20:30:30+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 13,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 4,
-      "DurationSeconds": 109.806,
-      "ObservedAt": "2026-10-07T20:35:28+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 14,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 3,
-      "DurationSeconds": 107.159,
-      "ObservedAt": "2026-10-07T20:35:36+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 15,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 6,
-      "DurationSeconds": 100.543,
-      "ObservedAt": "2026-10-07T20:35:29+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 16,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 103.855,
-      "ObservedAt": "2026-10-07T20:35:49+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 17,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 80.883,
-      "ObservedAt": "2026-10-07T20:42:49+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 18,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 89.254,
-      "ObservedAt": "2026-10-07T20:42:49+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 19,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 8,
-      "DurationSeconds": 85.935,
-      "ObservedAt": "2026-10-07T20:43:09+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 20,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 95.296,
-      "ObservedAt": "2026-10-07T20:43:00+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 21,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 108.751,
-      "ObservedAt": "2026-10-07T20:50:06+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 22,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 2,
-      "DurationSeconds": 89.966,
-      "ObservedAt": "2026-10-07T20:49:45+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 23,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 3,
-      "DurationSeconds": 94.801,
-      "ObservedAt": "2026-10-07T20:49:36+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 24,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 2,
-      "DurationSeconds": 82.593,
-      "ObservedAt": "2026-10-07T20:49:37+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 25,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 64.138,
-      "ObservedAt": "2026-10-07T20:57:35+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 26,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 1,
-      "DurationSeconds": 101.832,
-      "ObservedAt": "2026-10-07T20:58:00+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 27,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 7,
-      "DurationSeconds": 84.114,
-      "ObservedAt": "2026-10-07T20:57:43+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 28,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 78.218,
-      "ObservedAt": "2026-10-07T20:57:37+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 29,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 2,
-      "DurationSeconds": 67.552,
-      "ObservedAt": "2026-10-07T20:11:09+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 30,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 2,
-      "DurationSeconds": 83.863,
-      "ObservedAt": "2026-10-07T21:05:12+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 31,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 74.313,
-      "ObservedAt": "2026-10-07T21:04:43+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 32,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 2,
-      "DurationSeconds": 79.594,
-      "ObservedAt": "2026-10-07T21:04:49+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 33,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 111.975,
-      "ObservedAt": "2026-10-07T21:05:32+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 34,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 7,
-      "DurationSeconds": 102.351,
-      "ObservedAt": "2026-10-07T21:15:48+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 35,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 3,
-      "DurationSeconds": 81.378,
-      "ObservedAt": "2026-10-07T21:15:57+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 36,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 10,
-      "DurationSeconds": 67.093,
-      "ObservedAt": "2026-10-07T21:15:11+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 37,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 6,
-      "DurationSeconds": 78.613,
-      "ObservedAt": "2026-10-07T21:15:17+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 38,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 2,
-      "DurationSeconds": 99.386,
-      "ObservedAt": "2026-10-07T21:26:22+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 39,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 2,
-      "DurationSeconds": 98.492,
-      "ObservedAt": "2026-10-07T21:26:08+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 40,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 110.778,
-      "ObservedAt": "2026-10-07T21:26:21+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 41,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 8,
-      "DurationSeconds": 76.9,
-      "ObservedAt": "2026-10-07T21:25:44+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 42,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 101.357,
-      "ObservedAt": "2026-10-07T21:32:35+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 43,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 8,
-      "DurationSeconds": 139.897,
-      "ObservedAt": "2026-10-07T21:33:16+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 44,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 6,
-      "DurationSeconds": 113.064,
-      "ObservedAt": "2026-10-07T21:32:45+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 45,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 4,
-      "DurationSeconds": 70.544,
-      "ObservedAt": "2026-10-07T21:31:55+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 46,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 106.289,
-      "ObservedAt": "2026-10-07T21:40:05+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 47,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 67.86,
-      "ObservedAt": "2026-10-07T21:39:15+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 48,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 80.863,
-      "ObservedAt": "2026-10-07T21:39:32+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 49,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 100.48,
-      "ObservedAt": "2026-10-07T21:39:51+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 50,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 87.859,
-      "ObservedAt": "2026-10-07T21:45:08+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 51,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 4,
-      "DurationSeconds": 68.797,
-      "ObservedAt": "2026-10-07T21:44:55+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 52,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 5,
-      "DurationSeconds": 85.851,
-      "ObservedAt": "2026-10-07T21:45:02+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 53,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 100,
-      "Successful": 4,
-      "DurationSeconds": 95.795,
-      "ObservedAt": "2026-10-07T21:45:21+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     },
     {
       "Index": 54,
-      "Status": "Complete",
-      "Attempts": 1,
-      "Assessed": 54,
-      "Successful": 3,
-      "DurationSeconds": 51.317,
-      "ObservedAt": "2026-10-07T21:52:00.0000000+00:00"
+      "Status": "Pending",
+      "Attempts": 0,
+      "Assessed": 0,
+      "Successful": 0,
+      "DurationSeconds": 0,
+      "ObservedAt": null
     }
   ]
 }

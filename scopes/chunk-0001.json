@@ -4,7 +4,7 @@
     {
       "ClientId": "04b07795-8ddb-461a-bbee-02f9e1bf7b46",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:17:58.3849824+00:00",
+      "ObservedAt": "2026-10-12T01:22:22.1787985+00:00",
       "Scopes": [
         "Application.ReadWrite.All",
         "AppRoleAssignment.ReadWrite.All",
@@ -25,7 +25,7 @@
     {
       "ClientId": "04f0c124-f2bc-4f59-8241-bf6df9866bbd",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:18:04.3128404+00:00",
+      "ObservedAt": "2026-10-12T01:22:28.2067988+00:00",
       "Scopes": [
         "Application.ReadWrite.All",
         "Directory.Read.All",
@@ -41,7 +41,7 @@
     {
       "ClientId": "065d9450-1e87-434e-ac2f-69af271549ed",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:18:24.2946464+00:00",
+      "ObservedAt": "2026-10-12T01:22:46.6566837+00:00",
       "Scopes": [
         "_B.AR",
         "Directory.Read.All",
@@ -64,7 +64,7 @@
     {
       "ClientId": "08e18876-6177-487e-b8b5-cf950c1e598c",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:19:18.824682+00:00",
+      "ObservedAt": "2026-10-12T01:23:31.2498797+00:00",
       "Scopes": [
         "AppCatalog.Read.All",
         "AppCatalog.Submit",

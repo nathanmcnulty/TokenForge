@@ -4,7 +4,7 @@
     {
       "ClientId": "3cf6df92-2745-4f6f-bbcf-19b59bcdb62a",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:34:09.1428413+00:00",
+      "ObservedAt": "2026-10-12T13:16:11.953812+00:00",
       "Scopes": [
         "DeviceManagementConfiguration.Read.All",
         "DeviceManagementConfiguration.ReadWrite.All",
@@ -24,7 +24,7 @@
     {
       "ClientId": "3dd3a51e-8d76-4cca-ac35-5537c1319211",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:34:18.8448227+00:00",
+      "ObservedAt": "2026-10-12T13:16:20.8918326+00:00",
       "Scopes": [
         "CloudPC.Read.All",
         "email",
@@ -38,7 +38,7 @@
     {
       "ClientId": "3e62f81e-590b-425b-9531-cad6683656cf",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:34:26.7270241+00:00",
+      "ObservedAt": "2026-10-12T13:16:27.5275593+00:00",
       "Scopes": [
         "Channel.ReadBasic.All",
         "ChannelMessage.Read.All",
@@ -69,7 +69,7 @@
     {
       "ClientId": "3ff8e6ba-7dc3-4e9e-ba40-ee12b60d6d48",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:35:08.0913288+00:00",
+      "ObservedAt": "2026-10-12T13:16:58.9384114+00:00",
       "Scopes": [
         "email",
         "openid",

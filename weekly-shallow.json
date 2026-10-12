@@ -222965,7 +222965,7 @@
       "Assessed": 100,
       "Successful": 1,
       "DurationSeconds": 103.507,
-      "ObservedAt": "2026-10-12T13:10:25.4553610+00:00"
+      "ObservedAt": "2026-10-12T13:10:25.455361+00:00"
     },
     {
       "Index": 11,
@@ -222978,39 +222978,39 @@
     },
     {
       "Index": 12,
-      "Status": "Pending",
-      "Attempts": 0,
-      "Assessed": 0,
-      "Successful": 0,
-      "DurationSeconds": 0,
-      "ObservedAt": null
+      "Status": "Complete",
+      "Attempts": 1,
+      "Assessed": 100,
+      "Successful": 6,
+      "DurationSeconds": 112.286,
+      "ObservedAt": "2026-10-12T13:18:09.2289514+00:00"
     },
     {
       "Index": 13,
-      "Status": "Pending",
-      "Attempts": 0,
-      "Assessed": 0,
-      "Successful": 0,
-      "DurationSeconds": 0,
-      "ObservedAt": null
+      "Status": "Complete",
+      "Attempts": 1,
+      "Assessed": 100,
+      "Successful": 4,
+      "DurationSeconds": 85.385,
+      "ObservedAt": "2026-10-12T13:17:13.6104418+00:00"
     },
     {
       "Index": 14,
-      "Status": "Pending",
-      "Attempts": 0,
-      "Assessed": 0,
-      "Successful": 0,
-      "DurationSeconds": 0,
-      "ObservedAt": null
+      "Status": "Complete",
+      "Attempts": 1,
+      "Assessed": 100,
+      "Successful": 3,
+      "DurationSeconds": 93.626,
+      "ObservedAt": "2026-10-12T13:17:29.7816327+00:00"
     },
     {
       "Index": 15,
-      "Status": "Pending",
-      "Attempts": 0,
-      "Assessed": 0,
-      "Successful": 0,
-      "DurationSeconds": 0,
-      "ObservedAt": null
+      "Status": "Complete",
+      "Attempts": 1,
+      "Assessed": 100,
+      "Successful": 6,
+      "DurationSeconds": 116.597,
+      "ObservedAt": "2026-10-12T13:17:49.8867901+00:00"
     },
     {
       "Index": 16,

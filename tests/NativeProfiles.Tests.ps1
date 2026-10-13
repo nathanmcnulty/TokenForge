@@ -82,6 +82,24 @@ Describe 'Native profile configuration interoperability' -Skip:(-not $nativeAvai
   Invoke-NativeProfile @('profile','show','--root',$root) 1
   Test-Path $root|Should -BeFalse
  }
+ It 'rejects conflicting and incomplete native passkey login options before creating state' {
+  Invoke-NativeProfile @('login','--passkey-file','synthetic-private','--browser','--root',$root) 1
+  Invoke-NativeProfile @('login','--passkey-file','synthetic-private','--passkey-file','synthetic-private','--root',$root) 1
+  Invoke-NativeProfile @('login','--root',$root,'--passkey-file') 1
+  Test-Path $root|Should -BeFalse
+ }
+ It 'rejects browser-only options for native passkey login before reading credentials' {
+  foreach($option in @(@('--interactive'),@('--login-hint','synthetic-private'),@('--timeout-seconds','120'))){
+   Invoke-NativeProfile (@('login','--passkey-file','synthetic-private','--root',$root)+$option) 1
+  }
+  Test-Path $root|Should -BeFalse
+ }
+ It 'rejects passphrase input for an OS-protected native passkey profile without changing state' -Skip:$IsMacOS {
+  $created=Invoke-NativeProfile @('profile','create','--tenant','example.onmicrosoft.com','--storage','OperatingSystem','--root',$root)
+  Invoke-NativeProfile @('login','--passkey-file','synthetic-private','--root',$root,'--stdin') 1
+  (Invoke-NativeProfile @('profile','show','--root',$root)).Revision|Should -Be $created.Revision
+  Test-Path (Join-Path $root 'default/session.tfvault')|Should -BeFalse
+ }
  It 'refuses forgetting a non-OS profile without changing configuration' {
   $created=Invoke-NativeProfile @('profile','create','--tenant','example.onmicrosoft.com','--root',$root)
   Invoke-NativeProfile @('profile','forget-key','--root',$root) 1

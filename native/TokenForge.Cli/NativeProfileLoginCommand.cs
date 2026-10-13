@@ -12,10 +12,11 @@ internal static class NativeProfileLoginCommand
   {
    string option=args[i];if(!seen.Add(option))throw new InvalidOperationException();
    if(flags.Contains(option))continue;
-   if(option is not ("--profile" or "--root" or "--login-hint" or "--timeout-seconds") || ++i==args.Length || args[i].StartsWith('-') || args[i].Length is <1 or >4096)throw new InvalidOperationException();
+   if(option is not ("--profile" or "--root" or "--login-hint" or "--timeout-seconds" or "--passkey-file") || ++i==args.Length || args[i].StartsWith('-') || args[i].Length is <1 or >4096)throw new InvalidOperationException();
    options[option]=args[i];
   }
-  if(!seen.Contains("--browser") || seen.Contains("--stdin") && seen.Contains("--prompt-passphrase"))throw new InvalidOperationException();
+  bool passkey=options.ContainsKey("--passkey-file");
+  if(seen.Contains("--browser")==passkey || passkey && (seen.Contains("--interactive") || options.ContainsKey("--login-hint") || options.ContainsKey("--timeout-seconds")) || seen.Contains("--stdin") && seen.Contains("--prompt-passphrase"))throw new InvalidOperationException();
   if(options.TryGetValue("--login-hint",out var hint) && (hint.Length>320 || hint.Any(char.IsControl)))throw new InvalidOperationException();
   int timeout=300;if(options.TryGetValue("--timeout-seconds",out var value) && (!int.TryParse(value,out timeout) || timeout is <30 or >900))throw new InvalidOperationException();
   string name=options.GetValueOrDefault("--profile") ?? "default";string? root=options.GetValueOrDefault("--root");
@@ -28,7 +29,7 @@ internal static class NativeProfileLoginCommand
   using var cancellation=new CancellationTokenSource();ConsoleCancelEventHandler cancel=(_,e)=>{e.Cancel=true;cancellation.Cancel();};Console.CancelKeyPress+=cancel;
   try
   {
-   var result=ProfileLogin.Login(name,root,inventory,request=>
+   var result=passkey?ProfileLogin.LoginSoftwarePasskey(name,root,inventory,options["--passkey-file"],password,cancellation.Token):ProfileLogin.Login(name,root,inventory,request=>
    {
     using var acquired=NativeTokenCommand.AcquireBrowser(request,options.GetValueOrDefault("--login-hint"),timeout,!seen.Contains("--interactive"),cancellation.Token);
     return new ProfileCredentialToken(request,acquired.AccessToken,acquired.RefreshToken,acquired.ExpiresAt,acquired.AdditionalScopes.Length);

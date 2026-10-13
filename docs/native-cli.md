@@ -1,10 +1,10 @@
 # Native CLI and evidence store
 
 The native CLI is a self-contained .NET executable per OS and architecture. Evidence commands
-run directly in the shared core with bundled SQLite. Passkey login and Memory profile token adapters invoke the packaged PowerShell 7.4+ module;
+run directly in the shared core with bundled SQLite. Passkey enrollment, implicit passkey login and Memory profile token adapters invoke the packaged PowerShell 7.4+ module;
 install `pwsh` and keep `src/` and `scripts/` beside the executable for those commands.
 Version 0.18 adds direct native `token acquire`, and PowerShell uses the same C# OAuth transport
-and issued-token policy. Version 0.33 adds native system-browser PKCE to advanced `token acquire`. Version 0.36 adds native browser profile login and persisted browser profile acquisition. Passkey login and enrollment still use PowerShell.
+and issued-token policy. Version 0.33 adds native system-browser PKCE to advanced `token acquire`. Version 0.36 adds native browser profile login and persisted browser profile acquisition. Explicit software-passkey acquisition and profile login are native; enrollment and implicit passkey login still use PowerShell.
 Version 0.19 also shares vault envelope encryption with the native core; profile storage and
 login still use PowerShell. See [shared vault validation](vault-core-validation-2026-10-08.json).
 Version 0.20 shares profile configuration validation between PowerShell and the native core.
@@ -199,7 +199,7 @@ The plan follows the account, tenant, client, resource and scope policy describe
 The key file and its immediate parent must be private to the current user; linked paths
 are rejected. The command validates the plan before opening the key or contacting Entra.
 It runs without PowerShell, returns only the usual sanitized token metadata, and persists
-neither the cookie nor access/refresh tokens. Profile passkey login and enrollment still
+neither the cookie nor access/refresh tokens. Explicit software-passkey profile login is described below; enrollment and implicit passkey login
 use the existing PowerShell workflow.
 
 The flow is:
@@ -340,7 +340,7 @@ With fresh observed scope coverage, the tool first obtains a bounded Graph `User
 
 Cold checkpoint writes take the cooperating state writer lock and reread current JSON history or append transactionally to the existing SQLite store. A deleted or truncated existing SQLite store fails rather than being initialized again. Initially absent JSON history can be created. Checkpoint failure discards the token without trying another candidate. Credential persistence remains a separate final vault/profile comparison-and-swap: a successful metadata checkpoint can remain if subsequent cancellation, retention or concurrent profile changes prevent the credential commit.
 
-Memory profiles, `--login-hint`, and `--prompt-passphrase` retain the existing PowerShell adapter. If an OS-backed session needs fresh browser authentication because it has no cookie, the native operation releases its locks before invoking that adapter. Explicit stdin cannot be replayed into a browser fallback; use the existing interactive/module workflow. Login and passkey enrollment still require PowerShell. Windows and Linux OS stores are supported; macOS requires the existing signed-helper work. JWT payload checks do not establish signature verification.
+Memory profiles, `--login-hint`, and `--prompt-passphrase` retain the existing PowerShell adapter. If an OS-backed session needs fresh browser authentication because it has no cookie, the native operation releases its locks before invoking that adapter. Explicit stdin cannot be replayed into a browser fallback; use the existing interactive/module workflow. Explicit browser and software-passkey login are native; enrollment and implicit passkey login still require PowerShell. Windows and Linux OS stores are supported; macOS requires the existing signed-helper work. JWT payload checks do not establish signature verification.
 
 The [sanitized live report](native-fresh-acquisition-validation-2026-10-11.json) records Linux native cold/warm/cache/renewal Graph `/me` checks with Nora and secadmin, each HTTP 200, with PowerShell absent from the native commands’ PATH. Both sessions and OS keys were removed afterward. This is bounded Graph evidence, not proof for every app/resource or live Windows/macOS authentication.
 
@@ -419,3 +419,42 @@ records Linux cold/warm/cache and Graph identity proofs for both lab accounts. T
 proof kept the passkey-derived cookie in its PowerShell driver and sent only authorization
 URLs and completion signals over a private Unix socket; it did not exercise browser UI.
 The inventory observation date was preserved under an explicit 168-hour lab age limit.
+
+
+## Native software-passkey profile login
+
+With a private local software passkey file, explicit login can establish an encrypted
+saved ESTS session without PowerShell in the native process:
+
+```text
+tokenforge login --profile lab --passkey-file /private/Test.json --prompt-passphrase
+```
+
+Use `--stdin` instead of the hidden prompt for explicit redirected passphrase input.
+Windows Credential Manager and Linux Secret Service profiles require neither flag.
+Memory profiles authenticate and bind identity, but save no cookie or token across processes.
+Passkey enrollment and login without the explicit `--passkey-file` option retain their
+PowerShell adapters. Browser-only login options cannot accompany this option.
+
+The native signer authenticates to the fixed Microsoft public-cloud authority. The resulting
+ESTS cookie stays in an owned, temporary session while PKCE requests the configured Graph
+bootstrap token. Token policy and Graph `/me` must confirm the tenant and principal before
+cookie persistence. The commit rechecks token lifetime, retention, profile revision and
+ciphertext. Persisted profiles encrypt the cookie in their opted-in vault; `CookieSaved`
+reports success only after both local writes complete. Subsequent native `token get` commands
+can use that saved cookie, cache or same-client renewal. Login resets this session's token
+cache and preserves unrelated sessions.
+
+This is software emulation of a passkey, without hardware user-presence guarantees.
+Protect the private key file separately from the encrypted session vault. Existing
+additional-scope limits apply unchanged; requesting User.Read can still produce extra scopes.
+Use explicit policy limits appropriate to the application and inspect the resulting metadata.
+
+
+The [sanitized v0.38 live report](native-profile-passkey-validation-2026-10-13.json)
+records both lab accounts on Linux using passphrase-protected profiles. Login persisted
+an encrypted cookie; fresh and cached native acquisition returned Graph HTTP 200, and a
+separate identity read matched the expected user. Logout succeeded and owned private
+state was removed. The original key files remained unchanged. The proof explicitly used
+an additional-scope budget of 128 and preserved the original inventory observation under
+a 168-hour lab age limit. It is not live Windows/macOS or OS-vault authentication evidence.

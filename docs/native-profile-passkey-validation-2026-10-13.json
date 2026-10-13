@@ -1,0 +1,66 @@
+{
+  "Accounts": [
+    {
+      "ApiStatuses": [
+        200,
+        200
+      ],
+      "Account": "nora",
+      "OriginalPasskeyUnchanged": true,
+      "GraphIdentityConfirmed": true,
+      "CookieSaved": true,
+      "Storage": "Passphrase",
+      "ConfiguredInventoryMaxAgeHours": 168,
+      "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+      "Cache": "CachedVerifiedContextNotNewIssuance",
+      "MaximumAdditionalScopes": 128,
+      "LogoutSucceeded": true,
+      "MaximumBootstrapAdditionalScopes": 128,
+      "CredentialOutput": false,
+      "NativeWithoutPowerShell": true
+    },
+    {
+      "ApiStatuses": [
+        200,
+        200
+      ],
+      "Account": "secadmin",
+      "OriginalPasskeyUnchanged": true,
+      "GraphIdentityConfirmed": true,
+      "CookieSaved": true,
+      "Storage": "Passphrase",
+      "ConfiguredInventoryMaxAgeHours": 168,
+      "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+      "Cache": "CachedVerifiedContextNotNewIssuance",
+      "MaximumAdditionalScopes": 128,
+      "LogoutSucceeded": true,
+      "MaximumBootstrapAdditionalScopes": 128,
+      "CredentialOutput": false,
+      "NativeWithoutPowerShell": true
+    }
+  ],
+  "ConsentChanges": false,
+  "Date": "2026-10-13",
+  "OwnedPrivateStateRemoved": true,
+  "SignatureValidated": false,
+  "Version": "0.38.0",
+  "SchemaVersion": 1,
+  "Scope": "Bounded two-account Linux passphrase-vault software-passkey profile proof",
+  "CoreChecksPassed": 938,
+  "FocusedPester": {
+    "Passed": 29,
+    "Skipped": 1,
+    "Failed": 0
+  },
+  "ProfileLoginSourceSha256": "ff59c3cc78d7bbcb7c785e1188fc804e2dd0bbb8fca171d32fdb120281fbd52a",
+  "TestedExecutableSha256": "bcc8fdd7a3f8957aa7774f5eccbeecea58471ada5aa6fb8a32f570435e529c54",
+  "TestedCredentialAssemblySha256": "4853719cf7cfc6cee2b946315f85a79f289e8b141768e9febdadade6c9b0279d",
+  "Limitations": [
+    "Linux live authentication only; Windows/macOS live authentication not tested",
+    "Live profile storage was Passphrase; OS-backed commit uses the existing shared path",
+    "Inventory observation date preserved from 2026-10-07 under an explicit 168-hour lab age limit",
+    "Software passkey emulation provides no hardware user-presence guarantee",
+    "JWT claims and bounded Graph identity/API checks do not establish JWT signature verification or general API authorization",
+    "Tested local executable is not a published release asset"
+  ]
+}

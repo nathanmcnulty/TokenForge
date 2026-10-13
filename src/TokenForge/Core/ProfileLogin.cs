@@ -32,12 +32,30 @@ public static class ProfileLogin
         Func<SecureString,string>? readIdentity=null,CancellationToken cancellation=default)
         => LoginCore(name,root,inventoryJson,acquire,password,readIdentity,cancellation,()=>DateTimeOffset.UtcNow);
 
+    public static ProfileLoginResult LoginSoftwarePasskey(string name,string? root,string inventoryJson,
+        string passkeyPath,SecureString? password=null,CancellationToken cancellation=default)
+    {
+        SoftwarePasskeySession? session=null;
+        try
+        {
+            return LoginCore(name,root,inventoryJson,request=>
+            {
+                using var signer=SoftwarePasskey.Open(passkeyPath);
+                session=signer.Authenticate(cancellation);
+                using var token=OAuthTransport.Cookie(request,session.Cookie,session.CookieName,cancellation);
+                return new ProfileCredentialToken(request,token.AccessToken,token.RefreshToken,token.ExpiresAt,token.AdditionalScopes.Length);
+            },password,null,cancellation,()=>DateTimeOffset.UtcNow,()=> (session!.Cookie,session.CookieName));
+        }
+        finally{session?.Dispose();}
+    }
+
     // Internal clock keeps commit-time policy checks deterministic without changing the public login API.
     internal static ProfileLoginResult LoginCore(string name,string? root,string inventoryJson,
         Func<OAuthRequest,ProfileCredentialToken> acquire,SecureString? password,
-        Func<SecureString,string>? readIdentity,CancellationToken cancellation,Func<DateTimeOffset> clock)
+        Func<SecureString,string>? readIdentity,CancellationToken cancellation,Func<DateTimeOffset> clock,
+        Func<(SecureString Cookie,string Name)>? readCookie=null)
     {
-        SecureString? key=null;byte[]? before=null,plaintext=null,updated=null,envelope=null,configurationBytes=null;
+        SecureString? key=null,cookie=null;string cookieName="ESTSAUTH";byte[]? before=null,plaintext=null,updated=null,envelope=null,configurationBytes=null;
         JsonDocument? previous=null;string? temporary=null;
         try
         {
@@ -48,7 +66,7 @@ public static class ProfileLogin
             string storage=profile.GetProperty("Storage").GetString()!;
             if(storage=="Passphrase" && password==null || storage!="Passphrase" && password!=null || storage=="OperatingSystem" && PlatformVaultKey.Backend=="Unsupported")throw new InvalidOperationException();
             var request=ScopePlanning.BootstrapRequest(inventoryJson,profile.GetProperty("Tenant").GetString()!,profile.GetProperty("BootstrapClientId").GetString()!,
-                profile.GetProperty("MaxAgeHours").GetInt32(),browser:true).ToTransport();
+                profile.GetProperty("MaxAgeHours").GetInt32(),browser:readCookie==null).ToTransport();
             using var inventory=JsonDocument.Parse(inventoryJson);string expectedTenant=inventory.RootElement.GetProperty("TenantFingerprint").GetString()!;
             string directory=Path.Combine(ProfileStore.Root(root,false),name);
             string lockPath=PrivateFiles.Resolve(Path.Combine(directory,".operation.lock"),false);
@@ -93,6 +111,13 @@ public static class ProfileLogin
                         created=old[0].Value.GetProperty("CreatedAt").GetString()!;
                     }
                 }
+                if(storage!="Memory" && readCookie!=null)
+                {
+                    var borrowed=readCookie();
+                    if(borrowed.Cookie==null || borrowed.Cookie.Length is <1 or >65536 || borrowed.Name is not ("ESTSAUTH" or "ESTSAUTHPERSISTENT"))throw new InvalidOperationException();
+                    cookie=borrowed.Cookie.Copy();cookie.MakeReadOnly();cookieName=borrowed.Name;
+                    cancellation.ThrowIfCancellationRequested();
+                }
                 var next=JsonNode.Parse(initial)!.AsObject();next["Tenant"]=tenant;next["ExpectedTenantFingerprint"]=claims.TenantFingerprint;
                 next["ExpectedPrincipalFingerprint"]=claims.PrincipalFingerprint;next["Revision"]=Guid.NewGuid().ToString();next["UpdatedAt"]=now.ToString("o");
                 string configuration=next.ToJsonString(new JsonSerializerOptions{WriteIndented=true});ProfilePolicy.Validate(configuration,name);
@@ -108,7 +133,7 @@ public static class ProfileLogin
                             if(!item.Name.Equals(name,StringComparison.OrdinalIgnoreCase)){writer.WritePropertyName(item.Name);item.Value.WriteTo(writer);}
                         writer.WritePropertyName(name);writer.WriteStartObject();writer.WriteString("TenantFingerprint",claims.TenantFingerprint);writer.WriteString("PrincipalFingerprint",claims.PrincipalFingerprint);
                         writer.WriteString("Revision",Guid.NewGuid().ToString());writer.WriteString("CreatedAt",created);writer.WriteString("LastConfirmedAt",now.ToString("o"));writer.WriteString("RetainUntil",retained);
-                        writer.WriteNull("Cookie");writer.WriteString("CookieName","ESTSAUTH");writer.WriteStartObject("Tokens");writer.WriteEndObject();writer.WriteEndObject();writer.WriteEndObject();writer.WriteEndObject();
+                        if(cookie==null)writer.WriteNull("Cookie");else writer.WriteString("Cookie",new System.Net.NetworkCredential("",cookie).Password);writer.WriteString("CookieName",cookieName);writer.WriteStartObject("Tokens");writer.WriteEndObject();writer.WriteEndObject();writer.WriteEndObject();writer.WriteEndObject();
                     });
                     VaultRecordPolicy.Validate(updated);envelope=VaultEnvelope.Encrypt(updated,key);
                     cancellation.ThrowIfCancellationRequested();
@@ -135,14 +160,14 @@ public static class ProfileLogin
                 // A disk failure after the vault commit fails closed; same-account login can recover.
                 string profilePath=PrivateFiles.Resolve(Path.Combine(directory,"profile.json"),false);
                 File.Move(temporary,profilePath,true);temporary=null;
-                return new ProfileLoginResult(name,tenant,storage,storage=="Memory"?"NotPersisted":"Available",retained,request.ClientId,extras);
+                return new ProfileLoginResult(name,tenant,storage,storage=="Memory"?"NotPersisted":"Available",retained,request.ClientId,extras,CookieSaved:storage!="Memory" && cookie!=null);
             }
         }
         catch(OperationCanceledException){throw;}
         catch{throw new InvalidOperationException("Profile login failed. Details suppressed.");}
         finally
         {
-            previous?.Dispose();key?.Dispose();
+            previous?.Dispose();key?.Dispose();cookie?.Dispose();
             foreach(var bytes in new[]{before,plaintext,updated,envelope,configurationBytes})if(bytes!=null)CryptographicOperations.ZeroMemory(bytes);
             if(temporary!=null){try{File.Delete(temporary);}catch{}}
         }

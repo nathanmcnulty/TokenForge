@@ -301,7 +301,9 @@ public static class SoftwarePasskeyEnrollment
             byte[] auth=SHA256.HashData(Encoding.ASCII.GetBytes("login.microsoft.com")).Concat(new byte[]{0x45,0,0,0,0}).Concat(new byte[16]).Concat(new byte[]{0,32}).Concat(id).Concat(cose).ToArray();
             byte[] client=JsonSerializer.SerializeToUtf8Bytes(new{type="webauthn.create",challenge=Encode(Encoding.ASCII.GetBytes(challenge)),origin="https://login.microsoft.com",crossOrigin=false});ClientData=Encode(client);
             using var batch=ECDsa.Create(ECCurve.NamedCurves.nistP256);
-            var certificate=new CertificateRequest("CN=TokenForge Lab Software, OU=Authenticator Attestation, O=TokenForge, C=US",batch,HashAlgorithmName.SHA256);
+            var subject=new X500DistinguishedNameBuilder();subject.AddCountryOrRegion("US");subject.AddOrganizationName("TokenForge");subject.AddOrganizationalUnitName("Authenticator Attestation");subject.AddCommonName("TokenForge Lab Software");
+            var certificate=new CertificateRequest(subject.Build(),batch,HashAlgorithmName.SHA256);
+            certificate.CertificateExtensions.Add(new X509BasicConstraintsExtension(false,false,0,true));
             using var cert=certificate.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1),DateTimeOffset.UtcNow.AddYears(1));
             byte[] signed=auth.Concat(SHA256.HashData(client)).ToArray();byte[] signature=batch.SignData(signed,HashAlgorithmName.SHA256,DSASignatureFormat.Rfc3279DerSequence);
             try{Attestation=Encode(Cbor(new Dictionary<object,object>{{"fmt","packed"},{"attStmt",new Dictionary<object,object>{{"alg",-7},{"sig",signature},{"x5c",new object[]{cert.RawData}}}},{"authData",auth}}));}

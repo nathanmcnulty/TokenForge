@@ -81,6 +81,12 @@ by TokenForge until confirmed; the command does not automatically retry, delete 
 method, overwrite its local recovery file, or fabricate a receipt. Successful publication
 remains reported even if temporary-file cleanup subsequently fails.
 
+The lab certificate uses an X.509 v3 leaf with `CA=false` Basic Constraints and explicit
+subject encodings required by the [packed-attestation certificate format](https://www.w3.org/TR/webauthn-2/#sctn-packed-attestation-cert-requirements).
+Its `TokenForge` subject is a lab identifier, not verified manufacturer identity. The
+format correction is checked independently with certificate and ASN.1 decoding; it has
+not been live validated and does not explain the earlier unresolved server results.
+
 The receipt is local evidence of the completed enrollment response, not a signature from
 Microsoft or a hardware attestation. It does not revoke a remote method when deleted.
 Deleting the local files alone can lose a registered credential; manage remote methods

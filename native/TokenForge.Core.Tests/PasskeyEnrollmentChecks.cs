@@ -1,3 +1,4 @@
+using System.Formats.Asn1;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
@@ -95,7 +96,16 @@ static class PasskeyEnrollmentChecks
                             using var keyJson=JsonDocument.Parse(File.ReadAllBytes(output));using var credential=ECDsa.Create();byte[] privateDer=Convert.FromBase64String(keyJson.RootElement.GetProperty("privateKey").GetString()!);
                             try{credential.ImportPkcs8PrivateKey(privateDer,out int used);check(used==privateDer.Length);var point=credential.ExportParameters(false);check(point.Q.X!.SequenceEqual((byte[])cose[-2]) && point.Q.Y!.SequenceEqual((byte[])cose[-3]));}finally{CryptographicOperations.ZeroMemory(privateDer);}
                             byte[] client=Decode(verifyData.RootElement.GetProperty("ClientDataJson").GetString()!);using var cd=JsonDocument.Parse(client);check(cd.RootElement.GetProperty("origin").GetString()=="https://login.microsoft.com" && cd.RootElement.GetProperty("type").GetString()=="webauthn.create" && cd.RootElement.GetProperty("challenge").GetString()==Encode(Encoding.ASCII.GetBytes(serverChallenge)));
-                            using var certificate=X509CertificateLoader.LoadCertificate((byte[])((object[])statement["x5c"])[0]);using var batch=certificate.GetECDsaPublicKey()!;check(batch.VerifyData(auth.Concat(SHA256.HashData(client)).ToArray(),(byte[])statement["sig"],HashAlgorithmName.SHA256,DSASignatureFormat.Rfc3279DerSequence));
+                            using var certificate=X509CertificateLoader.LoadCertificate((byte[])((object[])statement["x5c"])[0]);
+                            check(certificate.Version==3);
+                            var constraints=certificate.Extensions.OfType<X509BasicConstraintsExtension>().SingleOrDefault();check(constraints!=null && !constraints.CertificateAuthority && !constraints.HasPathLengthConstraint);
+                            var subject=new AsnReader(certificate.SubjectName.RawData,AsnEncodingRules.DER).ReadSequence();var attributes=new Dictionary<string,(UniversalTagNumber,string)>();
+                            while(subject.HasData){var set=subject.ReadSetOf();var attribute=set.ReadSequence();string oid=attribute.ReadObjectIdentifier();var tag=(UniversalTagNumber)attribute.PeekTag().TagValue;attributes.Add(oid,(tag,attribute.ReadCharacterString(tag)));attribute.ThrowIfNotEmpty();set.ThrowIfNotEmpty();}
+                            check(attributes["2.5.4.6"]==(UniversalTagNumber.PrintableString,"US"));
+                            check(attributes["2.5.4.10"]==(UniversalTagNumber.UTF8String,"TokenForge"));
+                            check(attributes["2.5.4.11"]==(UniversalTagNumber.UTF8String,"Authenticator Attestation"));
+                            check(attributes["2.5.4.3"]==(UniversalTagNumber.UTF8String,"TokenForge Lab Software"));
+                            using var batch=certificate.GetECDsaPublicKey()!;check(batch.VerifyData(auth.Concat(SHA256.HashData(client)).ToArray(),(byte[])statement["sig"],HashAlgorithmName.SHA256,DSASignatureFormat.Rfc3279DerSequence));
                         }
                         if(scenario=="ChangedRecovery")File.WriteAllText(output,"synthetic external replacement");
                         if(scenario=="ReceiptAlreadyExists")File.WriteAllText(output+".registered.json","synthetic external receipt");

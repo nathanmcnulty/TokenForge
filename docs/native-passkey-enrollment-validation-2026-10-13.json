@@ -69,7 +69,11 @@
     "FullNativeChecksAfterBufferAndPortabilityFixes": 1182,
     "FocusedEnrollmentChecksAfterDiagnosticStages": 217,
     "FullNativeChecksAfterDiagnosticStages": 1193,
-    "DiagnosticStagesLiveValidated": false
+    "DiagnosticStagesLiveValidated": false,
+    "FocusedEnrollmentChecksAfterCertificateFix": 223,
+    "FullNativeChecksAfterCertificateFix": 1199,
+    "PostMergePowerShellBoundaryAndBootstrapTestsPassed": 22,
+    "PostMergePowerShellBoundaryAndBootstrapTestsSkipped": 1
   },
   "Interpretation": "Linux experiment only. This records an incomplete live enrollment and preserved recovery material, not a shipped capability or successful remote registration. Later source fixes require their own live proof. No hardware presence, trusted manufacturer attestation, general authorization or JWT signature validation is established.",
   "CorrectedNativeAttempt": {
@@ -100,5 +104,16 @@
       "NoRegistrationRequests": true,
       "ReceiptFabricated": false
     }
+  },
+  "CertificateFormatCorrection": {
+    "MissingBasicConstraintsRegressionFailedBeforeFix": true,
+    "CertificateVersion": 3,
+    "CertificateAuthority": false,
+    "CountryEncoding": "PrintableString",
+    "OrganizationOrganizationalUnitCommonNameEncoding": "UTF8String",
+    "IndependentCertificateAndAsn1Checks": true,
+    "TrustedManufacturerIdentityClaimed": false,
+    "LiveValidated": false,
+    "CauseOfPreviousLiveFailuresConfirmed": false
   }
 }

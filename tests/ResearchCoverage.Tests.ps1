@@ -6,8 +6,8 @@ BeforeAll {
 Describe 'Research coverage temporal and native parity' {
  BeforeEach {
   $state=Join-Path ($TestDrive -replace '^/var/','/private/var/') ([guid]::NewGuid().ToString())
-  $null=New-Item -ItemType Directory $state
-  if(-not $IsWindows){[IO.File]::SetUnixFileMode($state,[IO.UnixFileMode]448)}
+  # Use the existing private-path initializer so Windows receives a protected owner ACL.
+  $null=Get-TokenForgeFlowEvidence (Join-Path $state missing.json)
   $metadata=Join-Path $state applications.json;$scope=Join-Path $state scopes.json;$flow="$scope.flows.json"
   $cookie=ConvertTo-SecureString synthetic -AsPlainText -Force
   $app=[pscustomobject]@{AppId=$client;Name='2026-01-01T00:00:00+02:00';Registration='Present';Ownership='VerifiedMicrosoftOwner';AccountEnabled=$true;RedirectUris=@('https://example.test/callback');PreferredRedirectUri='https://example.test/callback';IdentifierUris=@();PublicClient=$true;PublishedGrants=@();DelegatedScopeDefinitions=@();IsResourceCandidate=$false;Sources=@();OwnerTenantId='f8cdef31-a31e-4b4a-93e4-5f571e91255a'}

@@ -66,7 +66,10 @@
     "BootstrapReleaseTestsSkipped": 1,
     "FullNativeChecksAfterFinalizationChanges": 1181,
     "FocusedEnrollmentChecksAfterBufferAndPortabilityFixes": 206,
-    "FullNativeChecksAfterBufferAndPortabilityFixes": 1182
+    "FullNativeChecksAfterBufferAndPortabilityFixes": 1182,
+    "FocusedEnrollmentChecksAfterDiagnosticStages": 217,
+    "FullNativeChecksAfterDiagnosticStages": 1193,
+    "DiagnosticStagesLiveValidated": false
   },
   "Interpretation": "Linux experiment only. This records an incomplete live enrollment and preserved recovery material, not a shipped capability or successful remote registration. Later source fixes require their own live proof. No hardware presence, trusted manufacturer attestation, general authorization or JWT signature validation is established.",
   "CorrectedNativeAttempt": {

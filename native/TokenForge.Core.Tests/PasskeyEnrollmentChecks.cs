@@ -45,6 +45,12 @@ static class PasskeyEnrollmentChecks
             reject(()=>Call("Finalization",FinalPage("{\"Canary\":\"a\",\"Canary\":\"b\"}",finalizationUrl),"AQ","synthetic","synthetic"));
             reject(()=>Call("Finalization",FinalPage("{\"Canary\":\"a\",\"CredentialId\":\"wrong\"}",finalizationUrl),"AQ","synthetic","synthetic"));
             reject(()=>Call("Finalization",FinalPage(ctx,finalizationUrl)+FinalPage(ctx,finalizationUrl),"AQ","synthetic","synthetic"));
+            var verifyResponse=typeof(SoftwarePasskeyEnrollment).GetMethod("VerifyResponse",BindingFlags.NonPublic|BindingFlags.Static)!.CreateDelegate<Verification>();
+            foreach(var failure in new[]{("{private malformed","VerificationResponse"),("{\"ErrorCode\":4,\"private\":\"secret\"}","VerificationServiceStatus"),("{\"ErrorCode\":0,\"VerificationState\":3}","VerificationState"),("{\"ErrorCode\":0,\"VerificationState\":2}","VerifiedCredentialMatch"),("{\"ErrorCode\":0,\"VerificationState\":2,\"DataUpdates\":{\"FidoDevices\":{\"CredentialId\":\"wrong\",\"DisplayName\":\"Test\"}}}","VerifiedCredentialMatch")})
+            {
+                string failureStage="VerificationTransport";reject(()=>verifyResponse(failure.Item1,"AQ","Test",ref failureStage));check(failureStage==failure.Item2);
+            }
+            string successStage="VerificationTransport";verifyResponse("{\"ErrorCode\":0,\"VerificationState\":2,\"DataUpdates\":{\"FidoDevices\":{\"CredentialId\":\"AQ2\",\"DisplayName\":\"Test\"}}}","AQ","Test",ref successStage);check(successStage=="VerifiedCredentialMatch");
             foreach(string scenario in new[]{"Success","RefreshIdentityChanged","ProvisionTimeout","PostbackMalformed","VerifyAmbiguous","Cancellation","UnsafeProvision","UnsafePostback","VerifyMismatch","ChangedRecovery","ReceiptAlreadyExists","OversizedChallenge"})
             {
                 string serverChallenge=scenario=="Success"?new string('x',5198):scenario=="OversizedChallenge"?new string('x',16385):"synthetic-challenge";
@@ -142,6 +148,7 @@ static class PasskeyEnrollmentChecks
         }
         object result=Read();if(position!=bytes.Length)throw new InvalidOperationException();return result;
     }
+    delegate void Verification(string body,string credential,string name,ref string stage);
     delegate void Publication(string path,byte[] bytes,ref bool published,Action<string>? cleanup);
     static HttpResponseMessage Response(string content,HttpStatusCode status=HttpStatusCode.OK)=>new(status){Content=new StringContent(content)};
     sealed class Handler(Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>> send):HttpMessageHandler

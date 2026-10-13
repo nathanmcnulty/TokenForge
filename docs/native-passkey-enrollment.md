@@ -67,6 +67,12 @@ A receipt for different key bytes is rejected. Legacy passkey files without an e
 marker continue to use their existing format. The authentication validation driver copies
 and checks the private pair when supplied through its local `-PasskeyPath` option.
 
+Verification failures report fixed local stages: `VerificationTransport`, `VerificationResponse`,
+`VerificationServiceStatus`, `VerificationState`, or `VerifiedCredentialMatch`. These separate
+transport, parsing, service rejection, terminal-state and exact-credential checks without
+returning server bodies, error messages, or credential values. The earlier live reports
+used the broad `Verification` stage; their exact cause cannot be inferred retrospectively.
+
 If enrollment fails before recovery publication, the error reports `RecoveryFileSaved=false`.
 If it fails after publication, preserve the recovery key and check the account's Security
 info before doing anything else. A timeout or malformed response can leave a remotely

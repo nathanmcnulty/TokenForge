@@ -120,18 +120,26 @@ public static class SoftwarePasskeyEnrollment
             stage="SessionReauthorization";
             using var reauthorized=Authorize(http,current,clientSession,context,cancellation);context=AuthorizedContext(reauthorized.RootElement);
             ValidateSelf(current,expectedTenant,expectedPrincipal);
-            stage="Verification";cancellation.ThrowIfCancellationRequested();
+            stage="VerificationTransport";cancellation.ThrowIfCancellationRequested();
             string verification=JsonSerializer.Serialize(new{Name=name,Canary=canary,AttestationObject=material.Attestation,ClientDataJson=material.ClientData,CredentialId=material.Id,ClientExtensionResults=material.Extensions,PostInfo=postInfo,AAGuid=Guid.Empty.ToString(),CredentialDeviceType="singleDevice"});
             using var verify=ApiRequest("authenticationmethods/verify",null,context,clientSession,JsonSerializer.Serialize(new{Type=18,VerificationData=verification}));
-            using var result=Json(Send(http,verify,"Verify",tenant,cancellation));NoError(result.RootElement);
-            if(!result.RootElement.TryGetProperty("VerificationState",out var state) || state.GetInt32()!=2)throw new InvalidOperationException();
-            // A terminal response must identify the exact new credential; success alone is insufficient.
-            var devices=result.RootElement.GetProperty("DataUpdates").GetProperty("FidoDevices");
-            if(!VerifiedDevice(devices,material.Id,name))throw new InvalidOperationException();
+            VerifyResponse(Send(http,verify,"Verify",tenant,cancellation),material.Id,name,ref stage);
             stage="RecoveryConfirmation";material.Confirm(output);
             return new SoftwarePasskeyEnrollmentResult(true,true);
         }
         finally{renewed?.Dispose();}
+    }
+    // Fixed local stages distinguish failures without projecting remote content.
+    private static void VerifyResponse(string body,string credential,string name,ref string stage)
+    {
+        stage="VerificationResponse";using var result=Json(body);
+        stage="VerificationServiceStatus";NoError(result.RootElement);
+        stage="VerificationState";
+        if(!result.RootElement.TryGetProperty("VerificationState",out var state) || state.GetInt32()!=2)throw new InvalidOperationException();
+        stage="VerifiedCredentialMatch";
+        // A terminal response must identify the exact new credential; success alone is insufficient.
+        var devices=result.RootElement.GetProperty("DataUpdates").GetProperty("FidoDevices");
+        if(!VerifiedDevice(devices,credential,name))throw new InvalidOperationException();
     }
     private sealed record FinalizationData(string Canary,string PostInfo);
     private static FinalizationData Finalization(string html,string credential,string clientData,string attestation)

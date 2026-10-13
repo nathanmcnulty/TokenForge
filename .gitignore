@@ -12,3 +12,9 @@ dist/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+
+# Local software-authenticator recovery material and cooperative locks.
+*.passkey
+*.passkey.registered.json
+*.enrollment.lock
+testResults.xml

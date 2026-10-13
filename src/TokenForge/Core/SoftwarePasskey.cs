@@ -24,6 +24,7 @@ public sealed class SoftwarePasskey : IDisposable
     private readonly string credential, handle, username;
     private SoftwarePasskey(ECDsa key,string credential,string handle,string username)
     {this.key=key;this.credential=credential;this.handle=handle;this.username=username;}
+    internal string Username=>username;
     internal string FileHash {get;private set;} = "";
     internal string ReceiptCredentialId {get;private set;} = "";
     public static SoftwarePasskey Open(string path)=>OpenCore(path,false);

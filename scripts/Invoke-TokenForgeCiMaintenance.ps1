@@ -18,38 +18,6 @@ $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1') -Force
 . (Join-Path $PSScriptRoot 'TokenForgeCiState.ps1')
 . (Join-Path $PSScriptRoot 'TokenForgeCiAuthentication.ps1')
-function Assert-MaintenanceCatalog($Catalog) {
- Assert-TfCiKeys $Catalog @('Format','SchemaVersion','CreatedAt','UpdatedAt','Applications','Origins','Runs')
- # The module's reader validates format/IDs; this envelope additionally rejects
- # credential fields and account namespaces before any restored state is reused.
- $check={param($value)
-  if($value -is [Collections.IDictionary]){
-   foreach($key in $value.Keys){
-    if($key -iin @('AccessToken','RefreshToken','IdToken','EstsAuth','EstsAuthPersistent','AuthCookie','Password','PrivateKey','ClientSecret','Assertion','RawSignIns','RawResponse','Headers')){throw 'Credential fields are not maintenance metadata.'}
-    & $check $value[$key]
-   }
-  }elseif($value -is [array]){foreach($item in $value){& $check $item}}
-  elseif($null -ne $value -and $value -isnot [string] -and $value -isnot [ValueType]){throw 'Unsupported maintenance metadata value.'}
- }; & $check $Catalog
- foreach($app in $Catalog.Applications.Values){foreach($record in $app.Records.Values){
-  if($record.Kind -cnotin @('Discovery','Inventory','SignIns','RegistrationAttempts','ScopeObservations','FlowAttempts')){throw 'Unknown private metadata kind.'}
-  if($record.TenantFingerprint -and $record.TenantFingerprint -cne $env:TOKENFORGE_TENANT_FINGERPRINT){throw 'Private catalog tenant mismatch.'}
-  if($record.PrincipalFingerprint -and $record.PrincipalFingerprint -cne $env:TOKENFORGE_PRINCIPAL_FINGERPRINT){throw 'Private catalog observer mismatch.'}
- }}
-}
-function Assert-MaintenanceGrants($History) {
- if($History -isnot [array] -or $History.Count -gt 10000){throw 'Invalid grant history.'}
- foreach($snapshot in $History){
-  Assert-TfCiKeys $snapshot @('FirstSeenAt','LastSeenAt','Grants')
-  if(($snapshot.FirstSeenAt -isnot [string] -and $snapshot.FirstSeenAt -isnot [datetime]) -or ($snapshot.LastSeenAt -isnot [string] -and $snapshot.LastSeenAt -isnot [datetime])){throw 'Invalid grant date types.'}
-  if([DateTimeOffset]$snapshot.FirstSeenAt -gt [DateTimeOffset]$snapshot.LastSeenAt -or [DateTimeOffset]$snapshot.LastSeenAt -gt [DateTimeOffset]::UtcNow.AddMinutes(5) -or $snapshot.Grants -isnot [array]){throw 'Invalid grant snapshot.'}
-  foreach($grant in $snapshot.Grants){
-   Assert-TfCiKeys $grant @('ClientId','ResourceId','Scopes','PrincipalFingerprint','ConsentType','AppliesToCurrentPrincipal','Evidence')
-   foreach($field in @('ClientId','ResourceId')){$id=[guid]::Empty;if($grant[$field] -isnot [string] -or -not [guid]::TryParse($grant[$field],[ref]$id) -or $id -eq [guid]::Empty){throw 'Invalid grant application ID.'}}
-   if($grant.Scopes -isnot [array] -or @($grant.Scopes|Where-Object {$_ -isnot [string] -or $_.Length -gt 256}).Count -or ($null -ne $grant.PrincipalFingerprint -and ($grant.PrincipalFingerprint -isnot [string] -or $grant.PrincipalFingerprint -notmatch '^[a-f0-9]{64}$')) -or $grant.ConsentType -cnotin @('AllPrincipals','Principal') -or $grant.AppliesToCurrentPrincipal -isnot [bool] -or $grant.Evidence -cne 'TenantConfiguredGrant'){throw 'Invalid grant metadata.'}
-  }
- }
-}
 $tempRoot=[IO.Path]::GetTempPath()
 if($IsMacOS -and $tempRoot.StartsWith('/var/',[StringComparison]::Ordinal)){$tempRoot='/private'+$tempRoot}
 $state=Join-Path $tempRoot ('TokenForge-maintenance-'+[guid]::NewGuid())
@@ -71,14 +39,13 @@ try{
   if($file.PSIsContainer -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -gt 134217757){throw 'Invalid encrypted maintenance file.'}
   $plain=Unprotect-TfCiCheckpoint ([IO.File]::ReadAllBytes($file.FullName)) $env:TOKENFORGE_CHECKPOINT_KEY $context
   try{
-   $saved=[Text.Encoding]::UTF8.GetString($plain)|ConvertFrom-Json -AsHashtable -Depth 100
-   Assert-TfCiKeys $saved @('SchemaVersion','Context','Metadata','GrantHistory','LastRun')
-   if($saved.SchemaVersion -ne 1 -or $saved.Context -cne $context){throw 'Invalid maintenance envelope.'}
-   $grantHistory=$saved.GrantHistory;Assert-MaintenanceGrants $grantHistory
+   $savedJson=[Text.UTF8Encoding]::new($false,$true).GetString($plain)
+   $null=[TokenForge.Core.MaintenanceSnapshot]::ValidateDocument($savedJson,$env:TOKENFORGE_TENANT_FINGERPRINT,$env:TOKENFORGE_PRINCIPAL_FINGERPRINT)
+   $saved=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson($savedJson)
+   $grantHistory=$saved.GrantHistory
    $saved.Metadata|ConvertTo-Json -Depth 100|Set-Content -LiteralPath $metadata
   }finally{[Security.Cryptography.CryptographicOperations]::ZeroMemory($plain)}
   if(-not $IsWindows){[IO.File]::SetUnixFileMode($metadata,[IO.UnixFileMode]384)}
-  $restored=Get-TokenForgeApplicationMetadata $metadata;Assert-MaintenanceCatalog $restored
  }
  $prior=if(Test-Path $metadata){Get-TokenForgeApplicationMetadata $metadata}else{$null}
  try{
@@ -101,11 +68,10 @@ try{
    $orderedGrants=@($inventory.TenantGrants|ForEach-Object {
     [ordered]@{ClientId=$_.ClientId;ResourceId=$_.ResourceId;Scopes=@($_.Scopes|Sort-Object -Unique);PrincipalFingerprint=$_.PrincipalFingerprint;ConsentType=$_.ConsentType;AppliesToCurrentPrincipal=$_.AppliesToCurrentPrincipal;Evidence=$_.Evidence}
    }|Sort-Object {[string]$_.ClientId},{[string]$_.ResourceId},{[string]$_.ConsentType},{[string]$_.PrincipalFingerprint},{($_.Scopes -join ' ')})
-   $grants=ConvertTo-Json -InputObject $orderedGrants -Depth 100|ConvertFrom-Json -AsHashtable -NoEnumerate
+   $grants=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((ConvertTo-Json -InputObject $orderedGrants -Depth 100))
    # Hash only the grant set, retaining dates of each distinct complete snapshot.
    if($grantHistory.Count -and (Get-TfCiHash $grantHistory[-1].Grants) -ceq (Get-TfCiHash $grants)){$grantHistory[-1].LastSeenAt=$inventory.CapturedAt}
    else{$grantHistory+=@{FirstSeenAt=$inventory.CapturedAt;LastSeenAt=$inventory.CapturedAt;Grants=$grants}}
-   Assert-MaintenanceGrants $grantHistory
   }
  }catch{$lastRun.Inventory='Failed'}
  if($SkipSignIns){$lastRun.SignIns='Skipped'}elseif($lastRun.Inventory -ne 'Complete'){$lastRun.SignIns='SkippedInventoryUnavailable'}else{
@@ -124,10 +90,10 @@ try{
   # Only the projected application catalog is serialized; never the token object,
   # raw sign-in events, browser state, profile, cookie, or authentication directories.
   if($graph -and (Test-Path -LiteralPath $metadata)){
-   $catalog=Get-TokenForgeApplicationMetadata $metadata;Assert-MaintenanceCatalog $catalog
+   $catalog=Get-TokenForgeApplicationMetadata $metadata
    $lastRun.FinishedAt=[DateTimeOffset]::UtcNow.ToString('o')
-   Assert-MaintenanceGrants $grantHistory
    $payload=@{SchemaVersion=1;Context=$context;Metadata=$catalog;GrantHistory=$grantHistory;LastRun=$lastRun}|ConvertTo-Json -Depth 100 -Compress
+   $null=[TokenForge.Core.MaintenanceSnapshot]::ValidateDocument($payload,$env:TOKENFORGE_TENANT_FINGERPRINT,$env:TOKENFORGE_PRINCIPAL_FINGERPRINT)
    $plain=[Text.Encoding]::UTF8.GetBytes($payload)
    try{
     $blob=Protect-TfCiCheckpoint $plain $env:TOKENFORGE_CHECKPOINT_KEY $context

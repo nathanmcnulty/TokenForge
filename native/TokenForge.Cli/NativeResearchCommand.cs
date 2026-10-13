@@ -10,13 +10,15 @@ internal static class NativeResearchCommand
         for(int i=2;i<args.Length;i++) {
             string option=args[i];if(!seen.Add(option))throw new InvalidOperationException();
             if(option is "--json" or "--summary-only")continue;
-            if(option is not ("--metadata-path" or "--flow-path" or "--state-path" or "--profile" or "--root" or "--tenant-fingerprint" or "--principal-fingerprint" or "--app" or "--max-age-hours") ||
+            if(option is not ("--maintenance-path" or "--metadata-path" or "--flow-path" or "--state-path" or "--profile" or "--root" or "--tenant-fingerprint" or "--principal-fingerprint" or "--app" or "--max-age-hours") ||
                 ++i==args.Length || args[i].StartsWith('-') || args[i].Length is <1 or >4096)throw new InvalidOperationException();
             options[option]=args[i];
         }
         string? state=options.GetValueOrDefault("--state-path"),tenant=options.GetValueOrDefault("--tenant-fingerprint"),principal=options.GetValueOrDefault("--principal-fingerprint");
         if((tenant==null)!=(principal==null))throw new InvalidOperationException();
-        if(state==null && !options.ContainsKey("--metadata-path")) {
+        bool maintenance=options.ContainsKey("--maintenance-path");
+        if(maintenance && (tenant==null || options.Keys.Any(x=>x is "--metadata-path" or "--flow-path" or "--state-path" or "--profile" or "--root")))throw new InvalidOperationException();
+        if(!maintenance && state==null && !options.ContainsKey("--metadata-path")) {
             using var profile=JsonDocument.Parse(ProfileStore.Read(options.GetValueOrDefault("--profile") ?? "default",options.GetValueOrDefault("--root")));
             state=profile.RootElement.GetProperty("StatePath").GetString();
             if(tenant==null) {
@@ -25,9 +27,10 @@ internal static class NativeResearchCommand
             }
         }
         string Choose(string name)=>Path.Combine(state!,File.Exists(Path.Combine(state!,name+".sqlite")) ? name+".sqlite" : name+".json");
-        string metadata=options.GetValueOrDefault("--metadata-path") ?? Choose("applications");
+        string? metadata=maintenance ? null : options.GetValueOrDefault("--metadata-path") ?? Choose("applications");
         string catalogJson;
-        if(metadata.EndsWith(".sqlite",StringComparison.OrdinalIgnoreCase)) {
+        if(maintenance)catalogJson=MaintenanceSnapshot.ReadCatalog(options["--maintenance-path"],tenant!,principal!);
+        else if(metadata!.EndsWith(".sqlite",StringComparison.OrdinalIgnoreCase)) {
             using var store=new ApplicationCatalogStore(metadata,true);catalogJson=store.Export();
         } else catalogJson=NativeScopeCommand.ReadJson(metadata,128*1024*1024);
         string? flow=options.GetValueOrDefault("--flow-path") ?? (state==null ? null : Choose("flows"));

@@ -1,0 +1,69 @@
+{
+  "SchemaVersion": 1,
+  "Date": "2026-10-13",
+  "Version": "0.46.0",
+  "EvidenceLevel": "LocalBuildAndHistoricalSnapshotRecovery",
+  "NativeBuild": {
+    "Succeeded": true,
+    "Warnings": 0
+  },
+  "SharedCoreChecks": 1083,
+  "SnapshotBackupReportTests": {
+    "Passed": 85,
+    "Failed": 0,
+    "Skipped": 0
+  },
+  "CiMaintenanceTests": {
+    "Passed": 12,
+    "Failed": 0,
+    "Skipped": 0
+  },
+  "ReleasePackageGuardTests": {
+    "Passed": 31,
+    "Failed": 0,
+    "Skipped": 0
+  },
+  "CredentialBootstrapTests": {
+    "Passed": 6,
+    "Failed": 0,
+    "Skipped": 1,
+    "SkippedCase": "Packaged DLL check requires the final bundle; hosted packaging remains a gate."
+  },
+  "ExistingSnapshots": [
+    {
+      "Alias": "nora",
+      "Passed": true,
+      "Authenticated": true,
+      "Restored": true,
+      "Applications": 5515,
+      "CatalogRuns": 4,
+      "GrantSnapshots": 1,
+      "FreshAuthenticationPerformed": false,
+      "OriginalHashesUnchanged": true
+    },
+    {
+      "Alias": "secadmin",
+      "Passed": true,
+      "Authenticated": true,
+      "Restored": true,
+      "Applications": 5537,
+      "CatalogRuns": 5,
+      "GrantSnapshots": 1,
+      "FreshAuthenticationPerformed": false,
+      "OriginalHashesUnchanged": true
+    }
+  ],
+  "FreshAuthenticationPerformed": false,
+  "TenantWritesPerformed": false,
+  "OriginalInputsModified": false,
+  "NativeFixtureChildren": "PowerShell absent from PATH",
+  "LegacyCompatibility": "Only absent schema-1 SignInFailureReason is accepted as unknown and preserved as absent.",
+  "Boundaries": [
+    "Complete history is validated before inspection counts, restoration or report projection.",
+    "AES-GCM authentication binds the explicit expected observer namespace. It does not establish current API authorization.",
+    "Full plaintext envelope is published as a new private file, never overwritten.",
+    "Cleanup failures distinguish whether destination publication succeeded.",
+    "Byte buffers are cleared; managed JSON strings cannot reliably be cleared.",
+    "Final six-runtime hosted and published-package proof is still required."
+  ]
+}

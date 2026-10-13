@@ -1,5 +1,10 @@
 # Application research catalog
 
+The 0.41 discovery format preserves [per-source claims and conflicts](discovery-source-claims.md).
+It retains alternative published names and owner hints without changing selected ownership
+rules. JSON and SQLite support v1/v2 records. Observation-only refreshes retain content
+hashes. These claims are diagnostic evidence, not consent or ownership proof.
+
 TokenForge tracks application IDs across public datasets, tenant inventory, sign-ins, registration attempts, and token probes. `applications.json` is the portable metadata ledger; version 0.14 adds a [primary SQLite application catalog](sqlite-application-catalog.md) for private maintenance. It records supported attributes, source, observation dates, and changes. This ledger is diagnostic: registration and token acquisition still require independently verified tenant metadata.
 
 ## The research loop
@@ -73,3 +78,5 @@ JSON files have a 128 MiB limit and use locked atomic writes. Version 0.13 adds 
 The [sanitized live report](research-catalog-validation-2026-10-06.json) records Nora and secadmin runs against the lab tenant. Each inventory contained 5,522 rows, representing 5,521 nonempty unique application IDs; empty placeholders are excluded from the ledger. Four registered Microsoft clients were tested for Graph with one callback each and all three implemented protocols: 12 terminal cells per account, seven matched successes and 17 failures overall. Both final exact-plan resumes returned zero observations and left attempt counts and flow files unchanged. Tokens/cookies were kept in memory and disposed; only private diagnostic metadata was saved.
 
 Secadmin's 24-hour sign-in scan found 205 client IDs, 13 absent from inventory. Nora's sign-in and registration calls returned HTTP 403. A single selected published missing registration candidate returned HTTP 400 for secadmin; both registration outcomes were linked into the metadata catalog. This run demonstrates failure checkpointing, not successful service-principal creation. Registration creation/ownership/rollback paths also have offline tests. This is a bounded sample, not an exhaustive verification of every catalog ID or authentication flow.
+
+Development version 0.42 adds [native research reporting](native-research-coverage.md), shared with PowerShell, including source conflicts and UTC latest-plan/attempt selection. It reads complete JSON/SQLite history before filtering and performs no authentication.

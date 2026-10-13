@@ -35,6 +35,13 @@ Native exports go to stdout and contain private diagnostic metadata. Protect red
 
 ## What a transaction preserves
 
+The 0.41 format adds [source claims and conflicts](discovery-source-claims.md).
+V1/v2 JSON remains readable. A successful write upgrades a v1 SQLite marker only after
+validating current records, history, indexes and origin/run relationships in the same
+transaction. Failed input or migration leaves v1 unchanged. Read-only access and ordinary
+exports do not upgrade it. Legacy hashes and history survive; older clients reject v2,
+so update the native executable and module together.
+
 Current records, historical versions, application first/last dates, origin watermarks, snapshot presence, and the run record commit together. Malformed input rolls back the whole update or import. An empty complete discovery, inventory, or sign-in snapshot explicitly marks prior records absent for its origin. Scope, registration, and flow batches never mark omitted pairs absent.
 
 Presence follows the newest origin snapshot independently of attribute observation dates. Older imports cannot restore an app removed by a newer snapshot. A newer absent snapshot can mark an app absent while retaining more recent attributes collected elsewhere. Equal-date row changes retain their input order. Repeated transitions such as A → B → A → B remain separate versions, including when their timestamps are equal.

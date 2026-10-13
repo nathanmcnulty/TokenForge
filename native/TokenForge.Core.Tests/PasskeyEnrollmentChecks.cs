@@ -24,6 +24,12 @@ static class PasskeyEnrollmentChecks
         PrivateFiles.Resolve(Path.Combine(root,".owned"),true);
         try
         {
+            foreach(int allowance in new[]{-1,513})
+            {
+                string absent=Path.Combine(root,"out-of-range-"+allowance+".passkey");
+                reject(()=>SoftwarePasskeyEnrollment.Enroll("absent","{}",absent,"Test",CancellationToken.None,allowance));
+                check(!File.Exists(absent));
+            }
             foreach(string url in new[]{"http://mysignins.microsoft.com/api/post/newfido","https://mysignins.microsoft.com:444/api/post/newfido","https://evil.test/api/post/newfido","https://mysignins.microsoft.com/api/other","https://mysignins.microsoft.com/api/post/newfido#secret","https://mysignins.microsoft.com/api/post/newfido?next=evil","https://mysignins.microsoft.com/api/post/newfido?cid=11111111-1111-1111-1111-111111111111&cid=22222222-2222-2222-2222-222222222222","https://mysignins.microsoft.com/api/post/newfido?mysignins-region=secret%0d%0a"})reject(()=>Call("Target",url,"Postback",Tenant));
             reject(()=>Call("Target","https://login.microsoft.com/22222222-2222-2222-2222-222222222222/fido/create","Provision",Tenant));
             check(((Uri)Call("Target","https://login.microsoft.com/"+Tenant+"/fido/create","Provision",Tenant)).Host=="login.microsoft.com");
@@ -122,7 +128,18 @@ static class PasskeyEnrollmentChecks
                 }
                 else
                 {
-                    reject(()=>Call("Complete",values));
+                    if(scenario=="VerifyAmbiguous")
+                    {
+                        try{Call("Complete",values);throw new InvalidOperationException("Expected HTTP rejection.");}
+                        catch(TargetInvocationException failure)
+                        {
+                            var transport=failure.InnerException!;
+                            check((int)transport.GetType().GetProperty("Status",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(transport)! ==503);
+                            check((string)transport.GetType().GetProperty("Category",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(transport)! =="UnexpectedStatus");
+                            check(!transport.ToString().Contains("private ambiguous body"));
+                        }
+                    }
+                    else reject(()=>Call("Complete",values));
                     bool published=scenario is not ("RefreshIdentityChanged" or "UnsafeProvision" or "UnsafePostback" or "OversizedChallenge");check(File.Exists(output)==published);
                     if(scenario=="ChangedRecovery")check(File.ReadAllText(output)=="synthetic external replacement");
                     if(scenario=="ReceiptAlreadyExists")check(File.ReadAllText(output+".registered.json")=="synthetic external receipt");

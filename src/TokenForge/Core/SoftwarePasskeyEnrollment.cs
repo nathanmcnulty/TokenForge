@@ -13,6 +13,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
+using TokenForge.Core.V0100;
 using TokenForge.Core.V0180;
 using TokenForge.Core.V0220;
 
@@ -23,7 +24,9 @@ public sealed class SoftwarePasskeyEnrollmentException : Exception
 {
     public string Stage {get;}
     public bool RecoveryFileSaved {get;}
-    internal SoftwarePasskeyEnrollmentException(string stage,bool saved):base("Software passkey enrollment failed during "+stage+". Details suppressed. "+(saved?"Preserve the recovery file and check Security info before retrying.":"No recovery key was published.")){Stage=stage;RecoveryFileSaved=saved;}
+    public int? HttpStatus {get;}
+    public string? TransportFailure {get;}
+    internal SoftwarePasskeyEnrollmentException(string stage,bool saved,int? status=null,string? failure=null):base("Software passkey enrollment failed during "+stage+". Details suppressed. "+(saved?"Preserve the recovery file and check Security info before retrying.":"No recovery key was published.")){Stage=stage;RecoveryFileSaved=saved;HttpStatus=status;TransportFailure=failure;}
 }
 
 // Explicit, same-account lab enrollment. No browser automation, remote targeting,
@@ -31,12 +34,13 @@ public sealed class SoftwarePasskeyEnrollmentException : Exception
 public static class SoftwarePasskeyEnrollment
 {
     private const string SelfClient="19db86c3-b2b9-44cc-b339-36da233a3be2", Graph="00000003-0000-0000-c000-000000000000", Bootstrap="14d82eec-204b-4c2f-b7e8-296a70dab67e";
-    public static SoftwarePasskeyEnrollmentResult Enroll(string sourcePath,string identityJson,string outputPath,string displayName="Test",CancellationToken cancellation=default)
+    public static SoftwarePasskeyEnrollmentResult Enroll(string sourcePath,string identityJson,string outputPath,string displayName="Test",CancellationToken cancellation=default,int maximumAdditionalScopes=0)
     {
         string stage="Inputs";bool saved=false;
         using var deadline=CancellationTokenSource.CreateLinkedTokenSource(cancellation);deadline.CancelAfter(TimeSpan.FromMinutes(5));
         try
         {
+            if(maximumAdditionalScopes is <0 or >512)throw new InvalidOperationException();
             if(displayName.Length is <1 or >64 || displayName.Any(char.IsControl) || identityJson.Length>64*1024*1024)throw new InvalidOperationException();
             string output=PrivateFiles.Resolve(outputPath,true);
             if(File.Exists(output) || File.Exists(output+".registered.json") || Path.GetFullPath(sourcePath)==output)throw new InvalidOperationException();
@@ -48,7 +52,10 @@ public static class SoftwarePasskeyEnrollment
             stage="IdentityConfirmation";
             using var graph=OAuthTransport.Cookie(new OAuthRequest{ClientId=Bootstrap,ResourceId=Graph,ResourceUri=Graph,RedirectUri="https://login.microsoftonline.com/common/oauth2/nativeclient",Scopes=new[]{"User.Read"},OAuthScopes=new[]{Graph+"/User.Read"}},session.Cookie,session.CookieName,deadline.Token);
             var claims=graph.TokenClaims;
-            if(claims.TenantFingerprint!=tenantFingerprint || claims.PrincipalFingerprint!=principalFingerprint || claims.ClientId!=Bootstrap || claims.Audience is not (Graph or "https://graph.microsoft.com" or "https://graph.microsoft.com/") || !claims.MatchesPrincipalIdentity(Guid.Parse(ProfileTokenApi.ReadIdentity(graph.AccessToken,deadline.Token))))throw new InvalidOperationException();
+            void ValidateBootstrap()=>TokenPolicy.Validate(claims.TenantFingerprint!,claims.PrincipalFingerprint!,claims.ClientId!,claims.Audience!,tenantFingerprint,principalFingerprint,Bootstrap,Graph,claims.Scopes,new[]{"User.Read"},claims.HasDelegatedScopeClaim,claims.ExpiresAt,graph.ExpiresAt,maximumAdditionalScopes,graph.AdditionalScopes.Length,false,DateTimeOffset.UtcNow);
+            ValidateBootstrap();
+            if(!claims.MatchesPrincipalIdentity(Guid.Parse(ProfileTokenApi.ReadIdentity(graph.AccessToken,deadline.Token))))throw new InvalidOperationException();
+            ValidateBootstrap();
             string tenant=claims.TenantIdentity() ?? throw new InvalidOperationException();
             stage="SelfToken";
             using var self=OAuthTransport.Cookie(new OAuthRequest{ClientId=SelfClient,ResourceId=SelfClient,ResourceUri=SelfClient,RedirectUri="https://mysignins.microsoft.com",Discovery=true,Spa=true,OAuthScopes=new[]{SelfClient+"/.default","offline_access"}},session.Cookie,session.CookieName,deadline.Token);
@@ -58,6 +65,7 @@ public static class SoftwarePasskeyEnrollment
             using var http=new HttpClient(handler){Timeout=Timeout.InfiniteTimeSpan};
             return Complete(http,signer.Username,self,tenant,tenantFingerprint,principalFingerprint,output,displayName,deadline.Token,ref stage,ref saved);
         }
+        catch(EnrollmentTransportException failure){throw new SoftwarePasskeyEnrollmentException(stage,saved,failure.Status,failure.Category);}
         catch{throw new SoftwarePasskeyEnrollmentException(stage,saved);}
     }
     private static FileStream EnrollmentLock(string output)
@@ -253,6 +261,12 @@ public static class SoftwarePasskeyEnrollment
     }
     private static Uri WithQuery(Uri uri,string correlation)
     {var b=new UriBuilder(uri);var q=System.Web.HttpUtility.ParseQueryString(uri.Query);q["cid"]=correlation;if(uri.Host=="mysignins.microsoft.com" && q["mysignins-region"]==null)q["mysignins-region"]="westus2";b.Query=q.ToString();return b.Uri;}
+    private sealed class EnrollmentTransportException : Exception
+    {
+        internal int Status {get;}
+        internal string Category {get;}
+        internal EnrollmentTransportException(int status,string category):base("Enrollment HTTP response rejected."){Status=status;Category=category;}
+    }
     private static string Send(HttpClient http,HttpRequestMessage request,string role,string tenant,CancellationToken cancellation)
     {
         Target(request.RequestUri!.AbsoluteUri,role,tenant);
@@ -261,9 +275,11 @@ public static class SoftwarePasskeyEnrollment
         using var deadline=CancellationTokenSource.CreateLinkedTokenSource(cancellation);deadline.CancelAfter(TimeSpan.FromSeconds(30));deadline.Token.ThrowIfCancellationRequested();
         using var response=http.SendAsync(request,HttpCompletionOption.ResponseHeadersRead,deadline.Token).GetAwaiter().GetResult();
         // Redirects are never followed, including a redirect between two allowed hosts.
-        if(response.StatusCode!=HttpStatusCode.OK || response.Headers.Location!=null || response.Content.Headers.ContentLength>1048576)throw new InvalidOperationException();
+        if(response.Headers.Location!=null)throw new EnrollmentTransportException((int)response.StatusCode,"RedirectRejected");
+        if(response.StatusCode!=HttpStatusCode.OK)throw new EnrollmentTransportException((int)response.StatusCode,"UnexpectedStatus");
+        if(response.Content.Headers.ContentLength>1048576)throw new EnrollmentTransportException((int)response.StatusCode,"ResponseLimit");
         using var stream=response.Content.ReadAsStreamAsync(deadline.Token).GetAwaiter().GetResult();byte[] bytes=new byte[1048577];
-        try{int used=0,count;while((count=stream.ReadAsync(bytes.AsMemory(used),deadline.Token).AsTask().GetAwaiter().GetResult())!=0){used+=count;if(used>1048576)throw new InvalidOperationException();}return Encoding.UTF8.GetString(bytes,0,used);}
+        try{int used=0,count;while((count=stream.ReadAsync(bytes.AsMemory(used),deadline.Token).AsTask().GetAwaiter().GetResult())!=0){used+=count;if(used>1048576)throw new EnrollmentTransportException((int)response.StatusCode,"ResponseLimit");}return Encoding.UTF8.GetString(bytes,0,used);}
         finally{CryptographicOperations.ZeroMemory(bytes);}
     }
     private static OAuthResult ParseSelf(string body)

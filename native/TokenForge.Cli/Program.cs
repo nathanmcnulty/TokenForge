@@ -4,16 +4,18 @@ using TokenForge.Core;
 
 try
 {
-    if(args.Length>=2 && args[0]=="passkey" && args[1]=="enroll")return NativePasskeyCommand.Run(args);
+    if(args.Length>=2 && args[0]=="passkey" && args[1]=="enroll")return NativePasskeyEnrollmentCommand.Run(args);
+    if(args.Length>=2 && args[0]=="passkey" && args[1]=="recover")return NativePasskeyCommand.Run(args);
     if(args.Length>=1 && args[0]=="login" && (args.Contains("--browser",StringComparer.Ordinal) || args.Contains("--passkey-file",StringComparer.Ordinal)))return NativeProfileLoginCommand.Run(args);
     if(args.Length>=2 && args[0]=="token" && args[1]=="get" && NativeProfileTokenCommand.TryRun(args,out var tokenExit))return tokenExit;
     if(args.Length>=2 && args[0]=="scopes" && args[1]=="explain")return NativeScopeCommand.Run(args);
-    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.40.0",AuthenticationDependency="Implicit authentication adapters: PowerShell 7.4+; same-account lab software-passkey enrollment and explicit Memory software-passkey token acquisition: native; browser/software-passkey profile login and persisted profile token get/cache/renewal/storage: native; scopes explain, profile create/show/forget-key/inspect-vault, logout, research backup and token acquire including system-browser PKCE and local software-passkey authentication: native"}));return 0;}
+    if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version="0.45.0",AuthenticationDependency="Implicit authentication adapters: PowerShell 7.4+; explicit Memory software-passkey token acquisition: native; browser/software-passkey profile login and persisted profile token get/cache/renewal/storage: native; scopes explain, profile create/show/forget-key/inspect-vault, logout, research report/backup and token acquire including system-browser PKCE and local software-passkey authentication: native"}));return 0;}
     if (args.Length == 0 || args[0] is "help" or "--help")
     {
-        Console.WriteLine("TokenForge: passkey enroll; profile create/show/forget-key/inspect-vault, login, status, doctor, logout, scopes explain, token get/acquire, graph permissions; research report/weekly/export-flows/backup; evidence import/update/export/plan/cohort/cohort-export/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Implicit authentication adapters require PowerShell 7.4+; same-account lab software-passkey enrollment and explicit Memory software-passkey token acquisition run natively; browser/software-passkey profile login and persisted profile token get, cache, renewal and storage run natively. Scopes explain, profile create/show/forget-key/inspect-vault, logout, research backup and token acquire including system-browser PKCE and local software-passkey authentication run natively.");
+        Console.WriteLine("TokenForge: passkey recover; profile create/show/forget-key/inspect-vault, login, status, doctor, logout, scopes explain, token get/acquire, graph permissions; research report/weekly/export-flows/backup; evidence import/update/export/plan/cohort/cohort-export/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Implicit authentication adapters require PowerShell 7.4+; explicit Memory software-passkey token acquisition runs natively; browser/software-passkey profile login and persisted profile token get, cache, renewal and storage run natively. Scopes explain, profile create/show/forget-key/inspect-vault, logout, research report/backup and token acquire including system-browser PKCE and local software-passkey authentication run natively.");
         return 0;
     }
+    if (args.Length > 1 && args[0] == "research" && args[1] == "report") return NativeResearchCommand.Run(args);
     if (args.Length > 1 && args[0] == "research" && args[1] == "backup")
     {
         string? snapshot = null, directory = null;
@@ -178,7 +180,7 @@ try
 }
 catch (SoftwarePasskeyEnrollmentException error)
 {
-    Console.Error.WriteLine(JsonSerializer.Serialize(new { SchemaVersion = 1, RegistrationConfirmed = false, RemoteRegistration = error.RecoveryFileSaved ? "Unknown" : "NotAttempted", error.Stage, error.RecoveryFileSaved, Message = error.Message }));
+    Console.Error.WriteLine(JsonSerializer.Serialize(new { SchemaVersion = 1, RegistrationConfirmed = false, RemoteRegistration = error.RecoveryFileSaved ? "Unknown" : "NotAttempted", error.Stage, error.RecoveryFileSaved, error.HttpStatus, error.TransportFailure, Message = error.Message }));
     return 1;
 }
 catch (NativeTokenException error)

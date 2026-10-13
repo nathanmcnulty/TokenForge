@@ -34,6 +34,6 @@ function Invoke-TokenForgeNativeEvidence {
         if(-not $process.WaitForExit(60000)){$process.Kill($true);throw 'Native metadata operation timed out; check its checkpoint before retrying.'}
         $json=$stdout.GetAwaiter().GetResult();$null=$stderr.GetAwaiter().GetResult()
         if($process.ExitCode -ne 0 -or [Text.Encoding]::UTF8.GetByteCount($json) -gt 134217728){throw 'Native metadata operation failed; details suppressed.'}
-        $json|ConvertFrom-Json -AsHashtable -Depth 32 -ErrorAction Stop
+        if($Domain -eq 'catalog' -and $Operation -eq 'export'){[TokenForge.Core.DiscoverySourceClaims]::ReadCatalog($json)}else{$json|ConvertFrom-Json -AsHashtable -Depth 32 -ErrorAction Stop}
     }finally{if($process){$process.Dispose()};if($temporary -and (Test-Path -LiteralPath $temporary)){Remove-Item -LiteralPath $temporary -Force}}
 }

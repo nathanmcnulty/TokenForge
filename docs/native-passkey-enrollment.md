@@ -1,6 +1,6 @@
 # Enroll another lab software passkey
 
-This feature is under development on a draft branch. Live enrollment has not yet been confirmed; it is not included in the released 0.39.0 packages.
+This feature is under development on a draft branch. Live enrollment has not yet been confirmed; it is not included in the released 0.44.0 packages.
 
 The draft native CLI and PowerShell module command attempts enrollment of another
 software passkey for the same account as an explicitly supplied existing local passkey. This is a lab software
@@ -17,11 +17,11 @@ or policy changes. Tenant policy and My Sign-ins still decide whether registrati
 # A private TokenForge inventory snapshot can also supply these fields.
 tokenforge passkey enroll --passkey-file /private/existing.passkey `
   --identity-file /private/identity.json --output-path /private/new.passkey `
-  --name Test --json
+  --name Test --max-extra-scopes 128 --json
 
 Register-TokenForgeSoftwarePasskey -PasskeyPath /private/existing.passkey `
   -IdentityPath /private/identity.json -OutputPath /private/new.passkey `
-  -DisplayName Test
+  -DisplayName Test -MaxAdditionalScopes 128
 
 ./scripts/tokenforge.ps1 passkey enroll -PasskeyPath /private/existing.passkey `
   -IdentityPath /private/identity.json -OutputPath /private/new.passkey -Json
@@ -84,8 +84,10 @@ remains reported even if temporary-file cleanup subsequently fails.
 The lab certificate uses an X.509 v3 leaf with `CA=false` Basic Constraints and explicit
 subject encodings required by the [packed-attestation certificate format](https://www.w3.org/TR/webauthn-2/#sctn-packed-attestation-cert-requirements).
 Its `TokenForge` subject is a lab identifier, not verified manufacturer identity. The
-format correction is checked independently with certificate and ASN.1 decoding; it has
-not been live validated and does not explain the earlier unresolved server results.
+format correction is checked independently with certificate and ASN.1 decoding. One fresh
+attempt per lab account with this correction stopped at VerificationTransport. Read-only
+recovery of both new keys failed at Authentication; neither received a receipt. The remote
+outcome remains unresolved, and this does not explain the earlier server results.
 
 The receipt is local evidence of the completed enrollment response, not a signature from
 Microsoft or a hardware attestation. It does not revoke a remote method when deleted.
@@ -98,3 +100,7 @@ synthetic checks alone do not establish successful live enrollment.
 The [sanitized experiment report](native-passkey-enrollment-validation-2026-10-13.json)
 records the successful identity/MFA prerequisites, the stopped live attempts for both
 accounts, and preservation of their unresolved recovery keys. It does not claim completed enrollment.
+
+The bootstrap Graph token is checked before and after GET /me: expected account, tenant, client, audience, User.Read and expiry. The default allowance for additional existing grants is zero. Explicitly choose --max-extra-scopes (native) or -MaxAdditionalScopes (PowerShell), from 0 to 512, for your lab; an allowance does not request or grant additional consent.
+
+Rejected HTTP responses now report only a numeric status and fixed category (UnexpectedStatus, RedirectRejected or ResponseLimit). No response body, URL, headers or remote error text is returned. Earlier attempts did not capture these fields, so their HTTP status remains unknown.

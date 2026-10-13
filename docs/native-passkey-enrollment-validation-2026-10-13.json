@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "DateUTC": "2026-10-13",
   "Status": "LiveEnrollmentNotYetConfirmed",
-  "VersionUnderDevelopment": "0.40.0",
+  "VersionUnderDevelopment": "0.45.0",
   "BaseCommit": "1381573fb479c751a039c374505228bb05d81ce8",
   "InterimPackage": {
     "Runtime": "linux-x64",
@@ -114,6 +114,54 @@
     "IndependentCertificateAndAsn1Checks": true,
     "TrustedManufacturerIdentityClaimed": false,
     "LiveValidated": false,
-    "CauseOfPreviousLiveFailuresConfirmed": false
-  }
+    "CauseOfPreviousLiveFailuresConfirmed": false,
+    "LiveAttempted": true
+  },
+  "CurrentMainReconciliation": {
+    "BaseVersion": "0.44.0",
+    "DraftVersion": "0.45.0",
+    "FullNativeChecksPassed": 1310,
+    "FocusedEnrollmentChecksPassed": 227,
+    "PowerShellChecksPassed": 34,
+    "PowerShellChecksSkipped": 1,
+    "FocusedEnrollmentChecksAfterHttpDiagnosticsPassed": 229,
+    "FinalPowerShellChecksPassed": 40,
+    "FinalPowerShellChecksSkipped": 1,
+    "DiagnosticAndCliBuildWarnings": 0
+  },
+  "FreshCertificateCorrectedAttempts": [
+    {
+      "AccountAlias": "nora",
+      "Attempts": 1,
+      "TerminalStage": "VerificationTransport",
+      "EnrollmentConfirmed": false,
+      "RecoveryKeyPublishedPrivately": true,
+      "ConfirmationReceiptPublished": false,
+      "RemoteOutcome": "Unresolved",
+      "OriginalCredentialUnchanged": true,
+      "ReadOnlyRecovery": {
+        "Succeeded": false,
+        "Stage": "Authentication",
+        "CredentialUnchanged": true,
+        "ReceiptSaved": false
+      }
+    },
+    {
+      "AccountAlias": "secadmin",
+      "Attempts": 1,
+      "TerminalStage": "VerificationTransport",
+      "EnrollmentConfirmed": false,
+      "RecoveryKeyPublishedPrivately": true,
+      "ConfirmationReceiptPublished": false,
+      "RemoteOutcome": "Unresolved",
+      "OriginalCredentialUnchanged": true,
+      "ReadOnlyRecovery": {
+        "Succeeded": false,
+        "Stage": "Authentication",
+        "CredentialUnchanged": true,
+        "ReceiptSaved": false
+      }
+    }
+  ],
+  "HistoricalVersionUnderDevelopment": "0.40.0"
 }

@@ -12,11 +12,11 @@ function Get-TokenForgeCatalog {
     [CmdletBinding()]
     param([string]$Path = $script:CatalogPath)
     $text = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop
-    $document = ConvertFrom-Json -InputObject $text -AsHashtable -ErrorAction Stop
+    $document = [TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson($text)
     $source = (Resolve-Path -LiteralPath $Path).Path
     $fetchedAt = $null
     $data = $document
-    if ($document.ContainsKey('SchemaVersion')) {
+    if ($document.Contains('SchemaVersion')) {
         if ($document.SchemaVersion -ne 1) { throw 'Unsupported catalog snapshot version.' }
         $data = $document.Data
         $source = $document.Source
@@ -55,7 +55,7 @@ function Get-TokenForgeCatalog {
         PSTypeName = 'TokenForge.Catalog'
         Source = $source; FetchedAt = $fetchedAt; ContentSha256 = $hash
         Applications = @($applications | Sort-Object Name, ClientId)
-        ResourceIdentifiers = if ($data.ContainsKey('resourceidentifiers')) { $data.resourceidentifiers } else { @{} }
+        ResourceIdentifiers = if ($data.Contains('resourceidentifiers')) { $data.resourceidentifiers } else { @{} }
     }
 }
 
@@ -66,7 +66,8 @@ function Update-TokenForgeCatalog {
     [CmdletBinding()]
     param([uri]$SourceUri = $script:CatalogUrl, [string]$Path = $script:CatalogPath)
     if ($SourceUri.Scheme -ne 'https' -or $SourceUri.UserInfo) { throw 'Catalog source must be HTTPS without user information.' }
-    $data = Invoke-RestMethod -Uri $SourceUri -TimeoutSec 30 -ErrorAction Stop
+    $response=Invoke-WebRequest -Uri $SourceUri -TimeoutSec 30 -ErrorAction Stop
+    $data=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([string]$response.Content)
     $snapshot = @{ SchemaVersion = 1; Source = $SourceUri.AbsoluteUri; FetchedAt = [DateTimeOffset]::UtcNow.ToString('o'); Data = $data }
     $fullPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
     $directory = Split-Path $fullPath -Parent

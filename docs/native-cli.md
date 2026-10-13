@@ -1,10 +1,10 @@
 # Native CLI and evidence store
 
 The native CLI is a self-contained .NET executable per OS and architecture. Evidence commands
-run directly in the shared core with bundled SQLite. Implicit authentication adapters invoke the packaged PowerShell 7.4+ module;
+run directly in the shared core with bundled SQLite. Passkey enrollment, implicit authentication adapters invoke the packaged PowerShell 7.4+ module;
 install `pwsh` and keep `src/` and `scripts/` beside the executable for those commands.
 Version 0.18 adds direct native `token acquire`, and PowerShell uses the same C# OAuth transport
-and issued-token policy. Version 0.33 adds native system-browser PKCE to advanced `token acquire`. Version 0.36 adds native browser profile login and persisted browser profile acquisition. Explicit software-passkey acquisition and profile login are native; [draft same-account lab software-passkey enrollment](native-passkey-enrollment.md) is implemented natively but live enrollment remains unconfirmed; first-passkey TAP enrollment remains external and implicit passkey login uses PowerShell.
+and issued-token policy. Version 0.33 adds native system-browser PKCE to advanced `token acquire`. Version 0.36 adds native browser profile login and persisted browser profile acquisition. Explicit software-passkey acquisition and profile login are native; enrollment and implicit passkey login still use PowerShell.
 Version 0.19 also shares vault envelope encryption with the native core; profile storage and
 login still use PowerShell. See [shared vault validation](vault-core-validation-2026-10-08.json).
 Version 0.20 shares profile configuration validation between PowerShell and the native core.
@@ -293,7 +293,7 @@ See [native architecture](native-architecture.md) for their boundaries and valid
 
 Explicit Windows/Linux OS-backed profile storage is documented in [OS-backed vault](os-backed-vault.md).
 
-Offline `research report` and `research export-flows` commands are available through the packaged PowerShell adapter; see [Application research catalog](research-catalog.md).
+Development version 0.42 runs `research report` natively with a shared coverage engine; see [research coverage](native-research-coverage.md). `research export-flows` retains its PowerShell adapter. See [Application research catalog](research-catalog.md) for evidence categories.
 
 ## Individual flow checkpoints
 
@@ -340,7 +340,7 @@ With fresh observed scope coverage, the tool first obtains a bounded Graph `User
 
 Cold checkpoint writes take the cooperating state writer lock and reread current JSON history or append transactionally to the existing SQLite store. A deleted or truncated existing SQLite store fails rather than being initialized again. Initially absent JSON history can be created. Checkpoint failure discards the token without trying another candidate. Credential persistence remains a separate final vault/profile comparison-and-swap: a successful metadata checkpoint can remain if subsequent cancellation, retention or concurrent profile changes prevent the credential commit.
 
-Memory profiles, `--login-hint`, and `--prompt-passphrase` retain the existing PowerShell adapter. If an OS-backed session needs fresh browser authentication because it has no cookie, the native operation releases its locks before invoking that adapter. Explicit stdin cannot be replayed into a browser fallback; use the existing interactive/module workflow. Explicit browser and software-passkey login are native; same-account lab enrollment is native; first-passkey TAP enrollment remains external and implicit passkey login requires PowerShell. Windows and Linux OS stores are supported; macOS requires the existing signed-helper work. JWT payload checks do not establish signature verification.
+Memory profiles, `--login-hint`, and `--prompt-passphrase` retain the existing PowerShell adapter. If an OS-backed session needs fresh browser authentication because it has no cookie, the native operation releases its locks before invoking that adapter. Explicit stdin cannot be replayed into a browser fallback; use the existing interactive/module workflow. Explicit browser and software-passkey login are native; enrollment and implicit passkey login still require PowerShell. Windows and Linux OS stores are supported; macOS requires the existing signed-helper work. JWT payload checks do not establish signature verification.
 
 The [sanitized live report](native-fresh-acquisition-validation-2026-10-11.json) records Linux native cold/warm/cache/renewal Graph `/me` checks with Nora and secadmin, each HTTP 200, with PowerShell absent from the native commands’ PATH. Both sessions and OS keys were removed afterward. This is bounded Graph evidence, not proof for every app/resource or live Windows/macOS authentication.
 
@@ -433,7 +433,7 @@ tokenforge login --profile lab --passkey-file /private/Test.json --prompt-passph
 Use `--stdin` instead of the hidden prompt for explicit redirected passphrase input.
 Windows Credential Manager and Linux Secret Service profiles require neither flag.
 Memory profiles authenticate and bind identity, but save no cookie or token across processes.
-First-passkey TAP enrollment remains external. Login without the explicit `--passkey-file` option retains its
+Passkey enrollment and login without the explicit `--passkey-file` option retain their
 PowerShell adapters. Browser-only login options cannot accompany this option.
 
 The native signer authenticates to the fixed Microsoft public-cloud authority. The resulting
@@ -506,6 +506,8 @@ It publishes only sanitized reports after private-state cleanup. The [completed 
 verified Nora on all six targets with 24 native Graph HTTP 200 checks. Offline core/package
 checks and the separate two-account Linux proof remain distinct evidence.
 
-Native `passkey enroll` is a draft command that attempts enrollment of another software credential for the confirmed account. See
-[lab software-passkey enrollment](native-passkey-enrollment.md) for recovery files, companion
-receipts, parameters and the boundary between software and hardware authentication.
+Native 0.43 adds [pending software-passkey recovery](native-passkey-recovery.md), with fresh sign-in and Graph identity confirmation before a private local receipt is saved.
+
+Version 0.44 extends pending-passkey receipt checks to the legacy PowerShell authentication adapter and uses the requested imported XDRInternals provider. See [private-file requirements and provider trust](native-passkey-recovery.md#the-powershell-adapter).
+
+Same-account native software-passkey enrollment remains under development; see [draft enrollment](native-passkey-enrollment.md).

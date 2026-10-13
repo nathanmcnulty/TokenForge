@@ -11,7 +11,7 @@ Versioned releases provide durable downloads beyond the one-day native CI artifa
 | macOS | Intel | `TokenForge-VERSION-osx-x64.tar.gz` |
 | macOS | Apple Silicon | `TokenForge-VERSION-osx-arm64.tar.gz` |
 
-Download from [GitHub Releases](https://github.com/nathanmcnulty/TokenForge/releases). Check the release version and source commit before installing. Unix archives preserve executable permissions. Windows uses ZIP archives. Windows and Linux support the documented OS-backed key stores; macOS currently uses passphrase storage. Native browser profile login, explicit software-passkey profile login and explicit Memory-profile software-passkey token acquisition do not require PowerShell. Same-account lab software-passkey enrollment is native. First-passkey TAP enrollment remains external; implicit passkey login and some research commands still use PowerShell adapters; see [native CLI coverage](native-cli.md).
+Download from [GitHub Releases](https://github.com/nathanmcnulty/TokenForge/releases). Check the release version and source commit before installing. Unix archives preserve executable permissions. Windows uses ZIP archives. Windows and Linux support the documented OS-backed key stores; macOS currently uses passphrase storage. Native browser profile login, explicit software-passkey profile login and explicit Memory-profile software-passkey token acquisition do not require PowerShell. Passkey enrollment, implicit passkey login and some research commands still use the PowerShell adapters; see [native CLI coverage](native-cli.md).
 
 ## Checking a download
 

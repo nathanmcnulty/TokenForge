@@ -36,6 +36,45 @@ static class SoftwarePasskeyChecks
    {var copy=new Dictionary<string,object>(data);copy[entry.Item1]=entry.Item2;Write(JsonSerializer.Serialize(copy));reject(()=>SoftwarePasskey.Open(path).Dispose());}
    Write(JsonSerializer.Serialize(data).Replace("{","{\"username\":\"duplicate@example.test\",",StringComparison.Ordinal));reject(()=>SoftwarePasskey.Open(path).Dispose());
    using var wrong=ECDsa.Create(ECCurve.NamedCurves.nistP384);var invalid=new Dictionary<string,object>(data);invalid["privateKey"]=wrong.ExportPkcs8PrivateKeyPem();Write(JsonSerializer.Serialize(invalid));reject(()=>SoftwarePasskey.Open(path).Dispose());
+   // Pending credentials cannot be used through normal acquisition until a byte-bound receipt exists.
+   var pending=new Dictionary<string,object>(data){["enrollmentStatus"]="PendingRemoteVerification"};
+   Write(JsonSerializer.Serialize(pending));byte[] pendingBytes=File.ReadAllBytes(path);
+   string hash=Convert.ToHexString(SHA256.HashData(pendingBytes)).ToLowerInvariant();
+   string receiptPath=path+".registered.json",rawId=(string)data["credentialId"];
+   var receiptType=typeof(SoftwarePasskey).Assembly.GetType("TokenForge.Core.SoftwarePasskeyReceipt")!;
+   var publish=receiptType.GetMethod("Publish",BindingFlags.Static|BindingFlags.NonPublic)!;
+   bool Publish(string expectedHash,CancellationToken cancellation)
+   {object[] args={path,expectedHash,rawId,cancellation,false};publish.Invoke(null,args);return (bool)args[4];}
+   reject(()=>SoftwarePasskey.Open(path).Dispose());
+   using(var cancelled=new CancellationTokenSource())
+   {
+    cancelled.Cancel();reject(()=>SoftwarePasskeyRecovery.Recover(path,"{}",cancelled.Token));
+    reject(()=>Publish(hash,cancelled.Token));check(!File.Exists(receiptPath));
+    check(!Directory.EnumerateFiles(root,"*.tmp").Any());
+   }
+   foreach(string input in new[]{"{}","{\"TenantFingerprint\":\"bad\",\"PrincipalFingerprint\":\"bad\"}","{\"TenantFingerprint\":\"a\",\"TenantFingerprint\":\"b\"}"})
+   {reject(()=>SoftwarePasskeyRecovery.Recover(path,input));check(!File.Exists(receiptPath));}
+   Write(JsonSerializer.Serialize(pending)+" ");reject(()=>Publish(hash,CancellationToken.None));check(!File.Exists(receiptPath));
+   Write(JsonSerializer.Serialize(pending));check(Publish(hash,CancellationToken.None));
+   check(File.ReadAllBytes(path).SequenceEqual(pendingBytes));
+   using(var confirmed=SoftwarePasskey.Open(path))check(confirmed.CreateAssertion("synthetic").Length>0);
+   byte[] validReceipt=File.ReadAllBytes(receiptPath);
+   reject(()=>Publish(hash,CancellationToken.None));check(File.ReadAllBytes(receiptPath).SequenceEqual(validReceipt));
+   check(!Directory.EnumerateFiles(root,"*.tmp").Any());
+   reject(()=>SoftwarePasskeyRecovery.Recover(path,JsonSerializer.Serialize(new{TenantFingerprint=new string('a',64),PrincipalFingerprint=new string('b',64)})));
+   foreach(string field in new[]{"SchemaVersion","Usable","Proof","CredentialFileSha256","CredentialId"})
+   {
+    var record=JsonSerializer.Deserialize<Dictionary<string,object>>(validReceipt)!;
+    record[field]=field=="SchemaVersion"?3:field=="Usable"?false:"wrong";
+    using(var file=PrivateFiles.Open(receiptPath,false)){file.SetLength(0);file.Write(JsonSerializer.SerializeToUtf8Bytes(record));}
+    reject(()=>SoftwarePasskey.Open(path).Dispose());
+   }
+   using(var file=PrivateFiles.Open(receiptPath,false)){file.SetLength(0);file.Write(Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(validReceipt).Replace("{","{\"Usable\":true,")));}
+   reject(()=>SoftwarePasskey.Open(path).Dispose());
+   using(var file=PrivateFiles.Open(receiptPath,false)){file.SetLength(0);file.Write(JsonSerializer.SerializeToUtf8Bytes(new{SchemaVersion=1,Registered=true,CredentialFileSha256=hash,CredentialId=rawId}));}
+   using(var legacy=SoftwarePasskey.Open(path))check(legacy.CreateAssertion("synthetic").Length>0);
+   Write(JsonSerializer.Serialize(pending)+" ");reject(()=>SoftwarePasskey.Open(path).Dispose());
+   File.Delete(receiptPath);
    Write(JsonSerializer.Serialize(data));if(!OperatingSystem.IsWindows()){File.SetUnixFileMode(path,UnixFileMode.UserRead|UnixFileMode.UserWrite|UnixFileMode.GroupRead);reject(()=>SoftwarePasskey.Open(path).Dispose());File.SetUnixFileMode(path,UnixFileMode.UserRead|UnixFileMode.UserWrite);string link=Path.Combine(root,"link");File.CreateSymbolicLink(link,path);reject(()=>SoftwarePasskey.Open(link).Dispose());}
   }
   finally{Directory.Delete(root,true);}

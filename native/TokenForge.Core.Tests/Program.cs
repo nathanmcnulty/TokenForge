@@ -8,6 +8,10 @@ var count=0;
 void Check(bool condition){if(!condition) throw new Exception("Check failed.");count++;}
 void Reject(Action action){try{action();}catch{count++;return;}throw new Exception("Expected rejection.");}
 if(args.Contains("--enrollment-only")){PasskeyEnrollmentChecks.Run(Check,Reject);Console.WriteLine($"{count} enrollment checks passed.");return 0;}
+if(args.Length==1 && args[0]=="--discovery-claims-only"){DiscoverySourceClaimChecks.Run(Check,Reject);Console.WriteLine($"{count} source-claim checks passed.");return 0;}
+if(args.Length==1 && args[0]=="--catalog-claims-only"){CatalogClaimsTests.Run(Check,Reject);Console.WriteLine($"{count} catalog-claim checks passed.");return 0;}
+DiscoverySourceClaimChecks.Run(Check,Reject);
+CatalogClaimsTests.Run(Check,Reject);
 NativeTokenDiagnosticChecks.Run(Check);
 TimestampPolicyChecks.Run(Check,Reject);
 VaultRecordPolicyChecks.Run(Check,Reject);

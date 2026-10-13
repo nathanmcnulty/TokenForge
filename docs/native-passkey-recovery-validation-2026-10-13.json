@@ -1,0 +1,65 @@
+{
+  "SchemaVersion": 1,
+  "ObservedOn": "2026-10-13",
+  "Feature": "NativePendingSoftwarePasskeyRecovery",
+  "Version": "0.43.0",
+  "LocalNativeCoreChecks": 1083,
+  "LiveProof": {
+    "AuthenticationMethodsDeleted": 0,
+    "RegistrationRequests": 0,
+    "Cases": [
+      {
+        "ReaderAcceptedAfter": true,
+        "CredentialUnchanged": true,
+        "ReaderDeniedBefore": true,
+        "Case": "RegisteredOriginalPrivateCopy",
+        "Account": "nora",
+        "Succeeded": true
+      },
+      {
+        "CredentialUnchanged": true,
+        "ReceiptSaved": false,
+        "Stage": "Authentication",
+        "Case": "UnresolvedEnrollmentKey",
+        "Account": "nora",
+        "Succeeded": false
+      },
+      {
+        "ReaderAcceptedAfter": true,
+        "CredentialUnchanged": true,
+        "ReaderDeniedBefore": true,
+        "Case": "RegisteredOriginalPrivateCopy",
+        "Account": "secadmin",
+        "Succeeded": true
+      },
+      {
+        "CredentialUnchanged": true,
+        "ReceiptSaved": false,
+        "Stage": "Authentication",
+        "Case": "UnresolvedEnrollmentKey",
+        "Account": "secadmin",
+        "Succeeded": false
+      },
+      {
+        "Case": "WrongExpectedIdentity",
+        "ReceiptSaved": false,
+        "Account": "nora",
+        "Stage": "IdentityConfirmation",
+        "Succeeded": false
+      },
+      {
+        "Case": "ZeroAdditionalScopeAllowance",
+        "ReceiptSaved": false,
+        "Account": "nora",
+        "Stage": "IdentityConfirmation",
+        "Succeeded": false
+      }
+    ]
+  },
+  "PositiveProofBoundary": "Private pending-marked copies of already registered original lab keys; not new enrollment",
+  "NativeEnrollmentValidated": false,
+  "UnresolvedEnrollmentKeysRemainPending": true,
+  "ExplicitLiveAdditionalScopeAllowance": 128,
+  "PrivateIdentityContext": "Existing live research inventories; fingerprints excluded",
+  "PublicEvidenceContainsCredentials": false
+}

@@ -12,7 +12,9 @@ function Get-TokenForgeFlowEvidence {
             $db=Invoke-TokenForgeNativeEvidence $full export -NativeExecutablePath $NativeExecutablePath -PlanFingerprint $PlanFingerprint -Latest:($Latest -or [bool]$PlanFingerprint) -TenantFingerprint $TenantFingerprint -PrincipalFingerprint $PrincipalFingerprint
         }else{
         if((Get-Item -LiteralPath $full).Length -gt 134217728){throw 'Oversized flow evidence.'}
-        $db=Get-Content -LiteralPath $full -Raw|ConvertFrom-Json -AsHashtable -Depth 12
+        $json=Get-Content -LiteralPath $full -Raw
+        [TokenForge.Core.FlowEvidencePolicy]::ValidateDocument($json)
+        $db=$json|ConvertFrom-Json -AsHashtable -Depth 12
         }
         foreach($row in $db.Attempts){foreach($field in @('StartedAt','ObservedAt')){if($row[$field] -is [datetime]){$row[$field]=$row[$field].ToUniversalTime().ToString('o')}}}
         Assert-TokenForgeFlowDocument $db

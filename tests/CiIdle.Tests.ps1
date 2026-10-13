@@ -4,6 +4,7 @@ BeforeAll {
  $runner="$PSScriptRoot/../scripts/Test-TokenForgeCiIdle.ps1"
  $now=[DateTimeOffset]'2026-10-07T12:00:00Z'
  $catalog=Get-TokenForgeCatalog -Path "$PSScriptRoot/fixtures/catalog.json"
+ $catalog.Source='https://raw.githubusercontent.com/example/public/main/scopes.json'
  $discovery=Get-TokenForgeDiscovery -Catalog $catalog|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable
  $discovery.FetchedAt=$now.AddMinutes(-10).ToString('o')
  foreach($app in $discovery.Applications){foreach($source in $app.Sources){$source.Location='https://raw.githubusercontent.com/example/public/main/scopes.json'}}

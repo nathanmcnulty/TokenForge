@@ -66,8 +66,8 @@ jobs:
           $env:TOKENFORGE_TEST_NATIVE = (Resolve-Path (Join-Path './dist/native/${{ matrix.runtime }}' $(if ($IsWindows) { 'tokenforge.exe' } else { 'tokenforge' }))).Path
           Import-Module (Join-Path (Split-Path $env:TOKENFORGE_TEST_NATIVE -Parent) src/TokenForge/TokenForge.psd1) -Force
           Remove-Module TokenForge # Keep compiled credential types loaded while tests import their source module.
-          $result = Invoke-Pester ./tests/SqliteFlow.Tests.ps1,./tests/SqliteCatalog.Tests.ps1,./tests/SqliteScope.Tests.ps1,./tests/ResearchCohort.Tests.ps1,./tests/WeeklyCli.Tests.ps1,./tests/NativeOAuth.Tests.ps1,./tests/NativeMaintenanceBackup.Tests.ps1,./tests/NativeProfiles.Tests.ps1,./tests/NativeProfileTokens.Tests.ps1,./tests/CredentialBootstrap.Tests.ps1,./tests/Profiles.Tests.ps1,./tests/NativeScopePlanning.Tests.ps1,./tests/ScopeCandidates.Tests.ps1,./tests/Assessment.Tests.ps1,./tests/ScopedToken.Tests.ps1,./tests/Browser.Tests.ps1 -PassThru -Output Detailed
-          $expectedPasses = if ($IsWindows) { 198 } elseif ($IsMacOS) { 201 } else { 208 } # Native input checks include platform-specific permission cases.
+          $result = Invoke-Pester ./tests/PasskeyEnrollment.Tests.ps1,./tests/PasskeyAdapter.Tests.ps1,./tests/NativePasskeyRecovery.Tests.ps1,./tests/ResearchCoverage.Tests.ps1,./tests/SqliteFlow.Tests.ps1,./tests/SqliteCatalog.Tests.ps1,./tests/SqliteScope.Tests.ps1,./tests/ResearchCohort.Tests.ps1,./tests/WeeklyCli.Tests.ps1,./tests/NativeOAuth.Tests.ps1,./tests/NativeMaintenanceBackup.Tests.ps1,./tests/NativeProfiles.Tests.ps1,./tests/NativeProfileTokens.Tests.ps1,./tests/CredentialBootstrap.Tests.ps1,./tests/Profiles.Tests.ps1,./tests/NativeScopePlanning.Tests.ps1,./tests/ScopeCandidates.Tests.ps1,./tests/Assessment.Tests.ps1,./tests/ScopedToken.Tests.ps1,./tests/Browser.Tests.ps1 -PassThru -Output Detailed
+          $expectedPasses = if ($IsWindows) { 242 } elseif ($IsMacOS) { 249 } else { 256 } # Native input checks include platform-specific permission cases.
           if ($result.FailedCount -or $result.FailedContainersCount -or $result.PassedCount -ne $expectedPasses) { throw 'Native metadata and weekly CLI adapter tests failed.' }
       - name: Smoke-test packaged CLI
         shell: pwsh
@@ -95,6 +95,7 @@ jobs:
             $null = New-Item -ItemType Directory $state
             if (-not $IsWindows) { [IO.File]::SetUnixFileMode($state, [IO.UnixFileMode]448) }
             @{Format='TokenForgeApplicationMetadata';SchemaVersion=1;CreatedAt=[DateTimeOffset]::UtcNow.ToString('o');UpdatedAt=[DateTimeOffset]::UtcNow.ToString('o');Applications=@{};Origins=@{};Runs=@()} | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $state applications.json)
+            if (-not $IsWindows) { [IO.File]::SetUnixFileMode((Join-Path $state applications.json), [IO.UnixFileMode]384) }
             & $exe research report --state-path $state --summary-only --json
             if ($LASTEXITCODE) { throw 'CLI research report failed.' }
             & $exe research export-flows --state-path $state --export-path (Join-Path $root anonymous-flows.json) --json

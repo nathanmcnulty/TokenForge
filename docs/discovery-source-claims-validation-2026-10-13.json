@@ -1,0 +1,59 @@
+{
+  "SchemaVersion": 1,
+  "ValidationDate": "2026-10-13",
+  "Version": "0.41.0",
+  "PublishedSourceRefresh": {
+    "SchemaVersion": 1,
+    "SourceCommit": "4570abb7801c655782347d9f65ce071cb9ea6e53",
+    "RuntimeVersion": "0.41.0",
+    "DiscoverySchema": 2,
+    "CatalogSchema": 2,
+    "Applications": 5455,
+    "InvalidSourceRecords": 2,
+    "ConflictingApplications": 199,
+    "SourceSnapshots": [
+      {
+        "Location": "https://raw.githubusercontent.com/dirkjanm/ROADtools/master/roadtx/roadtools/roadtx/firstpartyscopes.json",
+        "Sha256": "17b91b2415a2ef5da332cf06508610348c6f7a502a1b5936c9885c90322b635c",
+        "HashKind": "CatalogSnapshot"
+      },
+      {
+        "Location": "https://raw.githubusercontent.com/merill/microsoft-info/main/_info/MicrosoftApps.json",
+        "Sha256": "e010d35d6a986eaf846ae9801a71eb5cf32706865a519d0bb44bdc0e1c1e826d",
+        "HashKind": "NormalizedJson"
+      },
+      {
+        "Location": "https://raw.githubusercontent.com/f-bader/entrascopes.com/main/resources.json",
+        "Sha256": "8bef6dafe1c08fe7a12c50a7238d0afbf71b7edc4de95c55141dea307eef0444",
+        "HashKind": "NormalizedJson"
+      }
+    ],
+    "ElapsedSeconds": 507,
+    "AuthenticationPerformed": false,
+    "TenantChanges": false,
+    "DiscoverySha256": "e9a0d5f3c548c8b1b989c79cc1ae1bde96e3b287e05e7aad44451e648fc133bc",
+    "CatalogSha256": "0731c68b4a2c815690f12f612547c3ec16da1ca20ecfbcfdb8c94709306388b6"
+  },
+  "LegacyWeeklyRecipes": [
+    {
+      "PlanId": "ad9d352715730ce194e3a2985b120893ce29198813199043b16168c34bc1f7b4",
+      "Valid": true,
+      "DiscoverySchema": 1,
+      "File": "weekly-shallow.json",
+      "FileUnchanged": true
+    },
+    {
+      "PlanId": "03a949b87b70b58d772f8379882de93b9a7167a0c3e261a67a44963747660714",
+      "Valid": true,
+      "DiscoverySchema": 1,
+      "File": "weekly-deep.json",
+      "FileUnchanged": true
+    }
+  ],
+  "Limitations": [
+    "Published metadata claims are not verified ownership, tenant consent or authentication-flow support.",
+    "Elapsed time is one local observation with other validation processes running, not a hosted runner estimate.",
+    "This report records the source-code commit tested; later fixture-only and documentation commits do not change discovery behavior.",
+    "No credentials, authentication, tenant registration or consent changes were used."
+  ]
+}

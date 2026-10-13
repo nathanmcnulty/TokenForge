@@ -3,6 +3,7 @@ BeforeAll {
  Import-Module "$PSScriptRoot/../src/TokenForge/TokenForge.psd1" -Force
  $runner="$PSScriptRoot/../scripts/Invoke-TokenForgeCiDiscovery.ps1"
  $catalog=Get-TokenForgeCatalog -Path "$PSScriptRoot/fixtures/catalog.json"
+ $catalog.Source='https://raw.githubusercontent.com/example/public/main/scopes.json'
  $discovery=Get-TokenForgeDiscovery -Catalog $catalog|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable
  $discovery.Applications=@($discovery.Applications|Select-Object -First 2)
 }

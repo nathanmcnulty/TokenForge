@@ -13,7 +13,7 @@ static class CatalogClaimsTests
   if(OperatingSystem.IsMacOS() && root.StartsWith("/var/"))root="/private"+root;
   const string id="11111111-1111-1111-1111-111111111111";
   string Hash(string text)=>Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text))).ToLowerInvariant();
-  string Bytes(string path)=>Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
+  string Bytes(string path){using var stream=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite);return Convert.ToHexString(SHA256.HashData(stream));}
   JsonObject Update(string alternate="Other",bool legacy=false,string kind="Discovery",string date="2026-01-01T00:00:00Z")
   {
    var attrs=new JsonObject{["AppId"]=id,["Name"]=legacy?alternate:"Selected",["PublicClient"]=true};

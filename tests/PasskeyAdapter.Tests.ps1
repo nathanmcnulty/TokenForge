@@ -70,10 +70,10 @@ function Invoke-XdrPasskeyAuthentication {
   try{$cookie=Get-TokenForgeEstsCookie -PasskeyPath './key.passkey' -XdrModulePath $provider;$cookie.Dispose()}finally{Pop-Location}
   $global:TokenForgeAdapterObservedPath|Should -Be $key
  }
- It 'resolves a local PowerShell filesystem drive to its native path' {
+ It 'resolves a global PowerShell filesystem drive to its native path' {
   Set-Receipt;$drive='TfAdapter'+[guid]::NewGuid().ToString('N')
-  $null=New-PSDrive -Name $drive -PSProvider FileSystem -Root $root
-  try{$cookie=Get-TokenForgeEstsCookie -PasskeyPath ($drive+':/key.passkey') -XdrModulePath $provider;$cookie.Dispose()}finally{Remove-PSDrive $drive}
+  $null=New-PSDrive -Name $drive -PSProvider FileSystem -Root $root -Scope Global
+  try{$cookie=Get-TokenForgeEstsCookie -PasskeyPath ($drive+':/key.passkey') -XdrModulePath $provider;$cookie.Dispose()}finally{Remove-PSDrive $drive -Scope Global}
   $global:TokenForgeAdapterObservedPath|Should -Be $key
  }
  It 'rejects non-filesystem provider paths without invoking the backend' {

@@ -8,6 +8,9 @@ on:
       - 'scripts/Test-TokenForgeReleaseSource.ps1'
       - 'tests/ReleaseSource.Tests.ps1'
       - 'scripts/Build-TokenForgeNative.ps1'
+      - 'scripts/Build-TokenForgePackage.ps1'
+      - 'scripts/Copy-TokenForgePackageSource.ps1'
+      - 'tests/PackageSource.Tests.ps1'
   workflow_dispatch:
     inputs:
       publish:

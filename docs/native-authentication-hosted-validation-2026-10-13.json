@@ -1,0 +1,378 @@
+{
+  "SchemaVersion": 1,
+  "DateUTC": "2026-10-13",
+  "RunUrl": "https://github.com/nathanmcnulty/TokenForge/actions/runs/38377160936",
+  "SourceCommit": "a26caf60b81d4ae15728f0feb46e3c362263ac77",
+  "Version": "0.39.0",
+  "RunAttempt": 1,
+  "HostedSixPlatformProofComplete": true,
+  "NativeGraphApiChecks": 24,
+  "AccountScope": "NoraOnlyExistingAuthorization",
+  "Reports": [
+    {
+      "ArtifactSha256": "56f62f1d2aba79dff18bdf08e9da0b7029fda00ba2c286370cf5952477a64b21",
+      "SchemaVersion": 1,
+      "DateUTC": "2026-10-13",
+      "Runtime": "linux-x64",
+      "Version": "0.39.0",
+      "SourceCommit": "a26caf60b81d4ae15728f0feb46e3c362263ac77",
+      "RunAttempt": 1,
+      "ExecutableSha256": "9db5585f99f3d61c5135346e33b57fa3794aec4a2fe143b943bb85bae1f2339e",
+      "CredentialAssemblySha256": "466a886dad00ee3b2ac71e2ac67588e8b0cad0e1635b59d934e132abdae325dc",
+      "ExpectedAccountIndependentlyConfirmed": true,
+      "FreshInventoryConfirmed": true,
+      "Profiles": [
+        {
+          "NativeWithoutPowerShell": true,
+          "Repeat": "SilentExplicitScopeAcquisition",
+          "CredentialVaultCreated": false,
+          "CookieSaved": false,
+          "CredentialOutput": false,
+          "InventoryMaxAgeHours": 1,
+          "ApiStatuses": [
+            200,
+            200
+          ],
+          "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+          "LogoutSucceeded": true,
+          "NativeLogin": true,
+          "Storage": "Memory",
+          "MaximumAdditionalScopes": 128,
+          "IdentityBound": true,
+          "MaximumBootstrapAdditionalScopes": 128
+        },
+        {
+          "NativeWithoutPowerShell": true,
+          "Repeat": "CachedVerifiedContextNotNewIssuance",
+          "CredentialVaultCreated": true,
+          "CookieSaved": true,
+          "CredentialOutput": false,
+          "InventoryMaxAgeHours": 1,
+          "ApiStatuses": [
+            200,
+            200
+          ],
+          "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+          "LogoutSucceeded": true,
+          "NativeLogin": true,
+          "Storage": "Passphrase",
+          "MaximumAdditionalScopes": 128,
+          "IdentityBound": true,
+          "MaximumBootstrapAdditionalScopes": 128
+        }
+      ],
+      "OriginalPasskeyUnchanged": true,
+      "OwnedPrivateStateRemoved": true,
+      "CredentialsPublished": false,
+      "ConsentChanges": false,
+      "RegistrationsCreated": false,
+      "SignatureValidated": false,
+      "Scope": "FixedGraphUserReadForOneLabAccountNotUniversalFlowSupport"
+    },
+    {
+      "ArtifactSha256": "63a6cb61228a246dd320c1fba42a68cecdc1eecf0282d4150e2630c92533729b",
+      "SchemaVersion": 1,
+      "DateUTC": "2026-10-13",
+      "Runtime": "linux-arm64",
+      "Version": "0.39.0",
+      "SourceCommit": "a26caf60b81d4ae15728f0feb46e3c362263ac77",
+      "RunAttempt": 1,
+      "ExecutableSha256": "d2309426634371a036a63247f4224387221f8795c688e93f569e9007870d6cee",
+      "CredentialAssemblySha256": "466a886dad00ee3b2ac71e2ac67588e8b0cad0e1635b59d934e132abdae325dc",
+      "ExpectedAccountIndependentlyConfirmed": true,
+      "FreshInventoryConfirmed": true,
+      "Profiles": [
+        {
+          "LogoutSucceeded": true,
+          "Storage": "Memory",
+          "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+          "CookieSaved": false,
+          "CredentialVaultCreated": false,
+          "MaximumAdditionalScopes": 128,
+          "Repeat": "SilentExplicitScopeAcquisition",
+          "NativeLogin": true,
+          "NativeWithoutPowerShell": true,
+          "MaximumBootstrapAdditionalScopes": 128,
+          "ApiStatuses": [
+            200,
+            200
+          ],
+          "IdentityBound": true,
+          "InventoryMaxAgeHours": 1,
+          "CredentialOutput": false
+        },
+        {
+          "LogoutSucceeded": true,
+          "Storage": "Passphrase",
+          "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+          "CookieSaved": true,
+          "CredentialVaultCreated": true,
+          "MaximumAdditionalScopes": 128,
+          "Repeat": "CachedVerifiedContextNotNewIssuance",
+          "NativeLogin": true,
+          "NativeWithoutPowerShell": true,
+          "MaximumBootstrapAdditionalScopes": 128,
+          "ApiStatuses": [
+            200,
+            200
+          ],
+          "IdentityBound": true,
+          "InventoryMaxAgeHours": 1,
+          "CredentialOutput": false
+        }
+      ],
+      "OriginalPasskeyUnchanged": true,
+      "OwnedPrivateStateRemoved": true,
+      "CredentialsPublished": false,
+      "ConsentChanges": false,
+      "RegistrationsCreated": false,
+      "SignatureValidated": false,
+      "Scope": "FixedGraphUserReadForOneLabAccountNotUniversalFlowSupport"
+    },
+    {
+      "ArtifactSha256": "b090023bac00872548b28206792b42702290b56ffe370dcbb9c649a1212b7a7f",
+      "SchemaVersion": 1,
+      "DateUTC": "2026-10-13",
+      "Runtime": "win-x64",
+      "Version": "0.39.0",
+      "SourceCommit": "a26caf60b81d4ae15728f0feb46e3c362263ac77",
+      "RunAttempt": 1,
+      "ExecutableSha256": "aea4040e7a8402c11475b7ba0f14318fafab78c843fc4f263c18c4be32eb4d5e",
+      "CredentialAssemblySha256": "466a886dad00ee3b2ac71e2ac67588e8b0cad0e1635b59d934e132abdae325dc",
+      "ExpectedAccountIndependentlyConfirmed": true,
+      "FreshInventoryConfirmed": true,
+      "Profiles": [
+        {
+          "MaximumAdditionalScopes": 128,
+          "NativeLogin": true,
+          "Repeat": "SilentExplicitScopeAcquisition",
+          "NativeWithoutPowerShell": true,
+          "CredentialOutput": false,
+          "ApiStatuses": [
+            200,
+            200
+          ],
+          "LogoutSucceeded": true,
+          "CredentialVaultCreated": false,
+          "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+          "IdentityBound": true,
+          "CookieSaved": false,
+          "MaximumBootstrapAdditionalScopes": 128,
+          "InventoryMaxAgeHours": 1,
+          "Storage": "Memory"
+        },
+        {
+          "MaximumAdditionalScopes": 128,
+          "NativeLogin": true,
+          "Repeat": "CachedVerifiedContextNotNewIssuance",
+          "NativeWithoutPowerShell": true,
+          "CredentialOutput": false,
+          "ApiStatuses": [
+            200,
+            200
+          ],
+          "LogoutSucceeded": true,
+          "CredentialVaultCreated": true,
+          "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+          "IdentityBound": true,
+          "CookieSaved": true,
+          "MaximumBootstrapAdditionalScopes": 128,
+          "InventoryMaxAgeHours": 1,
+          "Storage": "Passphrase"
+        }
+      ],
+      "OriginalPasskeyUnchanged": true,
+      "OwnedPrivateStateRemoved": true,
+      "CredentialsPublished": false,
+      "ConsentChanges": false,
+      "RegistrationsCreated": false,
+      "SignatureValidated": false,
+      "Scope": "FixedGraphUserReadForOneLabAccountNotUniversalFlowSupport"
+    },
+    {
+      "ArtifactSha256": "99d8a3e8c9346533066256aca6c494c7e66223dc9757a2b3a95e720982b55672",
+      "SchemaVersion": 1,
+      "DateUTC": "2026-10-13",
+      "Runtime": "win-arm64",
+      "Version": "0.39.0",
+      "SourceCommit": "a26caf60b81d4ae15728f0feb46e3c362263ac77",
+      "RunAttempt": 1,
+      "ExecutableSha256": "7b53c22eefcfab5f07d369908c903a7e5a78c664a290b47defe029168be5b186",
+      "CredentialAssemblySha256": "466a886dad00ee3b2ac71e2ac67588e8b0cad0e1635b59d934e132abdae325dc",
+      "ExpectedAccountIndependentlyConfirmed": true,
+      "FreshInventoryConfirmed": true,
+      "Profiles": [
+        {
+          "MaximumBootstrapAdditionalScopes": 128,
+          "CookieSaved": false,
+          "MaximumAdditionalScopes": 128,
+          "LogoutSucceeded": true,
+          "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+          "NativeLogin": true,
+          "InventoryMaxAgeHours": 1,
+          "CredentialOutput": false,
+          "CredentialVaultCreated": false,
+          "NativeWithoutPowerShell": true,
+          "Storage": "Memory",
+          "IdentityBound": true,
+          "Repeat": "SilentExplicitScopeAcquisition",
+          "ApiStatuses": [
+            200,
+            200
+          ]
+        },
+        {
+          "MaximumBootstrapAdditionalScopes": 128,
+          "CookieSaved": true,
+          "MaximumAdditionalScopes": 128,
+          "LogoutSucceeded": true,
+          "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+          "NativeLogin": true,
+          "InventoryMaxAgeHours": 1,
+          "CredentialOutput": false,
+          "CredentialVaultCreated": true,
+          "NativeWithoutPowerShell": true,
+          "Storage": "Passphrase",
+          "IdentityBound": true,
+          "Repeat": "CachedVerifiedContextNotNewIssuance",
+          "ApiStatuses": [
+            200,
+            200
+          ]
+        }
+      ],
+      "OriginalPasskeyUnchanged": true,
+      "OwnedPrivateStateRemoved": true,
+      "CredentialsPublished": false,
+      "ConsentChanges": false,
+      "RegistrationsCreated": false,
+      "SignatureValidated": false,
+      "Scope": "FixedGraphUserReadForOneLabAccountNotUniversalFlowSupport"
+    },
+    {
+      "ArtifactSha256": "b5880623dd906875329cf1736fb2a21738d263ec4268ea0fb1689a077553546f",
+      "SchemaVersion": 1,
+      "DateUTC": "2026-10-13",
+      "Runtime": "osx-x64",
+      "Version": "0.39.0",
+      "SourceCommit": "a26caf60b81d4ae15728f0feb46e3c362263ac77",
+      "RunAttempt": 1,
+      "ExecutableSha256": "54e07debafcd63725ae86ee3eca8459cc48a8c2cdd37a5fdfd804918a1eb8dce",
+      "CredentialAssemblySha256": "466a886dad00ee3b2ac71e2ac67588e8b0cad0e1635b59d934e132abdae325dc",
+      "ExpectedAccountIndependentlyConfirmed": true,
+      "FreshInventoryConfirmed": true,
+      "Profiles": [
+        {
+          "InventoryMaxAgeHours": 1,
+          "CookieSaved": false,
+          "IdentityBound": true,
+          "LogoutSucceeded": true,
+          "NativeLogin": true,
+          "Repeat": "SilentExplicitScopeAcquisition",
+          "MaximumBootstrapAdditionalScopes": 128,
+          "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+          "Storage": "Memory",
+          "CredentialOutput": false,
+          "CredentialVaultCreated": false,
+          "MaximumAdditionalScopes": 128,
+          "NativeWithoutPowerShell": true,
+          "ApiStatuses": [
+            200,
+            200
+          ]
+        },
+        {
+          "InventoryMaxAgeHours": 1,
+          "CookieSaved": true,
+          "IdentityBound": true,
+          "LogoutSucceeded": true,
+          "NativeLogin": true,
+          "Repeat": "CachedVerifiedContextNotNewIssuance",
+          "MaximumBootstrapAdditionalScopes": 128,
+          "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+          "Storage": "Passphrase",
+          "CredentialOutput": false,
+          "CredentialVaultCreated": true,
+          "MaximumAdditionalScopes": 128,
+          "NativeWithoutPowerShell": true,
+          "ApiStatuses": [
+            200,
+            200
+          ]
+        }
+      ],
+      "OriginalPasskeyUnchanged": true,
+      "OwnedPrivateStateRemoved": true,
+      "CredentialsPublished": false,
+      "ConsentChanges": false,
+      "RegistrationsCreated": false,
+      "SignatureValidated": false,
+      "Scope": "FixedGraphUserReadForOneLabAccountNotUniversalFlowSupport"
+    },
+    {
+      "ArtifactSha256": "a4e75fd67dc34a51fca85b28bad8b1b44ce5a6ed2a68f843bf176b5e53283618",
+      "SchemaVersion": 1,
+      "DateUTC": "2026-10-13",
+      "Runtime": "osx-arm64",
+      "Version": "0.39.0",
+      "SourceCommit": "a26caf60b81d4ae15728f0feb46e3c362263ac77",
+      "RunAttempt": 1,
+      "ExecutableSha256": "31924f18e8a4cd8f039e5111c6114760bc8176eae1b79012107ed9a28c1fcf8c",
+      "CredentialAssemblySha256": "466a886dad00ee3b2ac71e2ac67588e8b0cad0e1635b59d934e132abdae325dc",
+      "ExpectedAccountIndependentlyConfirmed": true,
+      "FreshInventoryConfirmed": true,
+      "Profiles": [
+        {
+          "CredentialOutput": false,
+          "MaximumAdditionalScopes": 128,
+          "Repeat": "SilentExplicitScopeAcquisition",
+          "ApiStatuses": [
+            200,
+            200
+          ],
+          "CookieSaved": false,
+          "IdentityBound": true,
+          "NativeWithoutPowerShell": true,
+          "CredentialVaultCreated": false,
+          "Storage": "Memory",
+          "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+          "MaximumBootstrapAdditionalScopes": 128,
+          "NativeLogin": true,
+          "InventoryMaxAgeHours": 1,
+          "LogoutSucceeded": true
+        },
+        {
+          "CredentialOutput": false,
+          "MaximumAdditionalScopes": 128,
+          "Repeat": "CachedVerifiedContextNotNewIssuance",
+          "ApiStatuses": [
+            200,
+            200
+          ],
+          "CookieSaved": true,
+          "IdentityBound": true,
+          "NativeWithoutPowerShell": true,
+          "CredentialVaultCreated": true,
+          "Storage": "Passphrase",
+          "Cold": "BoundedTargetedSilentExplicitScopeAcquisition",
+          "MaximumBootstrapAdditionalScopes": 128,
+          "NativeLogin": true,
+          "InventoryMaxAgeHours": 1,
+          "LogoutSucceeded": true
+        }
+      ],
+      "OriginalPasskeyUnchanged": true,
+      "OwnedPrivateStateRemoved": true,
+      "CredentialsPublished": false,
+      "ConsentChanges": false,
+      "RegistrationsCreated": false,
+      "SignatureValidated": false,
+      "Scope": "FixedGraphUserReadForOneLabAccountNotUniversalFlowSupport"
+    }
+  ],
+  "ConsentChanges": false,
+  "RegistrationsCreated": false,
+  "CredentialsPublished": false,
+  "SignatureValidated": false,
+  "Interpretation": "Matching-architecture native Memory fresh cold/warm and Passphrase cold/cache flows succeeded on all six targets. Independent expected-account Graph identity confirmation, logout and private-state cleanup precede report publication. This does not establish hardware presence, OS-backed store support, browser UI or universal app/flow/API support."
+}

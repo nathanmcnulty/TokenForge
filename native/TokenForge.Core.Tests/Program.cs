@@ -18,6 +18,7 @@ VaultEnvelopeChecks.Run(Check,Reject);
 ProfilePolicyChecks.Run(Check,Reject);
 ProfileStoreChecks.Run(Check,Reject);
 ProfileLoginChecks.Run(Check,Reject);
+ProfileLoginChecks.RunCookie(Check,Reject);
 VaultFileChecks.Run(Check,Reject);
 PrivatePublicationChecks.Run(Check,Reject);
 var now=DateTimeOffset.UtcNow;

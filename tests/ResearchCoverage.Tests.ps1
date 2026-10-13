@@ -19,6 +19,56 @@ Describe 'Research coverage temporal and native parity' {
   $null=Update-TokenForgeApplicationMetadata $metadata $inventory Inventory
  }
  AfterEach {$cookie.Dispose()}
+ It 'classifies published callback structure: <CallbackUri>' -ForEach @(
+  @{CallbackUri='https://example.test/nativeclient-help';ExpectedHint='BrowserCallbackPublished'},
+  @{CallbackUri='https://example.test/localhost';ExpectedHint='BrowserCallbackPublished'},
+  @{CallbackUri='https://localhost.example.test/';ExpectedHint='BrowserCallbackPublished'},
+  @{CallbackUri='https://nativeclient.example.test/';ExpectedHint='BrowserCallbackPublished'},
+  @{CallbackUri='http://example.test/localhost';ExpectedHint='OtherCallbackPublished'},
+  @{CallbackUri='https://localhost/callback';ExpectedHint='NativeCallbackPublished'},
+  @{CallbackUri='http://LOCALHOST:1234/';ExpectedHint='NativeCallbackPublished'},
+  @{CallbackUri='https://login.microsoftonline.com/common/oauth2/nativeclient';ExpectedHint='NativeCallbackPublished'},
+  @{CallbackUri='https://login.microsoftonline.us/common/oauth2/nativeclient';ExpectedHint='NativeCallbackPublished'},
+  @{CallbackUri='https://example.test/common/oauth2/nativeclient';ExpectedHint='NativeCallbackPublished'},
+  @{CallbackUri='https://login.microsoftonline.com/common/oauth2/NativeClient';ExpectedHint='BrowserCallbackPublished'},
+  @{CallbackUri='urn:example:app';ExpectedHint='NativeCallbackPublished'},
+  @{CallbackUri='ms-appx-web://example/callback';ExpectedHint='BrokerCallbackPublished'},
+  @{CallbackUri='brk-multihub://example/callback';ExpectedHint='BrokerCallbackPublished'},
+  @{CallbackUri='my-app://example/callback';ExpectedHint='OtherCallbackPublished'},
+  @{CallbackUri='not a URI';ExpectedHint='OtherCallbackPublished'},
+  @{CallbackUri='https://example.test/?nativeclient=1';ExpectedHint='OtherCallbackPublished'},
+  @{CallbackUri='https://example.test/#localhost';ExpectedHint='OtherCallbackPublished'},
+  @{CallbackUri='https://user:password@example.test/';ExpectedHint='OtherCallbackPublished'},
+  @{CallbackUri=' https://localhost/';ExpectedHint='OtherCallbackPublished'}
+ ) {
+  param($CallbackUri,$ExpectedHint)
+  $app.RedirectUris=@($CallbackUri)
+  $inventory.CapturedAt=[DateTimeOffset]::UtcNow.ToString('o')
+  $null=Update-TokenForgeApplicationMetadata $metadata $inventory Inventory
+  $before=(Get-FileHash $metadata).Hash
+  $report=Get-TokenForgeResearchCoverage $metadata -TenantFingerprint ('a'*64) -PrincipalFingerprint ('b'*64)
+  @($report.Applications[0].PublishedFlowHints).Count|Should -Be 1
+  $report.Applications[0].PublishedFlowHints[0]|Should -BeExactly $ExpectedHint
+  $report.RequiredAuthenticationFlow|Should -BeExactly 'NotInferred'
+  ($report|ConvertTo-Json -Depth 30)|Should -Not -Match ([regex]::Escape($CallbackUri))
+  (Get-FileHash $metadata).Hash|Should -BeExactly $before
+  if($native){
+   $actualJson=& $native research report --metadata-path $metadata --tenant-fingerprint ('a'*64) --principal-fingerprint ('b'*64) --json
+   $LASTEXITCODE|Should -Be 0
+   $actual=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson(($actualJson -join [Environment]::NewLine))
+   @($actual.Applications[0].PublishedFlowHints).Count|Should -Be 1
+   $actual.Applications[0].PublishedFlowHints[0]|Should -BeExactly $ExpectedHint
+   $actual.RequiredAuthenticationFlow|Should -BeExactly 'NotInferred'
+  }
+ }
+ It 'rejects a scalar published callback field instead of weakening catalog validation' {
+  $app.RedirectUris='http://localhost/';$inventory.CapturedAt=[DateTimeOffset]::UtcNow.ToString('o')
+  $null=Update-TokenForgeApplicationMetadata $metadata $inventory Inventory
+  $before=(Get-FileHash $metadata).Hash
+  {Get-TokenForgeResearchCoverage $metadata -TenantFingerprint ('a'*64) -PrincipalFingerprint ('b'*64)}|Should -Throw
+  if($native){$output=& $native research report --metadata-path $metadata --json 2>&1;$LASTEXITCODE|Should -Not -Be 0;($output -join ' ')|Should -Not -Match 'http://localhost/'}
+  (Get-FileHash $metadata).Hash|Should -BeExactly $before
+ }
  It 'selects UTC instants rather than offset timestamp strings and preserves inputs' {
   $db=Get-TokenForgeFlowEvidence $flow;$older=$db.Attempts[0];$older.ObservedAt=[DateTimeOffset]::UtcNow.AddSeconds(-30).ToOffset([TimeSpan]::FromHours(2)).ToString('o');$older.StartedAt=$older.ObservedAt
   $retry=$older.Clone();$retry.AttemptId=[guid]::NewGuid().ToString();$retry.Outcome='Started';$retry.ObservedAt=[DateTimeOffset]::UtcNow.AddSeconds(-10).ToString('o');$retry.StartedAt=$retry.ObservedAt

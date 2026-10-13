@@ -80,9 +80,17 @@ public static class ResearchCoverage
             if(Attribute("RedirectUris") is JsonElement redirects && redirects.ValueKind==JsonValueKind.Array)
                 foreach(var redirect in redirects.EnumerateArray()) {
                     string uri=redirect.GetString()!;
-                    if(Regex.IsMatch(uri,"^(brk-|ms-appx-web:)",RegexOptions.IgnoreCase))hints.Add("BrokerCallbackPublished");
-                    else if(Regex.IsMatch(uri,"nativeclient|localhost|^urn:",RegexOptions.IgnoreCase))hints.Add("NativeCallbackPublished");
-                    else if(uri.StartsWith("https://",StringComparison.OrdinalIgnoreCase))hints.Add("BrowserCallbackPublished");
+                    // Describe published structure, not execution eligibility or host ownership.
+                    if(uri.Length>2048 || uri!=uri.Trim() || uri.Any(char.IsControl) ||
+                        !Uri.TryCreate(uri,UriKind.Absolute,out var callback) || callback.UserInfo.Length!=0 ||
+                        callback.Query.Length!=0 || callback.Fragment.Length!=0) {
+                        hints.Add("OtherCallbackPublished");continue;
+                    }
+                    if(callback.Scheme.StartsWith("brk-",StringComparison.Ordinal) || callback.Scheme=="ms-appx-web")hints.Add("BrokerCallbackPublished");
+                    else if(callback.Scheme=="urn" || (callback.Scheme is "http" or "https") && callback.Host=="localhost" ||
+                        callback.Scheme=="https" && callback.AbsolutePath.EndsWith("/oauth2/nativeclient",StringComparison.Ordinal))hints.Add("NativeCallbackPublished");
+                    else if(callback.Scheme=="https")hints.Add("BrowserCallbackPublished");
+                    else hints.Add("OtherCallbackPublished");
                 }
             var coverage=new List<Dictionary<string,object?>>();
             foreach(var entry in plansByClient[app.Name].OrderBy(x=>Text(x.Plan,"ResourceId"),StringComparer.Ordinal)) {

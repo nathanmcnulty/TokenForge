@@ -67,3 +67,17 @@ The [sanitized validation report](native-research-coverage-validation-2026-10-13
 records native checks, package parity, and reporting across 5,455 published applications.
 It also records the isolated rerun after a local timezone-fixture timeout. These
 checks do not establish live authentication or additional protocol support.
+
+Version 0.44.2 classifies published callbacks by parsed URI structure in the shared
+native and PowerShell report engine. HTTP/HTTPS callbacks with an exact `localhost`
+host, URNs, and HTTPS paths ending in the case-sensitive `/oauth2/nativeclient`
+suffix receive `NativeCallbackPublished`. Broker schemes receive a broker hint;
+other HTTPS callbacks receive a browser hint. `nativeclient-help`, `/localhost`,
+and `localhost.example.test` do not turn an ordinary HTTPS callback into a native hint.
+
+Malformed callbacks, other custom schemes, and callbacks containing userinfo,
+query or fragment receive `OtherCallbackPublished`. This category does not establish
+unusability. A native-client path on an arbitrary host does not establish trusted
+ownership or planner eligibility. Labels describe source metadata only; actual flow
+observations and the planner's execution restrictions remain separate. Reports do
+not return callback URLs or change their catalog inputs.

@@ -36,11 +36,11 @@ function Export-TokenForgeFlowEvidence {
         [ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,[switch]$Latest)
     $selection=@{};if($TenantFingerprint){$selection.TenantFingerprint=$TenantFingerprint};if($PrincipalFingerprint){$selection.PrincipalFingerprint=$PrincipalFingerprint}
     $db=Get-TokenForgeFlowEvidence $Path -NativeExecutablePath $NativeExecutablePath -Latest:$Latest @selection
-    $seen=@{}
+    $seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
     $rows=@(foreach($row in $db.Attempts){
         if($row.Outcome -ne 'Succeeded'){continue}
         $key=$row.ClientId+'|'+$row.ResourceId+'|'+$row.Protocol+'|'+[int]$row.Spa+'|'+(@($row.ScpScopes|Sort-Object -Unique -CaseSensitive) -join ' ')
-        if($seen.ContainsKey($key)){continue};$seen[$key]=$true
+        if(-not $seen.Add($key)){continue}
         [ordered]@{ClientId=$row.ClientId;ResourceId=$row.ResourceId;Protocol=$row.Protocol;Spa=$row.Spa;Scopes=@($row.ScpScopes|Sort-Object -Unique -CaseSensitive);SignatureValidated=$false;Evidence='AnonymousObservedFlowNotUniversalCapability'}
     })
     Save-TokenForgeDocument -Path $OutputPath -Document @{Format='TokenForgeAnonymousFlows';SchemaVersion=1;Observations=$rows;Disclaimer='Account/session/tenant-dependent observations, not universal support or consent.'}

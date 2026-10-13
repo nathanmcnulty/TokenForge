@@ -79,4 +79,6 @@ The [sanitized live report](research-catalog-validation-2026-10-06.json) records
 
 Secadmin's 24-hour sign-in scan found 205 client IDs, 13 absent from inventory. Nora's sign-in and registration calls returned HTTP 403. A single selected published missing registration candidate returned HTTP 400 for secadmin; both registration outcomes were linked into the metadata catalog. This run demonstrates failure checkpointing, not successful service-principal creation. Registration creation/ownership/rollback paths also have offline tests. This is a bounded sample, not an exhaustive verification of every catalog ID or authentication flow.
 
-Development version 0.42 adds [native research reporting](native-research-coverage.md), shared with PowerShell, including source conflicts and UTC latest-plan/attempt selection. It reads complete JSON/SQLite history before filtering and performs no authentication.
+Version 0.42 adds [native research reporting](native-research-coverage.md), shared with PowerShell, including source conflicts and UTC latest-plan/attempt selection. It reads complete JSON/SQLite history before filtering and performs no authentication.
+
+Version 0.44.1 preserves case-distinct scope sets in anonymous JSON and SQLite flow exports. Exact duplicate client/resource/protocol/SPA/scope observations still coalesce; scopes differing only by letter case remain separate observations. Input checkpoints are unchanged.

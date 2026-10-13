@@ -56,6 +56,24 @@ Describe 'Native SQLite flow integration' -Skip:(-not $nativeAvailable) {
   $db|ConvertTo-Json -Depth 12|Set-Content $export
   (Import-TokenForgeFlowEvidence $sqlite $export -NativeExecutablePath $native).Imported|Should -Be 0
  }
+ It 'preserves case-distinct scope observations in anonymous SQLite exports' {
+  $legacy=Join-Path $root legacy-case.json
+  $null=Invoke-TokenForgeScopeProbe $inventory $secret -ResourceId $graph -DatabasePath $path -FlowDatabasePath $legacy -DelayMilliseconds 0
+  $db=Get-TokenForgeFlowEvidence $legacy
+  $different=$db.Attempts[0].Clone();$different.AttemptId=[guid]::NewGuid().ToString();$different.ScpScopes=@('user.read');$different.ResponseScopes=@('user.read')
+  $duplicate=$db.Attempts[0].Clone();$duplicate.AttemptId=[guid]::NewGuid().ToString()
+  $db.Attempts+=@($different,$duplicate)
+  [IO.File]::WriteAllText($legacy,($db|ConvertTo-Json -Depth 12))
+  $null=Import-TokenForgeFlowEvidence $sqlite $legacy -NativeExecutablePath $native
+  $before=(Get-FileHash $sqlite).Hash
+  $export=Join-Path $root public-case.json;Export-TokenForgeFlowEvidence $sqlite -OutputPath $export -NativeExecutablePath $native
+  $json=Get-Content $export -Raw;$rows=($json|ConvertFrom-Json).Observations
+  $rows.Count|Should -Be 2
+  @($rows|Where-Object {$_.Scopes[0] -ceq 'User.Read'}).Count|Should -Be 1
+  @($rows|Where-Object {$_.Scopes[0] -ceq 'user.read'}).Count|Should -Be 1
+  (Get-FileHash $sqlite).Hash|Should -BeExactly $before
+  $json|Should -Not -Match 'Fingerprint|AttemptId|ObservedAt|PlannedAt|example.test|private-access'
+ }
  It 'fails safely when the native dependency is missing before token acquisition' {
   {Invoke-TokenForgeScopeProbe $inventory $secret -ResourceId $graph -DatabasePath $path -FlowDatabasePath $sqlite -NativeExecutablePath "$root/no-native" -DelayMilliseconds 0}|Should -Throw '*native*'
   Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 0

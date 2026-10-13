@@ -47,7 +47,8 @@ The text view summarizes counts. `--json` includes application rows unless
    against one captured UTC clock and the configured age limit. Token issuance does
    not establish signature verification or successful API operations.
 
-Reports compare parsed timestamp instants, including their offsets. Equal plan instants
+Reports compare parsed timestamp instants, including their offsets, and return report
+timestamps in UTC. Literal names that resemble dates remain unchanged strings. Equal plan instants
 use the ordinal greatest plan fingerprint for deterministic selection. Equal attempt
 instants use later input order, matching checkpoint append order; SQLite exports order
 by observation time and recorded sequence. This replaces the earlier report's string
@@ -55,7 +56,8 @@ ordering and unspecified plan ties.
 
 The adapters validate complete input documents before selecting an app or account,
 including historical metadata, source conflicts, flow hashes, and plan/attempt context.
-Duplicate JSON fields are rejected. SQLite opens read-only and is never upgraded by a
+Duplicate JSON fields are rejected. Flow timestamps use the existing SQLite policy's
+explicit ISO offset format. SQLite opens read-only and is never upgraded by a
 report. Output contains diagnostic metadata, not credentials, callback URLs, or raw
 authentication responses. Local report JSON can still contain private correlation
 fingerprints and sanitized sign-in summaries; keep it in private storage.

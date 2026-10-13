@@ -33,6 +33,9 @@ static class ApplicationCatalogTests
                 check(report["Applications"]![0]!["RoleHint"]!.GetValue<string>()=="Client");
                 check(ResearchCoverage.CreateFromValidatedDocuments(first,summaryOnly:true).Contains("\"Applications\":[]"));
                 reject(()=>ResearchCoverage.CreateFromValidatedDocuments(first,tenant:tenant));
+                var offsets=JsonNode.Parse(first)!;offsets["Applications"]![id]!["FirstSeenAt"]="2026-01-01T02:00:00+02:00";
+                var utcReport=JsonNode.Parse(ResearchCoverage.CreateFromValidatedDocuments(offsets.ToJsonString()))!;
+                check(utcReport["Applications"]![0]!["FirstSeenAt"]!.GetValue<string>()=="2026-01-01T00:00:00.0000000+00:00");
                 store.Update(json);check(store.Export()==first);
                 store.Update(Update("B").ToJsonString());store.Update(Update("Café <a> & \"b\" /").ToJsonString());store.Update(Update("B").ToJsonString());
                 var ledger=JsonNode.Parse(store.Export())!;check(ledger["Applications"]![id]!["Records"]!["Discovery///"]!["PreviousVersions"]!.AsArray().Count==3);

@@ -95,14 +95,14 @@ public static class ResearchCoverage
                     ["SuccessfulSlots"]=success.Length,["FailedSlots"]=Count("Failed"),["ContextMismatchSlots"]=Count("ContextMismatch"),
                     ["ObservedProtocols"]=success.Select(x=>Text(x,"Protocol")).Distinct(StringComparer.Ordinal).OrderBy(x=>x,StringComparer.Ordinal).ToArray(),
                     ["SpaRedemptionObserved"]=success.Any(x=>x.GetProperty("Spa").GetBoolean()),
-                    ["LatestObservationAt"]=latest.Length==0 ? null : latest.OrderBy(x=>Instant(x,"ObservedAt")).Last().GetProperty("ObservedAt").Clone(),
+                    ["LatestObservationAt"]=latest.Length==0 ? null : Instant(latest.OrderBy(x=>Instant(x,"ObservedAt")).Last(),"ObservedAt").ToString("o",CultureInfo.InvariantCulture),
                     ["FreshSuccessfulSlots"]=success.Count(x=>Instant(x,"ObservedAt")>=clock.AddHours(-maxAgeHours)),
                     ["Evidence"]="ObservedForSelectedAccountNotUniversalSupport",["ApiAcceptance"]="NotEstablishedByTokenProbe"};
                 coverage.Add(c);allPlans.Add(c);
             }
             var conflicts=discovery.HasValue && discovery.Value.GetProperty("Attributes").TryGetProperty("MetadataConflicts",out var mc) ? mc.Clone() : JsonSerializer.SerializeToElement(Array.Empty<object>());
             rows.Add(new Dictionary<string,object?> {
-                ["AppId"]=app.Name,["Name"]=Attribute("Name") ?? app.Name,["FirstSeenAt"]=app.Value.GetProperty("FirstSeenAt").Clone(),["LastSeenAt"]=app.Value.GetProperty("LastSeenAt").Clone(),
+                ["AppId"]=app.Name,["Name"]=Attribute("Name") ?? app.Name,["FirstSeenAt"]=Instant(app.Value,"FirstSeenAt").ToString("o",CultureInfo.InvariantCulture),["LastSeenAt"]=Instant(app.Value,"LastSeenAt").ToString("o",CultureInfo.InvariantCulture),
                 ["PublishedInLatestSnapshot"]=discovery.HasValue,["RoleHint"]=client ? (resource ? "ClientAndResource" : "Client") : resource ? "Resource" : "Unknown",
                 ["Ownership"]=Attribute("Ownership") ?? "Unknown",["Registration"]=inventory.HasValue ? Attribute("Registration") ?? "Unknown" : "Unknown",
                 ["LatestRegistrationOutcome"]=registration?.GetProperty("Attributes").GetProperty("Outcome").Clone(),

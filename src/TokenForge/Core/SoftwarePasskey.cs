@@ -24,7 +24,11 @@ public sealed class SoftwarePasskey : IDisposable
     private readonly string credential, handle, username;
     private SoftwarePasskey(ECDsa key,string credential,string handle,string username)
     {this.key=key;this.credential=credential;this.handle=handle;this.username=username;}
-    public static SoftwarePasskey Open(string path)
+    internal string FileHash {get;private set;} = "";
+    internal string ReceiptCredentialId {get;private set;} = "";
+    public static SoftwarePasskey Open(string path)=>OpenCore(path,false);
+    internal static SoftwarePasskey OpenPendingForRecovery(string path)=>OpenCore(path,true);
+    private static SoftwarePasskey OpenCore(string path,bool recovery)
     {
         byte[]? bytes=null;ECDsa? key=null;
         try
@@ -36,7 +40,16 @@ public sealed class SoftwarePasskey : IDisposable
             using var document=JsonDocument.Parse(bytes,new JsonDocumentOptions{MaxDepth=16});Unique(document.RootElement);
             var root=document.RootElement;
             if(root.ValueKind!=JsonValueKind.Object || root.TryGetProperty("keyVault",out _))throw new InvalidOperationException();
-            string user=Alias(root,"username","userName"),id=Alias(root,"credentialId","methodId"),pem=Alias(root,"privateKey","keyValue");
+            string receiptId=Alias(root,"credentialId","methodId");
+            string fileHash=Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+            bool pending=root.TryGetProperty("enrollmentStatus",out var enrollment);
+            if(pending && (enrollment.ValueKind!=JsonValueKind.String || enrollment.GetString()!="PendingRemoteVerification"))throw new InvalidOperationException();
+            if(recovery)
+            {
+                if(!pending || File.Exists(PrivateFiles.Resolve(path+".registered.json",false)))throw new InvalidOperationException();
+            }
+            else if(pending)SoftwarePasskeyReceipt.Validate(path,fileHash,receiptId);
+            string user=Alias(root,"username","userName"),id=receiptId,pem=Alias(root,"privateKey","keyValue");
             string rp=OptionalAlias(root,"relyingParty","rpId") ?? "login.microsoft.com";
             string origin=Optional(root,"url") ?? "https://login.microsoft.com";
             if(rp!="login.microsoft.com" || origin is not ("https://login.microsoft.com" or "https://login.microsoft.com/") || user.Length is <3 or >320 || user.Any(char.IsControl))throw new InvalidOperationException();
@@ -51,7 +64,7 @@ public sealed class SoftwarePasskey : IDisposable
                 try{key.ImportPkcs8PrivateKey(der,out int read);if(read!=der.Length)throw new InvalidOperationException();}finally{CryptographicOperations.ZeroMemory(der);}
             }
             if(key.KeySize!=256 || key.ExportParameters(false).Curve.Oid.Value!="1.2.840.10045.3.1.7")throw new InvalidOperationException();
-            var result=new SoftwarePasskey(key,id,userHandle,user);key=null;return result;
+            var result=new SoftwarePasskey(key,id,userHandle,user){FileHash=fileHash,ReceiptCredentialId=receiptId};key=null;return result;
         }
         catch{throw new InvalidOperationException("Unsupported or inaccessible software passkey. Details suppressed.");}
         finally{key?.Dispose();if(bytes!=null)CryptographicOperations.ZeroMemory(bytes);}

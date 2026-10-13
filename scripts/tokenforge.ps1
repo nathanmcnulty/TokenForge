@@ -62,7 +62,7 @@ try{
      if(-not (Test-Path -LiteralPath $path)){continue}
      $file=Get-Item -LiteralPath $path -Force
      if(($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -gt 134217728){throw 'Invalid frozen recipe file.'}
-     $state=Get-Content -LiteralPath $path -Raw|ConvertFrom-Json -AsHashtable
+     $state=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((Get-Content -LiteralPath $path -Raw))
      # Get-TfCiReport validates the complete frozen recipe once before deriving counts.
      $report=Get-TfCiReport $state
      if($state.Recipe.Mode -cne $mode){throw 'Weekly filename and recipe mode differ.'}

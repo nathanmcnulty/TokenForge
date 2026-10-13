@@ -12,14 +12,14 @@ function Get-TokenForgeApplicationMetadata {
         }else{
             $file=Get-Item -LiteralPath $Path -ErrorAction Stop
             if($file.PSIsContainer -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -gt 134217728){throw 'Invalid metadata file.'}
-            $document=Get-Content -LiteralPath $Path -Raw|ConvertFrom-Json -AsHashtable -Depth 100 -ErrorAction Stop
+            $document=[TokenForge.Core.DiscoverySourceClaims]::ReadCatalog((Get-Content -LiteralPath $Path -Raw))
         }
         # PowerShell 7.4 parses ISO dates as DateTime; normalize them back to UTC text.
         $normalizeDates={param($value)
             if($value -is [Collections.IDictionary]){foreach($key in @($value.Keys)){if($value[$key] -is [datetime]){$value[$key]=([DateTimeOffset]$value[$key].ToUniversalTime()).ToString('o')}else{& $normalizeDates $value[$key]}}}
             elseif($value -is [array]){foreach($item in $value){& $normalizeDates $item}}
         }; & $normalizeDates $document
-        if($document.SchemaVersion -ne 1 -or $document.Format -cne 'TokenForgeApplicationMetadata' -or $document.Applications -isnot [Collections.IDictionary] -or $document.Origins -isnot [Collections.IDictionary] -or $document.Runs -isnot [array]){throw 'Invalid metadata schema.'}
+        if($document.SchemaVersion -notin @(1,2) -or $document.Format -cne 'TokenForgeApplicationMetadata' -or $document.Applications -isnot [Collections.IDictionary] -or $document.Origins -isnot [Collections.IDictionary] -or $document.Runs -isnot [array]){throw 'Invalid metadata schema.'}
         foreach($key in $document.Applications.Keys){$id=[guid]::Empty;if(-not [guid]::TryParse($key,[ref]$id) -or $id -eq [guid]::Empty -or $key -cne $id.ToString() -or $document.Applications[$key].AppId -cne $key -or $document.Applications[$key].Records -isnot [Collections.IDictionary]){throw 'Invalid application metadata.'}}
         if($PublicOnly){
             # Reject rather than redact: public CI must never merge an accidentally private ledger.
@@ -30,7 +30,7 @@ function Get-TokenForgeApplicationMetadata {
                     if($field -in @('Applications','Origins','Records','Attributes')){
                         if($value -isnot [Collections.IDictionary]){throw 'Invalid public dictionary.'};continue
                     }
-                    if($field -in @('Runs','PreviousVersions','Sources','SourceSnapshots','Grants')){
+                    if($field -in @('Runs','PreviousVersions','Sources','SourceSnapshots','Grants','SourceClaims','MetadataConflicts')){
                         if($value -isnot [array]){throw 'Invalid public record array.'};continue
                     }
                     if($field -in @('Scopes','RedirectUris','IdentifierUris')){
@@ -55,13 +55,15 @@ function Get-TokenForgeApplicationMetadata {
 
             }
             $checkPayload={param($payload)
-                & $keys $payload.Attributes @('AppId','Name','OwnerTenantId','Ownership','PublicClient','Foci','RedirectUris','PreferredRedirectUri','Grants','IsResourceCandidate','IdentifierUris')
+                & $keys $payload.Attributes @('AppId','Name','OwnerTenantId','Ownership','PublicClient','Foci','RedirectUris','PreferredRedirectUri','Grants','IsResourceCandidate','IdentifierUris','SourceClaims','MetadataConflicts')
                 foreach($grant in @($payload.Attributes.Grants)){& $keys $grant @('ResourceId','Scopes')}
                 foreach($source in @($payload.Sources)){
                     & $keys $source @('Name','Location','Evidence')
-                    $uri=[uri]$source.Location
-                    if($uri.Scheme -ne 'https' -or $uri.Host -ne 'raw.githubusercontent.com' -or $uri.UserInfo -or $uri.Query){throw 'Public CI requires public upstream source locations.'}
+                    [TokenForge.Core.DiscoverySourceClaims]::ValidatePublicLocation($source.Location)
                 }
+                if($payload.Attributes.Contains('SourceClaims')){foreach($claim in $payload.Attributes.SourceClaims){
+                    [TokenForge.Core.DiscoverySourceClaims]::ValidatePublicLocation($claim.Location)
+                }}
             }
             & $keys $document @('Format','SchemaVersion','CreatedAt','UpdatedAt','Applications','Origins','Runs')
             foreach($app in $document.Applications.Values){
@@ -102,7 +104,7 @@ function Update-TokenForgeApplicationMetadata {
     )
     if($Kind -eq 'FlowAttempts'){Assert-TokenForgeFlowDocument $Document}
     $columns=switch($Kind){
-        Discovery {@('AppId','Name','OwnerTenantId','Ownership','PublicClient','Foci','RedirectUris','PreferredRedirectUri','Grants','IsResourceCandidate','IdentifierUris')}
+        Discovery {@('AppId','Name','OwnerTenantId','Ownership','PublicClient','Foci','RedirectUris','PreferredRedirectUri','Grants','IsResourceCandidate','IdentifierUris','SourceClaims','MetadataConflicts')}
         Inventory {@('AppId','Name','PublishedName','ServicePrincipalType','PreferredSingleSignOnMode','LoginUrl','LogoutUrl','Homepage','Registration','Ownership','OwnerTenantId','AccountEnabled','AssignmentRequired','SignInAudience','PublicClient','Foci','RedirectUris','TenantRedirectUris','PreferredRedirectUri','PublishedGrants','DelegatedScopeDefinitions','AppRoleDefinitions','IdentifierUris','IsResourceCandidate')}
         SignIns {@('AppId','SignInCount','KnownInInventory','RegisteredMicrosoft','Evidence','ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts','AuthenticationMethodCounts','CredentialTypeCounts','IncomingTokenTypeCounts')}
         RegistrationAttempts {@('AppId','Outcome','HttpStatus')}
@@ -132,7 +134,8 @@ function Update-TokenForgeApplicationMetadata {
         try{$lock=[IO.FileStream]::new("$full.lock",$options)}catch{throw 'Application metadata is already in use or unavailable.'}
         $now=[DateTimeOffset]::UtcNow.ToString('o')
         $changes=[Collections.Generic.List[object]]::new()
-        $catalog=if($sqlite){$null}elseif(Test-Path -LiteralPath $full){Get-TokenForgeApplicationMetadata $full}else{@{Format='TokenForgeApplicationMetadata';SchemaVersion=1;CreatedAt=$now;UpdatedAt=$now;Applications=@{};Origins=@{};Runs=@()}}
+        $catalog=if($sqlite){$null}elseif(Test-Path -LiteralPath $full){Get-TokenForgeApplicationMetadata $full}else{@{Format='TokenForgeApplicationMetadata';SchemaVersion=2;CreatedAt=$now;UpdatedAt=$now;Applications=@{};Origins=@{};Runs=@()}}
+        if(-not $sqlite){$catalog.SchemaVersion=2}
         $runId=[guid]::NewGuid().ToString();$seen=@{};$affectedOrigins=@{};$count=0;$emptyIds=0
         foreach($row in $rows){
             $rawId=if($Kind -in @('ScopeObservations','FlowAttempts')){$row.ClientId}else{$row.AppId};$id=[guid]::Empty
@@ -157,6 +160,10 @@ function Update-TokenForgeApplicationMetadata {
             if($Kind -eq 'FlowAttempts'){if($row.AttemptKey -notmatch '^[a-f0-9]{64}$'){throw 'Invalid flow attempt key.'};$origin+='/'+$row.AttemptKey}
             $attributes=[ordered]@{}
             foreach($column in $columns){if($row.PSObject.Properties[$column]){$attributes[$column]=$row.$column}elseif($row -is [Collections.IDictionary] -and $row.Contains($column)){$attributes[$column]=$row[$column]}}
+            if($Kind -eq 'Discovery'){
+                if($attributes.Contains('SourceClaims') -ne $attributes.Contains('MetadataConflicts')){throw 'Discovery claims require their matching conflict summary.'}
+                if($attributes.Contains('SourceClaims')){[TokenForge.Core.DiscoverySourceClaims]::Validate((ConvertTo-Json -InputObject $attributes.SourceClaims -Depth 32 -Compress),(ConvertTo-Json -InputObject $attributes.MetadataConflicts -Depth 32 -Compress),$appId)}
+            }
             foreach($nested in @('Grants','PublishedGrants','DelegatedScopeDefinitions','AppRoleDefinitions','ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts','AuthenticationMethodCounts','CredentialTypeCounts','IncomingTokenTypeCounts')){
                 if(-not $attributes.Contains($nested)){continue}
                 $fields=switch($nested){
@@ -177,6 +184,7 @@ function Update-TokenForgeApplicationMetadata {
             # Nested metadata records were projected above; remaining values must be simple leaves.
             # Reject credential-bearing objects rather than serializing them under an allowed field name.
             foreach($field in $attributes.Keys){
+                if($field -in @('SourceClaims','MetadataConflicts')){continue} # Strict shared validation above includes every nested field.
                 $entries=if($field -in @('Grants','PublishedGrants','DelegatedScopeDefinitions','AppRoleDefinitions','ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts','AuthenticationMethodCounts','CredentialTypeCounts','IncomingTokenTypeCounts')){
                     @($attributes[$field]|ForEach-Object {$_.Values})
                 }else{@($attributes[$field])}
@@ -239,7 +247,7 @@ function Update-TokenForgeApplicationMetadata {
         $run=@{Id=$runId;Kind=$Kind;ObservedAt=$observed.ToString('o');RecordedAt=$now;ApplicationRecordCount=$count;IgnoredEmptyAppIdCount=$emptyIds;TenantFingerprint=$tenant}
         if($Kind -eq 'Discovery'){$run.SourceSnapshots=@($Document.SourceSnapshots|ForEach-Object {[ordered]@{Location=$_.Location;Sha256=$_.Sha256;HashKind=$_.HashKind}})}
         if($Kind -eq 'SignIns'){$run.Window=@{Since=$Document.Since;Until=$Document.Until;EventTypes=@($Document.EventTypes)}}
-        if($sqlite){return Invoke-TokenForgeNativeEvidence $full update -Domain catalog -Document @{Format='TokenForgeCatalogUpdate';SchemaVersion=1;Run=$run;Rows=$changes.ToArray()} -NativeExecutablePath $NativeExecutablePath}
+        if($sqlite){return Invoke-TokenForgeNativeEvidence $full update -Domain catalog -Document @{Format='TokenForgeCatalogUpdate';SchemaVersion=2;Run=$run;Rows=$changes.ToArray()} -NativeExecutablePath $NativeExecutablePath}
         $catalog.Runs+= $run;$catalog.UpdatedAt=$now
         if([Text.Encoding]::UTF8.GetByteCount((ConvertTo-Json -InputObject $catalog -Depth 100)) -gt 134217728){throw 'Application metadata exceeds the 128 MiB limit; archive history before retrying.'}
         Save-TokenForgeDocument -Document $catalog -Path $full

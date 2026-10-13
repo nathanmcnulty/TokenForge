@@ -24,7 +24,7 @@ $null=New-Item -ItemType Directory $DataPath,$BundlePath,(Join-Path $DataPath re
 Assert-TfCiPublicData $DataPath
 if($Mode -eq 'Auto'){
  $shallowPath=Join-Path $DataPath weekly-shallow.json
- $shallow=if(Test-Path $shallowPath){Get-Content $shallowPath -Raw|ConvertFrom-Json -AsHashtable}else{$null}
+ $shallow=if(Test-Path $shallowPath){[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((Get-Content $shallowPath -Raw))}else{$null}
  $Mode=if($shallow -and $shallow.Recipe.Week -eq (Get-TfCiWeek) -and (Get-TfCiReport $shallow).Complete){'Deep'}else{'Shallow'}
 }
 if($AppId -and $Mode -ne 'Deep'){throw 'Targeted IDs are available only for Deep; weekly shallow coverage must include the full public catalog.'}
@@ -34,7 +34,7 @@ if($Action -eq 'Prepare'){
  if(Test-Path $metadata){$null=Get-TokenForgeApplicationMetadata $metadata -PublicOnly}
  $discovery=Update-TokenForgeDiscovery -Path (Join-Path $BundlePath discovery.json) -MetadataPath $metadata
  $null=Get-TokenForgeApplicationMetadata $metadata -PublicOnly
- $state=if(Test-Path $statePath){Get-Content $statePath -Raw|ConvertFrom-Json -AsHashtable}else{$null}
+ $state=if(Test-Path $statePath){[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((Get-Content $statePath -Raw))}else{$null}
  if($state){Assert-TfCiState $state}
  # History records public selection, not issuance or completed assessment.
  $history=@{}
@@ -45,7 +45,7 @@ if($Action -eq 'Prepare'){
  if(-not $state -or $state.Recipe.Week -ne (Get-TfCiWeek)){
   if($state){$archive=Join-Path $DataPath reports;$null=New-Item -ItemType Directory $archive -Force;Save-CiJson (Get-TfCiReport $state) (Join-Path $archive ($state.Recipe.Week+'-'+$Mode.ToLowerInvariant()+'.json'))}
   # Freeze only public discovery, never eligible tenant membership.
-  $public=$discovery|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable
+  $public=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((ConvertTo-Json -InputObject $discovery -Depth 100))
   $options=@{};if($AppId){$options.AppId=@($AppId|ForEach-Object ToString)}
   if($Mode -eq 'Deep'){
    $options.ChunkSize=if($ValidationOnly){2}else{25}
@@ -86,8 +86,8 @@ if($Action -eq 'Prepare'){
  $report
 }else{
  $null=Get-TokenForgeApplicationMetadata (Join-Path $DataPath applications.json) -PublicOnly
- $state=Get-Content (Join-Path $BundlePath state.json) -Raw|ConvertFrom-Json -AsHashtable;Assert-TfCiState $state
- $current=Get-Content $statePath -Raw|ConvertFrom-Json -AsHashtable;Assert-TfCiState $current
+ $state=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((Get-Content (Join-Path $BundlePath state.json) -Raw));Assert-TfCiState $state
+ $current=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((Get-Content $statePath -Raw));Assert-TfCiState $current
  if((Get-TfCiHash $state) -cne (Get-TfCiHash $current)){throw 'Publisher state changed after planning.'}
  $request=Get-Content (Join-Path $BundlePath request.json) -Raw|ConvertFrom-Json -AsHashtable
  $requestFields=@('SchemaVersion','PlanId','Mode','Indices','BaseCommit');if($ValidationOnly){$requestFields+='ValidationOnly'}

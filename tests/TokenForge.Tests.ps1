@@ -65,7 +65,7 @@ Describe 'Catalog and request planning' {
     It 'validates a download before replacing the previous catalog' {
         Copy-Item "$PSScriptRoot/fixtures/catalog.json" "$TestDrive/catalog.json"
         $before = Get-FileHash "$TestDrive/catalog.json"
-        Mock Invoke-RestMethod -ModuleName TokenForge { @{ apps = @() } }
+        Mock Invoke-WebRequest -ModuleName TokenForge { @{Content='{"apps":[]}'} }
         { Update-TokenForgeCatalog -Path "$TestDrive/catalog.json" } | Should -Throw '*apps object*'
         (Get-FileHash "$TestDrive/catalog.json").Hash | Should -Be $before.Hash
     }

@@ -1,5 +1,10 @@
 # Application research catalog
 
+The 0.41 discovery format preserves [per-source claims and conflicts](discovery-source-claims.md).
+It retains alternative published names and owner hints without changing selected ownership
+rules. JSON and SQLite support v1/v2 records. Observation-only refreshes retain content
+hashes. These claims are diagnostic evidence, not consent or ownership proof.
+
 TokenForge tracks application IDs across public datasets, tenant inventory, sign-ins, registration attempts, and token probes. `applications.json` is the portable metadata ledger; version 0.14 adds a [primary SQLite application catalog](sqlite-application-catalog.md) for private maintenance. It records supported attributes, source, observation dates, and changes. This ledger is diagnostic: registration and token acquisition still require independently verified tenant metadata.
 
 ## The research loop

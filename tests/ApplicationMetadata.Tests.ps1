@@ -60,7 +60,7 @@ Describe 'Persistent application metadata' {
     }
     It 'automatically updates the sibling catalog on every public discovery refresh' {
         Mock Update-TokenForgeCatalog -ModuleName TokenForge {Get-TokenForgeCatalog -Path "$PSScriptRoot/fixtures/catalog.json"}
-        Mock Invoke-RestMethod -ModuleName TokenForge { @() }
+        Mock Invoke-WebRequest -ModuleName TokenForge { @{Content='[]'} }
         $discoveryPath=Join-Path $TestDrive 'automatic/discovery.json'
         $null=Update-TokenForgeDiscovery -Path $discoveryPath
         $null=Update-TokenForgeDiscovery -Path $discoveryPath

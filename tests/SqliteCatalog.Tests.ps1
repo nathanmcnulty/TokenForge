@@ -11,6 +11,26 @@ Describe 'SQLite application catalog integration' -Skip:(-not $nativeAvailable) 
   $root=Join-Path ($TestDrive -replace '^/var/','/private/var/') ([guid]::NewGuid().ToString());$sqlite=Join-Path $root applications.sqlite;$json=Join-Path $root applications.json
   $null=Get-TokenForgeFlowEvidence (Join-Path $root missing.json)
  }
+ It 'matches v2 source-claim hashes, conflict history and literal text in JSON and SQLite' {
+  foreach($entry in @(@('2026-01-01T00:00:00Z','Other'),@('2026-01-02T00:00:00Z','Other'),@('2026-01-03T00:00:00Z','2026-01-01T00:00:00+02:00'))){
+   $doc=New-CatalogSample $entry[0]
+   $one=[TokenForge.Core.DiscoverySourceClaims]::Project('Published','https://raw.githubusercontent.com/example/public/main/apps.json','PublishedHint','{"Name":"Example"}')
+   $two=[TokenForge.Core.DiscoverySourceClaims]::Project('Other','https://raw.githubusercontent.com/example/other/main/apps.json','PublishedHint',(ConvertTo-Json -InputObject @{Name=$entry[1]} -Compress))
+   $claims=[TokenForge.Core.DiscoverySourceClaims]::NormalizeMetadata(('['+$one+','+$two+']'),$id)
+   $doc.Applications[0]|Add-Member -NotePropertyName SourceClaims -NotePropertyValue $claims.SourceClaims
+   $doc.Applications[0]|Add-Member -NotePropertyName MetadataConflicts -NotePropertyValue $claims.MetadataConflicts
+   foreach($path in @($json,$sqlite)){$null=Update-TokenForgeApplicationMetadata $path $doc Discovery -NativeExecutablePath $native}
+  }
+  $a=Get-TokenForgeApplicationMetadata $json -PublicOnly
+  $b=Get-TokenForgeApplicationMetadata $sqlite -PublicOnly -NativeExecutablePath $native
+  $a.SchemaVersion|Should -Be 2;$b.SchemaVersion|Should -Be 2
+  $record=$b.Applications[$id].Records['Discovery///']
+  $record.ContentSha256|Should -BeExactly $a.Applications[$id].Records['Discovery///'].ContentSha256
+  $record.PreviousVersions.Count|Should -Be 1
+  $record.PreviousVersions[0].ContentSha256|Should -BeExactly $a.Applications[$id].Records['Discovery///'].PreviousVersions[0].ContentSha256
+  @($record.Attributes.SourceClaims.Name)|Should -Contain '2026-01-01T00:00:00+02:00'
+  @($record.Attributes.MetadataConflicts.Field)|Should -Contain 'Name'
+ }
  It 'matches JSON chronology, presence, hashes and non-ASCII projection' {
   foreach($entry in @(@('2026-01-01T00:00:00Z','Café <a> & "b" /'),@('2026-01-02T00:00:00Z','Changed'),@('2026-01-03T00:00:00Z','Café <a> & "b" /'))){
    $doc=New-CatalogSample $entry[0] $entry[1]
@@ -98,7 +118,7 @@ Describe 'SQLite application catalog integration' -Skip:(-not $nativeAvailable) 
  It 'refreshes an existing sibling SQLite ledger without requiring an explicit metadata path' {
   $null=Update-TokenForgeApplicationMetadata $sqlite (New-CatalogSample) Discovery -NativeExecutablePath $native
   Mock Update-TokenForgeCatalog -ModuleName TokenForge {Get-TokenForgeCatalog -Path "$PSScriptRoot/fixtures/catalog.json"}
-  Mock Invoke-RestMethod -ModuleName TokenForge {@()}
+  Mock Invoke-WebRequest -ModuleName TokenForge {@{Content='[]'}}
   $null=Update-TokenForgeDiscovery -Path (Join-Path $root discovery.json) -NativeExecutablePath $native
   (Get-TokenForgeApplicationMetadata $sqlite -NativeExecutablePath $native).Runs.Count|Should -Be 2
   Test-Path $json|Should -BeFalse

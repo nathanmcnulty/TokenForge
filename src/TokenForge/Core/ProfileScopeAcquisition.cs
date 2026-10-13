@@ -19,7 +19,7 @@ public static class ProfileScopeAcquisition
     public static ProfileCredentialToken Acquire(string name,string profileJson,string inventoryJson,string databaseJson,
         string resource,string[] scopes,SecureString? cookie,string cookieName="ESTSAUTH",int maxCandidates=8,int maxRedirects=2,
         Func<ScopePlanning.RequestRow,ProfileCredentialToken>? execute=null,Func<SecureString,string>? readIdentity=null,
-        Action<string>? checkpoint=null,CancellationToken cancellation=default,bool browser=false)
+        Action<string>? checkpoint=null,CancellationToken cancellation=default,bool browser=false,bool confirmIdentity=false)
     {
         try
         {
@@ -48,7 +48,7 @@ public static class ProfileScopeAcquisition
                 using var token=OAuthTransport.Cookie(row.ToTransport(),ownedCookie!,cookieName,cancellation);
                 return new ProfileCredentialToken(row.ToTransport(),token.AccessToken,token.RefreshToken,token.ExpiresAt,token.AdditionalScopes.Length);
             }
-            if(warm)
+            if(warm || confirmIdentity)
             {
                 var bootstrap=ScopePlanning.BootstrapRequest(inventoryJson,authority,p.GetProperty("BootstrapClientId").GetString()!,hours,browser:browser);
                 using var issued=Execute(bootstrap);

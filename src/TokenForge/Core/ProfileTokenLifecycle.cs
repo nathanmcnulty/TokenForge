@@ -52,6 +52,36 @@ public sealed class ProfileFreshRequest
 
 public static class ProfileTokenLifecycle
 {
+    // Memory profiles hold only identity policy on disk. Fresh credentials remain caller-owned.
+    public static ProfileCredentialToken AcquireMemory(string name,string? root,string resource,string[] scopes,
+        Func<ProfileFreshRequest,ProfileCredentialToken> acquireFresh,CancellationToken cancellation=default,string? expectedProfileJson=null)
+        =>AcquireMemoryCore(name,root,resource,scopes,acquireFresh,cancellation,expectedProfileJson,()=>DateTimeOffset.UtcNow);
+    internal static ProfileCredentialToken AcquireMemoryCore(string name,string? root,string resource,string[] scopes,
+        Func<ProfileFreshRequest,ProfileCredentialToken> acquireFresh,CancellationToken cancellation,string? expectedProfileJson,Func<DateTimeOffset> clock)
+    {
+        scopes=scopes?.ToArray()!;
+        if(acquireFresh==null || !Guid.TryParse(resource,out var resourceId) || resourceId==Guid.Empty || scopes==null || scopes.Length is <1 or >64 ||
+            scopes.Any(s=>s==null || s.Length>256 || !Regex.IsMatch(s,@"\A[A-Za-z0-9_-][A-Za-z0-9_.-]*\z") || new[]{"openid","profile","email","offline_access"}.Contains(s,StringComparer.Ordinal)))
+            throw new InvalidOperationException("Invalid explicit memory token request.");
+        resource=resourceId.ToString();scopes=scopes.Distinct(StringComparer.Ordinal).OrderBy(s=>s,StringComparer.Ordinal).ToArray();
+        if(expectedProfileJson!=null)V0200.ProfilePolicy.Validate(expectedProfileJson,name);
+        using var expected=expectedProfileJson==null?null:JsonDocument.Parse(expectedProfileJson);
+        return ProfileStore.WithVault(name,root,null,null,"Read",true,(_,_,profile)=>
+        {
+            cancellation.ThrowIfCancellationRequested();
+            using var issued=acquireFresh(new ProfileFreshRequest(scopes,resource,null,"ESTSAUTH")) ?? throw new InvalidOperationException();
+            if(issued.Evidence is not ("SilentExplicitScopeAcquisition" or "BoundedTargetedSilentExplicitScopeAcquisition"))throw new InvalidOperationException();
+            cancellation.ThrowIfCancellationRequested();ValidateRequest(issued.Request,profile,resource,scopes);Validate(issued,profile,resource,scopes,false,clock());
+            using(var current=JsonDocument.Parse(ProfileStore.Read(name,root)))if(current.RootElement.GetRawText()!=profile.GetRawText())throw new InvalidOperationException();
+            cancellation.ThrowIfCancellationRequested();Validate(issued,profile,resource,scopes,false,clock());
+            return new ProfileCredentialToken(issued.Request,issued.AccessToken,issued.RefreshToken,issued.ExpiresAt,issued.ResponseAdditionalScopeCount,issued.Evidence);
+        },profile=>
+        {
+            cancellation.ThrowIfCancellationRequested();
+            if(profile.GetProperty("Storage").GetString()!="Memory" || expected!=null && expected.RootElement.GetRawText()!=profile.GetRawText() ||
+                profile.GetProperty("ExpectedTenantFingerprint").ValueKind!=JsonValueKind.String || profile.GetProperty("ExpectedPrincipalFingerprint").ValueKind!=JsonValueKind.String)throw new InvalidOperationException();
+        });
+    }
     // Fresh planning and optional adapter execute synchronously under the profile lock.
     // Vault locking is released for network work and reacquired for ciphertext comparison and commit.
     // The optional delegates are in-process adapters, never a credential export protocol.
@@ -186,11 +216,11 @@ public static class ProfileTokenLifecycle
         catch {throw new InvalidOperationException("Profile token lifecycle failed. Details suppressed.");}
         finally {cookie?.Dispose();if(!returned)result?.Dispose();if(plaintext!=null)CryptographicOperations.ZeroMemory(plaintext);if(rewritten!=null)CryptographicOperations.ZeroMemory(rewritten);}
     }
-    private static void Validate(ProfileCredentialToken token,JsonElement profile,string resource,string[] scopes,bool expired)
+    private static void Validate(ProfileCredentialToken token,JsonElement profile,string resource,string[] scopes,bool expired,DateTimeOffset? now=null)
     {
         var c=token.TokenClaims;
         TokenPolicy.Validate(c.TenantFingerprint!,c.PrincipalFingerprint!,c.ClientId!,c.Audience!,Text(profile,"ExpectedTenantFingerprint"),Text(profile,"ExpectedPrincipalFingerprint"),token.Request.ClientId,resource,
-            c.Scopes,scopes,c.HasDelegatedScopeClaim,c.ExpiresAt,token.ExpiresAt,profile.GetProperty("MaxAdditionalScopes").GetInt32(),token.ResponseAdditionalScopeCount,expired,DateTimeOffset.UtcNow);
+            c.Scopes,scopes,c.HasDelegatedScopeClaim,c.ExpiresAt,token.ExpiresAt,profile.GetProperty("MaxAdditionalScopes").GetInt32(),token.ResponseAdditionalScopeCount,expired,now??DateTimeOffset.UtcNow);
     }
     private static void ValidateRequest(OAuthRequest request,JsonElement profile,string resource,string[] scopes)
     {

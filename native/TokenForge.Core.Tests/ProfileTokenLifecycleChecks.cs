@@ -76,5 +76,48 @@ static class ProfileTokenLifecycleChecks
   }
   finally{if(Directory.Exists(root))Directory.Delete(root,true);}
  }
+ public static void RunMemory(Action<bool> check,Action<Action> reject)
+ {
+  const string tenant="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",principal="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",client="11111111-1111-1111-1111-111111111111",resource="00000003-0000-0000-c000-000000000000";
+  string Hash(string s)=>Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(s))).ToLowerInvariant();
+  string root=Path.Combine(Path.GetTempPath(),"TokenForge-memory-checks-"+Guid.NewGuid().ToString("N"));if(OperatingSystem.IsMacOS()&&root.StartsWith("/var/"))root="/private"+root;
+  ProfileCredentialToken Token(string? oid=null,string scope="User.Read",DateTimeOffset? expiry=null,string evidence="SilentExplicitScopeAcquisition")
+  {
+   var until=expiry??DateTimeOffset.UtcNow.AddHours(1);
+   var request=new OAuthRequest{ClientId=client,ResourceId=resource,ResourceUri=resource,Tenant=tenant,RedirectUri="http://localhost/",Scopes=new[]{"User.Read"},OAuthScopes=new[]{resource+"/User.Read"}};
+   string jwt="e30."+Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(new{tid=tenant,oid=oid??principal,appid=client,aud=resource,scp=scope,exp=until.ToUnixTimeSeconds()})).TrimEnd('=').Replace('+','-').Replace('/','_')+".synthetic-memory";
+   using var secret=Secret(jwt);return new ProfileCredentialToken(request,secret,null,until,evidence:evidence);
+  }
+  try
+  {
+   string path=Path.Combine(root,"lab","profile.json"),vault=Path.Combine(root,"lab","session.tfvault");
+   var profile=JsonNode.Parse(ProfileStore.Create("lab",tenant,root,storage:"Memory"))!.AsObject();int calls=0;
+   reject(()=>ProfileTokenLifecycle.AcquireMemory("lab",root,resource,new[]{"User.Read"},_=>{calls++;return Token();}));check(calls==0 && !File.Exists(vault));
+   profile["ExpectedTenantFingerprint"]=Hash(tenant);profile["ExpectedPrincipalFingerprint"]=Hash(tenant+"/"+principal);string configuration=profile.ToJsonString()+"\n";File.WriteAllText(path,configuration);
+   ProfileCredentialToken? supplied=null;
+   using(var result=ProfileTokenLifecycle.AcquireMemory("lab",root,resource,new[]{"User.Read"},input=>{calls++;check(input.Cookie==null);input.Scopes[0]="Mail.Read";return supplied=Token();},expectedProfileJson:configuration))
+    check(result.TokenClaims.Scopes.SequenceEqual(new[]{"User.Read"}) && !JsonSerializer.Serialize(result).Contains("synthetic-memory"));
+   reject(()=>{_=supplied!.AccessToken.Length;});check(ProfileStore.Read("lab",root)==configuration && !File.Exists(vault));
+   foreach(string poison in new[]{"identity","scope","expiry","cache"})
+   {
+    reject(()=>ProfileTokenLifecycle.AcquireMemory("lab",root,resource,new[]{"User.Read"},_=>supplied=Token(poison=="identity"?Guid.NewGuid().ToString():null,poison=="scope"?"User.Read Mail.Read":"User.Read",poison=="expiry"?DateTimeOffset.UtcNow.AddSeconds(30):null,poison=="cache"?"CachedVerifiedContextNotNewIssuance":"SilentExplicitScopeAcquisition")));
+    reject(()=>{_=supplied!.AccessToken.Length;});check(ProfileStore.Read("lab",root)==configuration && !File.Exists(vault));
+   }
+   using(var held=PrivateFiles.Open(Path.Combine(root,"lab",".operation.lock"),false))
+   {int before=calls;reject(()=>ProfileTokenLifecycle.AcquireMemory("lab",root,resource,new[]{"User.Read"},_=>{calls++;return Token();}));check(calls==before);}
+   using var cancellation=new CancellationTokenSource();
+   reject(()=>ProfileTokenLifecycle.AcquireMemory("lab",root,resource,new[]{"User.Read"},_=>{cancellation.Cancel();return supplied=Token();},cancellation.Token));reject(()=>{_=supplied!.AccessToken.Length;});
+   var changed=profile.DeepClone().AsObject();changed["Revision"]=Guid.NewGuid().ToString();string replacement=changed.ToJsonString();
+   reject(()=>ProfileTokenLifecycle.AcquireMemory("lab",root,resource,new[]{"User.Read"},_=>{File.WriteAllText(path,replacement);return supplied=Token();}));
+   reject(()=>{_=supplied!.AccessToken.Length;});check(ProfileStore.Read("lab",root)==replacement && !File.Exists(vault));File.WriteAllText(path,configuration);
+   int stale=0;reject(()=>ProfileTokenLifecycle.AcquireMemory("lab",root,resource,new[]{"User.Read"},_=>{stale++;return Token();},expectedProfileJson:replacement));check(stale==0);
+   var instant=DateTimeOffset.UtcNow;int clocks=0;var core=typeof(ProfileTokenLifecycle).GetMethod("AcquireMemoryCore",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static)!;
+   reject(()=>core.Invoke(null,new object?[]{"lab",root,resource,new[]{"User.Read"},(Func<ProfileFreshRequest,ProfileCredentialToken>)(_=>supplied=Token(expiry:instant.AddMinutes(5))),CancellationToken.None,configuration,(Func<DateTimeOffset>)(()=>++clocks==1?instant:instant.AddMinutes(4))}));
+   check(clocks==2 && ProfileStore.Read("lab",root)==configuration && !File.Exists(vault));reject(()=>{_=supplied!.AccessToken.Length;});
+   ProfileStore.Create("saved",tenant,root);int savedCalls=0;reject(()=>ProfileTokenLifecycle.AcquireMemory("saved",root,resource,new[]{"User.Read"},_=>{savedCalls++;return Token();}));check(savedCalls==0);
+   check(Directory.EnumerateFiles(Path.Combine(root,"lab")).Select(Path.GetFileName).OrderBy(x=>x).SequenceEqual(new[]{".operation.lock","profile.json"}));
+  }
+  finally{if(Directory.Exists(root))Directory.Delete(root,true);}
+ }
  private static SecureString Secret(string text){var s=new SecureString();foreach(char c in text)s.AppendChar(c);return s;}
 }

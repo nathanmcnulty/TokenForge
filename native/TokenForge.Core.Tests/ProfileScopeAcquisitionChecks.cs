@@ -31,8 +31,8 @@ static class ProfileScopeAcquisitionChecks
     using var access=Secret(jwt);using var refresh=Secret("synthetic-refresh");
     return new ProfileCredentialToken(row.ToTransport(),access,refresh,DateTimeOffset.UtcNow.AddHours(1),extras);
    }
-   ProfileCredentialToken Acquire(JsonObject db,Func<ScopePlanning.RequestRow,ProfileCredentialToken> execute,Action<string>? checkpoint=null,Func<SecureString,string>? identity=null,CancellationToken ct=default,bool browser=false)=>
-    ProfileScopeAcquisition.Acquire("lab",profile.ToJsonString(),inventory.ToJsonString(),db.ToJsonString(),graph,new[]{"Mail.Read"},browser?null:cookie,maxCandidates:2,execute:execute,readIdentity:identity,checkpoint:checkpoint,cancellation:ct,browser:browser);
+   ProfileCredentialToken Acquire(JsonObject db,Func<ScopePlanning.RequestRow,ProfileCredentialToken> execute,Action<string>? checkpoint=null,Func<SecureString,string>? identity=null,CancellationToken ct=default,bool browser=false,bool confirmIdentity=false)=>
+    ProfileScopeAcquisition.Acquire("lab",profile.ToJsonString(),inventory.ToJsonString(),db.ToJsonString(),graph,new[]{"Mail.Read"},browser?null:cookie,maxCandidates:2,execute:execute,readIdentity:identity,checkpoint:checkpoint,cancellation:ct,browser:browser,confirmIdentity:confirmIdentity);
    int calls=0,writes=0;ProfileCredentialToken? supplied=null;string? saved=null;
    using(var result=Acquire(empty,row=>{calls++;return supplied=Token(row);},value=>{writes++;saved=value;}))
    {check(result.Evidence=="BoundedTargetedSilentExplicitScopeAcquisition" && result.TokenClaims.Scopes.SequenceEqual(new[]{"Mail.Read"}));check(result.AccessToken.Length>0);}
@@ -53,6 +53,13 @@ static class ProfileScopeAcquisitionChecks
    calls=0;ProfileCredentialToken? bootstrapToken=null;int identities=0;
    using(var result=Acquire(warm,row=>{calls++;if(row.ClientId==bootstrap)return bootstrapToken=Token(row);reject(()=>{_ = bootstrapToken!.AccessToken.Length;});return Token(row);},_=>throw new Exception(),token=>{identities++;check(token.Length>0);return principal;}))check(result.Evidence=="SilentExplicitScopeAcquisition");
    check(calls==2 && identities==1);
+   calls=0;writes=0;identities=0;
+   using(var result=Acquire(empty,row=>{calls++;return Token(row);},_=>writes++,token=>{identities++;return principal;},confirmIdentity:true))
+    check(result.Evidence=="BoundedTargetedSilentExplicitScopeAcquisition");
+   check(calls==2 && writes==1 && identities==1);
+   calls=0;writes=0;
+   reject(()=>Acquire(empty,row=>{calls++;return supplied=Token(row);},_=>writes++,_=>Guid.NewGuid().ToString(),confirmIdentity:true));
+   check(calls==1 && writes==0);reject(()=>{_=supplied!.AccessToken.Length;});
    calls=0;reject(()=>Acquire(warm,row=>{calls++;return Token(row);},_=>writes++,token=>Guid.NewGuid().ToString()));check(calls==1); // Failed warm observer never falls back to cold.
    calls=0;inventory["Applications"]![3]!["DelegatedScopeDefinitions"]![0]!["Enabled"]=false;
    reject(()=>Acquire(warm,row=>{calls++;return Token(row);},identity:_=>principal));check(calls==0);

@@ -12,6 +12,7 @@ TimestampPolicyChecks.Run(Check,Reject);
 VaultRecordPolicyChecks.Run(Check,Reject);
 VaultInspectionChecks.Run(Check,Reject);
 ProfileTokenLifecycleChecks.Run(Check,Reject);
+ProfileTokenLifecycleChecks.RunMemory(Check,Reject);
 ScopePlanningChecks.Run(Check,Reject);
 ProfileScopeAcquisitionChecks.Run(Check,Reject);
 VaultEnvelopeChecks.Run(Check,Reject);

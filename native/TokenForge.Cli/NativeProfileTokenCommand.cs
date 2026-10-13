@@ -11,7 +11,7 @@ internal static class NativeProfileTokenCommand
  {
   exit=0;
   var options=new Dictionary<string,string>(StringComparer.Ordinal);var seen=new HashSet<string>(StringComparer.Ordinal);
-  var allowed=new HashSet<string>(new[]{"--profile","--root","--resource","--resource-id","--scope","--api-uri","--max-candidates","--max-redirects","--login-hint","--timeout-seconds"},StringComparer.Ordinal);
+  var allowed=new HashSet<string>(new[]{"--profile","--root","--resource","--resource-id","--scope","--api-uri","--max-candidates","--max-redirects","--login-hint","--timeout-seconds","--passkey-file"},StringComparer.Ordinal);
   bool stdin=false,prompt=false,browser=false;
   for(int i=2;i<args.Length;i++)
   {
@@ -39,7 +39,9 @@ internal static class NativeProfileTokenCommand
   string name=options.GetValueOrDefault("--profile") ?? "default",root=options.GetValueOrDefault("--root")!;
   string configJson=ProfileStore.Read(name,root);using var configuration=JsonDocument.Parse(configJson);var p=configuration.RootElement;
   string storage=p.GetProperty("Storage").GetString()!;
-  if(storage=="Memory"){if(stdin || prompt)throw new InvalidOperationException();return false;}
+  bool memoryPasskey=options.ContainsKey("--passkey-file");
+  if(memoryPasskey && (storage!="Memory" || stdin || prompt || browser || options.ContainsKey("--login-hint") || options.ContainsKey("--timeout-seconds")))throw new InvalidOperationException();
+  if(storage=="Memory"){if(stdin || prompt)throw new InvalidOperationException();if(!memoryPasskey)return false;}
   if(storage=="Passphrase" && !stdin && !prompt)return false;
   if(storage=="OperatingSystem" && (stdin || prompt))throw new InvalidOperationException();
   using SecureString? password=storage=="Passphrase"?NativeTokenCommand.ReadCredential(stdin,12,1024,"Vault passphrase (hidden): "):null;
@@ -47,7 +49,7 @@ internal static class NativeProfileTokenCommand
   Console.CancelKeyPress+=cancel;
   try
   {
-   using var result=ProfileTokenLifecycle.Acquire(name,root,resource,scopes,password,input=>
+   ProfileCredentialToken Fresh(ProfileFreshRequest input)
    {
     bool useBrowser=browser || input.Cookie==null || options.ContainsKey("--login-hint") || options.ContainsKey("--timeout-seconds");
     string state=p.GetProperty("StatePath").GetString()!,inventory=NativeScopeCommand.ReadJson(Path.Combine(state,"inventory.json"));
@@ -55,10 +57,28 @@ internal static class NativeProfileTokenCommand
     bool useSqlite=File.Exists(sqlite),existed=useSqlite || File.Exists(json);
     if(useSqlite){using var store=new EvidenceStore(sqlite,true);database=store.Export(latest:false,tenant:p.GetProperty("ExpectedTenantFingerprint").GetString(),principal:p.GetProperty("ExpectedPrincipalFingerprint").GetString(),resource:resource);}
     else {PrivateFiles.Resolve(json,false);database=existed?NativeScopeCommand.ReadJson(json):"{\"SchemaVersion\":1,\"Observations\":[],\"RegistrationAttempts\":[]}";}
+    if(memoryPasskey)
+    {
+     // Validate account-bound metadata and the bounded plan before touching the private key.
+     using var inventoryDocument=JsonDocument.Parse(inventory);
+     string tenant=p.GetProperty("ExpectedTenantFingerprint").GetString() ?? throw new InvalidOperationException();
+     string principal=p.GetProperty("ExpectedPrincipalFingerprint").GetString() ?? throw new InvalidOperationException();
+     if(inventoryDocument.RootElement.GetProperty("TenantFingerprint").GetString()!=tenant)throw new InvalidOperationException();
+     string authority=p.GetProperty("Tenant").GetString()!;int hours=p.GetProperty("MaxAgeHours").GetInt32();
+     _=ScopePlanning.BootstrapRequest(inventory,authority,p.GetProperty("BootstrapClientId").GetString()!,hours);
+     using var coverage=JsonDocument.Parse(ScopePlanning.Coverage(database,resource,input.Scopes,tenant,principal,hours));
+     bool warm=coverage.RootElement.EnumerateArray().Any(row=>row.GetProperty("CoversAll").GetBoolean());
+     if(ScopePlanning.PlanRequests(inventory,database,resource,input.Scopes,principal,authority,warm,false,true,maxCandidates,maxRedirects,hours).Length==0)throw new InvalidOperationException();
+     using var signer=SoftwarePasskey.Open(options["--passkey-file"]);using var session=signer.Authenticate(cancellation.Token);
+     return ProfileScopeAcquisition.Acquire(name,configJson,inventory,database,resource,input.Scopes,session.Cookie,session.CookieName,maxCandidates,maxRedirects,
+         checkpoint:observation=>Checkpoint(state,useSqlite?sqlite:json,useSqlite,existed,observation,cancellation.Token),cancellation:cancellation.Token,confirmIdentity:true);
+    }
     return ProfileScopeAcquisition.Acquire(name,configJson,inventory,database,resource,input.Scopes,useBrowser?null:input.Cookie,input.CookieName,maxCandidates,maxRedirects,
         execute:useBrowser?row=>{using var issued=NativeTokenCommand.AcquireBrowser(row.ToTransport(),options.GetValueOrDefault("--login-hint"),timeout,true,cancellation.Token);return new ProfileCredentialToken(row.ToTransport(),issued.AccessToken,issued.RefreshToken,issued.ExpiresAt,issued.AdditionalScopes.Length);}:null,
         checkpoint:observation=>Checkpoint(state,useSqlite?sqlite:json,useSqlite,existed,observation,cancellation.Token),cancellation:cancellation.Token,browser:useBrowser);
-   },cancellation:cancellation.Token,expectedProfileJson:configJson);
+   }
+   using var result=memoryPasskey?ProfileTokenLifecycle.AcquireMemory(name,root,resource,scopes,Fresh,cancellation.Token,configJson):
+       ProfileTokenLifecycle.Acquire(name,root,resource,scopes,password,Fresh,cancellation:cancellation.Token,expectedProfileJson:configJson);
    var apiCheck=api==null?null:ProfileTokenApi.Check(result.AccessToken,resource,api,cancellation.Token);
    Console.WriteLine(JsonSerializer.Serialize(new{SchemaVersion=1,Profile=name,ClientId=result.Request.ClientId,ResourceId=result.Request.ResourceId,
        RequestedScopes=result.Request.Scopes,IssuedScopes=result.TokenClaims.Scopes,result.ExpiresAt,result.Evidence,ApiCheck=apiCheck,CredentialOutput=false}));return true;

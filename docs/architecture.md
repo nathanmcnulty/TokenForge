@@ -1,6 +1,6 @@
 # Architecture and roadmap
 
-TokenForge separates credential-free planning, identity protocol execution, Graph tenant administration and persisted evidence. The PowerShell 7.4 module and script CLI run on Windows, Linux and macOS; self-contained native CLI packages are available, with native saved-cookie acquisition and advanced system-browser PKCE. Explicit browser and software-passkey profile login run natively; passkey enrollment and implicit passkey login adapters still require PowerShell.
+TokenForge separates credential-free planning, identity protocol execution, Graph tenant administration and persisted evidence. The PowerShell 7.4 module and script CLI run on Windows, Linux and macOS; self-contained native CLI packages are available, with native saved-cookie acquisition and advanced system-browser PKCE. Explicit browser and software-passkey profile login run natively; same-account lab software-passkey enrollment is native; first-passkey TAP enrollment remains external and implicit passkey login adapters still require PowerShell.
 
 | Layer | Functions | Evidence boundary |
 | --- | --- | --- |
@@ -18,7 +18,7 @@ Versioned JSON discovery/inventory/database documents preserve provenance and ev
 
 An explicit assessment request cannot silently switch to broad implicit discovery. Discovery tries published callbacks and supported flows but cannot satisfy secret, broker or device-binding requirements. Scope selection minimizes observed extra permissions, with no guarantee Entra will issue only requested scopes. Customer role and policy requirements remain independent.
 
-See [the repeatable inventory workflow](inventory.md) for stages and examples. Self-contained [native CLI packages](native-cli.md), JSON command output, [Graph PowerShell handoff](profiles-and-cli.md#graph-powershell), and frozen [weekly research coverage](weekly-ci.md) are implemented. Next work includes native passkey enrollment, signed macOS Keychain integration and OS-signed releases, device-code/broker/application-only flow research, additional supported cloud authorities, more source conflict handling, and further tenants/resources/operation-specific API proofs. These require evidence and are not advertised as shipped capabilities.
+See [the repeatable inventory workflow](inventory.md) for stages and examples. Self-contained [native CLI packages](native-cli.md), JSON command output, [Graph PowerShell handoff](profiles-and-cli.md#graph-powershell), and frozen [weekly research coverage](weekly-ci.md) are implemented. Next work includes native first-key enrollment/bootstrap, signed macOS Keychain integration and OS-signed releases, device-code/broker/application-only flow research, additional supported cloud authorities, more source conflict handling, and further tenants/resources/operation-specific API proofs. These require evidence and are not advertised as shipped capabilities.
 
 References: [authorization code + PKCE](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow), [scopes and consent](https://learn.microsoft.com/en-us/entra/identity-platform/scopes-oidc), [implicit flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-implicit-grant-flow). The ESTS sequence in research-passkeys informed acquisition; browser policy processing and passkey registration were not copied into TokenForge.
 

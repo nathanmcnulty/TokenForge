@@ -26,6 +26,27 @@ function Assert-TfNativeMetadata($Value) {
  }elseif($Value -is [array]){foreach($entry in $Value){Assert-TfNativeMetadata $entry}}
  elseif($Value -is [string] -and $Value -match '^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$'){throw 'Credential-bearing native output refused.'}
 }
+function Copy-TfNativeValidationPasskey {
+ param([string]$SourcePath,[string]$DestinationPath)
+ $bytes=$null;$receiptBytes=$null
+ try {
+  $source=[TokenForge.Core.V0220.PrivateFiles]::Resolve($SourcePath,$false)
+  $validate=[TokenForge.Core.SoftwarePasskey]::Open($source);$validate.Dispose()
+  $file=[IO.File]::Open($source,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+  try{if($file.Length -lt 2 -or $file.Length -gt 65536){throw 'Invalid passkey size.'};$bytes=[byte[]]::new($file.Length);$file.ReadExactly($bytes)}finally{$file.Dispose()}
+  $target=[TokenForge.Core.V0220.PrivateFiles]::Resolve($DestinationPath,$false)
+  $output=[TokenForge.Core.V0220.PrivateFiles]::Open($target,$true);try{$output.Write($bytes);$output.Flush($true)}finally{$output.Dispose()}
+  if(Test-Path -LiteralPath ($source+'.registered.json')){
+   $receipt=[TokenForge.Core.V0220.PrivateFiles]::Resolve(($source+'.registered.json'),$false)
+   $file=[IO.File]::Open($receipt,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+   try{if($file.Length -lt 2 -or $file.Length -gt 4096){throw 'Invalid passkey receipt size.'};$receiptBytes=[byte[]]::new($file.Length);$file.ReadExactly($receiptBytes)}finally{$file.Dispose()}
+   $output=[TokenForge.Core.V0220.PrivateFiles]::Open(($target+'.registered.json'),$true);try{$output.Write($receiptBytes);$output.Flush($true)}finally{$output.Dispose()}
+  }
+  $validate=[TokenForge.Core.SoftwarePasskey]::Open($target);$validate.Dispose()
+  [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))
+ }catch{throw 'Private passkey pair copy failed; details suppressed.'}
+ finally{foreach($buffer in @($bytes,$receiptBytes)){if($buffer){[Security.Cryptography.CryptographicOperations]::ZeroMemory($buffer)}}}
+}
 function Invoke-TfNativeValidationCommand {
  param([string]$Executable,[string]$PrivateRoot,[string[]]$Arguments,[string]$InputValue)
  $start=[Diagnostics.ProcessStartInfo]::new($Executable)
@@ -72,19 +93,14 @@ try{
  try{
   if($PasskeyPath){
    $original=[TokenForge.Core.V0220.PrivateFiles]::Resolve($PasskeyPath,$false)
-   $source=[IO.File]::Open($original,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
-   try{
-    if($source.Length -lt 2 -or $source.Length -gt 65536){throw 'Invalid software passkey size.'}
-    $keyBytes=[byte[]]::new($source.Length);$source.ReadExactly($keyBytes)
-    $originalHash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($keyBytes))
-   }finally{$source.Dispose()}
+   $originalHash=Copy-TfNativeValidationPasskey -SourcePath $original -DestinationPath $keyPath
   }else{
    foreach($name in $secretNames[0..2]){if(-not $inputValues[$name]){throw 'Missing passkey input.'}}
    $keyJson=@{username=$expectedUser;credentialId=$inputValues.TOKENFORGE_PASSKEY_CREDENTIAL_ID;userHandle=$inputValues.TOKENFORGE_PASSKEY_USER_HANDLE;privateKey=$inputValues.TOKENFORGE_PASSKEY_PRIVATE_KEY;relyingParty='login.microsoft.com';url='https://login.microsoft.com';counter=0}|ConvertTo-Json -Compress
    $keyBytes=[Text.Encoding]::UTF8.GetBytes($keyJson);$keyJson=$null
   }
-  if($keyBytes.Length -gt 65536){throw 'Oversized software passkey.'}
-  $stream=[TokenForge.Core.V0220.PrivateFiles]::Open($keyPath,$true);try{$stream.Write($keyBytes);$stream.Flush($true)}finally{$stream.Dispose()}
+  if($keyBytes -and $keyBytes.Length -gt 65536){throw 'Oversized software passkey.'}
+  if($keyBytes){$stream=[TokenForge.Core.V0220.PrivateFiles]::Open($keyPath,$true);try{$stream.Write($keyBytes);$stream.Flush($true)}finally{$stream.Dispose()}}
  }finally{if($keyBytes){[Security.Cryptography.CryptographicOperations]::ZeroMemory($keyBytes)};$inputValues.Clear()}
  $invoke=@{Executable=$exe;PrivateRoot=$root}
  $version=Invoke-TfNativeValidationCommand @invoke -Arguments @('--version')

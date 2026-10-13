@@ -7,6 +7,7 @@ using TokenForge.Core.V0220;
 var count=0;
 void Check(bool condition){if(!condition) throw new Exception("Check failed.");count++;}
 void Reject(Action action){try{action();}catch{count++;return;}throw new Exception("Expected rejection.");}
+if(args.Contains("--enrollment-only")){PasskeyEnrollmentChecks.Run(Check,Reject);Console.WriteLine($"{count} enrollment checks passed.");return 0;}
 NativeTokenDiagnosticChecks.Run(Check);
 TimestampPolicyChecks.Run(Check,Reject);
 VaultRecordPolicyChecks.Run(Check,Reject);
@@ -103,6 +104,7 @@ Reject(()=>TokenForge.Core.V0110.PlatformVaultKey.Open("invalid",true));
 
 OAuthTransportTests.Run(Check, Reject);
 SoftwarePasskeyChecks.Run(Check, Reject);
+PasskeyEnrollmentChecks.Run(Check, Reject);
 BrowserAuthorizationTests.Run(Check, Reject);
 FlowEvidenceTests.Run(Check, Reject);
 ApplicationCatalogTests.Run(Check,Reject);

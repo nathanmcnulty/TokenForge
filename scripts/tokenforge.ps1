@@ -1,15 +1,15 @@
 #Requires -Version 7.4
 [CmdletBinding()]
 param(
- [Parameter(Position=0,Mandatory)][ValidateSet('profile','login','logout','status','doctor','token','scopes','graph','research')][string]$Command,
- [Parameter(Position=1)][ValidateSet('create','forget-key','show','get','explain','permissions','connect','disconnect','report','export-flows','backup','weekly')][string]$Operation,
+ [Parameter(Position=0,Mandatory)][ValidateSet('profile','login','logout','status','doctor','token','scopes','graph','research','passkey')][string]$Command,
+ [Parameter(Position=1)][ValidateSet('create','forget-key','show','get','explain','permissions','connect','disconnect','report','export-flows','backup','weekly','enroll')][string]$Operation,
  [ValidatePattern('^[a-z][a-z0-9_-]{0,63}$')][string]$Profile='default',
  [string]$SnapshotPath,[string]$BackupDirectory,[string]$Root,[string]$Tenant,[string]$StatePath,[string]$ExportPath,[string]$FlowPath,[string]$MetadataPath,[string]$NativeExecutablePath,[switch]$SummaryOnly,
  [ValidatePattern('^[a-f0-9]{64}$')][string]$TenantFingerprint,[ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,
  [ValidateSet('Memory','Passphrase','OperatingSystem')][string]$Storage='Memory',
  [ValidateSet('graph','arm')][string]$Resource='graph',[string[]]$Scope,
  [securestring]$VaultPassword,[securestring]$EstsAuth,
- [string]$PasskeyPath,[string]$XdrModulePath,[ValidateLength(0,320)][string]$LoginHint,[switch]$Browser,[switch]$Interactive,
+ [string]$PasskeyPath,[string]$IdentityPath,[string]$OutputPath,[string]$DisplayName='Test',[string]$XdrModulePath,[ValidateLength(0,320)][string]$LoginHint,[switch]$Browser,[switch]$Interactive,
  [guid]$BootstrapClientId='038ddad9-5bbe-4f64-b0cd-12434d1e633b',
  [ValidateRange(0,8760)][int]$MaxAdditionalScopes=0,[ValidateRange(0,8760)][int]$MaxBootstrapAdditionalScopes=0,
  [uri]$ApiUri,[string]$GraphCommand,[switch]$PromptPassphrase,[switch]$Json
@@ -26,6 +26,11 @@ try{
  }
  if($Scope -and $Scope.Count -eq 1 -and $Scope[0].Contains(',')){$Scope=@($Scope[0].Split(','))}
  $result=switch($Command){
+  passkey {
+   if($Operation -ne 'enroll' -or -not $PasskeyPath -or -not $IdentityPath -or -not $OutputPath){throw 'Use passkey enroll with PasskeyPath, IdentityPath and OutputPath.'}
+   if(@($PSBoundParameters.Keys|Where-Object {$_ -notin @('Command','Operation','PasskeyPath','IdentityPath','OutputPath','DisplayName','Json')}).Count){throw 'Unexpected enrollment options.'}
+   Register-TokenForgeSoftwarePasskey -PasskeyPath $PasskeyPath -IdentityPath $IdentityPath -OutputPath $OutputPath -DisplayName $DisplayName
+  }
   profile {
    switch($Operation){
     create {if(-not $Tenant){throw 'Tenant is required.'};New-TokenForgeProfile @common -Tenant $Tenant -StatePath $StatePath -Storage $Storage -BootstrapClientId $BootstrapClientId -MaxAdditionalScopes $MaxAdditionalScopes -MaxBootstrapAdditionalScopes $MaxBootstrapAdditionalScopes -PasskeyPath $PasskeyPath -XdrModulePath $XdrModulePath}

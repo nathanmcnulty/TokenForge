@@ -1,0 +1,70 @@
+{
+  "SchemaVersion": 1,
+  "DateUTC": "2026-10-13",
+  "Status": "LiveEnrollmentNotYetConfirmed",
+  "VersionUnderDevelopment": "0.40.0",
+  "BaseCommit": "1381573fb479c751a039c374505228bb05d81ce8",
+  "InterimPackage": {
+    "Runtime": "linux-x64",
+    "ExecutableSha256": "78050932778e2d439e536515187b7a5b04dbead192ebf49ec6db612505a26903",
+    "CredentialAssemblySha256": "7b5f4579c4755c3cddd304ffa4ffbc8fe3a4a4660da2a76043740e9ce932a2e7",
+    "PackagedEnrollmentSourceSha256": "638306d5ec0cfbc5532e1e2631eb8fca3732192a3d537c436aebc0c8e9167371",
+    "ReleaseAttestationClaimed": false
+  },
+  "Prerequisites": {
+    "Accounts": [
+      "nora",
+      "secadmin"
+    ],
+    "GraphExpectedIdentityConfirmed": true,
+    "MySigninsContextMatched": true,
+    "NgcRefreshAndReauthorizationSucceeded": true
+  },
+  "InitialNativeAttempt": {
+    "Accounts": [
+      "nora",
+      "secadmin"
+    ],
+    "TerminalStage": "Challenge",
+    "RecoveryKeysPublished": false,
+    "Cause": "ChallengeExceededDraft4096CharacterBound",
+    "RegistrationRequestsSent": false
+  },
+  "LaterNativeAttempt": {
+    "AccountAlias": "nora",
+    "TerminalStage": "Verification",
+    "EnrollmentConfirmed": false,
+    "RecoveryKeyPublishedPrivately": true,
+    "ConfirmationReceiptPublished": false,
+    "RemoteOutcome": "Unresolved",
+    "DriverStoppedBeforeOtherAccount": true,
+    "RegistrationAutomaticallyRetried": false,
+    "NativeChildHadPowerShellOnPath": false
+  },
+  "ReadOnlyFollowup": {
+    "OriginalCredentialRecognizedByMethodsResponse": true,
+    "OriginalCredentialRecognizedByFidoAllowlist": true,
+    "PendingCredentialNotObservedInThoseResponses": true,
+    "PendingCredentialTokenAcquisitionSucceeded": false,
+    "RemoteNonRegistrationProven": false,
+    "ReceiptFabricated": false,
+    "RemoteMethodDeleted": false
+  },
+  "Privacy": {
+    "OriginalCredentialFilesUnchanged": true,
+    "TemporaryCredentialCopiesRemoved": true,
+    "RecoveryKeyRetainedInPrivateLocalStorage": true,
+    "CredentialsPublished": false,
+    "IdentityFingerprintsPublished": false,
+    "ConsentChanges": false
+  },
+  "Validation": {
+    "FullNativeChecksBeforeFinalizationChanges": 1147,
+    "FocusedEnrollmentChecksAfterFinalizationChanges": 205,
+    "PowerShellBoundaryTestsPassed": 8,
+    "BootstrapReleaseTestsPassed": 29,
+    "BootstrapReleaseTestsSkipped": 1,
+    "FullNativeChecksAfterFinalizationChanges": 1181
+  },
+  "Interpretation": "Linux experiment only. This records an incomplete live enrollment and preserved recovery material, not a shipped capability or successful remote registration. Later source fixes require their own live proof. No hardware presence, trusted manufacturer attestation, general authorization or JWT signature validation is established."
+}

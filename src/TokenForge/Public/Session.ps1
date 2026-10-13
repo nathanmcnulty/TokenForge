@@ -44,3 +44,29 @@ function Test-TokenForgeTokenAccess {
         [pscustomobject]@{ ResourceId = $Token.ResourceId; Status = [int]$response.StatusCode; Accepted = $response.IsSuccessStatusCode; Evidence = 'ReadOnlyApiResponse'; CheckedAt = [DateTimeOffset]::UtcNow.ToString('o') }
     } finally { if ($response) { $response.Dispose() }; $client.Dispose(); $handler.Dispose() }
 }
+
+function Register-TokenForgeSoftwarePasskey {
+    <#
+    .SYNOPSIS
+    Enroll another lab software passkey for the explicitly confirmed account.
+    .DESCRIPTION
+    Signs in with an existing local software passkey. IdentityPath contains the expected
+    TenantFingerprint and PrincipalFingerprint, such as a private inventory snapshot.
+    Saves immutable private recovery material and a separate registration receipt.
+    This changes the account's authentication methods; it does not create consent grants.
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    param([Parameter(Mandatory)][string]$PasskeyPath,
+          [Parameter(Mandatory)][string]$IdentityPath,
+          [Parameter(Mandatory)][string]$OutputPath,
+          [ValidateLength(1,64)][string]$DisplayName='Test')
+    if(-not $PSCmdlet.ShouldProcess($OutputPath,'Enroll a lab software passkey and preserve its recovery key')){return}
+    $bytes=$null
+    try {
+        $path=[TokenForge.Core.V0220.PrivateFiles]::Resolve($IdentityPath,$false)
+        $file=[IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+        try {if($file.Length -gt 67108864){throw 'Oversized identity metadata.'};$bytes=[byte[]]::new($file.Length);$file.ReadExactly($bytes)}finally{$file.Dispose()}
+        $identity=[Text.UTF8Encoding]::new($false,$true).GetString($bytes)
+        [TokenForge.Core.SoftwarePasskeyEnrollment]::Enroll($PasskeyPath,$identity,$OutputPath,$DisplayName,[Threading.CancellationToken]::None)
+    } finally {if($bytes){[Security.Cryptography.CryptographicOperations]::ZeroMemory($bytes)};$identity=$null}
+}

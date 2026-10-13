@@ -1,4 +1,5 @@
 BeforeAll {
+ Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1')
  $driver=Join-Path $PSScriptRoot '../scripts/Test-TokenForgeNativeAuthentication.ps1'
  $pwsh=Join-Path $PSHOME $(if($IsWindows){'pwsh.exe'}else{'pwsh'})
  . $driver -NativeExecutablePath $pwsh -Runtime linux-x64 -SourceCommit ('a'*40) -ReportPath (Join-Path $TestDrive 'unused.json')
@@ -40,5 +41,29 @@ Describe 'Native authentication validation trust boundaries' {
  It 'rejects non-object JSON while allowing bounded credential-free command metadata' {
   {Invoke-SyntheticNative 'Write-Output "[]"'}|Should -Throw '*output suppressed*'
   (Invoke-SyntheticNative 'Write-Output ''{"SchemaVersion":1,"CredentialOutput":false}''').CredentialOutput|Should -BeFalse
+ }
+}
+
+Describe 'Enrolled passkey companion receipt copies' {
+ It 'copies and validates a private immutable key and hash-bound receipt together' {
+  $root=Join-Path $TestDrive pair
+  if($IsMacOS -and $root.StartsWith('/var/')){$root='/private'+$root}
+  $source=[TokenForge.Core.V0220.PrivateFiles]::Resolve((Join-Path $root source.passkey),$true)
+  $target=Join-Path $root target.passkey
+  $ecdsa=[Security.Cryptography.ECDsa]::Create([Security.Cryptography.ECCurve]::CreateFromValue('1.2.840.10045.3.1.7'))
+  try{
+   $key=@{username='synthetic@example.test';credentialId='AQ';userHandle='AQ';privateKey=$ecdsa.ExportPkcs8PrivateKeyPem();counter=0;enrollmentStatus='PendingRemoteVerification'}|ConvertTo-Json -Compress
+   $bytes=[Text.Encoding]::UTF8.GetBytes($key);$file=[TokenForge.Core.V0220.PrivateFiles]::Open($source,$true);try{$file.Write($bytes)}finally{$file.Dispose()}
+   $hash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))
+   $receipt=@{SchemaVersion=1;Registered=$true;CredentialFileSha256=$hash.ToLowerInvariant();CredentialId='AQ'}|ConvertTo-Json -Compress
+   $file=[TokenForge.Core.V0220.PrivateFiles]::Open(($source+'.registered.json'),$true);try{$file.Write([Text.Encoding]::UTF8.GetBytes($receipt))}finally{$file.Dispose()}
+   (Copy-TfNativeValidationPasskey $source $target)|Should -BeExactly $hash
+   (Get-FileHash $target).Hash|Should -BeExactly $hash
+   Test-Path ($target+'.registered.json')|Should -BeTrue
+   $signer=[TokenForge.Core.SoftwarePasskey]::Open($target);$signer.Dispose()
+   Remove-Item ($source+'.registered.json')
+   {Copy-TfNativeValidationPasskey $source (Join-Path $root missing.passkey)}|Should -Throw '*copy failed*'
+   Test-Path (Join-Path $root missing.passkey)|Should -BeFalse
+  }finally{if($ecdsa){$ecdsa.Dispose()};if($bytes){[Security.Cryptography.CryptographicOperations]::ZeroMemory($bytes)}}
  }
 }

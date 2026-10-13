@@ -36,6 +36,21 @@ public sealed class SoftwarePasskey : IDisposable
             using var document=JsonDocument.Parse(bytes,new JsonDocumentOptions{MaxDepth=16});Unique(document.RootElement);
             var root=document.RootElement;
             if(root.ValueKind!=JsonValueKind.Object || root.TryGetProperty("keyVault",out _))throw new InvalidOperationException();
+            if(root.TryGetProperty("enrollmentStatus",out var enrollment))
+            {
+                if(enrollment.ValueKind!=JsonValueKind.String || enrollment.GetString()!="PendingRemoteVerification")throw new InvalidOperationException();
+                string receiptPath=PrivateFiles.Resolve(path+".registered.json",false);
+                using var receiptStream=new FileStream(receiptPath,FileMode.Open,FileAccess.Read,FileShare.Read);
+                if(receiptStream.Length is <2 or >4096)throw new InvalidOperationException();
+                byte[] receiptBytes=new byte[checked((int)receiptStream.Length)];
+                try
+                {
+                    receiptStream.ReadExactly(receiptBytes);using var receipt=JsonDocument.Parse(receiptBytes);Unique(receipt.RootElement);var r=receipt.RootElement;
+                    if(r.EnumerateObject().Count()!=4 || r.GetProperty("SchemaVersion").GetInt32()!=1 || r.GetProperty("Registered").ValueKind!=JsonValueKind.True ||
+                        Text(r,"CredentialFileSha256")!=Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant() || Text(r,"CredentialId")!=Text(root,"credentialId"))throw new InvalidOperationException();
+                }
+                finally{CryptographicOperations.ZeroMemory(receiptBytes);}
+            }
             string user=Alias(root,"username","userName"),id=Alias(root,"credentialId","methodId"),pem=Alias(root,"privateKey","keyValue");
             string rp=OptionalAlias(root,"relyingParty","rpId") ?? "login.microsoft.com";
             string origin=Optional(root,"url") ?? "https://login.microsoft.com";
@@ -56,6 +71,7 @@ public sealed class SoftwarePasskey : IDisposable
         catch{throw new InvalidOperationException("Unsupported or inaccessible software passkey. Details suppressed.");}
         finally{key?.Dispose();if(bytes!=null)CryptographicOperations.ZeroMemory(bytes);}
     }
+    internal string Username => username;
     public string CreateAssertion(string serverChallenge)
     {
         if(serverChallenge.Length is <1 or >4096 || serverChallenge.Any(c=>c<33 || c>126))throw new InvalidOperationException("Invalid software passkey challenge.");

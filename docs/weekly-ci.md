@@ -120,7 +120,7 @@ Workflow dispatch supports `validation_only=true` with Deep mode and one to four
 
 Each worker signs in independently with the existing Nora repository secrets, assesses its partition, then restores its encrypted checkpoint and checks that receipt completion/counts and flow/summary counts remain unchanged. The validation report is produced only if all validation workers and their resume checks succeed. The branch-writing job is skipped entirely, so this mode does not replace or extend the real weekly recipe. The read-only publisher uploads a `validation-report-<run-attempt>` aggregate artifact for eight days; encrypted checkpoints retain their existing account/plan/partition binding and eight-day retention. This proof creates no registrations or consent grants.
 
-Normal runs now pass validated public files through a one-day artifact to a separate branch writer. That writer revalidates public files, requires a normal publication request and matching plan, checks the original data parent, and performs a fast-forward push. The additional job adds runner overhead beyond the earlier measured cycle; its cost has not yet been measured in a complete new weekly cycle.
+Normal runs now pass validated public files through a one-day artifact to a separate branch writer. That writer revalidates public files, requires a normal publication request and matching plan, checks the original data parent, and performs a fast-forward push. The additional job adds runner overhead beyond the earlier measured cycle. The completed week-42 shallow cycle measured 9.617 runner-minutes for its 14 branch-writing jobs; see the completed hosted cycle below.
 
 Validation reports use an attempt-specific name so a failed rerun cannot look like a newly successful proof by retaining an earlier aggregate. Normal validated-data artifacts keep a stable name with overwrite enabled, allowing a failed branch writer to retry without rerunning successful workers; the original parent check still rejects stale publication.
 
@@ -277,5 +277,39 @@ A subsequent frozen public snapshot at `b911c778291d9986e51c844fe9302db1e65ab585
 contains 5,455 applications for week 42, with 24 of 55 shallow batches complete and 2,400
 applications assessed without retries. Its deep recipe still belongs to week 41. These
 are partial snapshot counts, not a completed new weekly-cycle measurement or a hosted
-Graph/ARM cost estimate. The current schedule remains four workers every six hours;
-measure the completed current shallow and new deep recipes before increasing depth.
+Graph/ARM cost estimate. The schedule remains four workers every six hours. The completed cycle below supersedes
+these partial snapshot counts.
+
+
+## Completed hosted week-42 catalog cycle
+
+The [sanitized cycle report](weekly-catalog-cycle-2026-10-13.json) records completed
+production plans, with the separate branch writer included in runner timing:
+
+| Plan | Coverage | Successful evidence | Runner minutes |
+| --- | --- | --- | --- |
+| Shallow Graph | All 5,455 source apps; 55 batches | 252 apps/pairs | 159.400 |
+| Deep Graph/ARM | 100 selected apps; 200 pairs; 4 batches | 54 apps across 74 pairs | 47.383 |
+| Combined selected plans | 16 runs; 107 timed jobs; no retries | Account-specific observations | 206.783 |
+
+The shallow data snapshot is `5638deb7e8bdc532837ed0a0c3ef6b5758470836`; the completed
+deep snapshot is `c1af9c2f75396e2356d82aaef59f2eac3adad3a0`. Both frozen recipes verified,
+and the recorded worker partitions cover each plan exactly once. Timing sums distinct,
+completed non-skipped jobs, including setup, preparation, publication and branch writing.
+The report preserves per-run stage seconds and partition indices for independent totals.
+It excludes unrelated idle refreshes, isolated validation, releases and observer runs;
+this is a completed plan cohort, not the closed-week usage report or billed minutes.
+
+Deep coverage remains a rotating bounded cohort, rather than every source app each week.
+The current selection history contains 200 of 490 published callback candidates, leaving
+290 never selected for deep assessment. Structural exclusions count as assessed; successful
+scope observations establish neither universal flow support nor API authorization. These
+normal runs did not independently prove zero-added-attempt checkpoint resume; that separate
+bounded proof is documented above. Full protocol research and larger resource sets still
+need additional cohorts and evidence.
+
+The repository is public and uses standard hosted runners. [GitHub's billing rules](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
+make that compute free; artifact storage remains separate. Keep the current schedule and
+bounded deep cohort until subsequent complete cycles show a need to change them. The
+47.383-minute hosted deep measurement replaces assumptions based on the earlier 62.43-minute
+local sequential proof; its selected membership differs, so this is not a controlled speedup.

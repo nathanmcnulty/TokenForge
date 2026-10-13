@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/release.yml'
+      - 'native/Directory.Build.props'
       - 'scripts/Test-TokenForgeReleaseAssets.ps1'
       - 'tests/ReleaseAssets.Tests.ps1'
       - 'scripts/Test-TokenForgeReleaseSource.ps1'

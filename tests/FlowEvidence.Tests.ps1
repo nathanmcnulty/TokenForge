@@ -103,6 +103,22 @@ Describe 'Exact flow evidence and coverage' {
   $json|Should -Not -Match 'Fingerprint|AttemptId|ObservedAt|PlannedAt|example.test|private-access|private-refresh'
   ($json|ConvertFrom-Json).Observations.Count|Should -Be 4
  }
+ It 'preserves case-distinct scope observations while deduplicating exact scopes' {
+  $null=Invoke-TokenForgeScopeProbe $inventory $secret -ResourceId $graph -DatabasePath $path -DelayMilliseconds 0
+  $db=Get-TokenForgeFlowEvidence $flowPath
+  $different=$db.Attempts[0].Clone();$different.AttemptId=[guid]::NewGuid().ToString();$different.ScpScopes=@('user.read');$different.ResponseScopes=@('user.read')
+  $duplicate=$db.Attempts[0].Clone();$duplicate.AttemptId=[guid]::NewGuid().ToString()
+  $db.Attempts+=@($different,$duplicate)
+  [IO.File]::WriteAllText($flowPath,($db|ConvertTo-Json -Depth 12))
+  $before=(Get-FileHash $flowPath).Hash
+  $export=Join-Path $state scope-case.json;Export-TokenForgeFlowEvidence $flowPath -OutputPath $export
+  $json=Get-Content $export -Raw;$rows=($json|ConvertFrom-Json).Observations
+  $rows.Count|Should -Be 2
+  @($rows|Where-Object {$_.Scopes[0] -ceq 'User.Read'}).Count|Should -Be 1
+  @($rows|Where-Object {$_.Scopes[0] -ceq 'user.read'}).Count|Should -Be 1
+  (Get-FileHash $flowPath).Hash|Should -BeExactly $before
+  $json|Should -Not -Match 'Fingerprint|AttemptId|ObservedAt|PlannedAt|example.test|private-access'
+ }
  It 'supports offline report and anonymous export through the simple CLI' {
   $null=Invoke-TokenForgeScopeProbe $inventory $secret -ResourceId $graph -DatabasePath $path -DelayMilliseconds 0
   Copy-Item $flowPath (Join-Path $state flows.json)

@@ -4,7 +4,7 @@
     {
       "ClientId": "f9818e52-50bd-463e-8932-a1650bd3fad2",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:44:15.2006583+00:00",
+      "ObservedAt": "2026-10-13T07:25:43.6861499+00:00",
       "Scopes": [
         "email",
         "Group.Read.All",
@@ -19,7 +19,7 @@
     {
       "ClientId": "f9a5ac11-cab3-45f0-9d0f-83463ba2e34c",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:44:17.1375899+00:00",
+      "ObservedAt": "2026-10-13T07:25:45.7046759+00:00",
       "Scopes": [
         "email",
         "Group.Read.All",
@@ -35,7 +35,7 @@
     {
       "ClientId": "fa3d58b1-f3bc-489e-954e-119d58a29bae",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:44:28.3492759+00:00",
+      "ObservedAt": "2026-10-13T07:25:57.6009867+00:00",
       "Scopes": [
         "email",
         "Files.ReadWrite.All",
@@ -52,7 +52,7 @@
     {
       "ClientId": "fc03f97a-9db0-4627-a216-ec98ce54e018",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:45:03.2409126+00:00",
+      "ObservedAt": "2026-10-13T07:26:33.2623232+00:00",
       "Scopes": [
         "Chat.Read",
         "Chat.ReadBasic",

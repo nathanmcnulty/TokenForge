@@ -40,6 +40,7 @@ static class PasskeyEnrollmentChecks
             check(finalized.GetType().GetProperty("Canary")!.GetValue(finalized)!.ToString()=="final" && finalized.GetType().GetProperty("PostInfo")!.GetValue(finalized)!.ToString()=="final-info");
             foreach(string invalidEncoding in new[]{"%GG","%FF","%C0%AF","%E2%82"})reject(()=>Call("Finalization",FinalPage(ctx,"https://mysignins.microsoft.com/security-info#fidoProvisionSuccess="+invalidEncoding),"AQ","synthetic","synthetic"));
             check((string)Call("DecodeFragment","%2520+")=="%20+");
+            check((string)Call("DecodeFragment",string.Concat(Enumerable.Repeat("é%F0%9F%94%91+%25",4096)))==string.Concat(Enumerable.Repeat("é🔑+%",4096)));
             foreach(string invalid in new[]{"https://evil.test/security-info#fidoProvisionSuccess=secret","https://mysignins.microsoft.com/api/other#fidoProvisionSuccess=secret","https://mysignins.microsoft.com/security-info#fidoProvisionSuccess=a&fidoProvisionSuccess=b","https://mysignins.microsoft.com/security-info#fidoProvisionSuccess=%Q0","https://mysignins.microsoft.com/security-info#error=secret","https://mysignins.microsoft.com/security-info#fidoProvisionSuccess=a&next=evil"})reject(()=>Call("Finalization",FinalPage(ctx,invalid),"AQ","synthetic","synthetic"));
             reject(()=>Call("Finalization",FinalPage("{\"Canary\":\"a\",\"Canary\":\"b\"}",finalizationUrl),"AQ","synthetic","synthetic"));
             reject(()=>Call("Finalization",FinalPage("{\"Canary\":\"a\",\"CredentialId\":\"wrong\"}",finalizationUrl),"AQ","synthetic","synthetic"));

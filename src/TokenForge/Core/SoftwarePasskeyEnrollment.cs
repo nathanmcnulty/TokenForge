@@ -172,7 +172,7 @@ public static class SoftwarePasskeyEnrollment
     }
     private static string DecodeFragment(string value)
     {
-        var utf8=new UTF8Encoding(false,true);using var output=new MemoryStream();
+        var utf8=new UTF8Encoding(false,true);byte[] output=new byte[utf8.GetMaxByteCount(value.Length)];int used=0;
         try
         {
             for(int i=0;i<value.Length;)
@@ -180,17 +180,17 @@ public static class SoftwarePasskeyEnrollment
                 if(value[i]=='%')
                 {
                     if(i+2>=value.Length || !byte.TryParse(value.AsSpan(i+1,2),System.Globalization.NumberStyles.AllowHexSpecifier,System.Globalization.CultureInfo.InvariantCulture,out byte encoded))throw new InvalidOperationException();
-                    output.WriteByte(encoded);i+=3;
+                    output[used++]=encoded;i+=3;
                 }
                 else
                 {
                     int end=value.IndexOf('%',i);if(end<0)end=value.Length;
-                    byte[] bytes=utf8.GetBytes(value.Substring(i,end-i));try{output.Write(bytes);}finally{CryptographicOperations.ZeroMemory(bytes);}i=end;
+                    used+=utf8.GetBytes(value.AsSpan(i,end-i),output.AsSpan(used));i=end;
                 }
             }
-            return utf8.GetString(output.GetBuffer(),0,checked((int)output.Length));
+            return utf8.GetString(output,0,used);
         }
-        finally{CryptographicOperations.ZeroMemory(output.GetBuffer());}
+        finally{CryptographicOperations.ZeroMemory(output);}
     }
     private static bool VerifiedDevice(JsonElement devices,string credential,string name)
     {
@@ -331,7 +331,7 @@ public static class SoftwarePasskeyEnrollment
                 PrivateFiles.Resolve(path,false);PrivateFiles.PublishNew(temporary,path);
                 published=true; // A subsequent cleanup failure must still report the recovery file.
             }
-            finally{if(File.Exists(temporary)){if(cleanup==null)File.Delete(temporary);else cleanup(temporary);}}
+            finally{if(cleanup!=null)cleanup(temporary);else if(File.Exists(temporary))File.Delete(temporary);}
         }
         public void Dispose(){key.Dispose();if(savedBytes!=null)CryptographicOperations.ZeroMemory(savedBytes);}
     }

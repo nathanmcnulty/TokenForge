@@ -4,7 +4,7 @@
     {
       "ClientId": "9d827643-d003-4cca-9dc8-71213a8f1644",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:33.6853847+00:00",
+      "ObservedAt": "2026-10-13T06:37:43.5461373+00:00",
       "Scopes": [
         "email",
         "GroupMember.Read.All",
@@ -22,7 +22,7 @@
     {
       "ClientId": "9ea1ad79-fdb6-4f9a-8bc3-2b70f96e34c7",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:49.3152978+00:00",
+      "ObservedAt": "2026-10-13T06:38:02.8245244+00:00",
       "Scopes": [
         "Calendars.Read",
         "Calendars.Read.Shared",
@@ -49,7 +49,7 @@
     {
       "ClientId": "9ed4cd8c-9a98-405f-966b-38ab1b0c24a3",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:51.5594401+00:00",
+      "ObservedAt": "2026-10-13T06:38:05.1539034+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -63,7 +63,7 @@
     {
       "ClientId": "9ee7b58d-f9db-45bc-ad7b-c2b97bbc3337",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:57.5645669+00:00",
+      "ObservedAt": "2026-10-13T06:38:12.9891046+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -77,7 +77,7 @@
     {
       "ClientId": "a0e1e353-1a3e-42cf-a8ea-3a9746eec58c",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:15:23.6592398+00:00",
+      "ObservedAt": "2026-10-13T06:38:41.814677+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -90,7 +90,7 @@
     {
       "ClientId": "a0fe4328-8965-437b-a350-cf71409d002f",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:15:29.4882552+00:00",
+      "ObservedAt": "2026-10-13T06:38:48.8149319+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -103,7 +103,7 @@
     {
       "ClientId": "a187e399-0c36-4b98-8f04-1edc167a0996",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:15:45.7668348+00:00",
+      "ObservedAt": "2026-10-13T06:39:08.1505094+00:00",
       "Scopes": [
         "_B.AR",
         "Calendars.Read",

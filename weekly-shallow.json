@@ -223158,39 +223158,39 @@
     },
     {
       "Index": 32,
-      "Status": "Pending",
-      "Attempts": 0,
-      "Assessed": 0,
-      "Successful": 0,
-      "DurationSeconds": 0,
-      "ObservedAt": null
+      "Status": "Complete",
+      "Attempts": 1,
+      "Assessed": 100,
+      "Successful": 2,
+      "DurationSeconds": 81.076,
+      "ObservedAt": "2026-10-13T06:38:21.7823987+00:00"
     },
     {
       "Index": 33,
-      "Status": "Pending",
-      "Attempts": 0,
-      "Assessed": 0,
-      "Successful": 0,
-      "DurationSeconds": 0,
-      "ObservedAt": null
+      "Status": "Complete",
+      "Attempts": 1,
+      "Assessed": 100,
+      "Successful": 5,
+      "DurationSeconds": 91.585,
+      "ObservedAt": "2026-10-13T06:38:38.1596214+00:00"
     },
     {
       "Index": 34,
-      "Status": "Pending",
-      "Attempts": 0,
-      "Assessed": 0,
-      "Successful": 0,
-      "DurationSeconds": 0,
-      "ObservedAt": null
+      "Status": "Complete",
+      "Attempts": 1,
+      "Assessed": 100,
+      "Successful": 7,
+      "DurationSeconds": 116.107,
+      "ObservedAt": "2026-10-13T06:39:10.5384588+00:00"
     },
     {
       "Index": 35,
-      "Status": "Pending",
-      "Attempts": 0,
-      "Assessed": 0,
-      "Successful": 0,
-      "DurationSeconds": 0,
-      "ObservedAt": null
+      "Status": "Complete",
+      "Attempts": 1,
+      "Assessed": 100,
+      "Successful": 3,
+      "DurationSeconds": 97.21,
+      "ObservedAt": "2026-10-13T06:38:35.4283098+00:00"
     },
     {
       "Index": 36,

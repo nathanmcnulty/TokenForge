@@ -1,0 +1,382 @@
+{
+  "SchemaVersion": 1,
+  "Date": "2026-10-13",
+  "Week": "2026-W42",
+  "Repository": "nathanmcnulty/TokenForge",
+  "Shallow": {
+    "PlanId": "ad9d352715730ce194e3a2985b120893ce29198813199043b16168c34bc1f7b4",
+    "DataCommit": "5638deb7e8bdc532837ed0a0c3ef6b5758470836",
+    "SourceCatalogApplications": 5455,
+    "SelectedApplications": 5455,
+    "AssessedApplications": 5455,
+    "SuccessfulApplications": 252,
+    "SelectedPairs": 5455,
+    "AssessedPairs": 5455,
+    "SuccessfulPairs": 252,
+    "ResourceIds": [
+      "00000003-0000-0000-c000-000000000000"
+    ],
+    "CompletedBatches": 55,
+    "TotalBatches": 55,
+    "PendingBatches": 0,
+    "ExhaustedBatches": 0,
+    "Complete": true,
+    "RetriedBatches": 0,
+    "FrozenMembershipVerified": true,
+    "RecipeHashVerified": true,
+    "DistinctWorkerPartitionIndicesVerified": true,
+    "SourceStateSha256": "481ac0b86132fbbe6ad75f17be95c0d2826c7019968e1cd6758002bc0b1d6a8b",
+    "BatchMedianSeconds": 91.917,
+    "BatchP95Seconds": 128.942,
+    "HostedRuns": [
+      38191437273,
+      38216302759,
+      38253445193,
+      38253446886,
+      38292579472,
+      38331218298,
+      38355428438,
+      38356489708,
+      38357554282,
+      38358749485,
+      38359556938,
+      38359991287,
+      38361271320,
+      38362316457
+    ],
+    "WorkerJobs": 55,
+    "TotalJobs": 97,
+    "RunnerMinutesByStage": {
+      "Prepare": 20.733,
+      "Worker": 107.4,
+      "Publish": 21.65,
+      "Push": 9.617
+    },
+    "TotalRunnerMinutes": 159.4,
+    "TimingEvidenceSha256": "59a0b3f311bef2ef46175a874e95878754e38c04f7d16a9f213e7467b8321ae0",
+    "RunTimings": [
+      {
+        "RunId": 38191437273,
+        "Attempt": 1,
+        "WorkerPartitions": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "TimedJobs": 7,
+        "RunnerSecondsByStage": {
+          "Prepare": 122.0,
+          "Worker": 540.0,
+          "Publish": 98.0,
+          "Push": 28.0
+        }
+      },
+      {
+        "RunId": 38216302759,
+        "Attempt": 1,
+        "WorkerPartitions": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "TimedJobs": 7,
+        "RunnerSecondsByStage": {
+          "Prepare": 61.0,
+          "Worker": 458.0,
+          "Publish": 87.0,
+          "Push": 29.0
+        }
+      },
+      {
+        "RunId": 38253445193,
+        "Attempt": 1,
+        "WorkerPartitions": [
+          8,
+          9,
+          10,
+          11
+        ],
+        "TimedJobs": 7,
+        "RunnerSecondsByStage": {
+          "Prepare": 73.0,
+          "Worker": 522.0,
+          "Publish": 111.0,
+          "Push": 45.0
+        }
+      },
+      {
+        "RunId": 38253446886,
+        "Attempt": 1,
+        "WorkerPartitions": [
+          12,
+          13,
+          14,
+          15
+        ],
+        "TimedJobs": 7,
+        "RunnerSecondsByStage": {
+          "Prepare": 107.0,
+          "Worker": 531.0,
+          "Publish": 109.0,
+          "Push": 32.0
+        }
+      },
+      {
+        "RunId": 38292579472,
+        "Attempt": 1,
+        "WorkerPartitions": [
+          16,
+          17,
+          18,
+          19
+        ],
+        "TimedJobs": 7,
+        "RunnerSecondsByStage": {
+          "Prepare": 76.0,
+          "Worker": 460.0,
+          "Publish": 78.0,
+          "Push": 44.0
+        }
+      },
+      {
+        "RunId": 38331218298,
+        "Attempt": 1,
+        "WorkerPartitions": [
+          20,
+          21,
+          22,
+          23
+        ],
+        "TimedJobs": 7,
+        "RunnerSecondsByStage": {
+          "Prepare": 108.0,
+          "Worker": 535.0,
+          "Publish": 73.0,
+          "Push": 45.0
+        }
+      },
+      {
+        "RunId": 38355428438,
+        "Attempt": 1,
+        "WorkerPartitions": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "TimedJobs": 7,
+        "RunnerSecondsByStage": {
+          "Prepare": 98.0,
+          "Worker": 403.0,
+          "Publish": 97.0,
+          "Push": 53.0
+        }
+      },
+      {
+        "RunId": 38356489708,
+        "Attempt": 1,
+        "WorkerPartitions": [
+          28,
+          29,
+          30,
+          31
+        ],
+        "TimedJobs": 7,
+        "RunnerSecondsByStage": {
+          "Prepare": 70.0,
+          "Worker": 444.0,
+          "Publish": 110.0,
+          "Push": 46.0
+        }
+      },
+      {
+        "RunId": 38357554282,
+        "Attempt": 1,
+        "WorkerPartitions": [
+          32,
+          33,
+          34,
+          35
+        ],
+        "TimedJobs": 7,
+        "RunnerSecondsByStage": {
+          "Prepare": 75.0,
+          "Worker": 483.0,
+          "Publish": 113.0,
+          "Push": 35.0
+        }
+      },
+      {
+        "RunId": 38358749485,
+        "Attempt": 1,
+        "WorkerPartitions": [
+          36,
+          37,
+          38,
+          39
+        ],
+        "TimedJobs": 7,
+        "RunnerSecondsByStage": {
+          "Prepare": 65.0,
+          "Worker": 410.0,
+          "Publish": 84.0,
+          "Push": 37.0
+        }
+      },
+      {
+        "RunId": 38359556938,
+        "Attempt": 1,
+        "WorkerPartitions": [
+          40,
+          41,
+          42,
+          43
+        ],
+        "TimedJobs": 7,
+        "RunnerSecondsByStage": {
+          "Prepare": 108.0,
+          "Worker": 468.0,
+          "Publish": 79.0,
+          "Push": 42.0
+        }
+      },
+      {
+        "RunId": 38359991287,
+        "Attempt": 1,
+        "WorkerPartitions": [
+          44,
+          45,
+          46,
+          47
+        ],
+        "TimedJobs": 7,
+        "RunnerSecondsByStage": {
+          "Prepare": 85.0,
+          "Worker": 436.0,
+          "Publish": 91.0,
+          "Push": 48.0
+        }
+      },
+      {
+        "RunId": 38361271320,
+        "Attempt": 1,
+        "WorkerPartitions": [
+          48,
+          49,
+          50,
+          51
+        ],
+        "TimedJobs": 7,
+        "RunnerSecondsByStage": {
+          "Prepare": 95.0,
+          "Worker": 467.0,
+          "Publish": 92.0,
+          "Push": 46.0
+        }
+      },
+      {
+        "RunId": 38362316457,
+        "Attempt": 1,
+        "WorkerPartitions": [
+          52,
+          53,
+          54
+        ],
+        "TimedJobs": 6,
+        "RunnerSecondsByStage": {
+          "Prepare": 101.0,
+          "Worker": 287.0,
+          "Publish": 77.0,
+          "Push": 47.0
+        }
+      }
+    ]
+  },
+  "TimingMethod": "Sum completed_at minus started_at for distinct completed non-skipped jobs in terminal successful run attempts containing the frozen plan; includes prepare, workers, publish and push. All selected attempts are first attempts. Excludes unrelated refresh, validation, release and weekly observer runs. Not whole-week usage, invoice minutes or elapsed cycle time.",
+  "AccountCoverage": "OneAccountAssessmentNotUniversalTokenSupport",
+  "JwtSignatureValidated": false,
+  "ApiAuthorizationEstablished": false,
+  "RegistrationsCreated": false,
+  "ConsentGranted": false,
+  "CredentialsPublished": false,
+  "Deep": {
+    "PlanId": "03a949b87b70b58d772f8379882de93b9a7167a0c3e261a67a44963747660714",
+    "DataCommit": "c1af9c2f75396e2356d82aaef59f2eac3adad3a0",
+    "SourceCatalogApplications": 5455,
+    "SelectedApplications": 100,
+    "AssessedApplications": 100,
+    "SuccessfulApplications": 54,
+    "SelectedPairs": 200,
+    "AssessedPairs": 200,
+    "SuccessfulPairs": 74,
+    "ResourceIds": [
+      "00000003-0000-0000-c000-000000000000",
+      "797f4846-ba00-4fd7-ba43-dac1f8f63013"
+    ],
+    "CompletedBatches": 4,
+    "TotalBatches": 4,
+    "PendingBatches": 0,
+    "ExhaustedBatches": 0,
+    "Complete": true,
+    "PublishedCallbackCandidates": 490,
+    "DeepSelectionHistoryApplications": 200,
+    "NeverDeepSelectedCallbackCandidates": 290,
+    "RetriedBatches": 0,
+    "FrozenMembershipVerified": true,
+    "RecipeHashVerified": true,
+    "DistinctWorkerPartitionIndicesVerified": true,
+    "SourceStateSha256": "4ef53c1a3ad0a2ea550e933088b19a2e1415d7138ee0e4830a6dc5029bf43927",
+    "BatchMedianSeconds": 544.291,
+    "BatchP95Seconds": 731.85,
+    "HostedRuns": [
+      38363060332,
+      38367378901
+    ],
+    "WorkerJobs": 4,
+    "TotalJobs": 10,
+    "RunnerMinutesByStage": {
+      "Prepare": 3.983,
+      "Worker": 39.933,
+      "Publish": 2.15,
+      "Push": 1.317
+    },
+    "TotalRunnerMinutes": 47.383,
+    "TimingEvidenceSha256": "b297d575277b16bd7764d6d0558e03bda74dd951694e74e50e2b9d6d1fa73e3e",
+    "Interpretation": "Complete selected Graph/ARM cohort, not all source applications or exhaustive authentication-flow support. Success evidence is account-specific; structural exclusions count as assessed. Encrypted checkpoint contents and zero-additional-attempt resume were not independently verified for these two normal runs.",
+    "RunTimings": [
+      {
+        "RunId": 38363060332,
+        "Attempt": 1,
+        "WorkerPartitions": [
+          0,
+          1
+        ],
+        "TimedJobs": 5,
+        "RunnerSecondsByStage": {
+          "Prepare": 135.0,
+          "Worker": 1186.0,
+          "Publish": 51.0,
+          "Push": 47.0
+        }
+      },
+      {
+        "RunId": 38367378901,
+        "Attempt": 1,
+        "WorkerPartitions": [
+          2,
+          3
+        ],
+        "TimedJobs": 5,
+        "RunnerSecondsByStage": {
+          "Prepare": 104.0,
+          "Worker": 1210.0,
+          "Publish": 78.0,
+          "Push": 32.0
+        }
+      }
+    ]
+  },
+  "CombinedPlanCohortRunnerMinutes": 206.783
+}

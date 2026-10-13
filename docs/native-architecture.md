@@ -2,7 +2,7 @@
 
 Use one shared .NET core with platform adapters, a CLI first, and a metadata-only visualization
 surface later. Do not maintain separate OAuth policy implementations for each operating system.
-The PowerShell workflow is the compatibility surface while code moves into the shared core. Shared timestamp projection and profile configuration and decrypted credential-record validation, private-file checks, vault-file transactions, issued-token policy, OAuth transport, vault envelope encryption, SQLite evidence import/export and checkpoints, and native CLI packages are implemented. Scope explanation, profile create/show, vault inspection, logout, OS-key forgetting, and direct token acquisition run natively; persisted-profile cache selection, same-client renewal, and credential writes also run in the shared native core. Saved-cookie persisted-profile acquisition and CLI token get now run natively, using shared request planning, Graph bootstrap confirmation and bounded candidate execution. Browser profile login and advanced local software-passkey acquisition run natively. Explicit software-passkey profile login is native; passkey enrollment, implicit authentication adapters still use PowerShell. Explicit Memory software-passkey token acquisition is native. Coverage and candidate ranking use the shared native planner. See [Native CLI](native-cli.md) for current dependencies.
+The PowerShell workflow is the compatibility surface while code moves into the shared core. Shared timestamp projection and profile configuration and decrypted credential-record validation, private-file checks, vault-file transactions, issued-token policy, OAuth transport, vault envelope encryption, SQLite evidence import/export and checkpoints, and native CLI packages are implemented. Scope explanation, profile create/show, vault inspection, logout, OS-key forgetting, and direct token acquisition run natively; persisted-profile cache selection, same-client renewal, and credential writes also run in the shared native core. Saved-cookie persisted-profile acquisition and CLI token get now run natively, using shared request planning, Graph bootstrap confirmation and bounded candidate execution. Browser profile login and advanced local software-passkey acquisition run natively. Explicit software-passkey profile login is native; passkey enrollment and implicit authentication adapters still use PowerShell. Explicit Memory software-passkey token acquisition is native. Coverage and candidate ranking use the shared native planner. See [Native CLI](native-cli.md) for current dependencies.
 
 The security boundary is a credential service that exposes scoped acquisition operations and
 metadata, not a general cookie jar export. Windows Credential Manager and Linux Secret Service adapters now protect a random vault password
@@ -66,7 +66,7 @@ current account. Version 0.31 moves saved-cookie profile bootstrap confirmation,
 issued-context checks and successful observation creation into the shared native acquisition service.
 PowerShell retains the browser execution adapter. Each attempted request
 rechecks inventory and, for warm requests, observation freshness. Native saved-cookie profile
-execution is implemented; native browser profile login is implemented; native profile passkey login remains unfinished.
+execution, browser profile login and explicit software-passkey profile login are implemented. Explicit Memory-profile software-passkey acquisition runs natively and confirms account identity for both cold and warm requests.
 
 The [v0.30 validation report](native-request-planning-validation-2026-10-11.json) records the sanitized two-account cold/warm acquisition proof and checks.
 
@@ -87,8 +87,9 @@ cancellation. A trusted adapter that blocks synchronously cannot be interrupted 
 the service. Code and verifier results are caller-owned secure strings excluded
 from JSON. Owned byte buffers are cleared; managed strings and browser-held
 credentials cannot be immediately erased by this service. The PowerShell command
-continues to launch the browser while sharing this callback service; native profile
-login and passkey handling remain separate work.
+continues to launch the browser while sharing this callback service. Native browser
+profile login also uses this service; explicit software-passkey login uses the shared
+software-passkey service. Passkey enrollment remains a PowerShell adapter.
 
 The [sanitized validation report](browser-service-validation-2026-10-11.json)
 records successful silent `User.Read` acquisition and matching Graph identity

@@ -1,0 +1,49 @@
+{
+  "SchemaVersion": 1,
+  "ObservedOn": "2026-10-13",
+  "Version": "0.44.0",
+  "Feature": "PowerShellPasskeyAdapterReceiptGate",
+  "FocusedAdapterTests": 26,
+  "LiveProof": {
+    "Cases": [
+      {
+        "Case": "RegisteredCopyWithRecoveryReceipt",
+        "GraphIdentityConfirmed": true,
+        "OriginalCredentialUnchanged": true,
+        "AuthenticationSucceeded": true,
+        "CredentialAndReceiptUnchanged": true,
+        "Account": "nora"
+      },
+      {
+        "ReceiptSaved": false,
+        "AdapterRejected": true,
+        "Account": "nora",
+        "CredentialUnchanged": true,
+        "Case": "UnresolvedEnrollmentKey"
+      },
+      {
+        "Case": "RegisteredCopyWithRecoveryReceipt",
+        "GraphIdentityConfirmed": true,
+        "OriginalCredentialUnchanged": true,
+        "AuthenticationSucceeded": true,
+        "CredentialAndReceiptUnchanged": true,
+        "Account": "secadmin"
+      },
+      {
+        "ReceiptSaved": false,
+        "AdapterRejected": true,
+        "Account": "secadmin",
+        "CredentialUnchanged": true,
+        "Case": "UnresolvedEnrollmentKey"
+      }
+    ],
+    "RegistrationRequests": 0,
+    "AuthenticationMethodsDeleted": 0
+  },
+  "LiveAdditionalScopeAllowance": 128,
+  "ProviderHelperSourceSha256": "edf3440ac1f88a52445cc43c028683eea2b15bd6c128cd2482554b362cad8f02",
+  "PositiveProofBoundary": "Previously recovered private copies of registered original lab keys, with schema 2 receipts; not new enrollment",
+  "NativeEnrollmentValidated": false,
+  "PathSwapBoundary": "Read lease and final pathname validation detect persistent changes; same-owner temporary swaps are outside the boundary",
+  "PublicEvidenceContainsCredentials": false
+}

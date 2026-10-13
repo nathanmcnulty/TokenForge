@@ -507,3 +507,5 @@ verified Nora on all six targets with 24 native Graph HTTP 200 checks. Offline c
 checks and the separate two-account Linux proof remain distinct evidence.
 
 Native 0.43 adds [pending software-passkey recovery](native-passkey-recovery.md), with fresh sign-in and Graph identity confirmation before a private local receipt is saved.
+
+Version 0.44 extends pending-passkey receipt checks to the legacy PowerShell authentication adapter and uses the requested imported XDRInternals provider. See [private-file requirements and provider trust](native-passkey-recovery.md#the-powershell-adapter).

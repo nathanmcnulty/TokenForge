@@ -2,8 +2,8 @@
 
 This feature is under development on a draft branch. Live enrollment has not yet been confirmed; it is not included in the released 0.39.0 packages.
 
-The native CLI and PowerShell module can enroll another software passkey for the same
-account as an explicitly supplied existing local passkey. This is a lab software
+The draft native CLI and PowerShell module command attempts enrollment of another
+software passkey for the same account as an explicitly supplied existing local passkey. This is a lab software
 authenticator: its key is exportable, its certificate is self-signed, and it does not
 establish hardware presence or hardware attestation. The command changes that account's
 authentication methods. It creates no consent grants and registers no applications.

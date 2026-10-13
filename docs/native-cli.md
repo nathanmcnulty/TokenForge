@@ -4,7 +4,7 @@ The native CLI is a self-contained .NET executable per OS and architecture. Evid
 run directly in the shared core with bundled SQLite. Implicit authentication adapters invoke the packaged PowerShell 7.4+ module;
 install `pwsh` and keep `src/` and `scripts/` beside the executable for those commands.
 Version 0.18 adds direct native `token acquire`, and PowerShell uses the same C# OAuth transport
-and issued-token policy. Version 0.33 adds native system-browser PKCE to advanced `token acquire`. Version 0.36 adds native browser profile login and persisted browser profile acquisition. Explicit software-passkey acquisition and profile login are native; [same-account lab software-passkey enrollment](native-passkey-enrollment.md) is native; first-passkey TAP enrollment remains external and implicit passkey login uses PowerShell.
+and issued-token policy. Version 0.33 adds native system-browser PKCE to advanced `token acquire`. Version 0.36 adds native browser profile login and persisted browser profile acquisition. Explicit software-passkey acquisition and profile login are native; [draft same-account lab software-passkey enrollment](native-passkey-enrollment.md) is implemented natively but live enrollment remains unconfirmed; first-passkey TAP enrollment remains external and implicit passkey login uses PowerShell.
 Version 0.19 also shares vault envelope encryption with the native core; profile storage and
 login still use PowerShell. See [shared vault validation](vault-core-validation-2026-10-08.json).
 Version 0.20 shares profile configuration validation between PowerShell and the native core.
@@ -506,6 +506,6 @@ It publishes only sanitized reports after private-state cleanup. The [completed 
 verified Nora on all six targets with 24 native Graph HTTP 200 checks. Offline core/package
 checks and the separate two-account Linux proof remain distinct evidence.
 
-Native `passkey enroll` enrolls another software credential for the confirmed account. See
+Native `passkey enroll` is a draft command that attempts enrollment of another software credential for the confirmed account. See
 [lab software-passkey enrollment](native-passkey-enrollment.md) for recovery files, companion
 receipts, parameters and the boundary between software and hardware authentication.

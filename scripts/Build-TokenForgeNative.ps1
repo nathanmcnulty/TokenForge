@@ -4,12 +4,13 @@ param([Parameter(Mandatory)][ValidateSet('linux-x64','linux-arm64','win-x64','wi
  [string]$OutputPath=(Join-Path $PSScriptRoot '../dist/native'),[string]$Dotnet='dotnet')
 $ErrorActionPreference='Stop'
 $repo=Split-Path $PSScriptRoot -Parent
+. (Join-Path $PSScriptRoot Copy-TokenForgePackageSource.ps1)
 $destination=Join-Path $OutputPath $Runtime
 if(Test-Path $destination){Remove-Item $destination -Recurse -Force}
 & $Dotnet publish (Join-Path $repo 'native/TokenForge.Cli/TokenForge.Cli.csproj') --configuration Release --runtime $Runtime --self-contained true --output $destination '-p:RestoreLockedMode=true' '-p:IncludeNativeLibrariesForSelfExtract=true' '-p:EnableCompressionInSingleFile=true' '-p:DebugType=None' '-p:DebugSymbols=false' --nologo
 if($LASTEXITCODE){throw 'Native publish failed.'}
 $null=New-Item -ItemType Directory (Join-Path $destination src),(Join-Path $destination scripts) -Force
-Copy-Item (Join-Path $repo src/TokenForge) (Join-Path $destination src) -Recurse
+Copy-TokenForgePackageSource -SourceRoot $repo -DestinationRoot $destination -Prefix src/TokenForge
 $null=& (Join-Path $PSScriptRoot 'Build-TokenForgeCredentials.ps1') -OutputPath (Join-Path $destination 'src/TokenForge/lib/net8.0') -Dotnet $Dotnet
 Copy-Item (Join-Path $PSScriptRoot tokenforge.ps1) (Join-Path $destination scripts)
 Copy-Item (Join-Path $PSScriptRoot TokenForgeCiState.ps1) (Join-Path $destination scripts)

@@ -293,7 +293,7 @@ See [native architecture](native-architecture.md) for their boundaries and valid
 
 Explicit Windows/Linux OS-backed profile storage is documented in [OS-backed vault](os-backed-vault.md).
 
-Offline `research report` and `research export-flows` commands are available through the packaged PowerShell adapter; see [Application research catalog](research-catalog.md).
+Development version 0.42 runs `research report` natively with a shared coverage engine; see [research coverage](native-research-coverage.md). `research export-flows` retains its PowerShell adapter. See [Application research catalog](research-catalog.md) for evidence categories.
 
 ## Individual flow checkpoints
 

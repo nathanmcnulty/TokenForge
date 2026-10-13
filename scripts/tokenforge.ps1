@@ -86,7 +86,7 @@ try{
    }
    $p=if($StatePath){$null}else{Get-TokenForgeProfile @common}
    $state=if($StatePath){$StatePath}else{$p.StatePath}
-   if(-not $FlowPath){$FlowPath=Join-Path $state $(if(Test-Path (Join-Path $state 'flows.sqlite')){'flows.sqlite'}else{'flows.json'})}
+   if(-not $FlowPath){$candidate=Join-Path $state $(if(Test-Path (Join-Path $state 'flows.sqlite')){'flows.sqlite'}else{'flows.json'});if(Test-Path -LiteralPath $candidate -PathType Leaf){$FlowPath=$candidate}}
    switch($Operation){
     report {
      $metadata=if($MetadataPath){$MetadataPath}elseif(Test-Path (Join-Path $state applications.sqlite)){Join-Path $state applications.sqlite}else{Join-Path $state applications.json}
@@ -95,7 +95,7 @@ try{
      elseif($p -and $p.ExpectedPrincipalFingerprint){$options.TenantFingerprint=$p.ExpectedTenantFingerprint;$options.PrincipalFingerprint=$p.ExpectedPrincipalFingerprint}
      Get-TokenForgeResearchCoverage @options
     }
-    export-flows {if(-not $ExportPath){throw 'Choose ExportPath.'};$selection=@{};if($TenantFingerprint){$selection.TenantFingerprint=$TenantFingerprint};if($PrincipalFingerprint){$selection.PrincipalFingerprint=$PrincipalFingerprint};Export-TokenForgeFlowEvidence $FlowPath -OutputPath $ExportPath -NativeExecutablePath $NativeExecutablePath @selection;[pscustomobject]@{SchemaVersion=1;Exported=$true;CredentialOutput=$false}}
+    export-flows {if(-not $FlowPath){$FlowPath=Join-Path $state flows.json};if(-not $ExportPath){throw 'Choose ExportPath.'};$selection=@{};if($TenantFingerprint){$selection.TenantFingerprint=$TenantFingerprint};if($PrincipalFingerprint){$selection.PrincipalFingerprint=$PrincipalFingerprint};Export-TokenForgeFlowEvidence $FlowPath -OutputPath $ExportPath -NativeExecutablePath $NativeExecutablePath @selection;[pscustomobject]@{SchemaVersion=1;Exported=$true;CredentialOutput=$false}}
     default {throw 'Use research report, research weekly, research export-flows, or research backup.'}
    }
   }

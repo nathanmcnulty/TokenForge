@@ -84,6 +84,7 @@ public static class DiscoverySourceClaims
             }
         return (IDictionary)ReadValue(root)!;
     }
+    public static void ValidateUniqueKeys(JsonElement value)=>Unique(value);
     public static object? ReadMetadataJson(string json)
     {
         if(Utf8.GetByteCount(json)>128*1024*1024)throw Invalid();

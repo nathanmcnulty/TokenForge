@@ -38,12 +38,16 @@ static class CatalogClaimsTests
    string path=Path.Combine(root,"v2.sqlite");
    using(var store=new ApplicationCatalogStore(path)){
     store.Update(Update().ToJsonString());store.Update(Update("Changed",date:"2026-01-02T00:00:00Z").ToJsonString());
-    var exported=store.Export();var ledger=JsonNode.Parse(exported)!;check(ledger["SchemaVersion"]!.GetValue<int>()==2);
+    var exported=store.Export();ApplicationCatalogStore.ValidateDocument(exported);
+    var report=JsonNode.Parse(ResearchCoverage.CreateFromValidatedDocuments(exported))!;
+    check(report["ApplicationsWithMetadataConflicts"]!.GetValue<int>()==1);
+    check(report["Applications"]![0]!["MetadataConflicts"]!.AsArray().Count==1);
+    var ledger=JsonNode.Parse(exported)!;check(ledger["SchemaVersion"]!.GetValue<int>()==2);
     var record=ledger["Applications"]![id]!["Records"]!["Discovery///"]!;
     check(record["PreviousVersions"]!.AsArray().Count==1);check(record["Attributes"]!["SourceClaims"]!.AsArray().Count==2);
     var wrongEnvelope=Update();wrongEnvelope["SchemaVersion"]=1;reject(()=>store.Update(wrongEnvelope.ToJsonString()));check(store.Export()==exported);
     var forged=Update();forged["Rows"]![0]!["Record"]!["Attributes"]!["MetadataConflicts"]=new JsonArray();reject(()=>store.Update(forged.ToJsonString()));check(store.Export()==exported);
-    record["PreviousVersions"]![0]!["Attributes"]!["SourceClaims"]![0]!["AccessToken"]="synthetic";reject(()=>store.Import(ledger.ToJsonString()));check(store.Export()==exported);
+    record["PreviousVersions"]![0]!["Attributes"]!["SourceClaims"]![0]!["AccessToken"]="synthetic";reject(()=>store.Import(ledger.ToJsonString()));reject(()=>ApplicationCatalogStore.ValidateDocument(ledger.ToJsonString()));check(store.Export()==exported);
     store.Update(Update("2026-01-01T00:00:00+02:00",date:"2026-01-03T00:00:00Z").ToJsonString());
     var literal=DiscoverySourceClaims.ReadCatalog(store.Export());var literalJson=JsonSerializer.Serialize(literal);
     check(literalJson.Contains("2026-01-01T00:00:00\\u002B02:00") || literalJson.Contains("2026-01-01T00:00:00+02:00"));

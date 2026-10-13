@@ -1,0 +1,75 @@
+{
+  "OwnedPrivateStateRemoved": true,
+  "DateUTC": "2026-10-13",
+  "Version": "0.39.0",
+  "ConsentChanges": false,
+  "Accounts": [
+    {
+      "Warm": "SilentExplicitScopeAcquisition",
+      "ConfiguredInventoryMaxAgeHours": 168,
+      "NativeWithoutPowerShell": true,
+      "MaximumAdditionalScopes": 128,
+      "CredentialVaultCreated": false,
+      "LogoutSucceeded": true,
+      "CredentialOutput": false,
+      "ApiStatuses": [
+        200,
+        200
+      ],
+      "NativeLogin": true,
+      "MaximumBootstrapAdditionalScopes": 128,
+      "ExpectedUserIndependentlyConfirmed": true,
+      "OriginalPasskeyUnchanged": true,
+      "CookieSaved": false,
+      "Storage": "Memory",
+      "Account": "nora",
+      "Cold": "BoundedTargetedSilentExplicitScopeAcquisition"
+    },
+    {
+      "Warm": "SilentExplicitScopeAcquisition",
+      "ConfiguredInventoryMaxAgeHours": 168,
+      "NativeWithoutPowerShell": true,
+      "MaximumAdditionalScopes": 128,
+      "CredentialVaultCreated": false,
+      "LogoutSucceeded": true,
+      "CredentialOutput": false,
+      "ApiStatuses": [
+        200,
+        200
+      ],
+      "NativeLogin": true,
+      "MaximumBootstrapAdditionalScopes": 128,
+      "ExpectedUserIndependentlyConfirmed": true,
+      "OriginalPasskeyUnchanged": true,
+      "CookieSaved": false,
+      "Storage": "Memory",
+      "Account": "secadmin",
+      "Cold": "BoundedTargetedSilentExplicitScopeAcquisition"
+    }
+  ],
+  "SignatureValidated": false,
+  "SchemaVersion": 1,
+  "Scope": "Bounded two-account Linux native Memory software-passkey profile proof",
+  "CoreChecksPassed": 976,
+  "FocusedPester": {
+    "Passed": 15,
+    "Failed": 0,
+    "Skipped": 0
+  },
+  "SourceSha256": {
+    "src/TokenForge/Core/ProfileTokenLifecycle.cs": "8509af705ee29a6881be5dd8af6e9966166cbebf447e8d22043409b6b7f2198e",
+    "src/TokenForge/Core/ProfileScopeAcquisition.cs": "237889df454c7a65f08cc371c2c541d8ed2d68132010bfc59dde136373cc8d73",
+    "native/TokenForge.Cli/NativeProfileTokenCommand.cs": "259c20876b3d92a2da1171fe13071e391330e75d1a8bdba19987719f356a9bd4"
+  },
+  "TestedExecutableSha256": "bb387ec501bdb5af8ea0a84396f2a82ab3397ceac2b6823e5159a5aae83d680c",
+  "TestedCredentialAssemblySha256": "3e9a63220098e31ea93df141e8e5f0068001547f189849944361b223118f2777",
+  "Limitations": [
+    "Live authentication was tested on Linux only",
+    "Software keys do not provide hardware user-presence guarantees",
+    "An already identity-bound Memory profile is required",
+    "Private profile policy and sanitized scope observations are disk metadata; cookies and tokens are not saved",
+    "JWT claims are decoded diagnostics; Graph checks establish only the tested identity and endpoint access",
+    "Original inventory observation dates were preserved under an explicit 168-hour lab limit",
+    "The tested local binary is not a published release asset"
+  ]
+}

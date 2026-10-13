@@ -1,7 +1,7 @@
 # Native CLI and evidence store
 
 The native CLI is a self-contained .NET executable per OS and architecture. Evidence commands
-run directly in the shared core with bundled SQLite. Passkey enrollment, implicit passkey login and Memory profile token adapters invoke the packaged PowerShell 7.4+ module;
+run directly in the shared core with bundled SQLite. Passkey enrollment, implicit authentication adapters invoke the packaged PowerShell 7.4+ module;
 install `pwsh` and keep `src/` and `scripts/` beside the executable for those commands.
 Version 0.18 adds direct native `token acquire`, and PowerShell uses the same C# OAuth transport
 and issued-token policy. Version 0.33 adds native system-browser PKCE to advanced `token acquire`. Version 0.36 adds native browser profile login and persisted browser profile acquisition. Explicit software-passkey acquisition and profile login are native; enrollment and implicit passkey login still use PowerShell.
@@ -458,3 +458,41 @@ separate identity read matched the expected user. Logout succeeded and owned pri
 state was removed. The original key files remained unchanged. The proof explicitly used
 an additional-scope budget of 128 and preserved the original inventory observation under
 a 168-hour lab age limit. It is not live Windows/macOS or OS-vault authentication evidence.
+
+
+## Native Memory profile acquisition
+
+A Memory profile can request tokens with an explicit software key in each native CLI process:
+
+```text
+tokenforge login --profile lab --passkey-file /private/credentials/Test.json
+tokenforge token get --profile lab --scope User.Read --passkey-file /private/credentials/Test.json --api-uri https://graph.microsoft.com/v1.0/me
+```
+
+Create the profile with `profile create --storage Memory`, configure its private inventory,
+bootstrap client and scope budgets, then log in to bind the tenant and principal. Each
+`token get` above authenticates freshly and confirms that account through Graph before
+requesting a candidate token. The first request checkpoints sanitized scope metadata;
+a later request can use that observation for planning and still obtains a fresh token.
+Memory mode stores no credential vault, cookie or token across commands. Profile policy
+and identity fingerprints, inventory and sanitized scope observations remain private files.
+
+`--passkey-file` on `token get` selects this explicit Memory route. It cannot accompany
+browser options or vault passphrase flags. Persisted profiles use `login --passkey-file`
+followed by ordinary `token get`; their existing cache and renewal paths are unchanged.
+Memory acquisition without this explicit option retains its PowerShell adapter.
+
+The service validates the identity-bound profile and metadata before opening the key.
+The operation lock protects acquisition; configuration and token lifetime are checked
+again before returning an owned result. Core results hold secure strings in process;
+the CLI emits metadata and the optional bounded API-check status. Owned sessions and
+credentials are disposed. Managed strings and library internals do not guarantee immediate
+erasure. Existing additional-scope limits apply, with no automatic consent approval.
+
+The [sanitized v0.39 report](native-memory-passkey-validation-2026-10-13.json) records Linux
+proofs for both lab accounts: native login, cold and warm acquisition, Graph HTTP 200,
+no vault creation, logout and removal of owned private state. The independent baseline
+matched the expected username through Graph; native login and each acquisition matched
+the principal against the profile. Both policy budgets were explicitly 128, and the original
+inventory date was preserved under a 168-hour lab limit. No Windows/macOS live account
+validation or general API authorization is claimed.

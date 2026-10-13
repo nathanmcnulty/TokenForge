@@ -55,6 +55,30 @@ Describe 'Native saved profile tokens without PowerShell on PATH' -Skip:(-not $n
   (Get-FileHash $vault).Hash|Should -Be $before
   Test-Path (Join-Path $p.StatePath inventory.json)|Should -BeFalse
  }
+ It 'rejects software-passkey token acquisition for persisted profiles before unlocking' {
+  $before=(Get-FileHash $vault).Hash
+  Invoke-NativeProfileToken @('--scope','User.Read','--passkey-file','synthetic-native-private') 1
+  (Get-FileHash $vault).Hash|Should -Be $before
+ }
+ It 'rejects conflicting Memory passkey modes before reading a key or evidence' {
+  $config.Storage='Memory';[IO.File]::WriteAllText($configPath,($config|ConvertTo-Json -Depth 6));$before=(Get-FileHash $vault).Hash
+  foreach($extra in @(@('--browser'),@('--login-hint','synthetic-native-private'),@('--timeout-seconds','60'),@('--stdin'),@('--prompt-passphrase'),@('--passkey-file','duplicate'))){
+   Invoke-NativeProfileToken (@('--scope','User.Read','--passkey-file','synthetic-native-private')+$extra) 1
+  }
+  Invoke-NativeProfileToken @('--scope','User.Read','--passkey-file') 1
+  (Get-FileHash $vault).Hash|Should -Be $before
+  Test-Path (Join-Path $p.StatePath scopes.json)|Should -BeFalse
+ }
+ It 'requires bound Memory identity and fresh inventory before passkey authentication' {
+  $config.Storage='Memory';$expected=$config.ExpectedPrincipalFingerprint;$config.ExpectedPrincipalFingerprint=$null
+  [IO.File]::WriteAllText($configPath,($config|ConvertTo-Json -Depth 6));$before=(Get-FileHash $vault).Hash
+  Invoke-NativeProfileToken @('--scope','User.Read','--passkey-file','synthetic-native-private') 1
+  $config.ExpectedPrincipalFingerprint=$expected;[IO.File]::WriteAllText($configPath,($config|ConvertTo-Json -Depth 6))
+  Invoke-NativeProfileToken @('--scope','User.Read','--passkey-file','synthetic-native-private') 1
+  (Get-FileHash $vault).Hash|Should -Be $before
+  Test-Path (Join-Path $p.StatePath inventory.json)|Should -BeFalse
+  Test-Path (Join-Path $p.StatePath scopes.sqlite)|Should -BeFalse
+ }
  It 'refuses an incorrect passphrase without changing ciphertext' {
   $before=(Get-FileHash $vault).Hash
   Invoke-NativeProfileToken @('--scope','User.Read','--stdin') 1 'synthetic-native-wrong-password'

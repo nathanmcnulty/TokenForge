@@ -4,7 +4,7 @@
     {
       "ClientId": "b20d0d3a-dc90-485b-ad11-6031e769e221",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:25:33.4785953+00:00",
+      "ObservedAt": "2026-10-13T06:49:52.7733981+00:00",
       "Scopes": [
         "Application.Read.All",
         "Calendars.ReadWrite",
@@ -26,7 +26,7 @@
     {
       "ClientId": "b26aadf8-566f-4478-926f-589f601d9c74",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:25:38.0930183+00:00",
+      "ObservedAt": "2026-10-13T06:49:56.5760371+00:00",
       "Scopes": [
         "Contacts.Read",
         "Content.Process.User",

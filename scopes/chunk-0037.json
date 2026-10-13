@@ -4,7 +4,7 @@
     {
       "ClientId": "aad98258-6bb0-44ed-a095-21506dfb68fe",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:24.8731302+00:00",
+      "ObservedAt": "2026-10-13T06:49:35.0993129+00:00",
       "Scopes": [
         "email",
         "GroupMember.Read.All",
@@ -25,7 +25,7 @@
     {
       "ClientId": "ab9b8c07-8f02-4f72-87fa-80105867a763",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:30.0899133+00:00",
+      "ObservedAt": "2026-10-13T06:49:40.1016416+00:00",
       "Scopes": [
         "email",
         "Files.Read",
@@ -40,7 +40,7 @@
     {
       "ClientId": "aba285d5-d9f3-427b-a994-e9deb4567639",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:30.7319801+00:00",
+      "ObservedAt": "2026-10-13T06:49:40.6367531+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -53,7 +53,7 @@
     {
       "ClientId": "aced0c89-3b79-49ab-b2f1-27b67d3f0054",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:44.6740444+00:00",
+      "ObservedAt": "2026-10-13T06:49:53.6661171+00:00",
       "Scopes": [
         "Application.ReadWrite.All",
         "CustomAuthenticationExtension.ReadWrite.All",
@@ -81,7 +81,7 @@
     {
       "ClientId": "aebc6443-996d-45c2-90f0-388ff96faa56",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:15:04.3652026+00:00",
+      "ObservedAt": "2026-10-13T06:50:12.1674802+00:00",
       "Scopes": [
         "EduCurricula.Read",
         "EduRoster.ReadBasic",
@@ -102,7 +102,7 @@
     {
       "ClientId": "af124e86-4e96-495a-b70a-90f90ab96707",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:15:07.5256823+00:00",
+      "ObservedAt": "2026-10-13T06:50:15.0873522+00:00",
       "Scopes": [
         "Contacts.Read",
         "Content.Process.User",

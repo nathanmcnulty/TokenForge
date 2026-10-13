@@ -4,7 +4,7 @@
     {
       "ClientId": "a670efe7-64b6-454f-9ae9-4f1cf27aba58",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:22.1996681+00:00",
+      "ObservedAt": "2026-10-13T06:49:43.5394955+00:00",
       "Scopes": [
         "email",
         "GroupMember.Read.All",
@@ -20,7 +20,7 @@
     {
       "ClientId": "a672d62c-fc7b-4e81-a576-e60dc46e951d",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:22.7682497+00:00",
+      "ObservedAt": "2026-10-13T06:49:44.4912837+00:00",
       "Scopes": [
         "Calendars.ReadWrite",
         "Calendars.ReadWrite.Shared",
@@ -48,7 +48,7 @@
     {
       "ClientId": "a6943a7f-5ba0-4a34-bf91-ab439efdda3f",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:23.6473708+00:00",
+      "ObservedAt": "2026-10-13T06:49:45.6859113+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -61,7 +61,7 @@
     {
       "ClientId": "a81833f1-fd18-490b-8598-60cd7b6b0382",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:37.7333851+00:00",
+      "ObservedAt": "2026-10-13T06:50:05.3529325+00:00",
       "Scopes": [
         "ChannelMessage.Read.All",
         "Chat.Create",
@@ -85,7 +85,7 @@
     {
       "ClientId": "a85cf173-4192-42f8-81fa-777a763e6e2c",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:44.1154867+00:00",
+      "ObservedAt": "2026-10-13T06:50:15.8282075+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -98,7 +98,7 @@
     {
       "ClientId": "a8759234-4b8b-4d94-8c0a-ee1ab73af270",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:45.1086435+00:00",
+      "ObservedAt": "2026-10-13T06:50:17.3092652+00:00",
       "Scopes": [
         "ChannelMessage.Send",
         "Chat.Create",
@@ -127,7 +127,7 @@
     {
       "ClientId": "a8adde6c-aeb4-4fd6-9d8f-c2dfdecac60a",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:48.1690852+00:00",
+      "ObservedAt": "2026-10-13T06:50:21.2083623+00:00",
       "Scopes": [
         "Channel.Create",
         "Chat.Create",
@@ -152,7 +152,7 @@
     {
       "ClientId": "a8f7a65c-f5ba-4859-b2d6-df772c264e9d",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:50.0710472+00:00",
+      "ObservedAt": "2026-10-13T06:50:23.7293256+00:00",
       "Scopes": [
         "_A.AA",
         "_B.AC",
@@ -179,7 +179,7 @@
     {
       "ClientId": "a94f9c62-97fe-4d19-b06d-472bed8d2bcf",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:14:52.9298195+00:00",
+      "ObservedAt": "2026-10-13T06:50:27.4864993+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -192,7 +192,7 @@
     {
       "ClientId": "aaa651fc-734c-48a1-8c37-ad1724b2088c",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:15:05.7203427+00:00",
+      "ObservedAt": "2026-10-13T06:50:44.2038205+00:00",
       "Scopes": [
         "_B.AR",
         "Application.Read.All",

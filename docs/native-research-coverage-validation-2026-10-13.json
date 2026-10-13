@@ -1,0 +1,50 @@
+{
+  "SchemaVersion": 1,
+  "ValidationDate": "2026-10-13",
+  "Version": "0.42.0",
+  "CoverageCodeCommit": "256213468f80d4ff6cbd6c81894bbbe1242c98d7",
+  "NativeCoreChecks": {
+    "Passed": 1055,
+    "Failed": 0
+  },
+  "PackageParityChecks": {
+    "Passed": 24,
+    "Failed": 0,
+    "Skipped": 0,
+    "Runtime": "linux-x64",
+    "Includes": [
+      "PowerShell/native JSON equality",
+      "Read-only SQLite with no PowerShell on PATH",
+      "Malicious current/history metadata rejection",
+      "Fresh-process compiled credential bootstrap"
+    ]
+  },
+  "PublishedCatalog": {
+    "DataCommit": "61073498e524556cc08d21ec50137aeaa5eb9bdb",
+    "Sha256": "a77104a55b37bdd4f57c3df23d3bcec1afcd503b0f2b60a31fe0b7a1b6457b6f",
+    "Bytes": 31932994,
+    "Applications": 5455,
+    "ConflictingApplications": 199,
+    "SelectedPlans": 0,
+    "InputUnchanged": true,
+    "PowerShellOnPath": false
+  },
+  "BroadOfflineRun": {
+    "Passed": 455,
+    "Failed": 1,
+    "Skipped": 105,
+    "FailureCategory": "TimezoneChildProcessTimeoutUnderConcurrentValidation",
+    "TimestampSuiteIsolatedRerun": {
+      "Passed": 5,
+      "Failed": 0,
+      "Skipped": 0
+    }
+  },
+  "AuthenticationPerformed": false,
+  "TenantChanges": false,
+  "Limitations": [
+    "These are offline metadata and synthetic checks, not authentication, consent, required-flow or API-authorization evidence.",
+    "The broad offline run started before the report-only UTC formatting correction; its timeout was reproduced only under concurrent validation, and all five timestamp checks passed in an isolated rerun.",
+    "The code commit identifies the coverage engine tested; later fixture, input-size and documentation changes require their own final hosted gates."
+  ]
+}

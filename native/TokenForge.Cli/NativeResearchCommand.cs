@@ -29,7 +29,7 @@ internal static class NativeResearchCommand
         string catalogJson;
         if(metadata.EndsWith(".sqlite",StringComparison.OrdinalIgnoreCase)) {
             using var store=new ApplicationCatalogStore(metadata,true);catalogJson=store.Export();
-        } else catalogJson=NativeScopeCommand.ReadJson(metadata);
+        } else catalogJson=NativeScopeCommand.ReadJson(metadata,128*1024*1024);
         string? flow=options.GetValueOrDefault("--flow-path") ?? (state==null ? null : Choose("flows"));
         string? flowJson=null;
         // An explicit flow input is validated even when its account is unselected.
@@ -37,7 +37,7 @@ internal static class NativeResearchCommand
         if(flow!=null && (options.ContainsKey("--flow-path") || File.Exists(flow))) {
             if(flow.EndsWith(".sqlite",StringComparison.OrdinalIgnoreCase)) {
                 using var store=new FlowEvidenceStore(flow,true);flowJson=store.Export();
-            } else flowJson=NativeScopeCommand.ReadJson(flow);
+            } else flowJson=NativeScopeCommand.ReadJson(flow,128*1024*1024);
         }
         int age=options.TryGetValue("--max-age-hours",out var text) ? int.Parse(text,NumberStyles.None,CultureInfo.InvariantCulture) : 24;
         string[]? apps=options.TryGetValue("--app",out var app) ? new[]{app} : null;

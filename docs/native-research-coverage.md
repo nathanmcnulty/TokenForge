@@ -1,6 +1,6 @@
 # Understand catalog and flow coverage
 
-Development version 0.42 runs `research report` directly in the native CLI. It reads
+Version 0.42 runs `research report` directly in the native CLI. It reads
 JSON or SQLite metadata and does not need PowerShell, authenticate, request tokens,
 register applications, or open an encryption key. The PowerShell report uses the same
 coverage engine.
@@ -25,7 +25,8 @@ the profile's credential storage. `--profile` and `--root` select that configura
 An explicit state path prefers `applications.sqlite` and `flows.sqlite` when present.
 Explicit `--metadata-path` and `--flow-path` override those defaults. Missing optional
 state flow evidence means no selected plans; a missing explicit flow path is an
-error. Files and their parent directories must meet the existing private-path rules.
+error. JSON inputs are capped at 128 MiB, matching the catalog and flow policies. Files
+and their parent directories must meet the existing private-path rules.
 
 The text view summarizes counts. `--json` includes application rows unless
 `--summary-only` is supplied. `--app` selects one canonical application ID;
@@ -62,5 +63,7 @@ report. Output contains diagnostic metadata, not credentials, callback URLs, or 
 authentication responses. Local report JSON can still contain private correlation
 fingerprints and sanitized sign-in summaries; keep it in private storage.
 
-Synthetic checks and public-catalog scale validation are in progress on the feature
-branch. This guide does not claim live authentication or additional protocol support.
+The [sanitized validation report](native-research-coverage-validation-2026-10-13.json)
+records native checks, package parity, and reporting across 5,455 published applications.
+It also records the isolated rerun after a local timezone-fixture timeout. These
+checks do not establish live authentication or additional protocol support.

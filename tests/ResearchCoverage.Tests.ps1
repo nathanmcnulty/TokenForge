@@ -71,6 +71,12 @@ Describe 'Research coverage temporal and native parity' {
   ($actual|ConvertTo-Json -Depth 30 -Compress)|Should -BeExactly ($expected|ConvertTo-Json -Depth 30 -Compress)
   $actual.Applications[0].Name|Should -BeExactly '2026-01-01T00:00:00+02:00'
  }
+ It 'accepts catalog input above the scope-planner limit within the catalog bound' -Skip:(-not $env:TOKENFORGE_TEST_NATIVE) {
+  $large=Join-Path $state large.json;Copy-Item -LiteralPath $metadata -Destination $large
+  [IO.File]::WriteAllText($large,([string]::new([char]32,65*1024*1024)+[IO.File]::ReadAllText($metadata)))
+  $report=& $native research report --metadata-path $large --summary-only --json | ConvertFrom-Json
+  $LASTEXITCODE|Should -Be 0;$report.ApplicationCount|Should -Be 1
+ }
  It 'reads SQLite catalog and flows without changing bytes or requiring PowerShell' -Skip:(-not $env:TOKENFORGE_TEST_NATIVE) {
   $catalogSqlite=Join-Path $state applications.sqlite;$flowSqlite=Join-Path $state flows.sqlite
   $null=Import-TokenForgeApplicationMetadata $catalogSqlite -InputPath $metadata -NativeExecutablePath $native

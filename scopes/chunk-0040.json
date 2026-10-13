@@ -4,7 +4,7 @@
     {
       "ClientId": "b97b6bd4-a49f-4a0c-af18-af507d1da76c",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:24:54.9050014+00:00",
+      "ObservedAt": "2026-10-13T06:58:34.3080857+00:00",
       "Scopes": [
         "email",
         "Files.Read.All",
@@ -19,7 +19,7 @@
     {
       "ClientId": "b998f6f8-79d0-4b6a-8c25-5791dbe49ad0",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:24:56.679234+00:00",
+      "ObservedAt": "2026-10-13T06:58:36.2608221+00:00",
       "Scopes": [
         "Application.Read.All",
         "email",
@@ -35,7 +35,7 @@
     {
       "ClientId": "ba9ff945-a723-4ab5-a977-bd8c9044fe61",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:25:17.2252132+00:00",
+      "ObservedAt": "2026-10-13T06:58:58.1966868+00:00",
       "Scopes": [
         "AgentIdentity.Read.All",
         "CrossTenantInformation.ReadBasic.All",
@@ -52,7 +52,7 @@
     {
       "ClientId": "bb301b1f-c8f3-473a-9ff5-7ad970c639c2",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:25:25.79433+00:00",
+      "ObservedAt": "2026-10-13T06:59:07.6654425+00:00",
       "Scopes": [
         "_A.AA",
         "_C.AA",
@@ -70,7 +70,7 @@
     {
       "ClientId": "bb5ffd56-39eb-458c-a53a-775ba21277da",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:25:37.5740324+00:00",
+      "ObservedAt": "2026-10-13T06:59:17.7765678+00:00",
       "Scopes": [
         "Application.Read.All",
         "email",

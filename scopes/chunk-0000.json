@@ -249,6 +249,292 @@
       ],
       "Evidence": "AnonymousTenantTokenObservation",
       "SignatureValidated": false
+    },
+    {
+      "ClientId": "3420270d-958d-47dd-b212-d94442460036",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-13T07:33:41.409683+00:00",
+      "Scopes": [
+        "email",
+        "GroupMember.Read.All",
+        "openid",
+        "profile",
+        "User.Read",
+        "User.ReadBasic.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "36c50012-7aa1-4bff-9ff8-51c75190ae4d",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-13T07:34:08.8853959+00:00",
+      "Scopes": [
+        "email",
+        "MultiTenantOrganization.ReadBasic.All",
+        "openid",
+        "profile"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "36c50012-7aa1-4bff-9ff8-51c75190ae4d",
+      "ResourceId": "797f4846-ba00-4fd7-ba43-dac1f8f63013",
+      "ObservedAt": "2026-10-13T07:34:19.3049736+00:00",
+      "Scopes": [
+        "user_impersonation"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "373aedd7-18be-428f-81e6-8174c02cf6d8",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-13T07:34:23.6246737+00:00",
+      "Scopes": [
+        "Calendars.Read",
+        "Chat.Read",
+        "Contacts.Read",
+        "email",
+        "Files.ReadWrite.All",
+        "OnlineMeetingTranscript.Read.All",
+        "openid",
+        "Presence.ReadWrite",
+        "profile",
+        "User.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "386ce8c0-7421-48c9-a1df-2a532400339f",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-13T07:34:48.8225527+00:00",
+      "Scopes": [
+        "Contacts.Read",
+        "email",
+        "openid",
+        "People.Read",
+        "profile",
+        "RoleManagement.Read.Directory",
+        "SensitivityLabel.Read",
+        "User.Read",
+        "User.Read.All",
+        "User.ReadBasic.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "386ce8c0-7421-48c9-a1df-2a532400339f",
+      "ResourceId": "797f4846-ba00-4fd7-ba43-dac1f8f63013",
+      "ObservedAt": "2026-10-13T07:34:51.9626606+00:00",
+      "Scopes": [
+        "user_impersonation"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "38a893b6-d74c-4786-8fe7-bc3b4318e881",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-13T07:35:03.5825573+00:00",
+      "Scopes": [
+        "_A.AA",
+        "_B.AC",
+        "_C.AA",
+        "_E.AA",
+        "_G.AA",
+        "_H.AD",
+        "_L.AA",
+        "email",
+        "Group.Read.All",
+        "Member.Read.Hidden",
+        "openid",
+        "profile",
+        "Sites.Read.All",
+        "User.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "38a893b6-d74c-4786-8fe7-bc3b4318e881",
+      "ResourceId": "797f4846-ba00-4fd7-ba43-dac1f8f63013",
+      "ObservedAt": "2026-10-13T07:35:15.3672239+00:00",
+      "Scopes": [
+        "user_impersonation"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "3aa85724-c5ce-42f5-b7f9-36b5a387b7b4",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-13T07:36:01.0680955+00:00",
+      "Scopes": [
+        "_A.AA",
+        "_E.AA",
+        "_G.AA",
+        "_G.AB",
+        "Application.ReadWrite.All",
+        "AppRegistration.Create",
+        "email",
+        "openid",
+        "profile"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "3aa85724-c5ce-42f5-b7f9-36b5a387b7b4",
+      "ResourceId": "797f4846-ba00-4fd7-ba43-dac1f8f63013",
+      "ObservedAt": "2026-10-13T07:36:04.7931143+00:00",
+      "Scopes": [
+        "user_impersonation"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "3ab9b3bc-762f-4d62-82f7-7e1d653ce29f",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-13T07:36:19.2651295+00:00",
+      "Scopes": [
+        "_A.AB",
+        "_H.AL",
+        "email",
+        "openid",
+        "Organization.Read.All",
+        "profile",
+        "RoleManagement.ReadWrite.Directory"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "3ab9b3bc-762f-4d62-82f7-7e1d653ce29f",
+      "ResourceId": "797f4846-ba00-4fd7-ba43-dac1f8f63013",
+      "ObservedAt": "2026-10-13T07:36:38.5599048+00:00",
+      "Scopes": [
+        "user_impersonation"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "3b511579-5e00-46e1-a89e-a6f0870e2f5a",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-13T07:36:58.6564046+00:00",
+      "Scopes": [
+        "CloudPC.Read.All",
+        "Device.Read.All",
+        "email",
+        "openid",
+        "profile"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "3b68e96c-82d3-41b3-99b8-56c260cf38d8",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-13T07:37:36.1918885+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "3cf6df92-2745-4f6f-bbcf-19b59bcdb62a",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-13T07:38:46.3113631+00:00",
+      "Scopes": [
+        "DeviceManagementConfiguration.Read.All",
+        "DeviceManagementConfiguration.ReadWrite.All",
+        "Directory.Read.All",
+        "email",
+        "Group.Read.All",
+        "GroupMember.Read.All",
+        "openid",
+        "Organization.Read.All",
+        "profile",
+        "User.Read.All",
+        "User.ReadBasic.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "3cf6df92-2745-4f6f-bbcf-19b59bcdb62a",
+      "ResourceId": "797f4846-ba00-4fd7-ba43-dac1f8f63013",
+      "ObservedAt": "2026-10-13T07:38:59.1659543+00:00",
+      "Scopes": [
+        "user_impersonation"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "3dd3a51e-8d76-4cca-ac35-5537c1319211",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-13T07:39:39.0729481+00:00",
+      "Scopes": [
+        "CloudPC.Read.All",
+        "email",
+        "openid",
+        "profile",
+        "User.Read"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "3e62f81e-590b-425b-9531-cad6683656cf",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-13T07:40:32.5047743+00:00",
+      "Scopes": [
+        "Channel.ReadBasic.All",
+        "ChannelMessage.Read.All",
+        "Chat.Create",
+        "Chat.Read",
+        "ChatMessage.Send",
+        "Files.Read.All",
+        "Group.Read.All",
+        "Mail.Read",
+        "Organization.Read.All",
+        "People.Read",
+        "Presence.Read.All",
+        "TeamMember.Read.All",
+        "TeamsAppInstallation.ReadWriteAndConsentForChat",
+        "TeamsAppInstallation.ReadWriteForChat",
+        "TeamworkAppSettings.Read.All",
+        "TeamworkTag.Read",
+        "User.Read",
+        "User.Read.All",
+        "User.ReadBasic.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
+    },
+    {
+      "ClientId": "3ff8e6ba-7dc3-4e9e-ba40-ee12b60d6d48",
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "ObservedAt": "2026-10-13T07:41:30.705994+00:00",
+      "Scopes": [
+        "email",
+        "openid",
+        "profile",
+        "User.Read",
+        "User.Read.All"
+      ],
+      "Evidence": "AnonymousTenantTokenObservation",
+      "SignatureValidated": false
     }
   ],
   "Disclaimer": "Observed scopes are session/tenant dependent, not universal consent or guaranteed API access."

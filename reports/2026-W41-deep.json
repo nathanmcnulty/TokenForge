@@ -1,0 +1,33 @@
+{
+  "SchemaVersion": 3,
+  "ResourceIds": [
+    "00000003-0000-0000-c000-000000000000"
+  ],
+  "SelectedPairs": 100,
+  "AssessedPairs": 100,
+  "SuccessfulPairs": 46,
+  "SourceCatalogApplications": 5454,
+  "SelectedApplications": 100,
+  "PublishedCallbackCandidates": 490,
+  "DeepSelectionHistoryApplications": 100,
+  "NeverDeepSelectedCallbackCandidates": 390,
+  "Week": "2026-W41",
+  "Mode": "Deep",
+  "GeneratedAt": "2026-10-13T07:31:47.4331488+00:00",
+  "PublishedApplications": 100,
+  "AssessedApplications": 100,
+  "SuccessfulApplications": 46,
+  "TotalBatches": 4,
+  "CompletedBatches": 4,
+  "PendingBatches": 0,
+  "ExhaustedBatches": 0,
+  "Complete": true,
+  "OldestCompletedAssessmentAt": "2026-10-07T21:58:12+00:00",
+  "LatestCompletedAssessmentAt": "2026-10-07T22:06:49+00:00",
+  "OldestPendingHours": 0,
+  "MedianBatchSeconds": 149.759,
+  "P95BatchSeconds": 244.029,
+  "EstimatedRemainingRunnerSeconds": 0.0,
+  "Evidence": "AssessedForOneAccountNotUniversalSupport",
+  "SuccessfulScopeFreshness": "InspectAnonymousObservationDates"
+}

@@ -64,7 +64,38 @@
     "PowerShellBoundaryTestsPassed": 8,
     "BootstrapReleaseTestsPassed": 29,
     "BootstrapReleaseTestsSkipped": 1,
-    "FullNativeChecksAfterFinalizationChanges": 1181
+    "FullNativeChecksAfterFinalizationChanges": 1181,
+    "FocusedEnrollmentChecksAfterBufferAndPortabilityFixes": 206,
+    "FullNativeChecksAfterBufferAndPortabilityFixes": 1182
   },
-  "Interpretation": "Linux experiment only. This records an incomplete live enrollment and preserved recovery material, not a shipped capability or successful remote registration. Later source fixes require their own live proof. No hardware presence, trusted manufacturer attestation, general authorization or JWT signature validation is established."
+  "Interpretation": "Linux experiment only. This records an incomplete live enrollment and preserved recovery material, not a shipped capability or successful remote registration. Later source fixes require their own live proof. No hardware presence, trusted manufacturer attestation, general authorization or JWT signature validation is established.",
+  "CorrectedNativeAttempt": {
+    "AccountAlias": "secadmin",
+    "SourceCommit": "c360c742c2f72c46720403f831b5b797eaebfee3",
+    "Package": {
+      "Runtime": "linux-x64",
+      "ExecutableSha256": "1237ddb79bf0286f7856f837b98b8f8bc2f32b492b5e0c03e7f6d2f4c8889145",
+      "CredentialAssemblySha256": "89988f3a6b3a400aadb80d9292d4683bdb7cdba63af05280d1413791e80bed88",
+      "PackagedEnrollmentSourceSha256": "534f9c24501288707842c7f9932daf0caae1d844f393a71980a582794166d9df",
+      "ReleaseAttestationClaimed": false
+    },
+    "TerminalStage": "Verification",
+    "EnrollmentConfirmed": false,
+    "RecoveryKeyPublishedPrivately": true,
+    "ConfirmationReceiptPublished": false,
+    "RemoteOutcome": "Unresolved",
+    "RegistrationAutomaticallyRetried": false,
+    "NativeChildHadPowerShellOnPath": false,
+    "OriginalCredentialUnchanged": true,
+    "TemporaryCredentialCopiesRemoved": true,
+    "ReadOnlyFollowup": {
+      "OriginalCredentialRecognizedByFidoAllowlist": true,
+      "PendingCredentialNotObservedInAllowlist": true,
+      "PendingCredentialTokenAcquisitionSucceeded": false,
+      "RecoveryFileUnchanged": true,
+      "RemoteNonRegistrationProven": false,
+      "NoRegistrationRequests": true,
+      "ReceiptFabricated": false
+    }
+  }
 }

@@ -1,5 +1,7 @@
 # Enroll another lab software passkey
 
+This feature is under development on a draft branch. Live enrollment has not yet been confirmed; it is not included in the released 0.39.0 packages.
+
 The native CLI and PowerShell module can enroll another software passkey for the same
 account as an explicitly supplied existing local passkey. This is a lab software
 authenticator: its key is exportable, its certificate is self-signed, and it does not
@@ -82,5 +84,5 @@ Implementation validation is in progress on the feature branch. Successful build
 synthetic checks alone do not establish successful live enrollment.
 
 The [sanitized experiment report](native-passkey-enrollment-validation-2026-10-13.json)
-records the successful identity/MFA prerequisites, the stopped live attempt, and preservation
-of its unresolved recovery key. It does not claim completed enrollment.
+records the successful identity/MFA prerequisites, the stopped live attempts for both
+accounts, and preservation of their unresolved recovery keys. It does not claim completed enrollment.

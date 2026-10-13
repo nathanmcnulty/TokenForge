@@ -1,0 +1,69 @@
+{
+  "SchemaVersion": 1,
+  "GeneratedAt": "2026-10-12T05:04:50.9734168+00:00",
+  "Repository": "nathanmcnulty/TokenForge",
+  "Workflow": "discovery.yml",
+  "WeekStart": "2026-10-05T00:00:00.0000000+00:00",
+  "WeekEnd": "2026-10-12T00:00:00.0000000+00:00",
+  "ObservedThrough": "2026-10-12T00:00:00.0000000+00:00",
+  "Scope": "AllAttemptsOfWorkflowRunsCreatedInUtcWeek",
+  "WeekElapsed": true,
+  "ObservationComplete": true,
+  "CatalogCompletionVerified": false,
+  "RunCount": 54,
+  "AttemptCount": 54,
+  "IncompleteRuns": 0,
+  "IncompleteJobs": 0,
+  "TimedJobs": 154,
+  "NonSuccessfulTimedJobs": 1,
+  "TotalRunnerMinutes": 269.183,
+  "RunnerMinutesByStage": [
+    {
+      "Stage": "Prepare",
+      "Jobs": 42,
+      "RunnerMinutes": 66.417
+    },
+    {
+      "Stage": "Worker",
+      "Jobs": 61,
+      "RunnerMinutes": 123.533
+    },
+    {
+      "Stage": "Publish",
+      "Jobs": 24,
+      "RunnerMinutes": 32.417
+    },
+    {
+      "Stage": "Push",
+      "Jobs": 15,
+      "RunnerMinutes": 10.733
+    },
+    {
+      "Stage": "Other",
+      "Jobs": 12,
+      "RunnerMinutes": 36.083
+    }
+  ],
+  "ArtifactSnapshot": {
+    "UnexpiredCount": 98,
+    "UnexpiredBytes": 42239868,
+    "ExpiredCount": 0,
+    "Scope": "SelectedRunsAtObservationTimeNotRepositoryStorageOrBilledUsage"
+  },
+  "TimingMethod": "Sum distinct completed non-skipped job durations, including failures and reruns; includes setup, excludes queues and unfinished jobs. Attempts may execute outside the selected creation week. Not invoice minutes or elapsed cycle time.",
+  "SourceRunUrl": "https://github.com/nathanmcnulty/TokenForge/actions/runs/38206395378",
+  "SourceArtifact": "discovery-usage/discovery-usage.json",
+  "SourceArtifactSha256": "3854f6826cf316ed99e39b180f103a7b3f27eb3cb5bcee881def044d73987faf",
+  "Interpretation": "All discovery runs created in UTC week 41, including manual validation and failures; not the isolated catalog cycle, not billed usage.",
+  "CurrentWeekSnapshot": {
+    "Commit": "b911c778291d9986e51c844fe9302db1e65ab585",
+    "Week": "2026-W42",
+    "Applications": 5455,
+    "CompletedShallowBatches": 24,
+    "TotalShallowBatches": 55,
+    "AssessedApplications": 2400,
+    "Retries": 0,
+    "DeepWeek": "2026-W41",
+    "DeepNote": "Prior complete Graph-only recipe retained until current shallow work completes; full hosted Graph/ARM cycle not yet measured."
+  }
+}

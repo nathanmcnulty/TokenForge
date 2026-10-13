@@ -4,7 +4,7 @@
     {
       "ClientId": "7eadcef8-456d-4611-9480-4fff72b8b9e2",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:57:01.6119387+00:00",
+      "ObservedAt": "2026-10-13T06:15:10.7888878+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -17,7 +17,7 @@
     {
       "ClientId": "7f5a85eb-674c-4dee-8c57-1544c5769cfb",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:57:07.2084131+00:00",
+      "ObservedAt": "2026-10-13T06:15:16.0835735+00:00",
       "Scopes": [
         "Application.Read.All",
         "email",
@@ -31,7 +31,7 @@
     {
       "ClientId": "7f98cb04-cd1e-40df-9140-3bf7e2cea4db",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:57:14.9280681+00:00",
+      "ObservedAt": "2026-10-13T06:15:23.1649616+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -44,7 +44,7 @@
     {
       "ClientId": "7fba38f4-ec1f-458d-906c-f4e3c4f41335",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:57:15.9002049+00:00",
+      "ObservedAt": "2026-10-13T06:15:23.9964864+00:00",
       "Scopes": [
         "_A.A3",
         "_A.AA",
@@ -65,7 +65,7 @@
     {
       "ClientId": "801546d2-55cc-4ff4-b66d-134b1208deb5",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:57:20.1436699+00:00",
+      "ObservedAt": "2026-10-13T06:15:27.9232374+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -80,7 +80,7 @@
     {
       "ClientId": "80ccca67-54bd-44ab-8625-4b79c4dc7775",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:57:29.3745398+00:00",
+      "ObservedAt": "2026-10-13T06:15:36.6033297+00:00",
       "Scopes": [
         "_C.AL",
         "_C.AO",
@@ -92,7 +92,6 @@
         "CaseManagement.Read.All",
         "Channel.ReadBasic.All",
         "ChannelMessage.Send",
-        "CloudApp-Discovery.Read.All",
         "DeviceManagementConfiguration.Read.All",
         "DeviceManagementManagedDevices.Read.All",
         "DeviceManagementManagedDevices.ReadWrite.All",
@@ -119,7 +118,8 @@
         "ServiceMessage.Read.All",
         "Sites.Read.All",
         "User.Read",
-        "User.Read.All"
+        "User.Read.All",
+        "WindowsUpdates.Read.All"
       ],
       "Evidence": "AnonymousTenantTokenObservation",
       "SignatureValidated": false
@@ -127,7 +127,7 @@
     {
       "ClientId": "810dcf14-1858-4bf2-8134-4c369fa3235b",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:57:39.2777409+00:00",
+      "ObservedAt": "2026-10-13T06:15:46.8579854+00:00",
       "Scopes": [
         "AccessReview.ReadWrite.All",
         "Application.Read.All",

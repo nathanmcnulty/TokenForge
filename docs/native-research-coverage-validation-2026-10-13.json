@@ -44,7 +44,7 @@
   "TenantChanges": false,
   "Limitations": [
     "These are offline metadata and synthetic checks, not authentication, consent, required-flow or API-authorization evidence.",
-    "The broad offline run started before the report-only UTC formatting correction; its timeout was reproduced only under concurrent validation, and all five timestamp checks passed in an isolated rerun.",
+    "The broad offline run started before the report-only UTC formatting correction; its timeout occurred while other validation processes ran, and all five timestamp checks passed in an isolated rerun.",
     "The code commit identifies the coverage engine tested; later fixture, input-size and documentation changes require their own final hosted gates."
   ]
 }

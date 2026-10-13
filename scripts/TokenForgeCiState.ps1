@@ -3,6 +3,17 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot '../src/TokenForge/Core/Initialize-Credentials.ps1')
 function Get-TfCiHash($Value) {
  $json=ConvertTo-Json -InputObject $Value -Depth 100 -Compress
+ # New discovery preserves literal text, including date-looking application names.
+ # Keep the existing date-normalized recipe hash for already-frozen v1 discovery.
+ if($Value -is [Collections.IDictionary] -and (($Value.Contains('Discovery') -and $Value.Discovery.SchemaVersion -eq 2) -or $Value.Contains('SourceClaims'))){
+  $parsed=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson($json)
+  if($parsed.Contains('Discovery')){
+   if($parsed.Contains('CreatedAt')){$parsed.CreatedAt=[TokenForge.Core.V0240.TimestampPolicy]::Parse($parsed.CreatedAt).ToUniversalTime().ToString('o')}
+   $parsed.Discovery.FetchedAt=[TokenForge.Core.V0240.TimestampPolicy]::Parse($parsed.Discovery.FetchedAt).ToUniversalTime().ToString('o')
+  }
+  $json=ConvertTo-Json -InputObject $parsed -Depth 100 -Compress
+  return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($json))).ToLowerInvariant()
+ }
  # Date parsing uses the host time zone. Convert parsed dates to UTC offsets
  # before hashing so the frozen recipe verifies on every platform/time zone.
  # DateTimeOffset emits the same +00:00 representation as existing UTC CI hashes.
@@ -23,18 +34,24 @@ function Get-TfCiWeek([DateTimeOffset]$Now=[DateTimeOffset]::UtcNow) {
 }
 function Assert-TfCiDiscovery($Discovery) {
  Assert-TfCiKeys $Discovery @('SchemaVersion','FetchedAt','Sources','CatalogContentSha256','InvalidSourceRecordCount','SourceSnapshots','Applications')
- if($Discovery.SchemaVersion -ne 1 -or $Discovery.CatalogContentSha256 -notmatch '^[a-f0-9]{64}$' -or $Discovery.Applications -isnot [array] -or $Discovery.Applications.Count -gt 100000){throw 'Invalid public discovery.'}
+ if($Discovery.SchemaVersion -notin @(1,2) -or $Discovery.CatalogContentSha256 -notmatch '^[a-f0-9]{64}$' -or $Discovery.Applications -isnot [array] -or $Discovery.Applications.Count -gt 100000){throw 'Invalid public discovery.'}
  foreach($snapshot in $Discovery.SourceSnapshots){Assert-TfCiKeys $snapshot @('Location','Sha256','HashKind')}
  if($Discovery.Sources -isnot [array] -or @($Discovery.Sources|Where-Object {$_ -isnot [string] -or $_.Length -gt 2048}).Count -or $Discovery.SourceSnapshots -isnot [array]){throw 'Invalid public source types.'}
  $seen=@{}
  foreach($app in $Discovery.Applications){
-  Assert-TfCiKeys $app @('AppId','Name','OwnerTenantId','Ownership','Sources','PublicClient','Foci','RedirectUris','PreferredRedirectUri','Grants','IsResourceCandidate','IdentifierUris')
+  $fields=@('AppId','Name','OwnerTenantId','Ownership','Sources','PublicClient','Foci','RedirectUris','PreferredRedirectUri','Grants','IsResourceCandidate','IdentifierUris')
+  if($Discovery.SchemaVersion -eq 2){$fields+=@('SourceClaims','MetadataConflicts')}
+  Assert-TfCiKeys $app $fields
+  if($Discovery.SchemaVersion -eq 2){
+   [TokenForge.Core.DiscoverySourceClaims]::Validate((ConvertTo-Json -InputObject $app.SourceClaims -Depth 32 -Compress),(ConvertTo-Json -InputObject $app.MetadataConflicts -Depth 32 -Compress),$app.AppId)
+   foreach($claim in $app.SourceClaims){[TokenForge.Core.DiscoverySourceClaims]::ValidatePublicLocation($claim.Location)}
+  }
   $id=[guid]::Empty
   if(-not [guid]::TryParse($app.AppId,[ref]$id) -or $id -eq [guid]::Empty -or $seen.ContainsKey($id.ToString())){throw 'Invalid discovery app ID.'};$seen[$id.ToString()]=$true
   if($app.Name -isnot [string] -or $app.Name.Length -gt 2048 -or $app.Ownership -cnotin @('Unverified','PublishedMicrosoftOwner') -or ($null -ne $app.OwnerTenantId -and -not [guid]::TryParse([string]$app.OwnerTenantId,[ref]$id)) -or ($null -ne $app.PublicClient -and $app.PublicClient -isnot [bool]) -or ($null -ne $app.Foci -and $app.Foci -isnot [bool]) -or $app.IsResourceCandidate -isnot [bool] -or $app.PreferredRedirectUri -isnot [string]){throw 'Invalid public application types.'}
   foreach($field in @('RedirectUris','IdentifierUris')){if($app[$field] -isnot [array] -or @($app[$field]|Where-Object {$_ -isnot [string] -or $_.Length -gt 2048}).Count){throw 'Invalid public URI hints.'}}
   if($app.Sources -isnot [array] -or $app.Grants -isnot [array]){throw 'Invalid public application lists.'}
-  foreach($source in $app.Sources){Assert-TfCiKeys $source @('Name','Location','Evidence');foreach($field in @('Name','Location','Evidence')){if($source[$field] -isnot [string] -or $source[$field].Length -gt 2048){throw 'Invalid public provenance.'}}}
+  foreach($source in $app.Sources){Assert-TfCiKeys $source @('Name','Location','Evidence');foreach($field in @('Name','Location','Evidence')){if($source[$field] -isnot [string] -or $source[$field].Length -gt 2048){throw 'Invalid public provenance.'}};[TokenForge.Core.DiscoverySourceClaims]::ValidatePublicLocation($source.Location)}
   foreach($grant in $app.Grants){Assert-TfCiKeys $grant @('ResourceId','Scopes');$resource=[guid]::Empty;if(-not [guid]::TryParse($grant.ResourceId,[ref]$resource) -or $grant.Scopes -isnot [array] -or @($grant.Scopes|Where-Object {$_ -isnot [string] -or $_ -notmatch '^[A-Za-z0-9_.-]{1,256}$'}).Count){throw 'Invalid public scope hints.'}}
  }
 }
@@ -219,7 +236,7 @@ function Assert-TfCiPublicData([string]$Path){
  if(Test-Path (Join-Path $Path scopes)){
   foreach($file in Get-ChildItem (Join-Path $Path scopes) -Recurse -Force){if($file.PSIsContainer -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Name -notmatch '^chunk-[0-9]{4,6}\.json$'){throw 'Unexpected public scope file.'};Assert-TfCiScopeExport (Get-Content $file.FullName -Raw|ConvertFrom-Json -AsHashtable)}
  }
- foreach($file in @(Get-ChildItem $Path -File -Filter 'weekly-*.json')){Assert-TfCiState (Get-Content $file.FullName -Raw|ConvertFrom-Json -AsHashtable)}
+ foreach($file in @(Get-ChildItem $Path -File -Filter 'weekly-*.json')){Assert-TfCiState ([TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((Get-Content $file.FullName -Raw)))}
 }
 function Assert-TfCiReport($Report){
  $fields=@('SchemaVersion','Week','Mode','GeneratedAt','PublishedApplications','AssessedApplications','SuccessfulApplications','TotalBatches','CompletedBatches','PendingBatches','ExhaustedBatches','Complete','OldestCompletedAssessmentAt','LatestCompletedAssessmentAt','OldestPendingHours','MedianBatchSeconds','P95BatchSeconds','EstimatedRemainingRunnerSeconds','Evidence','SuccessfulScopeFreshness')

@@ -40,7 +40,7 @@ $tempRoot=[IO.Path]::GetTempPath()
 if($IsMacOS -and $tempRoot.StartsWith('/var/',[StringComparison]::Ordinal)){$tempRoot='/private'+$tempRoot}
 $state=Join-Path $tempRoot ('TokenForge-ci-'+[guid]::NewGuid())
 $cookie=$null;$graph=$null;$weekly=$null;$checkpointWatch=[Diagnostics.Stopwatch]::StartNew();$timer=[Diagnostics.Stopwatch]::StartNew()
-if($WeeklyStatePath){. (Join-Path $PSScriptRoot 'TokenForgeCiState.ps1');$weekly=Get-Content -LiteralPath $WeeklyStatePath -Raw|ConvertFrom-Json -AsHashtable;Assert-TfCiState $weekly;if($ChunkIndex -lt 0){throw 'A frozen worker requires ChunkIndex.'};$selected=@(Get-TfCiMembers $weekly $ChunkIndex);$receipt=[ordered]@{SchemaVersion=1;PlanId=$weekly.PlanId;Index=$ChunkIndex;Attempt=($weekly.Batches[$ChunkIndex].Attempts+1);Status='Failed';Assessed=0;Successful=0;DurationSeconds=0;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')}}
+if($WeeklyStatePath){. (Join-Path $PSScriptRoot 'TokenForgeCiState.ps1');$weekly=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((Get-Content -LiteralPath $WeeklyStatePath -Raw));Assert-TfCiState $weekly;if($ChunkIndex -lt 0){throw 'A frozen worker requires ChunkIndex.'};$selected=@(Get-TfCiMembers $weekly $ChunkIndex);$receipt=[ordered]@{SchemaVersion=1;PlanId=$weekly.PlanId;Index=$ChunkIndex;Attempt=($weekly.Batches[$ChunkIndex].Attempts+1);Status='Failed';Assessed=0;Successful=0;DurationSeconds=0;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')}}
 if($weekly -and $weekly.SchemaVersion -eq 2){$receipt.SchemaVersion=2;$receipt.AssessedPairs=0;$receipt.SuccessfulPairs=0}
 try {
  $null=New-Item -ItemType Directory -Path $state
@@ -49,7 +49,11 @@ try {
  Assert-PublicScopeExports $DataPath
  $metadata=Join-Path $DataPath 'applications.json'
  if(Test-Path $metadata){$null=Get-TokenForgeApplicationMetadata $metadata -PublicOnly}
- $discovery=if($weekly){$weekly.Recipe.Discovery|ConvertTo-Json -Depth 100|ConvertFrom-Json}else{Update-TokenForgeDiscovery -Path (Join-Path $state 'discovery.json') -MetadataPath $metadata}
+ $discovery=if($weekly){
+  $copy=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((ConvertTo-Json -InputObject $weekly.Recipe.Discovery -Depth 100))
+  $copy.Applications=@($copy.Applications|ForEach-Object {[pscustomobject]$_})
+  [pscustomobject]$copy
+ }else{Update-TokenForgeDiscovery -Path (Join-Path $state 'discovery.json') -MetadataPath $metadata}
  if(-not $weekly){$null=Get-TokenForgeApplicationMetadata $metadata -PublicOnly}
  if($PublicOnly){return [pscustomobject]@{Applications=$discovery.Applications.Count;Stage='PublicDiscovery'}}
  if(-not $env:TOKENFORGE_ESTS_COOKIE){throw 'The passkey action must supply an ESTS cookie.'}

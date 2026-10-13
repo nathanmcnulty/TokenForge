@@ -1,7 +1,9 @@
 BeforeAll {
  . "$PSScriptRoot/../scripts/TokenForgeCiState.ps1"
  Import-Module "$PSScriptRoot/../src/TokenForge/TokenForge.psd1" -Force
- $discovery=Get-TokenForgeDiscovery -Catalog (Get-TokenForgeCatalog -Path "$PSScriptRoot/fixtures/catalog.json")|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable
+ $catalog=Get-TokenForgeCatalog -Path "$PSScriptRoot/fixtures/catalog.json"
+ $catalog.Source='https://raw.githubusercontent.com/example/public/main/scopes.json'
+ $discovery=Get-TokenForgeDiscovery -Catalog $catalog|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable
  $cli="$PSScriptRoot/../scripts/tokenforge.ps1"
 }
 Describe 'Offline weekly CLI coverage' {
@@ -10,6 +12,25 @@ Describe 'Offline weekly CLI coverage' {
   $null=New-Item -ItemType Directory $root
   $state=New-TfCiState $discovery -Mode Deep -ResourceId @('00000003-0000-0000-c000-000000000000','797f4846-ba00-4fd7-ba43-dac1f8f63013')
   $state|ConvertTo-Json -Depth 100|Set-Content "$root/weekly-deep.json"
+ }
+ It 'preserves literal date-looking claim text when reading frozen reports' {
+  $literal=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((ConvertTo-Json -InputObject $discovery -Depth 100))
+  $app=@($literal.Applications|Where-Object AppId -eq '11111111-1111-1111-1111-111111111111')[0]
+  $app.SourceClaims[0].Name='2026-01-01T00:00:00+02:00'
+  $claims=[TokenForge.Core.DiscoverySourceClaims]::NormalizeMetadata((ConvertTo-Json -InputObject $app.SourceClaims -Depth 32 -Compress),$app.AppId)
+  $app.SourceClaims=$claims.SourceClaims;$app.MetadataConflicts=$claims.MetadataConflicts
+  $frozen=New-TfCiState $literal -Mode Deep -ResourceId @('00000003-0000-0000-c000-000000000000','797f4846-ba00-4fd7-ba43-dac1f8f63013')
+  ConvertTo-Json -InputObject $frozen -Depth 100|Set-Content "$root/weekly-deep.json"
+  $before=(Get-FileHash "$root/weekly-deep.json").Hash
+  $result=(& $cli research weekly -StatePath $root -Json)|ConvertFrom-Json
+  $LASTEXITCODE|Should -Be 0
+  $result.Reports[0].PlanId|Should -BeExactly $frozen.PlanId
+  if($env:TOKENFORGE_TEST_NATIVE){
+   $nativeResult=(& $env:TOKENFORGE_TEST_NATIVE research weekly --state-path $root --json)|ConvertFrom-Json
+   $LASTEXITCODE|Should -Be 0
+   $nativeResult.Reports[0].PlanId|Should -BeExactly $frozen.PlanId
+  }
+  (Get-FileHash "$root/weekly-deep.json").Hash|Should -BeExactly $before
  }
  It 'reads frozen pairs without a profile and changes no files' {
   $before=(Get-FileHash "$root/weekly-deep.json").Hash

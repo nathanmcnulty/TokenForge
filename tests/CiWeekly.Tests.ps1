@@ -2,6 +2,7 @@ BeforeAll {
  . "$PSScriptRoot/../scripts/TokenForgeCiState.ps1"
  Import-Module "$PSScriptRoot/../src/TokenForge/TokenForge.psd1" -Force
  $catalog=Get-TokenForgeCatalog -Path "$PSScriptRoot/fixtures/catalog.json"
+ $catalog.Source='https://raw.githubusercontent.com/example/public/main/scopes.json'
  $discovery=Get-TokenForgeDiscovery -Catalog $catalog|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable
 }
 Describe 'Frozen CI recipes and receipt completeness' {

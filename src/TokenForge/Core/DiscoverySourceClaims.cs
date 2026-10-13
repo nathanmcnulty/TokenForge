@@ -1,6 +1,8 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Collections;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -55,6 +57,59 @@ public static class DiscoverySourceClaims
     {
         using var expected=Parse(Normalize(claimsJson,appId));using var actual=Parse(conflictsJson);
         if(!JsonNode.DeepEquals(JsonNode.Parse(expected.RootElement.GetProperty("SourceClaims").GetRawText()),JsonNode.Parse(claimsJson)) || !JsonNode.DeepEquals(JsonNode.Parse(expected.RootElement.GetProperty("MetadataConflicts").GetRawText()),JsonNode.Parse(actual.RootElement.GetRawText())))throw Invalid();
+    }
+    public static void ValidatePublicLocation(string location)
+    {
+        String(location,4096);
+        if(!Uri.TryCreate(location,UriKind.Absolute,out var uri) || uri.Scheme!=Uri.UriSchemeHttps || !string.Equals(uri.Host,"raw.githubusercontent.com",StringComparison.OrdinalIgnoreCase) || uri.UserInfo.Length!=0 || uri.Query.Length!=0 || uri.Fragment.Length!=0)throw Invalid();
+    }
+    public static IDictionary NormalizeMetadata(string claimsJson,string appId)
+    {
+        using var document=Parse(Normalize(claimsJson,appId));
+        return (IDictionary)ReadValue(document.RootElement)!;
+    }
+    // Used by both catalog readers so date-looking names remain strings on PowerShell 7.4.
+    public static IDictionary ReadCatalog(string json)
+    {
+        if(Utf8.GetByteCount(json)>128*1024*1024)throw Invalid();
+        using var document=JsonDocument.Parse(json,new JsonDocumentOptions{MaxDepth=100});
+        Unique(document.RootElement);var root=document.RootElement;
+        if(root.GetProperty("Format").GetString()!="TokenForgeApplicationMetadata" || !root.GetProperty("SchemaVersion").TryGetInt32(out int version) || version is not (1 or 2))throw Invalid();
+        foreach(var app in root.GetProperty("Applications").EnumerateObject())
+            foreach(var record in app.Value.GetProperty("Records").EnumerateObject())
+            {
+                string kind=record.Value.GetProperty("Kind").GetString()!;
+                ValidateCatalogAttributes(record.Value.GetProperty("Attributes"),app.Name,kind,version);
+                foreach(var previous in record.Value.GetProperty("PreviousVersions").EnumerateArray())ValidateCatalogAttributes(previous.GetProperty("Attributes"),app.Name,kind,version);
+            }
+        return (IDictionary)ReadValue(root)!;
+    }
+    public static object? ReadMetadataJson(string json)
+    {
+        if(Utf8.GetByteCount(json)>128*1024*1024)throw Invalid();
+        using var document=JsonDocument.Parse(json,new JsonDocumentOptions{MaxDepth=100});Unique(document.RootElement);return ReadValue(document.RootElement);
+    }
+    public static void ValidateCatalogAttributes(JsonElement attributes,string appId,string kind,int version)
+    {
+        bool claims=attributes.TryGetProperty("SourceClaims",out var sourceClaims),conflicts=attributes.TryGetProperty("MetadataConflicts",out var metadataConflicts);
+        if(claims!=conflicts || claims && (kind!="Discovery" || version!=2))throw Invalid();
+        if(claims)Validate(sourceClaims.GetRawText(),metadataConflicts.GetRawText(),appId);
+    }
+    private static object? ReadValue(JsonElement value)
+    {
+        switch(value.ValueKind)
+        {
+            case JsonValueKind.Object:
+                var fields=new OrderedDictionary(StringComparer.Ordinal);
+                foreach(var field in value.EnumerateObject())fields.Add(field.Name,ReadValue(field.Value));return fields;
+            case JsonValueKind.Array:return value.EnumerateArray().Select(ReadValue).ToArray();
+            case JsonValueKind.String:return value.GetString();
+            case JsonValueKind.Number:return value.TryGetInt64(out var integer)?(object)integer:value.GetDouble();
+            case JsonValueKind.True:return true;
+            case JsonValueKind.False:return false;
+            case JsonValueKind.Null:return null;
+            default:throw Invalid();
+        }
     }
     private static JsonObject Header(string source,string location,string evidence)
     {

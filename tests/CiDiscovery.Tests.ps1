@@ -10,7 +10,7 @@ Describe 'CI discovery boundaries' {
    $catalog.Source='https://raw.githubusercontent.com/example/public/main/scopes.json'
    $catalog
   }
-  Mock Invoke-RestMethod -ModuleName TokenForge {@()}
+  Mock Invoke-WebRequest -ModuleName TokenForge {@{Content='[]'}}
  }
  It 'runs public-only without credentials and validates existing anonymous exports' {
   $data=Join-Path $TestDrive 'data'

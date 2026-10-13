@@ -16,7 +16,7 @@ public sealed class ApplicationCatalogStore : IDisposable
     private static readonly string[] Kinds = "Discovery Inventory SignIns ScopeObservations RegistrationAttempts FlowAttempts".Split(' ');
     private static readonly HashSet<string> Dates = new("CreatedAt UpdatedAt FirstSeenAt LastSeenAt CurrentVersionFirstSeenAt LastObservedAt ObservedAt RecordedAt Since Until".Split(' '), StringComparer.Ordinal);
     private static readonly Dictionary<string,string> Attributes = new() {
-        ["Discovery"]="AppId Name OwnerTenantId Ownership PublicClient Foci RedirectUris PreferredRedirectUri Grants IsResourceCandidate IdentifierUris",
+        ["Discovery"]="AppId Name OwnerTenantId Ownership PublicClient Foci RedirectUris PreferredRedirectUri Grants IsResourceCandidate IdentifierUris SourceClaims MetadataConflicts",
         ["Inventory"]="AppId Name PublishedName ServicePrincipalType PreferredSingleSignOnMode LoginUrl LogoutUrl Homepage Registration Ownership OwnerTenantId AccountEnabled AssignmentRequired SignInAudience PublicClient Foci RedirectUris TenantRedirectUris PreferredRedirectUri PublishedGrants DelegatedScopeDefinitions AppRoleDefinitions IdentifierUris IsResourceCandidate",
         ["SignIns"]="AppId SignInCount KnownInInventory RegisteredMicrosoft Evidence ProtocolCounts ClientTypeCounts EventTypeCounts ResourceCounts OutcomeCounts AuthenticationMethodCounts CredentialTypeCounts IncomingTokenTypeCounts",
         ["RegistrationAttempts"]="AppId Outcome HttpStatus",
@@ -33,9 +33,9 @@ public sealed class ApplicationCatalogStore : IDisposable
             connection.Open();using var command=connection.CreateCommand();
             command.CommandText="PRAGMA application_id;";var app=Convert.ToInt32(command.ExecuteScalar());
             command.CommandText="PRAGMA user_version;";var version=Convert.ToInt32(command.ExecuteScalar());
-            if(!empty && (app!=0x54464741 || version!=1) || empty && readOnly) throw Invalid();
+            if(!empty && (app!=0x54464741 || version is not (1 or 2)) || empty && readOnly) throw Invalid();
             command.CommandText="PRAGMA trusted_schema=OFF; PRAGMA foreign_keys=ON;";command.ExecuteNonQuery();
-            if(!empty) return;
+            if(!empty)return;
             using var transaction=connection.BeginTransaction();command.Transaction=transaction;
             command.CommandText="""
                 CREATE TABLE catalog_info(id INTEGER PRIMARY KEY CHECK(id=1),created TEXT NOT NULL,updated TEXT NOT NULL);
@@ -47,7 +47,7 @@ public sealed class ApplicationCatalogStore : IDisposable
                 CREATE TABLE catalog_versions(sequence INTEGER PRIMARY KEY AUTOINCREMENT,app TEXT NOT NULL,origin TEXT NOT NULL,id TEXT NOT NULL,first TEXT NOT NULL,last TEXT NOT NULL,payload TEXT NOT NULL,hash TEXT NOT NULL,UNIQUE(app,origin,id),FOREIGN KEY(app,origin) REFERENCES catalog_records(app,origin));
                 CREATE INDEX catalog_history ON catalog_versions(app,origin,first,last,sequence);
                 CREATE INDEX catalog_version_payload ON catalog_versions(app,origin,hash);
-                PRAGMA application_id=1413891905; PRAGMA user_version=1;
+                PRAGMA application_id=1413891905; PRAGMA user_version=2;
                 """;
             command.ExecuteNonQuery();transaction.Commit();command.Transaction=null;
             command.CommandText="PRAGMA journal_mode=WAL;";command.ExecuteNonQuery();
@@ -57,15 +57,16 @@ public sealed class ApplicationCatalogStore : IDisposable
     {
         using var document=Parse(json);var root=document.RootElement;
         Keys(root,"Format SchemaVersion Run Rows");
-        if(Text(root,"Format")!="TokenForgeCatalogUpdate" || root.GetProperty("SchemaVersion").GetInt32()!=1) throw Invalid();
+        var version=root.GetProperty("SchemaVersion").GetInt32();
+        if(Text(root,"Format")!="TokenForgeCatalogUpdate" || version is not (1 or 2)) throw Invalid();
         var run=root.GetProperty("Run");ValidateRun(run);var kind=Text(run,"Kind");var observed=Date(run,"ObservedAt");var now=Date(run,"RecordedAt");var runId=Text(run,"Id");
         var rows=root.GetProperty("Rows");if(rows.ValueKind!=JsonValueKind.Array || rows.GetArrayLength()!=run.GetProperty("ApplicationRecordCount").GetInt32()) throw Invalid();
-        using var tx=connection.BeginTransaction();
+        using var tx=connection.BeginTransaction(deferred:false);EnsureWritableFormat(tx);
         if(!WriteRun(run,tx,Hash(Canonical(root)))){tx.Commit();return Statistics(kind);}
         Execute("CREATE TEMP TABLE seen_apps(app TEXT NOT NULL,origin TEXT NOT NULL,PRIMARY KEY(app,origin));",tx);
         var origins=new HashSet<string>(StringComparer.Ordinal);
         foreach(var row in rows.EnumerateArray()) {
-            Keys(row,"AppId Record HashInput");var id=Text(row,"AppId");GuidValue(id);var record=row.GetProperty("Record");var origin=ValidateRecord(record,id);
+            Keys(row,"AppId Record HashInput");var id=Text(row,"AppId");GuidValue(id);var record=row.GetProperty("Record");ValidateClaimsVersion(record,id,version);var origin=ValidateRecord(record,id);
             if(Text(record,"Kind")!=kind || record.GetProperty("PreviousVersions").GetArrayLength()!=0 || Date(record,"FirstSeenAt")!=Date(record,"LastSeenAt") || Date(record,"CurrentVersionFirstSeenAt")!=Date(record,"LastSeenAt")) throw Invalid();
             var hashInput=Text(row,"HashInput",MaxBytes);using var hashDoc=Parse(hashInput);Keys(hashDoc.RootElement,"Attributes Sources");
             if(Hash(hashInput)!=Text(record,"ContentSha256") || Canonical(hashDoc.RootElement.GetProperty("Attributes"))!=Canonical(record.GetProperty("Attributes")) || Canonical(hashDoc.RootElement.GetProperty("Sources"))!=Canonical(record.GetProperty("Sources"))) throw Invalid();
@@ -90,11 +91,12 @@ public sealed class ApplicationCatalogStore : IDisposable
     {
         using var document=Parse(json);var root=document.RootElement;
         Keys(root,"Format SchemaVersion CreatedAt UpdatedAt Applications Origins Runs");
-        if(Text(root,"Format")!="TokenForgeApplicationMetadata" || root.GetProperty("SchemaVersion").GetInt32()!=1) throw Invalid();
+        var envelopeVersion=root.GetProperty("SchemaVersion").GetInt32();
+        if(Text(root,"Format")!="TokenForgeApplicationMetadata" || envelopeVersion is not (1 or 2)) throw Invalid();
         var created=Date(root,"CreatedAt");var updated=Date(root,"UpdatedAt");if(StringComparer.Ordinal.Compare(created,updated)>0)throw Invalid();
         var applications=root.GetProperty("Applications");var origins=root.GetProperty("Origins");var runs=root.GetProperty("Runs");
         if(applications.ValueKind!=JsonValueKind.Object || origins.ValueKind!=JsonValueKind.Object || runs.ValueKind!=JsonValueKind.Array)throw Invalid();
-        using var tx=connection.BeginTransaction();var count=0;var runIds=new Dictionary<string,JsonElement>(StringComparer.Ordinal);
+        using var tx=connection.BeginTransaction(deferred:false);EnsureWritableFormat(tx);var count=0;var runIds=new Dictionary<string,JsonElement>(StringComparer.Ordinal);
         UniqueKeys(applications);UniqueKeys(origins);
         foreach(var run in runs.EnumerateArray()){ValidateRun(run);if(!runIds.TryAdd(Text(run,"Id"),run))throw Invalid();if(WriteRun(run,tx))count++;}
         foreach(var app in applications.EnumerateObject()) {
@@ -102,6 +104,7 @@ public sealed class ApplicationCatalogStore : IDisposable
             var first=Date(app.Value,"FirstSeenAt");var last=Date(app.Value,"LastSeenAt");if(StringComparer.Ordinal.Compare(first,last)>0)throw Invalid();
             WriteApp(app.Name,first,last,tx);var records=app.Value.GetProperty("Records");if(records.ValueKind!=JsonValueKind.Object)throw Invalid();UniqueKeys(records);
             foreach(var entry in records.EnumerateObject()) {
+                ValidateClaimsVersion(entry.Value,app.Name,envelopeVersion);
                 if(ValidateRecord(entry.Value,app.Name)!=entry.Name)throw Invalid();
                 if(!origins.TryGetProperty(entry.Name,out _))throw Invalid();
                 var importedObserved=Date(origins.GetProperty(entry.Name),"LastObservedAt");var currentObserved=OriginObserved(entry.Name,tx);
@@ -125,7 +128,7 @@ public sealed class ApplicationCatalogStore : IDisposable
     public string Export(string? appId=null,bool currentOnly=false)
     {
         if(appId!=null)GuidValue(appId);
-        using var tx=connection.BeginTransaction();long bytes=0;
+        using var tx=connection.BeginTransaction();var catalogVersion=ReadFormatVersion(tx);long bytes=0;
         void Bound(string text){bytes+=Encoding.UTF8.GetByteCount(text);if(bytes>MaxBytes)throw new InvalidOperationException("Select a smaller catalog export.");}
         var apps=new JsonObject();
         using(var command=Command("SELECT id,first,last FROM catalog_apps WHERE ($app IS NULL OR id=$app) ORDER BY id;",tx,("$app",appId))) {
@@ -137,7 +140,7 @@ public sealed class ApplicationCatalogStore : IDisposable
         }
         using(var command=Command("SELECT app,origin,payload,first,last,present,hash,digest FROM catalog_records WHERE ($app IS NULL OR app=$app) ORDER BY app,origin;",tx,("$app",appId))) {
             using var reader=command.ExecuteReader();while(reader.Read()){
-                var payload=reader.GetString(2);Bound(payload);var record=ParseRecord(payload,reader.GetString(0),reader.GetString(1));CheckIndex(record,reader,3);
+                var payload=reader.GetString(2);Bound(payload);using var shape=Parse(payload);ValidateClaimsVersion(shape.RootElement,reader.GetString(0),catalogVersion);var record=ParseRecord(payload,reader.GetString(0),reader.GetString(1));CheckIndex(record,reader,3);
                 record["PreviousVersions"]=new JsonArray();((JsonObject)apps[reader.GetString(0)]!["Records"]!)[reader.GetString(1)]=record;
             }
         }
@@ -145,6 +148,7 @@ public sealed class ApplicationCatalogStore : IDisposable
             using var reader=command.ExecuteReader();while(reader.Read()){
                 var payload=reader.GetString(2);Bound(payload);using var doc=Parse(payload);var version=doc.RootElement;var record=apps[reader.GetString(0)]!["Records"]![reader.GetString(1)]!;
                 using var current=Parse(record.ToJsonString());ValidateVersion(version,record["Kind"]!.GetValue<string>(),reader.GetString(0),current.RootElement);
+                DiscoverySourceClaims.ValidateCatalogAttributes(version.GetProperty("Attributes"),reader.GetString(0),record["Kind"]!.GetValue<string>(),catalogVersion);
                 HashValue(reader.GetString(3));if(Hash(Canonical(version))!=reader.GetString(6) || Date(version,"FirstSeenAt")!=reader.GetString(4) || Date(version,"LastSeenAt")!=reader.GetString(5))throw Invalid();
                 ((JsonArray)record["PreviousVersions"]!).Add(JsonNode.Parse(Canonical(version)));
             }
@@ -167,7 +171,7 @@ public sealed class ApplicationCatalogStore : IDisposable
         }
         using var info=Command("SELECT created,updated FROM catalog_info WHERE id=1;",tx);using var infoReader=info.ExecuteReader();
         var now=DateTimeOffset.UtcNow.ToString("o");var created=now;var updated=now;if(infoReader.Read()){created=DateText(infoReader.GetString(0));updated=DateText(infoReader.GetString(1));}infoReader.Close();
-        var result=new JsonObject { ["Format"]="TokenForgeApplicationMetadata",["SchemaVersion"]=1,["CreatedAt"]=created,["UpdatedAt"]=updated,["Applications"]=apps,["Origins"]=origins,["Runs"]=runs}.ToJsonString();
+        var result=new JsonObject { ["Format"]="TokenForgeApplicationMetadata",["SchemaVersion"]=catalogVersion,["CreatedAt"]=created,["UpdatedAt"]=updated,["Applications"]=apps,["Origins"]=origins,["Runs"]=runs}.ToJsonString();
         if(Encoding.UTF8.GetByteCount(result)>MaxBytes)throw new InvalidOperationException("Select a smaller catalog export.");tx.Commit();return result;
     }
     private void MergeRecord(string app,string origin,JsonElement incoming,bool? present,SqliteTransaction tx,bool newEvent=false)
@@ -191,6 +195,50 @@ public sealed class ApplicationCatalogStore : IDisposable
         }else{
             var earlier=StringComparer.Ordinal.Compare(first,oldFirst)<0;if(earlier)old["FirstSeenAt"]=first;
             if(earlier || !newEvent && oldPresent!=importedPresent)WriteRecord(app,origin,old,tx);
+        }
+    }
+    private static void ValidateClaimsVersion(JsonElement record,string app,int version)
+    {
+        string kind=Text(record,"Kind");DiscoverySourceClaims.ValidateCatalogAttributes(record.GetProperty("Attributes"),app,kind,version);
+        foreach(var previous in record.GetProperty("PreviousVersions").EnumerateArray())DiscoverySourceClaims.ValidateCatalogAttributes(previous.GetProperty("Attributes"),app,kind,version);
+    }
+    private void EnsureWritableFormat(SqliteTransaction tx)
+    {
+        if(ReadFormatVersion(tx)!=1)return;
+        ValidateLegacyStorage(tx);Execute("PRAGMA user_version=2;",tx);
+    }
+    private int ReadFormatVersion(SqliteTransaction tx)
+    {
+        using var command=Command("PRAGMA application_id;",tx);if(Convert.ToInt32(command.ExecuteScalar())!=0x54464741)throw Invalid();
+        command.CommandText="PRAGMA user_version;";int version=Convert.ToInt32(command.ExecuteScalar());if(version is not (1 or 2))throw Invalid();return version;
+    }
+    // Validate every domain and historical row under the same writer transaction as
+    // the format marker. Do not assemble an export or impose its whole-document limit.
+    private void ValidateLegacyStorage(SqliteTransaction tx)
+    {
+        using(var command=Command("PRAGMA foreign_key_check;",tx))using(var reader=command.ExecuteReader())if(reader.Read())throw Invalid();
+        using(var command=Command("SELECT id,first,last FROM catalog_apps;",tx))using(var reader=command.ExecuteReader())while(reader.Read()){
+            GuidValue(reader.GetString(0));var first=DateText(reader.GetString(1));var last=DateText(reader.GetString(2));
+            if(first!=reader.GetString(1) || last!=reader.GetString(2) || StringComparer.Ordinal.Compare(first,last)>0)throw Invalid();
+        }
+        using(var command=Command("SELECT app,origin,payload,first,last,present,hash,digest FROM catalog_records;",tx))using(var reader=command.ExecuteReader())while(reader.Read()){
+            string app=reader.GetString(0),payload=reader.GetString(2);using var shape=Parse(payload);ValidateClaimsVersion(shape.RootElement,app,1);
+            var record=ParseRecord(payload,app,reader.GetString(1));CheckIndex(record,reader,3);
+        }
+        using(var command=Command("SELECT v.app,v.payload,v.id,v.first,v.last,v.hash,r.payload FROM catalog_versions v JOIN catalog_records r ON r.app=v.app AND r.origin=v.origin;",tx))using(var reader=command.ExecuteReader())while(reader.Read()){
+            using var document=Parse(reader.GetString(1));using var current=Parse(reader.GetString(6));var version=document.RootElement;string app=reader.GetString(0),kind=Text(current.RootElement,"Kind");
+            DiscoverySourceClaims.ValidateCatalogAttributes(version.GetProperty("Attributes"),app,kind,1);ValidateVersion(version,kind,app,current.RootElement);
+            HashValue(reader.GetString(2));if(Hash(Canonical(version))!=reader.GetString(5) || Date(version,"FirstSeenAt")!=reader.GetString(3) || Date(version,"LastSeenAt")!=reader.GetString(4))throw Invalid();
+        }
+        using(var command=Command("SELECT id FROM catalog_origins;",tx))using(var reader=command.ExecuteReader())while(reader.Read())if(OriginObserved(reader.GetString(0),tx)==null)throw Invalid();
+        using(var command=Command("SELECT id,payload,kind,observed,request FROM catalog_runs;",tx))using(var reader=command.ExecuteReader())while(reader.Read()){
+            using var document=Parse(reader.GetString(1));var run=document.RootElement;ValidateRun(run);
+            if(Text(run,"Id")!=reader.GetString(0) || Text(run,"Kind")!=reader.GetString(2) || Date(run,"ObservedAt")!=reader.GetString(3))throw Invalid();
+            if(!reader.IsDBNull(4))HashValue(reader.GetString(4));
+        }
+        using(var command=Command("SELECT id,created,updated FROM catalog_info;",tx))using(var reader=command.ExecuteReader())while(reader.Read()){
+            var created=DateText(reader.GetString(1));var updated=DateText(reader.GetString(2));
+            if(reader.GetInt32(0)!=1 || created!=reader.GetString(1) || updated!=reader.GetString(2) || StringComparer.Ordinal.Compare(created,updated)>0)throw Invalid();
         }
     }
     private void WriteApp(string app,string first,string last,SqliteTransaction tx)=>Execute("INSERT INTO catalog_apps VALUES($app,$first,$last) ON CONFLICT(id) DO UPDATE SET first=MIN(first,excluded.first),last=MAX(last,excluded.last);",tx,("$app",app),("$first",first),("$last",last));
@@ -272,7 +320,9 @@ public sealed class ApplicationCatalogStore : IDisposable
     private static void ValidatePayload(JsonElement payload,string kind,string? app)
     {
         HashValue(Text(payload,"ContentSha256"));var attributes=payload.GetProperty("Attributes");AllowedKeys(attributes,Attributes[kind]);
+        DiscoverySourceClaims.ValidateCatalogAttributes(attributes,app!,kind,2);
         foreach(var field in attributes.EnumerateObject()) {
+            if(field.Name is "SourceClaims" or "MetadataConflicts")continue;
             var value=field.Value;if(value.ValueKind==JsonValueKind.Null)continue;
             if(field.Name is "Grants" or "PublishedGrants" or "DelegatedScopeDefinitions" or "AppRoleDefinitions" || field.Name.EndsWith("Counts",StringComparison.Ordinal)){
                 if(value.ValueKind!=JsonValueKind.Array)throw Invalid();foreach(var item in value.EnumerateArray()){

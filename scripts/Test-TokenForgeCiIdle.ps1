@@ -15,7 +15,7 @@ foreach($mode in @('Shallow','Deep')){
  if(-not(Test-Path -LiteralPath $path)){return $false}
  $file=Get-Item -LiteralPath $path
  if($file.PSIsContainer -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -gt 134217728){throw 'Invalid idle-check state file.'}
- $state=Get-Content -LiteralPath $path -Raw|ConvertFrom-Json -AsHashtable -Depth 100
+ $state=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((Get-Content -LiteralPath $path -Raw))
  $report=Get-TfCiReport $state -Now $Now
  if($report.Mode -cne $mode){throw 'Idle-check state mode mismatch.'}
  $created=[TokenForge.Core.V0240.TimestampPolicy]::Parse($state.Recipe.CreatedAt)

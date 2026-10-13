@@ -63,7 +63,7 @@ Describe 'Research coverage temporal and native parity' {
   (Get-TokenForgeResearchCoverage $metadata).PlannedSlots|Should -Be 0
   if($native){$null=& $native research report --metadata-path $metadata --flow-path (Join-Path $state missing.json) --json 2>&1;$LASTEXITCODE|Should -Not -Be 0}
  }
- It 'runs the native JSON report with the same selected-account fields' -Skip:(-not $native) {
+ It 'runs the native JSON report with the same selected-account fields' -Skip:(-not $env:TOKENFORGE_TEST_NATIVE) {
   $expected=Get-TokenForgeResearchCoverage $metadata -FlowPath $flow -TenantFingerprint ('a'*64) -PrincipalFingerprint ('b'*64)
   $actualJson=& $native research report --metadata-path $metadata --flow-path $flow --tenant-fingerprint ('a'*64) --principal-fingerprint ('b'*64) --json
   $actual=[pscustomobject][TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson(($actualJson -join [Environment]::NewLine))
@@ -71,7 +71,7 @@ Describe 'Research coverage temporal and native parity' {
   ($actual|ConvertTo-Json -Depth 30 -Compress)|Should -BeExactly ($expected|ConvertTo-Json -Depth 30 -Compress)
   $actual.Applications[0].Name|Should -BeExactly '2026-01-01T00:00:00+02:00'
  }
- It 'reads SQLite catalog and flows without changing bytes or requiring PowerShell' -Skip:(-not $native) {
+ It 'reads SQLite catalog and flows without changing bytes or requiring PowerShell' -Skip:(-not $env:TOKENFORGE_TEST_NATIVE) {
   $catalogSqlite=Join-Path $state applications.sqlite;$flowSqlite=Join-Path $state flows.sqlite
   $null=Import-TokenForgeApplicationMetadata $catalogSqlite -InputPath $metadata -NativeExecutablePath $native
   $null=Import-TokenForgeFlowEvidence $flowSqlite -InputPath $flow -NativeExecutablePath $native

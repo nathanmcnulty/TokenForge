@@ -4,7 +4,7 @@
     {
       "ClientId": "e4712ded-3c3d-47d4-b800-91eea97808aa",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:38:37.3083214+00:00",
+      "ObservedAt": "2026-10-13T07:15:28.5870273+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -19,7 +19,7 @@
     {
       "ClientId": "e526e72f-ffae-44a0-8dac-cf14b8bd40e2",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:38:43.0835542+00:00",
+      "ObservedAt": "2026-10-13T07:15:33.90507+00:00",
       "Scopes": [
         "Device.Read.All",
         "email",
@@ -35,7 +35,7 @@
     {
       "ClientId": "e64aa8bc-8eb4-40e2-898b-cf261a25954f",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:38:54.3027404+00:00",
+      "ObservedAt": "2026-10-13T07:15:43.6258857+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -48,7 +48,7 @@
     {
       "ClientId": "e6c2449c-aafc-4709-a7a6-6a019e4b5377",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:39:03.7717079+00:00",
+      "ObservedAt": "2026-10-13T07:15:51.3583806+00:00",
       "Scopes": [
         "email",
         "Files.ReadWrite",
@@ -61,7 +61,7 @@
     {
       "ClientId": "e6d9c1d6-72d0-4722-92b2-85d61ff9a464",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:39:06.3638666+00:00",
+      "ObservedAt": "2026-10-13T07:15:53.382218+00:00",
       "Scopes": [
         "Channel.ReadBasic.All",
         "Chat.ReadBasic",

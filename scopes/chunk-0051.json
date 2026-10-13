@@ -4,7 +4,7 @@
     {
       "ClientId": "ee90a17f-1cb7-4909-be27-dfc2dcc4dc15",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:44:09.8482094+00:00",
+      "ObservedAt": "2026-10-13T07:15:38.1395038+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -17,7 +17,7 @@
     {
       "ClientId": "eea619ad-603a-4b03-a386-860fcc7410d1",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:44:12.962362+00:00",
+      "ObservedAt": "2026-10-13T07:15:43.0820927+00:00",
       "Scopes": [
         "Calendars.Read",
         "Calendars.ReadWrite.Shared",
@@ -44,7 +44,7 @@
     {
       "ClientId": "ef47e344-4bff-4e28-87da-6551a21ffbe0",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:44:17.170532+00:00",
+      "ObservedAt": "2026-10-13T07:15:48.0093815+00:00",
       "Scopes": [
         "_A.AA",
         "_B.AC",
@@ -73,7 +73,7 @@
     {
       "ClientId": "f05ff7c9-f75a-4acd-a3b5-f4b6a870245d",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T21:44:23.2875386+00:00",
+      "ObservedAt": "2026-10-13T07:15:55.3784995+00:00",
       "Scopes": [
         "Contacts.Read",
         "Directory.Read.All",

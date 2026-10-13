@@ -249,7 +249,9 @@ function Update-TokenForgeApplicationMetadata {
         if($Kind -eq 'SignIns'){$run.Window=@{Since=$Document.Since;Until=$Document.Until;EventTypes=@($Document.EventTypes)}}
         if($sqlite){return Invoke-TokenForgeNativeEvidence $full update -Domain catalog -Document @{Format='TokenForgeCatalogUpdate';SchemaVersion=2;Run=$run;Rows=$changes.ToArray()} -NativeExecutablePath $NativeExecutablePath}
         $catalog.Runs+= $run;$catalog.UpdatedAt=$now
-        if([Text.Encoding]::UTF8.GetByteCount((ConvertTo-Json -InputObject $catalog -Depth 100)) -gt 134217728){throw 'Application metadata exceeds the 128 MiB limit; archive history before retrying.'}
+        $publicationJson=ConvertTo-Json -InputObject $catalog -Depth 100
+        if([Text.Encoding]::UTF8.GetByteCount($publicationJson) -gt 134217728){throw 'Application metadata exceeds the 128 MiB limit; archive history before retrying.'}
+        [TokenForge.Core.ApplicationCatalogPolicy]::ValidateDocument($publicationJson)
         Save-TokenForgeDocument -Document $catalog -Path $full
         [pscustomobject]@{Updated=$true;ApplicationCount=$catalog.Applications.Count;RunCount=$catalog.Runs.Count;Kind=$Kind}
     }finally{if($lock){$lock.Dispose()}}

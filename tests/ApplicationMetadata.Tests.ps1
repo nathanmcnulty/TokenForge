@@ -151,3 +151,41 @@ Describe 'Metadata date fidelity' {
         $date.UtcDateTime|Should -Be $doc.FetchedAt
     }
 }
+
+Describe 'Catalog publication validation' {
+    It 'rejects malformed <Field> metadata without replacing an existing catalog: <Existing>' -ForEach @(
+        @{Field='RedirectUris';Value='https://example.test/callback';Existing=$true},
+        @{Field='RedirectUris';Value='https://example.test/callback';Existing=$false},
+        @{Field='PublicClient';Value='yes';Existing=$true},
+        @{Field='PublicClient';Value='yes';Existing=$false},
+        @{Field='OwnerTenantId';Value='invalid-owner';Existing=$true},
+        @{Field='OwnerTenantId';Value='invalid-owner';Existing=$false}
+    ) {
+        param($Field,$Value,[bool]$Existing)
+        $path=Join-Path $TestDrive ([guid]::NewGuid().ToString()+'.json')
+        if($Existing){$null=Update-TokenForgeApplicationMetadata $path (New-MetadataDiscovery) Discovery;$before=(Get-FileHash $path).Hash}
+        $bad=New-MetadataDiscovery '2026-01-02T00:00:00Z' 'Must not be saved'
+        $bad.Applications[0]|Add-Member -NotePropertyName $Field -NotePropertyValue $Value -Force
+        {Update-TokenForgeApplicationMetadata $path $bad Discovery}|Should -Throw
+        (Test-Path $path)|Should -Be $Existing
+        if($Existing){(Get-FileHash $path).Hash|Should -BeExactly $before}
+        # Failed validation must release the writer lock, permitting a valid update.
+        $null=Update-TokenForgeApplicationMetadata $path (New-MetadataDiscovery '2026-01-03T00:00:00Z') Discovery
+        (Get-TokenForgeApplicationMetadata $path).Runs.Count|Should -Be $(if($Existing){2}else{1})
+    }
+}
+
+Describe 'Full catalog history publication guard' {
+    It 'does not publish a valid unrelated update over malformed historical attributes' {
+        $path=Join-Path $TestDrive 'malformed-history.json'
+        $null=Update-TokenForgeApplicationMetadata $path (New-MetadataDiscovery) Discovery
+        $null=Update-TokenForgeApplicationMetadata $path (New-MetadataDiscovery '2026-01-02T00:00:00Z' 'Changed') Discovery
+        $catalog=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([IO.File]::ReadAllText($path))
+        $catalog.Applications[$id].Records['Discovery///'].PreviousVersions[0].Attributes.PublicClient='yes'
+        [IO.File]::WriteAllText($path,($catalog|ConvertTo-Json -Depth 100))
+        $before=(Get-FileHash $path).Hash
+        $valid=New-MetadataDiscovery '2026-01-03T00:00:00Z';$valid.Applications[0].AppId='22222222-2222-2222-2222-222222222222'
+        {Update-TokenForgeApplicationMetadata $path $valid Discovery}|Should -Throw
+        (Get-FileHash $path).Hash|Should -BeExactly $before
+    }
+}

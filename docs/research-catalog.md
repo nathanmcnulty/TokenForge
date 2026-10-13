@@ -82,3 +82,10 @@ Secadmin's 24-hour sign-in scan found 205 client IDs, 13 absent from inventory. 
 Version 0.42 adds [native research reporting](native-research-coverage.md), shared with PowerShell, including source conflicts and UTC latest-plan/attempt selection. It reads complete JSON/SQLite history before filtering and performs no authentication.
 
 Version 0.44.1 preserves case-distinct scope sets in anonymous JSON and SQLite flow exports. Exact duplicate client/resource/protocol/SPA/scope observations still coalesce; scopes differing only by letter case remain separate observations. Input checkpoints are unchanged.
+
+Version 0.44.3 validates the complete JSON catalog, including historical records,
+with the shared catalog schema before publishing an update. Malformed attributes
+fail before the atomic save: an existing catalog keeps its original bytes, and a
+new catalog file is not created. The writer lock is released on failure. SQLite
+updates already validate their records transactionally. This validation does not
+establish consent, ownership, successful authentication, or API acceptance.

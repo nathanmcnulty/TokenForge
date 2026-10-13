@@ -4,7 +4,7 @@
     {
       "ClientId": "60c8bde5-3167-4f92-8fdb-059f6176dc0f",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:48:48.3741612+00:00",
+      "ObservedAt": "2026-10-13T01:17:57.4016401+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -17,7 +17,7 @@
     {
       "ClientId": "60f38cf4-a0bf-4fdf-b0b5-14d3131bc031",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:48:54.5772391+00:00",
+      "ObservedAt": "2026-10-13T01:18:02.4797006+00:00",
       "Scopes": [
         "Application.ReadWrite.All",
         "Channel.ReadBasic.All",
@@ -34,7 +34,7 @@
     {
       "ClientId": "618dd325-23f6-4b6f-8380-4df78026e39b",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:49:14.8058083+00:00",
+      "ObservedAt": "2026-10-13T01:18:18.6999987+00:00",
       "Scopes": [
         "_B.AR",
         "Application.Read.All",
@@ -51,7 +51,7 @@
     {
       "ClientId": "6388acc4-795e-43a9-a320-33075c1eb83b",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:50:04.553453+00:00",
+      "ObservedAt": "2026-10-13T01:19:01.7294193+00:00",
       "Scopes": [
         "email",
         "openid",
@@ -64,7 +64,7 @@
     {
       "ClientId": "63896e48-3d27-4ce2-9968-610b4af62c5d",
       "ResourceId": "00000003-0000-0000-c000-000000000000",
-      "ObservedAt": "2026-10-07T20:50:05.91175+00:00",
+      "ObservedAt": "2026-10-13T01:19:02.9865492+00:00",
       "Scopes": [
         "CloudPC.Read.All",
         "email",

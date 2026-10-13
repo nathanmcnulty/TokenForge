@@ -496,3 +496,12 @@ matched the expected username through Graph; native login and each acquisition m
 the principal against the profile. Both policy budgets were explicitly 128, and the original
 inventory date was preserved under a 168-hour lab limit. No Windows/macOS live account
 validation or general API authorization is claimed.
+
+
+## On-demand native account validation
+
+The [native lab authentication workflow](native-authentication-validation.md) uses existing
+Nora repository secrets to exercise Memory and Passphrase profiles on all six packages.
+It publishes only sanitized reports after private-state cleanup. The workflow must finish
+on each target before treating its reports as live platform evidence; offline core/package
+checks and the existing Linux account proofs remain separate evidence.

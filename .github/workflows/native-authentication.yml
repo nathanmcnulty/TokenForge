@@ -1,0 +1,68 @@
+name: Native lab authentication validation
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-lab-authentication-main
+  cancel-in-progress: false
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/main' && github.repository == 'nathanmcnulty/TokenForge'
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - os: ubuntu-latest
+            runtime: linux-x64
+          - os: ubuntu-24.04-arm
+            runtime: linux-arm64
+          - os: windows-latest
+            runtime: win-x64
+          - os: windows-11-arm
+            runtime: win-arm64
+          - os: macos-latest
+            runtime: osx-arm64
+          - os: macos-15-intel
+            runtime: osx-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          dotnet-version: 10.0.401
+      - name: Check core and build the matching native package
+        shell: pwsh
+        env:
+          PACKAGE_RUNTIME: ${{ matrix.runtime }}
+        run: |
+          dotnet restore native/TokenForge.Core.Tests --locked-mode
+          if($LASTEXITCODE){throw 'Locked restore failed.'}
+          dotnet run --project native/TokenForge.Core.Tests --no-restore
+          if($LASTEXITCODE){throw 'Core checks failed.'}
+          ./scripts/Build-TokenForgeNative.ps1 -Runtime $env:PACKAGE_RUNTIME
+      - name: Validate fixed Graph scope with existing lab authorization
+        shell: pwsh
+        env:
+          PACKAGE_RUNTIME: ${{ matrix.runtime }}
+          SOURCE_COMMIT: ${{ github.sha }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          TOKENFORGE_PASSKEY_CREDENTIAL_ID: ${{ secrets.NORA_PASSKEY_CREDENTIAL_ID }}
+          TOKENFORGE_PASSKEY_USER_HANDLE: ${{ secrets.NORA_PASSKEY_USER_HANDLE }}
+          TOKENFORGE_PASSKEY_PRIVATE_KEY: ${{ secrets.NORA_PASSKEY_PRIVATE_KEY }}
+          TOKENFORGE_PASSKEY_UPN: ${{ secrets.NORA_PASSKEY_UPN }}
+          TOKENFORGE_EXPECTED_TENANT: ${{ secrets.NORA_TENANT_FINGERPRINT }}
+          TOKENFORGE_EXPECTED_PRINCIPAL: ${{ secrets.NORA_PRINCIPAL_FINGERPRINT }}
+        run: |
+          $exe=Join-Path "./dist/native/$env:PACKAGE_RUNTIME" $(if($IsWindows){'tokenforge.exe'}else{'tokenforge'})
+          ./scripts/Test-TokenForgeNativeAuthentication.ps1 -NativeExecutablePath (Resolve-Path $exe).Path -Runtime $env:PACKAGE_RUNTIME -SourceCommit $env:SOURCE_COMMIT -RunAttempt ([int]$env:RUN_ATTEMPT) -ReportPath "$env:RUNNER_TEMP/native-authentication.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-auth-${{ matrix.runtime }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-authentication.json
+          retention-days: 1
+          if-no-files-found: error

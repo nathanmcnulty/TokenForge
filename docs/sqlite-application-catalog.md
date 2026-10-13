@@ -35,7 +35,7 @@ Native exports go to stdout and contain private diagnostic metadata. Protect red
 
 ## What a transaction preserves
 
-The unreleased 0.41 format adds [source claims and conflicts](discovery-source-claims.md).
+The 0.41 format adds [source claims and conflicts](discovery-source-claims.md).
 V1/v2 JSON remains readable. A successful write upgrades a v1 SQLite marker only after
 validating current records, history, indexes and origin/run relationships in the same
 transaction. Failed input or migration leaves v1 unchanged. Read-only access and ordinary

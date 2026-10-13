@@ -1,6 +1,6 @@
 # Application research catalog
 
-The unreleased 0.41 discovery format preserves [per-source claims and conflicts](discovery-source-claims.md).
+The 0.41 discovery format preserves [per-source claims and conflicts](discovery-source-claims.md).
 It retains alternative published names and owner hints without changing selected ownership
 rules. JSON and SQLite support v1/v2 records. Observation-only refreshes retain content
 hashes. These claims are diagnostic evidence, not consent or ownership proof.

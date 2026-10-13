@@ -1,6 +1,6 @@
 # Discovery source claims
 
-Version 0.41 is in development and has not been released. Discovery and the application
+Version 0.41 adds source claims. Discovery and the application
 catalog use schema v2 to retain differing published names and owner hints. These claims
 describe the sources; they do not establish ownership, consent or authentication support.
 
@@ -83,4 +83,9 @@ snapshot with stable canonical round trips. Its SHA-256 is
 `83f49938273dc6dd82f4b770e8cad62048db1908c6b1b6ed662c08e387f9328a`.
 It fetched no new data and changed no catalog or credentials. Integration tests add
 history, literal-text, publication, legacy-hash, migration-rollback and shared-handle checks.
-Current public-source, package, hosted-gate and release validation remain pending.
+The [published-source validation report](discovery-source-claims-validation-2026-10-13.json)
+records an exact-source refresh of 5,455 applications, including 199 with conflicting
+metadata and two skipped invalid source records. Both retained W42 v1 recipes validated
+with their original plan hashes and unchanged files. The refresh took 507 seconds locally
+while other checks were running; this is not a hosted runner cost estimate. No authentication
+or tenant changes were involved. Hosted release and package validation remain separate gates.

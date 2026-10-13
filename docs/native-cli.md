@@ -502,6 +502,6 @@ validation or general API authorization is claimed.
 
 The [native lab authentication workflow](native-authentication-validation.md) uses existing
 Nora repository secrets to exercise Memory and Passphrase profiles on all six packages.
-It publishes only sanitized reports after private-state cleanup. The workflow must finish
-on each target before treating its reports as live platform evidence; offline core/package
-checks and the existing Linux account proofs remain separate evidence.
+It publishes only sanitized reports after private-state cleanup. The [completed hosted proof](native-authentication-hosted-validation-2026-10-13.json)
+verified Nora on all six targets with 24 native Graph HTTP 200 checks. Offline core/package
+checks and the separate two-account Linux proof remain distinct evidence.

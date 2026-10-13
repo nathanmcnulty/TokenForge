@@ -65,6 +65,24 @@ freshness is limited to one hour.
 
 The [sanitized Linux report](native-authentication-validation-2026-10-13.json) records
 successful Memory and Passphrase checks with both lab accounts, using the verified published
-0.39.0 Linux package. This live evidence remains separate from synthetic platform checks. Until the new hosted workflow completes, its addition alone is not evidence of
-Windows/macOS live authentication. OS-backed stores, browser UI, hardware passkeys and
+0.39.0 Linux package. This live evidence remains separate from synthetic platform checks. The [hosted six-platform report](native-authentication-hosted-validation-2026-10-13.json)
+records completed live validation for Nora on Windows, macOS and Linux, each on x64 and
+ARM64. OS-backed stores, browser UI, hardware passkeys and
 other resource operations require separate proofs.
+
+
+## Hosted proof on 2026-10-13
+
+[Run 38377160936](https://github.com/nathanmcnulty/TokenForge/actions/runs/38377160936)
+completed all six targets from source `a26caf60b81d4ae15728f0feb46e3c362263ac77`.
+Independent downloads verified each report's runtime, version, source, attempt, storage
+behavior, expected-account confirmation and private cleanup. Twelve profile cases
+produced 24 native Graph HTTP 200 checks. Memory repeats acquired fresh tokens;
+Passphrase repeats used the validated cache. No consent or registration was performed,
+and no credentials or identity fingerprints appeared in the report projection.
+
+This proves the fixed Graph operation for one lab account on those source-bound packages.
+It adds Windows/macOS live evidence to the separate two-account Linux proof. It does not
+add macOS Keychain support, signed/notarized releases, hardware presence or general
+application/resource authorization. Each report includes package hashes and its downloaded
+artifact hash; these workflow reports are separate from release-package attestations.

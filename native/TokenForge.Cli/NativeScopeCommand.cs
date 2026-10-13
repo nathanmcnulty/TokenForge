@@ -38,11 +38,11 @@ internal static class NativeScopeCommand
         Console.WriteLine(ScopePlanning.Candidates(inventoryJson,databaseJson,resource,scope.Split(','),principal,profile.GetProperty("MaxAgeHours").GetInt32()));
         return 0;
     }
-    internal static string ReadJson(string path)
+    internal static string ReadJson(string path,int maxBytes=64*1024*1024)
     {
         path=PrivateFiles.Resolve(path,false);
         using var file=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read);
-        if(file.Length>64*1024*1024)throw new InvalidOperationException();
+        if(file.Length>maxBytes)throw new InvalidOperationException();
         var bytes=new byte[checked((int)file.Length)];file.ReadExactly(bytes);
         if(file.ReadByte()!=-1)throw new InvalidOperationException();
         int skip=bytes.Length>=3 && bytes[0]==0xef && bytes[1]==0xbb && bytes[2]==0xbf?3:0;

@@ -28,6 +28,8 @@ static class FlowEvidenceTests
         {
             using (var store = new FlowEvidenceStore(path))
             {
+                FlowEvidenceStore.ValidateDocument(Document(row));
+                reject(()=>FlowEvidenceStore.ValidateDocument(Document(row).Replace("\"ElapsedSeconds\":0","\"ElapsedSeconds\":0,\"AccessToken\":\"synthetic\"")));
                 check(store.Import(Document(row))==1);
                 check(store.Import(Document(row))==0);
                 plan["ResourceAliases"] = new[]{"https://graph.microsoft.com",resource};

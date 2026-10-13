@@ -26,6 +26,16 @@ static class ApplicationCatalogTests
         try {
             using(var store=new ApplicationCatalogStore(path)) {
                 var initial=Update("Café <a> & \"b\" /");var json=initial.ToJsonString();store.Update(json);var first=store.Export();
+                ApplicationCatalogStore.ValidateDocument(first);
+                var report=JsonNode.Parse(ResearchCoverage.CreateFromValidatedDocuments(first))!;
+                check(report["ApplicationCount"]!.GetValue<int>()==1);
+                check(report["Applications"]![0]!["Name"]!.GetValue<string>()=="Café <a> & \"b\" /");
+                check(report["Applications"]![0]!["RoleHint"]!.GetValue<string>()=="Client");
+                check(ResearchCoverage.CreateFromValidatedDocuments(first,summaryOnly:true).Contains("\"Applications\":[]"));
+                reject(()=>ResearchCoverage.CreateFromValidatedDocuments(first,tenant:tenant));
+                var offsets=JsonNode.Parse(first)!;offsets["Applications"]![id]!["FirstSeenAt"]="2026-01-01T02:00:00+02:00";
+                var utcReport=JsonNode.Parse(ResearchCoverage.CreateFromValidatedDocuments(offsets.ToJsonString()))!;
+                check(utcReport["Applications"]![0]!["FirstSeenAt"]!.GetValue<string>()=="2026-01-01T00:00:00.0000000+00:00");
                 store.Update(json);check(store.Export()==first);
                 store.Update(Update("B").ToJsonString());store.Update(Update("Café <a> & \"b\" /").ToJsonString());store.Update(Update("B").ToJsonString());
                 var ledger=JsonNode.Parse(store.Export())!;check(ledger["Applications"]![id]!["Records"]!["Discovery///"]!["PreviousVersions"]!.AsArray().Count==3);
@@ -43,7 +53,7 @@ static class ApplicationCatalogTests
                 var invalid=Update("Changed","2026-01-07T00:00:00Z");invalid["Run"]!["ApplicationRecordCount"]=2;invalid["Rows"]!.AsArray().Add(new JsonObject{["AppId"]=id,["Record"]=new JsonObject{["AccessToken"]="synthetic"},["HashInput"]="{}"});reject(()=>store.Update(invalid.ToJsonString()));check(store.Export()==before);
                 var injected=JsonNode.Parse(before)!;injected["Applications"]![id]!["Records"]!["Discovery///"]!["Attributes"]!["AccessToken"]="synthetic";reject(()=>store.Import(injected.ToJsonString()));check(store.Export()==before);
                 var invalidRun=JsonNode.Parse(before)!;invalidRun["Runs"]![0]!["ApplicationRecordCount"]=999;reject(()=>store.Import(invalidRun.ToJsonString()));check(store.Export()==before);
-                var wrongHistory=JsonNode.Parse(before)!;wrongHistory["Applications"]![id]!["Records"]!["Discovery///"]!["PreviousVersions"]![0]!["Attributes"]!["AppId"]="22222222-2222-2222-2222-222222222222";reject(()=>store.Import(wrongHistory.ToJsonString()));
+                var wrongHistory=JsonNode.Parse(before)!;wrongHistory["Applications"]![id]!["Records"]!["Discovery///"]!["PreviousVersions"]![0]!["Attributes"]!["AppId"]="22222222-2222-2222-2222-222222222222";reject(()=>store.Import(wrongHistory.ToJsonString()));reject(()=>ApplicationCatalogStore.ValidateDocument(wrongHistory.ToJsonString()));
                 var importedPath=Path.Combine(root,"imported.sqlite");using(var imported=new ApplicationCatalogStore(importedPath)){check(imported.Import(before)>0);check(imported.Import(before)==0);check(imported.Export()==before);}
             }
             using(var a=new ApplicationCatalogStore(Path.Combine(root,"presence-a.sqlite")))using(var b=new ApplicationCatalogStore(Path.Combine(root,"presence-b.sqlite"))){

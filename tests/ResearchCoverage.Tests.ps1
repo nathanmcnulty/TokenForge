@@ -62,8 +62,9 @@ Describe 'Research coverage temporal and native parity' {
   }
  }
  It 'rejects a scalar published callback field instead of weakening catalog validation' {
-  $app.RedirectUris='http://localhost/';$inventory.CapturedAt=[DateTimeOffset]::UtcNow.ToString('o')
-  $null=Update-TokenForgeApplicationMetadata $metadata $inventory Inventory
+  $malformed=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([IO.File]::ReadAllText($metadata))
+  @($malformed.Applications[$client].Records.Values)[0].Attributes.RedirectUris='http://localhost/'
+  [IO.File]::WriteAllText($metadata,($malformed|ConvertTo-Json -Depth 100))
   $before=(Get-FileHash $metadata).Hash
   {Get-TokenForgeResearchCoverage $metadata -TenantFingerprint ('a'*64) -PrincipalFingerprint ('b'*64)}|Should -Throw
   if($native){$output=& $native research report --metadata-path $metadata --json 2>&1;$LASTEXITCODE|Should -Not -Be 0;($output -join ' ')|Should -Not -Match 'http://localhost/'}

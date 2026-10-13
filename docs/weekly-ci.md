@@ -255,3 +255,27 @@ would change week membership and future-time checks. Regression fixtures run in 
 and Tokyo timezones and cover runs at both UTC week boundaries.
 Runs and jobs already deleted or outside GitHub's retention are unavailable to this API
 observation. A settled report cannot establish that such missing history never existed.
+
+
+## First complete weekly usage observation
+
+The scheduled [week-41 usage report](https://github.com/nathanmcnulty/TokenForge/actions/runs/38206395378)
+observed **269.183 runner-minutes** across 54 discovery runs and 154 timed jobs for runs
+created from October 5 through October 11 UTC. All observed attempts were terminal;
+one non-successful timed job contributed to the total. This includes manual validation,
+metadata refresh and coordination alongside catalog assessment. It is broader than the
+149.6-minute shallow cycle and 18.57-minute legacy deep-cycle measurements above; do not
+add those cycle totals to this weekly observation.
+
+The selected runs had 98 unexpired artifacts totaling **42,239,868 bytes** at observation
+time. This is neither all repository storage nor billed byte-hours. The observer did not
+verify catalog completion; the frozen catalog reports provide that separate evidence.
+The source artifact hash, stage totals and interpretation are recorded in the
+[sanitized observation](weekly-usage-observation-2026-10-13.json).
+
+A subsequent frozen public snapshot at `b911c778291d9986e51c844fe9302db1e65ab585`
+contains 5,455 applications for week 42, with 24 of 55 shallow batches complete and 2,400
+applications assessed without retries. Its deep recipe still belongs to week 41. These
+are partial snapshot counts, not a completed new weekly-cycle measurement or a hosted
+Graph/ARM cost estimate. The current schedule remains four workers every six hours;
+measure the completed current shallow and new deep recipes before increasing depth.

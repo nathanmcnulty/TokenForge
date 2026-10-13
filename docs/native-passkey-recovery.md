@@ -47,4 +47,32 @@ is true in an error, publication succeeded but subsequent temporary-file cleanup
 failed; inspect the private receipt before trying again. Pending keys that fail
 sign-in remain unresolved. Do not assume they are registered or automatically
 retry enrollment. Legacy passkey files without the pending marker retain their
-existing behavior.
+existing authentication formats.
+
+## The PowerShell adapter
+
+Version 0.43 introduced the native receipt gate. Version 0.44 also applies it to
+`Get-TokenForgeEstsCookie` and the implicit profile login that uses that function.
+The adapter validates the key before importing XDRInternals, invokes the module
+returned by the requested import, and confirms the current pathname, exact key
+bytes and pending receipt again before converting the returned cookie to a
+`SecureString`. File handles and temporary byte buffers are disposed on failure.
+
+All adapter key files now require the same private-file policy as native keys:
+on Unix, keep the directory at `0700` and file at `0600`; on Windows, use the
+documented owner/SYSTEM/Administrators-only ACL policy. Links and linked ancestors
+are rejected. Inputs must be UTF-8 JSON objects of at most 65,536 bytes and depth
+16, with no duplicate fields. Unmarked local and Key Vault reference formats
+remain supported, including legacy UTF-8 files with a byte-order mark.
+
+The adapter still delegates authentication and Key Vault token handling to the
+chosen XDRInternals module. Receipt checking does not replace the caller's account
+and token validation or add Graph identity verification to a bare cookie request.
+Use a trusted provider in a dedicated PowerShell process without transcripts.
+
+The read lease and final pathname check detect persistent file changes or
+replacement. They cannot guarantee the provider read the leased bytes if another
+process belonging to the same owner temporarily swaps the pathname and restores
+it during authentication. Private directories exclude other local users; the
+owner of the file and provider remains trusted. Receipts are local evidence,
+not a security boundary against that owner editing them.

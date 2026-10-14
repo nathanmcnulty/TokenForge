@@ -1,29 +1,17 @@
 name: Native CLI validation
 on:
-  push:
-    branches: [main]
-    tags: ['**']
-  pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
   native:
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             runtime: linux-x64
-          - os: windows-latest
-            runtime: win-x64
-          - os: macos-latest
-            runtime: osx-arm64
-          - os: ubuntu-24.04-arm
-            runtime: linux-arm64
-          - os: windows-11-arm
-            runtime: win-arm64
-          - os: macos-15-intel
-            runtime: osx-x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7.0.1

@@ -1,17 +1,5 @@
 name: Release packages
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/release.yml'
-      - 'native/Directory.Build.props'
-      - 'scripts/Test-TokenForgeReleaseAssets.ps1'
-      - 'tests/ReleaseAssets.Tests.ps1'
-      - 'scripts/Test-TokenForgeReleaseSource.ps1'
-      - 'tests/ReleaseSource.Tests.ps1'
-      - 'scripts/Build-TokenForgeNative.ps1'
-      - 'scripts/Build-TokenForgePackage.ps1'
-      - 'scripts/Copy-TokenForgePackageSource.ps1'
-      - 'tests/PackageSource.Tests.ps1'
   workflow_dispatch:
     inputs:
       publish:
@@ -25,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build:
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -33,16 +21,6 @@ jobs:
         include:
           - os: ubuntu-latest
             runtime: linux-x64
-          - os: ubuntu-24.04-arm
-            runtime: linux-arm64
-          - os: windows-latest
-            runtime: win-x64
-          - os: windows-11-arm
-            runtime: win-arm64
-          - os: macos-15-intel
-            runtime: osx-x64
-          - os: macos-latest
-            runtime: osx-arm64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -120,7 +98,7 @@ jobs:
           SOURCE_COMMIT: ${{ github.sha }}
         run: |
           $version=(Import-PowerShellDataFile ./src/TokenForge/TokenForge.psd1).ModuleVersion
-          $report=./scripts/Test-TokenForgeReleaseAssets.ps1 -AssetPath ./release-assets -Version $version -SourceCommit $env:SOURCE_COMMIT
+          $report=./scripts/Test-TokenForgeReleaseAssets.ps1 -AssetPath ./release-assets -Version $version -SourceCommit $env:SOURCE_COMMIT -Runtime linux-x64
           $report|ConvertTo-Json -Depth 5|Set-Content ./release-assets/release-manifest.json
           ($report.Archives|ForEach-Object {"$($_.Sha256)  $($_.Archive)"})|Set-Content ./release-assets/SHA256SUMS
           "version=$version"|Out-File $env:GITHUB_OUTPUT -Append
@@ -155,20 +133,20 @@ jobs:
         with:
           name: verified-release
           path: release-assets
-      - name: Require exact main source and all nine existing validation gates
+      - name: Require exact main source and both manual Linux validation gates
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_COMMIT: ${{ github.sha }}
         run: |
           $version=(Import-PowerShellDataFile ./src/TokenForge/TokenForge.psd1).ModuleVersion
-          ./scripts/Test-TokenForgeReleaseSource.ps1 -Repository $env:GITHUB_REPOSITORY -SourceCommit $env:SOURCE_COMMIT -Version $version
+          ./scripts/Test-TokenForgeReleaseSource.ps1 -Repository $env:GITHUB_REPOSITORY -SourceCommit $env:SOURCE_COMMIT -Version $version -ValidationPlatform Linux -ValidationEvent workflow_dispatch
           $version=(Import-PowerShellDataFile ./src/TokenForge/TokenForge.psd1).ModuleVersion
           Remove-Item ./release-assets/SHA256SUMS,./release-assets/release-manifest.json
-          $report=./scripts/Test-TokenForgeReleaseAssets.ps1 -AssetPath ./release-assets -Version $version -SourceCommit $env:SOURCE_COMMIT
+          $report=./scripts/Test-TokenForgeReleaseAssets.ps1 -AssetPath ./release-assets -Version $version -SourceCommit $env:SOURCE_COMMIT -Runtime linux-x64
           $report|ConvertTo-Json -Depth 5|Set-Content ./release-assets/release-manifest.json
           ($report.Archives|ForEach-Object {"$($_.Sha256)  $($_.Archive)"})|Set-Content ./release-assets/SHA256SUMS
-      - name: Attest the six archives and release manifest
+      - name: Attest the Linux archive and release manifest
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
         with:
           subject-path: |

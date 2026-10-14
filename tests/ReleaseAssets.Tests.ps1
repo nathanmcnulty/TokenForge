@@ -20,6 +20,16 @@ Describe 'Complete release asset validation' {
   $report.SourceCommit|Should -BeExactly $commit
   $report.Archives[0].Sha256|Should -BeExactly (Get-FileHash (Join-Path $dir TokenForge-1.2.3-linux-x64.tar.gz)).Hash.ToLowerInvariant()
  }
+ It 'validates a Linux-only release only when that runtime is explicitly selected' {
+  Get-ChildItem $dir|Where-Object {$_.Name -notlike '*linux-x64*'}|Remove-Item
+  $report=& $validator -AssetPath $dir -Version $version -SourceCommit $commit -Runtime linux-x64
+  $report.Archives.Count|Should -Be 1
+  $report.Archives[0].Runtime|Should -BeExactly linux-x64
+  {& $validator -AssetPath $dir -Version $version -SourceCommit $commit}|Should -Throw '*exactly six*'
+ }
+ It 'rejects extra architectures when Linux alone is selected' {
+  {& $validator -AssetPath $dir -Version $version -SourceCommit $commit -Runtime linux-x64}|Should -Throw '*selected archives*'
+ }
  It 'rejects missing architectures rather than publishing a partial release' {
   Remove-Item (Join-Path $dir TokenForge-1.2.3-win-arm64.zip)
   {& $validator -AssetPath $dir -Version $version -SourceCommit $commit}|Should -Throw '*exactly six*'

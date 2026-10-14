@@ -1,5 +1,7 @@
 # Private metadata maintenance
 
+Hosted Actions are currently disabled to protect the runner budget. Scheduled runs have been removed; execution requires a new explicit user instruction and manual enable/dispatch. No background catalog or maintenance runs are authorized.
+
 A public repository's artifacts are downloadable by readers. This workflow therefore uploads **only authenticated-encrypted metadata**, using artifacts as recovery snapshots. Keep a separate protected backup for authoritative long-term history; artifact retention is not a durable database.
 
 Every Monday, or on manual dispatch, the main-only workflow:

@@ -1,5 +1,7 @@
 # TokenForge
 
+Hosted CI is intentionally disabled. Workflows are manual-only and build Linux x64 only; local validation is the default. Enabling or dispatching hosted jobs requires explicit user approval.
+
 PowerShell toolkit for finding Microsoft Entra first-party applications that publish the delegated scopes you need, then requesting access tokens using an authorized ESTSAUTH session, refresh token, or system-browser authorization-code flow.
 
 Initial version: PowerShell 7.4+ on Windows, Linux, and macOS. Live passkey-backed validation on Linux has confirmed native-client and SPA acquisition, refresh redemption, and read-only API access in one tenant. Availability still depends on the selected client, resource, session, and policy; see the [validation evidence](docs/live-validation.md).

@@ -30,6 +30,16 @@ Describe 'Release source and existing-version guard' {
  It 'accepts exact current main only with all nine successful platform gates' {
   {& $validator -Repository owner/repo -SourceCommit $commit -Version 1.2.3}|Should -Not -Throw
  }
+ It 'accepts explicitly selected manual Linux validation without requiring other platforms' {
+  $global:tfReleaseFixture.jobs['1']=@(@{name='test (ubuntu-latest)';conclusion='success'})
+  $global:tfReleaseFixture.jobs['2']=@(@{name='native (ubuntu-latest, linux-x64)';conclusion='success'})
+  {& $validator -Repository owner/repo -SourceCommit $commit -Version 1.2.3 -ValidationPlatform Linux -ValidationEvent workflow_dispatch}|Should -Not -Throw
+  Should -Invoke gh -Exactly -Times 1 -ParameterFilter {$Path -like '*event=workflow_dispatch*'}
+ }
+ It 'rejects incomplete Linux validation even when other platforms passed' {
+  $global:tfReleaseFixture.jobs['2']=@($global:tfReleaseFixture.jobs['2']|Where-Object {$_.name -notlike '*linux-x64*'})
+  {& $validator -Repository owner/repo -SourceCommit $commit -Version 1.2.3 -ValidationPlatform Linux -ValidationEvent workflow_dispatch}|Should -Throw '*platform gate*'
+ }
  It 'rejects an existing exact version tag without changing it' {
   $global:tfReleaseFixture.tags=@(@{ref='refs/tags/v1.2.3';object=@{sha=$commit}})
   {& $validator -Repository owner/repo -SourceCommit $commit -Version 1.2.3}|Should -Throw '*never overwritten*'

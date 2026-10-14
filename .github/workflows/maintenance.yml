@@ -1,7 +1,5 @@
 name: Private metadata maintenance
 on:
-  schedule:
-    - cron: '47 5 * * 1'
   workflow_dispatch:
     inputs:
       skip_signins:

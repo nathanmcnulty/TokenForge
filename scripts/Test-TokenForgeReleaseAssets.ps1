@@ -1,14 +1,16 @@
 #Requires -Version 7.4
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$AssetPath,[Parameter(Mandatory)][ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version,
- [Parameter(Mandatory)][ValidatePattern('^[a-f0-9]{40}$')][string]$SourceCommit)
+ [Parameter(Mandatory)][ValidatePattern('^[a-f0-9]{40}$')][string]$SourceCommit,
+ [ValidateSet('linux-x64','linux-arm64','win-x64','win-arm64','osx-x64','osx-arm64')][string[]]$Runtime=@('linux-x64','linux-arm64','win-x64','win-arm64','osx-x64','osx-arm64'))
 $ErrorActionPreference='Stop'
 $root=(Get-Item -LiteralPath $AssetPath -Force)
 if(-not $root.PSIsContainer -or $root.LinkType){throw 'Release assets must be a regular directory.'}
-$runtimes=@('linux-x64','linux-arm64','win-x64','win-arm64','osx-x64','osx-arm64')
+$runtimes=@($Runtime|ForEach-Object ToLowerInvariant)
+if(-not $runtimes.Count -or @($runtimes|Sort-Object -Unique).Count -ne $runtimes.Count){throw 'Choose a nonempty unique runtime set.'}
 $expected=@($runtimes|ForEach-Object { $extension=if($_.StartsWith('win-')){'zip'}else{'tar.gz'}; "TokenForge-$Version-$_.${extension}"; "TokenForge-$Version-$_.${extension}.json" })
 $files=@(Get-ChildItem -LiteralPath $root.FullName -Force)
-if($files.Count -ne $expected.Count){throw 'Release must contain exactly six archives and six receipts.'}
+if($files.Count -ne $expected.Count){if($runtimes.Count -eq 6){throw 'Release must contain exactly six archives and six receipts.'};throw 'Release must contain exactly the selected archives and receipts.'}
 foreach($file in $files){if($file.PSIsContainer -or $file.LinkType -or $file.Name -cnotin $expected){throw 'Unexpected release asset.'}}
 $entries=@(foreach($runtime in $runtimes){
  $extension=if($runtime.StartsWith('win-')){'zip'}else{'tar.gz'}

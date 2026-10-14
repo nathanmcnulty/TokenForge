@@ -1,12 +1,12 @@
 name: Refresh application metadata
 on:
-  schedule:
-    - cron: '23 */6 * * *'
   workflow_dispatch:
     inputs:
       workers:
-        description: 'Independent workers (1-4)'
-        default: '4'
+        description: 'Single worker; hosted execution requires explicit approval'
+        type: choice
+        options: ['1']
+        default: '1'
         required: true
       mode:
         description: 'Separate weekly sampling or bounded deeper research'
@@ -77,7 +77,7 @@ jobs:
         id: plan
         shell: pwsh
         env:
-          WORKERS: ${{ inputs.workers || '4' }}
+          WORKERS: '1'
           MODE: ${{ inputs.mode || 'Auto' }}
           APP_IDS: ${{ inputs.app_ids }}
           RETRY_EXHAUSTED: ${{ inputs.retry_exhausted }}

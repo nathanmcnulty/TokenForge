@@ -1,5 +1,7 @@
 # Weekly research CI
 
+Hosted Actions are currently disabled to protect the runner budget. Scheduled runs have been removed; execution requires a new explicit user instruction and manual enable/dispatch. No background catalog or maintenance runs are authorized.
+
 The scheduled workflow checks every six hours and refreshes public source metadata while weekly work remains. Once both current-week recipes complete, it refreshes sources once per UTC day and skips later scheduled refreshes that day. Manual runs always refresh. It freezes a UTC ISO-week recipe containing **all published application IDs**, the public discovery snapshot, protocol bounds, and fixed chunk membership. It does not publish the tenant's eligible registration inventory. App IDs found only in private sign-in logs remain in the separate private maintenance catalog.
 
 Four independently authenticated workers assess at most 100 published IDs each. Every selected ID must have an explicit fresh inventory record, including missing, disabled, or unverified entries. These structural results count as assessment coverage without token issuance. A successful token observation is a different measure: it describes what Entra issued for the tested account/session, not universal support or API authorization.

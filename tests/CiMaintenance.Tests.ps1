@@ -6,7 +6,7 @@ BeforeAll {
  $privateId='f0000000-0000-0000-0000-000000000009'
  function Read-Snapshot([string]$Path){
   $plain=Unprotect-TfCiCheckpoint ([IO.File]::ReadAllBytes($Path)) $env:TOKENFORGE_CHECKPOINT_KEY "private-maintenance/v1/$('a'*64)/$('b'*64)"
-  try{[Text.Encoding]::UTF8.GetString($plain)|ConvertFrom-Json -AsHashtable -Depth 100}finally{[Security.Cryptography.CryptographicOperations]::ZeroMemory($plain)}
+  try{[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([Text.Encoding]::UTF8.GetString($plain))}finally{[Security.Cryptography.CryptographicOperations]::ZeroMemory($plain)}
  }
 }
 Describe 'Encrypted read-only private maintenance' {
@@ -35,7 +35,7 @@ Describe 'Encrypted read-only private maintenance' {
   $result=& $runner -CheckpointPath "$root/maintenance.sealed"
   $result.Status|Should -Be Complete
   $saved=Read-Snapshot "$root/maintenance.sealed"
-  $saved.Metadata.Applications.ContainsKey($privateId)|Should -BeTrue
+  $saved.Metadata.Applications.Contains($privateId)|Should -BeTrue
   ($saved|ConvertTo-Json -Depth 100)|Should -Not -Match 'synthetic-cookie|synthetic-access|must-not-persist|AccessToken'
   $saved.LastRun.Registration|Should -Be NotRun
   $saved.GrantHistory.Count|Should -Be 1
@@ -53,7 +53,7 @@ Describe 'Encrypted read-only private maintenance' {
   $after=Read-Snapshot "$root/next.sealed"
   $after.Metadata.Origins[$origin].LastObservedAt|Should -Be $before.Metadata.Origins[$origin].LastObservedAt
   @($after.Metadata.Runs|Where-Object Kind -eq SignIns)[-1].Window.Since|Should -Be @($before.Metadata.Runs|Where-Object Kind -eq SignIns)[-1].Window.Since
-  $after.Metadata.Applications[$privateId].Records.ContainsKey("Inventory/$('a'*64)//")|Should -BeTrue
+  $after.Metadata.Applications[$privateId].Records.Contains("Inventory/$('a'*64)//")|Should -BeTrue
   Should -Invoke Get-TokenForgeTenantInventory -Times 1 -ParameterFilter {@($Discovery.Applications|Where-Object AppId -eq $privateId).Count -eq 1}
  }
  It 'preserves successful inventory history when fresh enumeration fails' {
@@ -124,6 +124,33 @@ Describe 'Encrypted read-only private maintenance' {
   {& $runner -CheckpointPath "$root/next.sealed" -CheckpointInputPath "$root/maintenance.sealed"}|Should -Throw
   Test-Path "$root/next.sealed"|Should -BeFalse
   $env:TOKENFORGE_ESTS_COOKIE|Should -BeNullOrEmpty
+ }
+ It 'validates authenticated run metadata before reuse and leaves the checkpoint untouched' {
+  $null=& $runner -CheckpointPath "$root/maintenance.sealed"
+  $before=(Get-FileHash "$root/maintenance.sealed").Hash
+  $saved=Read-Snapshot "$root/maintenance.sealed";$saved.LastRun.Status='Unknown'
+  $plain=[Text.Encoding]::UTF8.GetBytes(($saved|ConvertTo-Json -Depth 100 -Compress))
+  try{$blob=Protect-TfCiCheckpoint $plain $env:TOKENFORGE_CHECKPOINT_KEY "private-maintenance/v1/$('a'*64)/$('b'*64)";[IO.File]::WriteAllBytes("$root/malformed.sealed",$blob)}finally{[Security.Cryptography.CryptographicOperations]::ZeroMemory($plain)}
+  $env:TOKENFORGE_ESTS_COOKIE='synthetic-cookie'
+  {& $runner -CheckpointPath "$root/maintenance.sealed" -CheckpointInputPath "$root/malformed.sealed"}|Should -Throw
+  (Get-FileHash "$root/maintenance.sealed").Hash|Should -BeExactly $before
+  $env:TOKENFORGE_ESTS_COOKIE|Should -BeNullOrEmpty
+ }
+ It 'preserves literal date-looking application names through restored history and republication' {
+  $null=& $runner -CheckpointPath "$root/maintenance.sealed"
+  $saved=Read-Snapshot "$root/maintenance.sealed"
+  $metadataPath=Join-Path $root date-catalog.json
+  ConvertTo-Json -InputObject $saved.Metadata -Depth 100|Set-Content -LiteralPath $metadataPath
+  $literal='2026-01-01T02:30:00+02:00';$dateId='11111111-1111-1111-1111-111111111111'
+  $document=[pscustomobject]@{FetchedAt=[DateTimeOffset]::UtcNow.ToString('o');SourceSnapshots=@();Applications=@([pscustomobject]@{AppId=$dateId;Name=$literal;Sources=@();Grants=@()})}
+  $null=Update-TokenForgeApplicationMetadata $metadataPath $document Discovery
+  $saved.Metadata=Get-TokenForgeApplicationMetadata $metadataPath
+  $plain=[Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $saved -Depth 100))
+  try{$blob=Protect-TfCiCheckpoint $plain $env:TOKENFORGE_CHECKPOINT_KEY "private-maintenance/v1/$('a'*64)/$('b'*64)";[IO.File]::WriteAllBytes("$root/with-literal.sealed",$blob)}finally{[Security.Cryptography.CryptographicOperations]::ZeroMemory($plain)}
+  $env:TOKENFORGE_ESTS_COOKIE='synthetic-cookie'
+  $null=& $runner -CheckpointPath "$root/next.sealed" -CheckpointInputPath "$root/with-literal.sealed"
+  $after=Read-Snapshot "$root/next.sealed"
+  $after.Metadata.Applications[$dateId].Records['Discovery///'].PreviousVersions[-1].Attributes.Name|Should -BeExactly $literal
  }
  It 'disposes credentials and clears the cookie even if snapshot output fails' {
   {& $runner -CheckpointPath "$root/nonexistent/maintenance.sealed"}|Should -Throw

@@ -309,6 +309,20 @@ Version 0.16 connects [frozen research cohorts](research-cohorts.md) to the inve
 
 ## Encrypted maintenance backups
 
+Version 0.46 adds native authenticated snapshot inspection and offline restoration. Supply the original separately protected Base64 key file and both expected account fingerprints:
+
+```sh
+tokenforge research inspect-backup --snapshot-path /private/maintenance.sealed --key-file /private/key.txt --tenant-fingerprint <expected-tenant-hash> --principal-fingerprint <expected-account-hash> --json
+tokenforge research restore-backup --snapshot-path /private/maintenance.sealed --key-file /private/key.txt --tenant-fingerprint <expected-tenant-hash> --principal-fingerprint <expected-account-hash> --output-path /private/restored.json --json
+tokenforge research report --maintenance-path /private/restored.json --tenant-fingerprint <expected-tenant-hash> --principal-fingerprint <expected-account-hash> --summary-only --json
+```
+
+Inspection and restoration authenticate the ciphertext and validate the complete historical envelope before returning aggregate counts or writing plaintext. `Authenticated=true` means AES-GCM authentication with the expected account context; `FreshAuthenticationPerformed=false` makes clear that no login or current authorization check occurred. A configured grant is historical evidence. Its beneficiary may differ from the account that observed it.
+
+Restore writes the full original validated envelope to one new private file. Existing destinations are never overwritten. Report accepts this plaintext input only with an explicit expected namespace; it cannot be combined with metadata, flow, state or profile inputs. No profile is created and no network request is made. Keep the restored file private and delete it when finished.
+
+The key file holds exactly one canonical Base64-encoded 32-byte key, optionally followed by CR/LF, and is limited to 46 bytes. Snapshot and key paths use the existing private local-file restrictions. Owned key, plaintext and ciphertext byte buffers are cleared after use; UTF-8 decoding and JSON parsing can allocate managed strings that cannot be reliably cleared. Ctrl-C cancels before publication when observed; once published, the destination remains. A temporary-file cleanup failure reports `CleanupFailed=true` and `Restored` indicates whether publication already succeeded. Inspect that private directory before retrying or removing leftovers.
+
 `tokenforge research backup --snapshot-path <maintenance.sealed> --backup-directory <private-directory> --json` saves an immutable ciphertext copy without loading an authentication profile. It runs natively and reports byte identity separately from authentication. See [private maintenance](private-maintenance.md) for key custody and restoration.
 
 ## Inspect weekly progress offline
@@ -352,7 +366,7 @@ Version 0.34 runs research backup without PowerShell or an authentication profil
 tokenforge research backup --snapshot-path /private/maintenance.sealed --backup-directory /private/backups --json
 ~~~
 
-The command copies ciphertext into a private directory under its SHA-256 content identity. Existing identical copies are reused; corrupt or conflicting files are never overwritten. Concurrent identical copies converge on one saved file. It rejects linked or broadly accessible paths, malformed envelope headers and oversized inputs. Output contains copy metadata and Authenticated=false: size, version and hash checks do not authenticate the encrypted payload. Keep the decryption key separately; account-bound authenticated restoration remains in the repository maintenance workflow. See [private maintenance](private-maintenance.md).
+The command copies ciphertext into a private directory under its SHA-256 content identity. Existing identical copies are reused; corrupt or conflicting files are never overwritten. Concurrent identical copies converge on one saved file. It rejects linked or broadly accessible paths, malformed envelope headers and oversized inputs. Output contains copy metadata and Authenticated=false: size, version and hash checks do not authenticate the encrypted payload. Keep the decryption key separately. Version 0.46 adds the offline authenticated inspection/restoration commands described above; fresh account maintenance remains in the repository workflow. See [private maintenance](private-maintenance.md).
 
 The [0.34 validation report](native-maintenance-backup-validation-2026-10-11.json) records native copies and deduplicated repeats of existing Nora and secadmin maintenance snapshots, plus bounded corruption, concurrency and private-path fixtures. The native child ran without PowerShell on its PATH. These copy proofs do not refresh metadata or authenticate the ciphertext.
 

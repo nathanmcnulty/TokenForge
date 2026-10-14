@@ -121,3 +121,5 @@ Research categorization, individual flow attempts, and exhaustive bounded probin
 [Weekly research CI](docs/weekly-ci.md) tracks frozen public-catalog coverage; [private maintenance](docs/private-maintenance.md) refreshes tenant metadata into encrypted recovery snapshots.
 
 Read [native releases](docs/native-releases.md) for versioned downloads, package verification, and the release process.
+
+For development, use the [deterministic local validation presets](docs/local-validation.md) and reuse unchanged packages and passing checks.

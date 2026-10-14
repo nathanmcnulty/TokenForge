@@ -72,7 +72,7 @@ try{
      $report.CurrentWeek=$report.Week -ceq $week
      $report.RemainingApplications=$report.SelectedApplications-$report.AssessedApplications
      $report.RemainingPairs=$report.SelectedPairs-$report.AssessedPairs
-     $report.NextAction=if(-not $report.CurrentWeek){'Refresh the checkout and inspect the next scheduled weekly cycle.'}elseif($report.ExhaustedBatches){'Review exhausted batches; use the workflow retry_exhausted option after resolving failures.'}elseif($report.Complete){'This selected set is complete; inspect observation dates and the next weekly cycle.'}else{'Pending batches continue on scheduled runs; inspect failed worker status if progress stalls.'}
+     $report.NextAction=if(-not $report.CurrentWeek){'Refresh the checkout and inspect the next weekly cycle.'}elseif($report.ExhaustedBatches){'Review exhausted batches; use the workflow retry_exhausted option after resolving failures.'}elseif($report.Complete){'This selected set is complete; inspect observation dates and the next weekly cycle.'}else{'Pending batches require an explicitly approved manual run; inspect failed worker status if progress stalls.'}
      $report
     })
     if(-not $reports.Count){throw 'No frozen weekly recipes were found.'}

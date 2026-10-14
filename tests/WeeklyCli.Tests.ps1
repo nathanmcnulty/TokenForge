@@ -42,7 +42,7 @@ Describe 'Offline weekly CLI coverage' {
   $r.SelectedPairs|Should -Be ($state.Recipe.AppIds.Count*2)
   $r.RemainingPairs|Should -Be $r.SelectedPairs
   $r.CurrentWeek|Should -BeTrue
-  $r.NextAction|Should -Match 'Pending batches'
+  $r.NextAction|Should -Match 'explicitly approved manual run'
   $result.CredentialOutput|Should -BeFalse
   (Get-FileHash "$root/weekly-deep.json").Hash|Should -Be $before
   Test-Path $profileRoot|Should -BeFalse

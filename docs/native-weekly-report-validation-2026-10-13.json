@@ -1,0 +1,51 @@
+{
+  "SchemaVersion": 1,
+  "Version": "0.47.0",
+  "Platform": "linux-x64",
+  "Execution": "LocalOffline",
+  "HostedRuns": 0,
+  "AuthenticationAttempts": 0,
+  "NativeRequiresPowerShell": false,
+  "FrozenDataCommit": "c1af9c2f75396e2356d82aaef59f2eac3adad3a0",
+  "FrozenRecipeHashesVerified": true,
+  "FrozenInputBytesUnchanged": true,
+  "CachedCoverageFieldsEquivalentExceptGeneratedAt": true,
+  "PackagedPowerShellAndNativeEquivalentExceptGeneratedAt": true,
+  "Reports": [
+    {
+      "Mode": "Shallow",
+      "SelectedApplications": 5455,
+      "AssessedApplications": 5455,
+      "SuccessfulApplications": 252,
+      "SelectedPairs": 5455,
+      "AssessedPairs": 5455,
+      "SuccessfulPairs": 252,
+      "CompletedBatches": 55,
+      "PendingBatches": 0
+    },
+    {
+      "Mode": "Deep",
+      "SelectedApplications": 100,
+      "AssessedApplications": 100,
+      "SuccessfulApplications": 54,
+      "SelectedPairs": 200,
+      "AssessedPairs": 200,
+      "SuccessfulPairs": 74,
+      "CompletedBatches": 4,
+      "PendingBatches": 0
+    }
+  ],
+  "LinuxValidation": {
+    "Passed": 331,
+    "Failed": 0,
+    "Skipped": 3,
+    "Seconds": 1041.14
+  },
+  "CiWeeklyAndBootstrapAndWeeklyValidation": {
+    "UniqueApplicableTestsPassedAcrossFinalRuns": 69,
+    "RemainingFailures": 0
+  },
+  "Review": "Sol reviewed; legacy hash compatibility and producer snapshot-label issues resolved",
+  "Evidence": "OfflineFrozenRecipesNotUniversalSupportOrApiAuthorization",
+  "PackageExecutableSha256": "aa261a6afeb6124d5ce5a52b0c83d9b8a708d957e271e4df8ffeea45495767f9"
+}

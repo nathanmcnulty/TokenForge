@@ -85,6 +85,79 @@ Describe 'Offline weekly CLI coverage' {
   $LASTEXITCODE|Should -Be 1
   $r.Code|Should -Be 'OperationFailed'
  }
+ It 'preserves legacy Unicode and control-character hash bytes' {
+  $texts=@([string][char]0xa0,[string][char]0x80+[char]0x93,[string][char]0x85,[string][char]0x2028,[string][char]0x2029,"quote`" slash\ newline`n")
+  foreach($text in $texts){
+   $value=[ordered]@{SchemaVersion=1;CreatedAt='2026-01-01T00:00:00+00:00';Name=$text}
+   [TokenForge.Core.WeeklyRecipeHash]::Compute((ConvertTo-Json -InputObject $value -Depth 100 -Compress))|Should -BeExactly (Get-TfCiHash $value)
+  }
+ }
+ It 'keeps legacy date-looking text beyond parser precision literal' {
+  foreach($text in @('0001-01-01T00:00:00+01:00','9999-12-31T23:59:59-01:00','2026-01-01T00:00:00z','2026-01-01T24:00:00Z','2026-01-01T00:00:00+15:00','2026-01-01T00:00:00+14:01','2026-01-01T00:00:00+01:60','2026-01-01T00:00:00+99','2026-01-01T00:00:00.12345678Z','2026-01-01T00:00:00Z ','2026-01-01T00:00:00 +00:00',"2026-01-01T00:00:00Z`n")){
+   $value=[ordered]@{SchemaVersion=1;CreatedAt='2026-01-01T00:00:00+00:00';Name=$text}
+   [TokenForge.Core.WeeklyRecipeHash]::Compute((ConvertTo-Json -InputObject $value -Depth 100 -Compress))|Should -BeExactly (Get-TfCiHash $value)
+  }
+ }
+ It 'preserves case-insensitive selected IDs with exact historical selection keys' {
+  $mixed=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((ConvertTo-Json -InputObject $discovery -Depth 100))
+  $mixed.SchemaVersion=1
+  foreach($app in $mixed.Applications){$app.Remove('SourceClaims');$app.Remove('MetadataConflicts')}
+  $mixed.Applications[0].AppId='abcdefab-cdef-abcd-efab-cdefabcdefab'
+  $selected=$mixed.Applications[0].AppId
+  $frozen=New-TfCiState $mixed -Mode Deep -AppId @($selected)
+  $frozen.Recipe.AppIds=@($selected.ToUpperInvariant())
+  $frozen.DeepSelectionHistory=@{$selected=$frozen.Recipe.Week}
+  $frozen.PlanId=Get-TfCiHash $frozen.Recipe
+  Assert-TfCiState $frozen
+  $report=[TokenForge.Core.WeeklyResearchReport]::Create((ConvertTo-Json -InputObject $frozen -Depth 100),'Deep',[DateTimeOffset]::UtcNow)|ConvertFrom-Json
+  $report.SelectedApplications|Should -Be 1
+  $report.DeepSelectionHistoryApplications|Should -Be 1
+ }
+ It 'matches the existing report fields for partial and complete batches' {
+  $state=New-TfCiState $discovery -Mode Shallow -ChunkSize 1
+  $first=@(Get-TfCiMembers $state 0).Count
+  Merge-TfCiReceipt $state @{SchemaVersion=1;PlanId=$state.PlanId;Index=0;Attempt=1;Status='Complete';Assessed=$first;Successful=0;DurationSeconds=12;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')}
+  $now=[DateTimeOffset]::UtcNow
+  $old=Get-TfCiReport $state $now
+  $new=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([TokenForge.Core.WeeklyResearchReport]::Create((ConvertTo-Json -InputObject $state -Depth 100),'Shallow',$now))
+  foreach($field in $old.Keys){
+   if($old[$field] -is [ValueType] -and $old[$field] -isnot [bool]){
+    [decimal]$new[$field]|Should -Be ([decimal]$old[$field])
+   }else{
+    (ConvertTo-Json -InputObject $new[$field] -Depth 20 -Compress)|Should -BeExactly (ConvertTo-Json -InputObject $old[$field] -Depth 20 -Compress)
+   }
+  }
+ }
+ It 'rejects impossible completed checkpoints: <Case>' -ForEach @(@{Case='NoAttempt'},@{Case='Duration'},@{Case='ZoneLess'}) {
+  $state.Batches[0].Status='Complete';$state.Batches[0].Attempts=1
+  $state.Batches[0].Assessed=$state.Recipe.AppIds.Count
+  $state.Batches[0].AssessedPairs=$state.Recipe.AppIds.Count*2
+  $state.Batches[0].ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')
+  switch($Case){
+   NoAttempt {$state.Batches[0].Attempts=0}
+   Duration {$state.Batches[0].DurationSeconds=3601}
+   ZoneLess {$state.Batches[0].ObservedAt='2026-10-13T01:02:03'}
+  }
+  { [TokenForge.Core.WeeklyResearchReport]::Create((ConvertTo-Json -InputObject $state -Depth 100),'Deep',[DateTimeOffset]::UtcNow) }|Should -Throw
+ }
+ It 'rejects completed batches with missing observation dates' {
+  $state.Batches[0].Status='Complete';$state.Batches[0].Attempts=1
+  $state.Batches[0].Assessed=$state.Recipe.AppIds.Count
+  $state.Batches[0].AssessedPairs=$state.Recipe.AppIds.Count*2
+  $state.Batches[0].ObservedAt=$null
+  $state|ConvertTo-Json -Depth 100|Set-Content "$root/weekly-deep.json"
+  $result=(. $cli research weekly -StatePath $root -Json)|ConvertFrom-Json
+  $LASTEXITCODE|Should -Be 1
+  $result.Code|Should -Be 'OperationFailed'
+ }
+ It 'rejects changed recipes and duplicate keys without emitting their contents' {
+  $raw=Get-Content "$root/weekly-deep.json" -Raw
+  $raw=$raw.Replace('"PlanId":', '"PlanId":"synthetic-private", "PlanId":')
+  $raw|Set-Content "$root/weekly-deep.json"
+  $result=. $cli research weekly -StatePath $root -Json
+  $LASTEXITCODE|Should -Be 1
+  $result|Should -Not -Match 'synthetic-private'
+ }
  It 'rejects authentication prompts before prompting' {
   Mock Read-Host {throw 'Unexpected prompt.'}
   $r=(. $cli research weekly -StatePath $root -PromptPassphrase -Json)|ConvertFrom-Json

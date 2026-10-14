@@ -28,7 +28,7 @@ and observation time. Keep JSON as deterministic import/export and the public ap
 format. Freeze each discovery plan's membership, hash, and chunk assignments; resume from explicit
 terminal checkpoints. Version 0.16 connects those frozen [research cohorts](research-cohorts.md) to chunk execution and metadata repair. Failed probes do not erase the previous successful evidence's date.
 
-Build self-contained .NET executables per OS and architecture. Evaluate Native AOT after the
+Build and validate locally for Linux x64 during this development phase. Other OS and architecture builds require an explicit user request. Evaluate Native AOT after the
 browser, interop, storage, and PowerShell handoff paths pass integration tests; self-contained
 publishing and Native AOT are different milestones. A native launcher alone does not remove the
 PowerShell dependency or create an OS credential boundary.

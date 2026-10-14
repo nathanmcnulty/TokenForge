@@ -334,11 +334,11 @@ tokenforge research weekly --state-path /path/to/discovery-data
 tokenforge research weekly --state-path /path/to/discovery-data --json
 ```
 
-The PowerShell entry point is `./scripts/tokenforge.ps1 research weekly -StatePath /path/to/discovery-data -Json`. No profile or login is required. The command reads the two frozen weekly recipe files, validates their hashes and coverage, and recomputes reports rather than relying on cached report files. It writes no files. Unrelated checkout files are not inspected or endorsed by this command.
+The native command runs without PowerShell and shares recipe validation and report calculations with the PowerShell entry point, `./scripts/tokenforge.ps1 research weekly -StatePath /path/to/discovery-data -Json`. No profile or login is required. The command reads the two frozen weekly recipe files, validates their hashes and coverage, and recomputes reports rather than relying on cached report files. It writes no files. Unrelated checkout files are not inspected or endorsed by this command.
 
-Reports distinguish source catalog, selected applications, successful applications, and app/resource pairs. They include remaining applications/pairs, pending/exhausted batches, observation dates, and next-step guidance. An older recipe is marked `CurrentWeek=false`; refresh the checkout and inspect scheduling before assuming the current week has run. Future-week recipes and creation times more than five minutes ahead are rejected. Assessment includes structural exclusions, and successful token observations do not establish universal support or API authorization. The packaged native command uses its PowerShell adapter, so PowerShell 7.4+ is required.
+Reports distinguish source catalog, selected applications, successful applications, and app/resource pairs. They include remaining applications/pairs, pending/exhausted batches, observation dates, and next-step guidance. An older recipe is marked `CurrentWeek=false`; refresh the checkout and inspect the next weekly cycle before assuming the current week has run. Future-week recipes and creation times more than five minutes ahead are rejected. Assessment includes structural exclusions, and successful token observations do not establish universal support or API authorization. The command never dispatches workers or requests authentication. Pending work requires an explicitly approved manual run.
 
-The [v0.29 scope-planning validation report](native-scope-planning-validation-2026-10-11.json) records the sanitized two-account Linux proof and package checks.
+The [Linux offline validation report](native-weekly-report-validation-2026-10-13.json) records recipe-hash and coverage parity against both stored recipes, packaged PowerShell/native parity, and 331 passing local Linux checks. No hosted jobs or authentication were used.
 
 ## Native saved-cookie profile acquisition
 

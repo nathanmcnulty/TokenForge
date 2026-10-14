@@ -4,7 +4,7 @@ Hosted Actions are currently disabled to protect the runner budget. Scheduled ru
 
 A public repository's artifacts are downloadable by readers. This workflow therefore uploads **only authenticated-encrypted metadata**, using artifacts as recovery snapshots. Keep a separate protected backup for authoritative long-term history; artifact retention is not a durable database.
 
-Every Monday, or on manual dispatch, the main-only workflow:
+When an explicitly approved manual run is enabled, the main-only workflow:
 
 1. Downloads the newest unexpired `maintenance-snapshot-v1` artifact from a main-branch run. Missing artifacts start a new catalog; damaged or incompatible snapshots stop restoration rather than silently discarding history.
 2. Signs Nora in using repository-secret software passkey values. It obtains a fresh Graph token through the fixed Graph Command Line Tools client using existing authorization, checks the expected tenant/account/client/audience, and verifies the account through Graph `/me`.

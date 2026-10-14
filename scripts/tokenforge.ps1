@@ -56,24 +56,14 @@ try{
     if(-not $StatePath -or -not (Test-Path -LiteralPath $StatePath -PathType Container)){throw 'Choose a public discovery-data directory with StatePath.'}
     if((Get-Item -LiteralPath $StatePath -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Linked weekly data is not allowed.'}
     . (Join-Path $PSScriptRoot 'TokenForgeCiState.ps1')
-    $week=Get-TfCiWeek
+    $now=[DateTimeOffset]::UtcNow
+    $week=Get-TfCiWeek $now
     $reports=@(foreach($mode in @('Shallow','Deep')){
      $path=Join-Path $StatePath ('weekly-'+$mode.ToLowerInvariant()+'.json')
      if(-not (Test-Path -LiteralPath $path)){continue}
      $file=Get-Item -LiteralPath $path -Force
      if(($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -gt 134217728){throw 'Invalid frozen recipe file.'}
-     $state=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((Get-Content -LiteralPath $path -Raw))
-     # Get-TfCiReport validates the complete frozen recipe once before deriving counts.
-     $report=Get-TfCiReport $state
-     if($state.Recipe.Mode -cne $mode){throw 'Weekly filename and recipe mode differ.'}
-     if($state.Recipe.Week -cgt $week -or [TokenForge.Core.V0240.TimestampPolicy]::Parse($state.Recipe.CreatedAt) -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Weekly recipe is from the future.'}
-     Assert-TfCiReport $report
-     $report.PlanId=$state.PlanId
-     $report.CurrentWeek=$report.Week -ceq $week
-     $report.RemainingApplications=$report.SelectedApplications-$report.AssessedApplications
-     $report.RemainingPairs=$report.SelectedPairs-$report.AssessedPairs
-     $report.NextAction=if(-not $report.CurrentWeek){'Refresh the checkout and inspect the next weekly cycle.'}elseif($report.ExhaustedBatches){'Review exhausted batches; use the workflow retry_exhausted option after resolving failures.'}elseif($report.Complete){'This selected set is complete; inspect observation dates and the next weekly cycle.'}else{'Pending batches require an explicitly approved manual run; inspect failed worker status if progress stalls.'}
-     $report
+     [TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([TokenForge.Core.WeeklyResearchReport]::Create((Get-Content -LiteralPath $path -Raw),$mode,$now))
     })
     if(-not $reports.Count){throw 'No frozen weekly recipes were found.'}
     [pscustomobject]@{SchemaVersion=1;CurrentWeek=$week;Reports=$reports;Evidence='OfflineFrozenRecipesNotUniversalSupportOrApiAuthorization';CredentialOutput=$false}

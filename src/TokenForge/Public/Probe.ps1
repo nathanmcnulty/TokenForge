@@ -42,7 +42,8 @@ function Invoke-TokenForgeScopeProbe {
         if(-not $probeLock){$probeLock=Open-TokenForgeVaultFile $probeLockPath}
     if($DatabasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){
         $null=Invoke-TokenForgeNativeEvidence $DatabasePath update -Document (New-TokenForgeScopeDatabase) -Domain evidence -NativeExecutablePath $NativeExecutablePath
-        $database=Get-TokenForgeScopeDatabase $DatabasePath -NativeExecutablePath $NativeExecutablePath -Latest -TenantFingerprint $Inventory.TenantFingerprint -PrincipalFingerprint $probePrincipal
+        # Cohorts read each exact flow plan below; do not load unrelated account history.
+        $database=if($CohortFingerprint){New-TokenForgeScopeDatabase}else{Get-TokenForgeScopeDatabase $DatabasePath -NativeExecutablePath $NativeExecutablePath -Latest -TenantFingerprint $Inventory.TenantFingerprint -PrincipalFingerprint $probePrincipal}
     }else{$database=Get-TokenForgeScopeDatabase $DatabasePath}
     if(-not $FlowDatabasePath){$FlowDatabasePath=$DatabasePath+'.flows.json'}
     $sqliteFlows=$FlowDatabasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)
@@ -200,9 +201,14 @@ function Invoke-TokenForgeScopeProbe {
                             $flowAttempt.ErrorCodes=@([regex]::Matches($_.Exception.Message,'\bAADSTS([0-9]{4,9})\b')|ForEach-Object {$_.Groups[1].Value}|Sort-Object -Unique|Select-Object -First 16)
                             $flowAttempt.Outcome=if($transientFailure){'Started'}else{'Failed'}
                         } finally {
-                            $flowAttempt.ObservedAt=[DateTimeOffset]::UtcNow.ToString('o');$flowAttempt.ElapsedSeconds=[math]::Round($attemptWatch.Elapsed.TotalSeconds,3)
-                            # Persistence errors stop the sweep; no additional issuance after a failed checkpoint.
-                            try{$flows=Save-TokenForgeFlowEvidence $FlowDatabasePath -Attempt $flowAttempt -ExistingDocument $flows -NativeExecutablePath $NativeExecutablePath -Changes $FlowChanges}finally{
+                            # A transient failure keeps the original durable Started event unchanged.
+                            # SQLite permits that event to transition only to a terminal outcome.
+                            try{
+                                if(-not $transientFailure){
+                                    $flowAttempt.ObservedAt=[DateTimeOffset]::UtcNow.ToString('o');$flowAttempt.ElapsedSeconds=[math]::Round($attemptWatch.Elapsed.TotalSeconds,3)
+                                    $flows=Save-TokenForgeFlowEvidence $FlowDatabasePath -Attempt $flowAttempt -ExistingDocument $flows -NativeExecutablePath $NativeExecutablePath -Changes $FlowChanges
+                                }
+                            }finally{
                             if ($token) { $token.AccessToken.Dispose(); if ($token.RefreshToken) { $token.RefreshToken.Dispose() } }
                             $token = $null
                             }

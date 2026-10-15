@@ -54,13 +54,18 @@ function Invoke-TokenForgeResearchChunk {
         if($Inventory.TenantFingerprint -ne $recipe.TenantFingerprint -or $inventoryHash -ne $recipe.InventoryHash -or $Inventory.DiscoveryCatalogHash -ne $recipe.CatalogHash){throw 'Inventory differs from the frozen cohort. Create a new cohort after refreshing metadata.'}
         $captured=[DateTimeOffset]$Inventory.CapturedAt
         if($captured -lt [DateTimeOffset]::UtcNow.AddHours(-$MaxAgeHours) -or $captured -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Cohort execution requires a fresh inventory.'}
-        if($ChunkIndex -lt 0){
+        $automaticChunk=$ChunkIndex -lt 0
+        if($automaticChunk){
             if(-not $plan.Pending.Count){return [pscustomobject]@{PlanId=$CohortId;Complete=$true;PendingClients=0;NewObservations=0}}
             $ChunkIndex=@($plan.Pending|Sort-Object Chunk)[0].Chunk
         }
         if($ChunkIndex -ge $plan.ChunkCount){throw 'ChunkIndex exceeds the frozen cohort.'}
         $members=@($recipe.Pairs.ClientId|Sort-Object -Unique)
         $selected=@($members|Select-Object -Skip ($ChunkIndex*$plan.BatchSize) -First $plan.BatchSize)
+        if($automaticChunk){
+            $pendingClients=@{};foreach($member in $plan.Pending){$pendingClients[$member.ClientId]=$true}
+            $selected=@($selected|Where-Object {$pendingClients.ContainsKey($_)})
+        }
         $pairs=@($recipe.Pairs|Where-Object {$_.ClientId -in $selected}|ForEach-Object {[pscustomobject]$_})
         $directory=Split-Path $DatabasePath -Parent
         if(-not $FlowDatabasePath){$FlowDatabasePath=Join-Path $directory flows.sqlite}
@@ -81,7 +86,8 @@ function Invoke-TokenForgeResearchChunk {
             }
         }
         if(@($scopeChanges.Values|Where-Object Outcome -eq ContextMismatch).Count){throw 'Cohort stopped on an issued-token context mismatch; affected clients remain pending.'}
-        $remaining=Get-TokenForgeResearchCohort $DatabasePath $CohortId -NativeExecutablePath $NativeExecutablePath
-        [pscustomobject]@{PlanId=$CohortId;ChunkIndex=$ChunkIndex;SelectedClients=$selected.Count;HandledPairs=$scopeChanges.Count;NewObservations=$observations.Count;CompletedClients=$remaining.CompletedClients;PendingClients=$remaining.Pending.Count;Complete=($remaining.Pending.Count -eq 0)}
+        # The frozen recipe was validated above; refresh only durable pending membership.
+        $remaining=@(Invoke-TokenForgeNativeEvidence $DatabasePath pending -Domain evidence -PlanFingerprint $CohortId -NativeExecutablePath $NativeExecutablePath)
+        [pscustomobject]@{PlanId=$CohortId;ChunkIndex=$ChunkIndex;SelectedClients=$selected.Count;HandledPairs=$scopeChanges.Count;NewObservations=$observations.Count;CompletedClients=($plan.ClientCount-$remaining.Count);PendingClients=$remaining.Count;Complete=($remaining.Count -eq 0)}
     }finally{if($lock){$lock.Dispose()}}
 }

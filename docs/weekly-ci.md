@@ -1,6 +1,6 @@
 # Weekly research CI
 
-GitHub Actions are disabled. All workflows are manual-only, and discovery accepts one Linux worker per invocation. Enabling or dispatching hosted work requires a new explicit instruction. Use [local discovery](discovery.md) to collect data without runner minutes or model quota; use [local validation](local-validation.md) for code checks. Windows, macOS, and additional architectures remain deferred.
+GitHub Actions are disabled. All workflows are manual-only, and discovery accepts one Linux worker per invocation. Enabling or dispatching hosted work requires a new explicit instruction. Use [local discovery](discovery.md) to collect data without runner minutes or model quota; use [local validation](local-validation.md) for code checks. Windows, macOS, and additional architectures remain deferred. Native validation checks Linux x64 only; it does not upload packages or delete artifacts. Release publication remains a separate workflow.
 
 “Weekly” describes the frozen research recipe, not an active schedule. Earlier schedules, worker counts, build matrices, and timing measurements are in the [history archive](history/weekly-ci.md). They do not describe the current execution policy or guarantee billing or throughput.
 

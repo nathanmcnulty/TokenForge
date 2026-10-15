@@ -41,8 +41,10 @@ function Invoke-TokenForgeResearchChunk {
         [Parameter(Mandatory)][string]$DatabasePath,[Parameter(Mandatory)][ValidatePattern('^[a-f0-9]{64}$')][string]$CohortId,
         [ValidateRange(-1,100000)][int]$ChunkIndex=-1,[string]$FlowDatabasePath,[string]$MetadataPath,[string]$NativeExecutablePath,
         [ValidateSet('ESTSAUTH','ESTSAUTHPERSISTENT')][string]$CookieName='ESTSAUTH',
-        [ValidateRange(1,8760)][int]$MaxAgeHours=24,[ValidateRange(0,60000)][int]$DelayMilliseconds=250)
+        [ValidateRange(1,8760)][int]$MaxAgeHours=24,[ValidateRange(0,60000)][int]$DelayMilliseconds=250,
+        [ValidateRange(0,1000)][int]$MaxPendingClients=0)
     if(-not $DatabasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){throw 'Research cohorts require a SQLite scope database.'}
+    if($MaxPendingClients -and $ChunkIndex -ge 0){throw 'MaxPendingClients cannot be combined with an explicit ChunkIndex.'}
     if(-not $PSCmdlet.ShouldProcess($CohortId,'Execute the frozen research chunk using existing authorization')){return}
     $lock=$null
     try{
@@ -61,10 +63,15 @@ function Invoke-TokenForgeResearchChunk {
         }
         if($ChunkIndex -ge $plan.ChunkCount){throw 'ChunkIndex exceeds the frozen cohort.'}
         $members=@($recipe.Pairs.ClientId|Sort-Object -Unique)
-        $selected=@($members|Select-Object -Skip ($ChunkIndex*$plan.BatchSize) -First $plan.BatchSize)
-        if($automaticChunk){
-            $pendingClients=@{};foreach($member in $plan.Pending){$pendingClients[$member.ClientId]=$true}
-            $selected=@($selected|Where-Object {$pendingClients.ContainsKey($_)})
+        if($MaxPendingClients){
+            # Span stored chunks without changing the frozen recipe or flow-plan identity.
+            $selected=@($plan.Pending|Sort-Object {[int]$_.Chunk},{[string]$_.ClientId}|Select-Object -First $MaxPendingClients|ForEach-Object {$_.ClientId})
+        }else{
+            $selected=@($members|Select-Object -Skip ($ChunkIndex*$plan.BatchSize) -First $plan.BatchSize)
+            if($automaticChunk){
+                $pendingClients=@{};foreach($member in $plan.Pending){$pendingClients[$member.ClientId]=$true}
+                $selected=@($selected|Where-Object {$pendingClients.ContainsKey($_)})
+            }
         }
         $pairs=@($recipe.Pairs|Where-Object {$_.ClientId -in $selected}|ForEach-Object {[pscustomobject]$_})
         $directory=Split-Path $DatabasePath -Parent

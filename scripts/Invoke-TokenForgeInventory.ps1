@@ -36,7 +36,8 @@ param(
  [string[]]$InputDatabasePath,
  [string]$ExportPath,
  [ValidatePattern('^[a-f0-9]{64}$')][string]$CohortId,
- [ValidateRange(-1,100000)][int]$ChunkIndex=-1,[ValidateRange(1,1000)][int]$BatchSize=25
+ [ValidateRange(-1,100000)][int]$ChunkIndex=-1,[ValidateRange(1,1000)][int]$BatchSize=25,
+ [ValidateRange(0,1000)][int]$MaxPendingClients=0
 )
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1') -Force
@@ -100,7 +101,7 @@ try {
    if(-not $CohortId -or -not $EstsAuth){throw 'ProbeChunk requires CohortId and EstsAuth.'}
    $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
    if($PrincipalFingerprint){$cohort=Get-TokenForgeResearchCohort $DatabasePath $CohortId -NativeExecutablePath $NativeExecutablePath;if($PrincipalFingerprint -ne $cohort.Cohort.PrincipalFingerprint){throw 'Principal selection differs from the frozen cohort.'}}
-   Invoke-TokenForgeResearchChunk -Inventory $inventory -EstsAuth $EstsAuth -CookieName $CookieName -DatabasePath $DatabasePath -CohortId $CohortId -ChunkIndex $ChunkIndex -FlowDatabasePath $FlowPath -MetadataPath $MetadataPath -NativeExecutablePath $NativeExecutablePath -WhatIf:$WhatIfPreference -Confirm:$false
+   Invoke-TokenForgeResearchChunk -Inventory $inventory -EstsAuth $EstsAuth -CookieName $CookieName -DatabasePath $DatabasePath -CohortId $CohortId -ChunkIndex $ChunkIndex -MaxPendingClients $MaxPendingClients -FlowDatabasePath $FlowPath -MetadataPath $MetadataPath -NativeExecutablePath $NativeExecutablePath -WhatIf:$WhatIfPreference -Confirm:$false
   }
   'Discover' {Update-TokenForgeDiscovery -Path $discoveryPath -MetadataPath $MetadataPath -NativeExecutablePath $NativeExecutablePath}
   'SignIns' {

@@ -34,6 +34,11 @@ Describe 'Bounded local discovery orchestration' {
   Should -Invoke Get-TokenForgeResearchCohort -ModuleName TokenForge -Times 0 -Exactly
   Should -Invoke Invoke-TokenForgeResearchChunk -ModuleName TokenForge -Times 3 -Exactly -ParameterFilter {$DatabasePath.EndsWith('scopes.sqlite') -and $FlowDatabasePath.EndsWith('flows.sqlite') -and $MetadataPath.EndsWith('applications.sqlite')}
  }
+ It 'forwards the pending-client cap without changing frozen batch size' {
+  $null=Invoke-TokenForgeDiscoveryRun @options -BatchSize 1 -MaxPendingClients 25 -MaxChunks 1
+  Should -Invoke New-TokenForgeResearchCohort -ModuleName TokenForge -Times 1 -Exactly -ParameterFilter {$BatchSize -eq 1}
+  Should -Invoke Invoke-TokenForgeResearchChunk -ModuleName TokenForge -Times 1 -Exactly -ParameterFilter {$MaxPendingClients -eq 25}
+ }
  It 'stops at a chunk budget and resumes the saved cohort without creating another' {
   $r=Invoke-TokenForgeDiscoveryRun @options -MaxChunks 1
   $r.Status|Should -Be BudgetReached
@@ -189,7 +194,7 @@ Describe 'Standalone run against native SQLite checkpoints' -Skip:(-not $nativeA
    foreach($name in @('applications.sqlite','scopes.sqlite','flows.sqlite')){Test-Path (Join-Path $root $name)|Should -BeTrue}
   }finally{$secret.Dispose()}
  }
- It 'retries a partial native chunk without repeating completed client issuance' {
+ It 'retries partial native work with batch size <BatchSize> and execution cap <Cap> without repeating completed issuance' -ForEach @(@{BatchSize=2;Cap=0},@{BatchSize=1;Cap=2}) {
   $native=$env:TOKENFORGE_TEST_NATIVE
   $root=Join-Path $TestDrive ([guid]::NewGuid().ToString())
   $clients=@('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')
@@ -199,7 +204,7 @@ Describe 'Standalone run against native SQLite checkpoints' -Skip:(-not $nativeA
   Mock Get-TokenForgeToken -ModuleName TokenForge {param($Request) $script:retryCalls++;if($script:retryCalls -eq 2){throw 'Identity request failed (HTTP 429); details suppressed.'}; [pscustomobject]@{AccessToken=ConvertTo-SecureString synthetic -AsPlainText -Force;RefreshToken=$null;GrantedScopes=@('User.Read');TokenClaims=[pscustomobject]@{Readable=$true;HasDelegatedScopeClaim=$true;Scopes=@('User.Read');TenantFingerprint=('a'*64);PrincipalFingerprint=('b'*64);ClientId=$Request.ClientId;Audience=$Request.ResourceId}}}
   $secret=ConvertTo-SecureString synthetic -AsPlainText -Force
   try{
-   $options=@{Inventory=$inventory;EstsAuth=$secret;StatePath=$root;NativeExecutablePath=$native;GraphOnly=$true;BatchSize=2;MaxRedirects=1;ExploreAllFlows=$false;RetryDelaySeconds=1}
+   $options=@{Inventory=$inventory;EstsAuth=$secret;StatePath=$root;NativeExecutablePath=$native;GraphOnly=$true;BatchSize=$BatchSize;MaxPendingClients=$Cap;MaxRedirects=1;ExploreAllFlows=$false;RetryDelaySeconds=1}
    $result=Invoke-TokenForgeDiscoveryRun @options
    $result.Status|Should -Be Complete
    $result.CompletedClients|Should -Be 2

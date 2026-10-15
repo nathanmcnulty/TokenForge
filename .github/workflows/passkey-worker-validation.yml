@@ -67,7 +67,7 @@ jobs:
               throw 'Graph returned a different account than the configured test account.'
             }
             Add-Content $env:GITHUB_STEP_SUMMARY 'Verified: passkey Action login, TokenForge token acquisition, and Graph /me matched the configured test account.'
-            Add-Content $env:GITHUB_STEP_SUMMARY "Requested User.Read.All; additional API scopes returned by Entra: $(@($token.AdditionalScopes).Count). No consent grant was changed."
+            Add-Content $env:GITHUB_STEP_SUMMARY "Requested User.Read.All; additional API scopes returned by Entra: $(@($token.AdditionalScopes).Count). No consent-grant mutation API was called."
           } finally {
             $cookie.Dispose()
             if ($token) {

@@ -71,7 +71,18 @@ function Get-TokenForgeTenantInventory {
             PublicClient = $candidate.PublicClient; Foci = $candidate.Foci
             RedirectUris = $redirects; TenantRedirectUris = @(if ($verified) { @($sp['replyUrls']) }); PreferredRedirectUri = $candidate.PreferredRedirectUri
             PublishedGrants = $candidate.Grants; DelegatedScopeDefinitions = $definitions
-            AppRoleDefinitions = @(if($verified){foreach($role in @($sp['appRoles'])){if($role -and $role['value']){[pscustomobject]@{Id=[string]$role['id'];Value=[string]$role['value'];DisplayName=[string]$role['displayName'];Description=[string]$role['description'];AllowedMemberTypes=@($role['allowedMemberTypes']);Enabled=$role['isEnabled'] -eq $true}}}})
+            AppRoleDefinitions = @(if($verified){
+                foreach($role in @($sp['appRoles'])){
+                    if(-not $role -or -not $role['value']){continue}
+                    $origin=if($role['origin'] -cin @('Application','ServicePrincipal')){[string]$role['origin']}else{'Unknown'}
+                    [pscustomobject]@{
+                        Id=[string]$role['id'];Value=[string]$role['value']
+                        DisplayName=[string]$role['displayName'];Description=[string]$role['description']
+                        AllowedMemberTypes=@($role['allowedMemberTypes']);Enabled=$role['isEnabled'] -eq $true
+                        Origin=$origin
+                    }
+                }
+            })
             IdentifierUris = @(@($candidate.IdentifierUris) + @(if ($verified) { $sp['servicePrincipalNames'] }) | Where-Object { $_ -is [string] -and $_ } | Sort-Object -Unique -CaseSensitive)
             IsResourceCandidate = $candidate.IsResourceCandidate -or $definitions.Count -gt 0
         }

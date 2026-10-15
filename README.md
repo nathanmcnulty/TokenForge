@@ -30,6 +30,7 @@ To acquire a token for a specific task, follow the [scope-to-token guide](docs/s
 - [Inventory](docs/inventory.md): public sources, tenant inventory, and explicit registration.
 - [Research cohorts](docs/research-cohorts.md): frozen membership and resumable requests.
 - [Application metadata](docs/application-metadata.md): provenance and history.
+- [Public permissions](docs/public-permissions.md): API definitions and offline queries.
 - [Private maintenance](docs/private-maintenance.md): encrypted backups and recovery.
 - [Local validation](docs/local-validation.md): focused development checks.
 

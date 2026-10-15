@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 $ErrorActionPreference = 'Stop'
 Import-Module Pester -MinimumVersion 5.7.1
 $manifest = Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1'

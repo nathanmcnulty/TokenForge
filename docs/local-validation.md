@@ -1,6 +1,6 @@
 # Local validation
 
-GitHub Actions remain disabled. Run the smallest relevant local preset in a fresh PowerShell process; use an existing trusted Linux package rather than rebuilding unchanged code. The runner needs PowerShell 7.4+ and Pester 5.7.1 already installed. It does not install dependencies, build packages, authenticate, or dispatch workflows.
+GitHub Actions remain disabled. Run the smallest relevant local preset in a fresh PowerShell process; use an existing trusted Linux package rather than rebuilding unchanged code. The runner needs PowerShell 7.6+ and Pester 5.7.1 already installed. It does not install dependencies, build packages, authenticate, or dispatch workflows.
 
 ```powershell
 pwsh -NoProfile -File ./scripts/Invoke-TokenForgeLocalValidation.ps1 -Preset ReleaseGuards

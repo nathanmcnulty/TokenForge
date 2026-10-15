@@ -10,7 +10,7 @@ key; encrypted credential records remain account-, tenant-, and client-bound. Th
 passphrase storage when an OS store is unavailable; never silently fall back to plaintext.
 OS stores protect credentials at rest but do not isolate every process running as the user.
 
-The module loads one BCL-only .NET 8 credential assembly in process. Source checkouts compile
+The module loads one BCL-only .NET 10 credential assembly in process. Source checkouts compile
 the same explicit sources together; distributed packages contain the prebuilt assembly. This
 keeps SecureString handoff inside the caller and avoids coupling credential operations to SQLite.
 A loaded incompatible runtime requires a fresh PowerShell process. The shared BCL scope planner

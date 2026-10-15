@@ -1,7 +1,7 @@
 # Native CLI and evidence store
 
 The native CLI is a self-contained .NET executable per OS and architecture. Evidence commands
-run directly in the shared core with bundled SQLite. Passkey enrollment, implicit authentication adapters invoke the packaged PowerShell 7.4+ module;
+run directly in the shared core with bundled SQLite. Passkey enrollment, implicit authentication adapters invoke the packaged PowerShell 7.6+ module;
 install `pwsh` and keep `src/` and `scripts/` beside the executable for those commands.
 Version 0.18 adds direct native `token acquire`, and PowerShell uses the same C# OAuth transport
 and issued-token policy. Version 0.33 adds native system-browser PKCE to advanced `token acquire`. Version 0.36 adds native browser profile login and persisted browser profile acquisition. Explicit software-passkey acquisition and profile login are native; enrollment and implicit passkey login still use PowerShell.
@@ -41,7 +41,7 @@ in process through `TokenForge.Credentials.dll`; credentials do not cross a subp
 boundary. Fresh candidate planning, browser/passkey login, Memory sessions, and the CLI
 `token get` adapter still use PowerShell. See the [persisted lifecycle validation report](native-profile-lifecycle-validation-2026-10-11.json).
 
-Packages include a BCL-only .NET 8 credential assembly, separate from SQLite evidence storage.
+Packages include a BCL-only .NET 10 credential assembly, separate from SQLite evidence storage.
 A source checkout compiles the same explicit source list once with `Add-Type`; it needs no SDK
 for module import. Both package builders need the .NET SDK and validate that their compiled
 source list matches the module list. A present invalid DLL fails without source fallback.
@@ -285,9 +285,8 @@ silently migrated to these plans; integration is a later explicit migration.
 # Also supported: linux-arm64, win-x64, win-arm64, osx-x64, osx-arm64
 ```
 
-.NET 10 SDK builds the executables; the shared core targets .NET 8 for PowerShell 7.4 compatibility.
-Offline CI builds and exercises host executables on Linux, Windows, and macOS. Live auth proof
-remains Linux and the two lab accounts. Native AOT, OS-protected encryption keys, removal of the
+.NET 10 LTS is the target framework for the executables and both shared libraries. The module and packaged PowerShell adapters require PowerShell 7.6+ (built on .NET 10); older PowerShell versions are unsupported.
+Current offline validation uses local Linux x64 checks. GitHub Actions are manual-only and disabled; hosted runners and other platforms require explicit approval. Live auth proof remains Linux and the two lab accounts. Native AOT, OS-protected encryption keys, removal of the
 PowerShell authentication dependency, and a metadata visualization GUI remain separate milestones.
 See [native architecture](native-architecture.md) for their boundaries and validation gates.
 

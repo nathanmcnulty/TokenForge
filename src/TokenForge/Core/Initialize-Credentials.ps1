@@ -5,7 +5,7 @@
   'TokenForge.Core.V0250.VaultRecordPolicy','TokenForge.Core.V0240.TimestampPolicy','TokenForge.Core.V0230.ProfileKeyIdentity',
   'TokenForge.Core.V0220.PrivateFiles','TokenForge.Core.V0220.VaultFileTransaction','TokenForge.Core.V0200.ProfilePolicy',
   'TokenForge.Core.V0190.VaultEnvelope','TokenForge.Core.V0100.TokenPolicy','TokenForge.Core.V0110.PlatformVaultKey','TokenForge.Core.V0180.OAuthTransport')
- $dll=Join-Path $PSScriptRoot '../lib/net8.0/TokenForge.Credentials.dll'
+ $dll=Join-Path $PSScriptRoot '../lib/net10.0/TokenForge.Credentials.dll'
  if(Test-Path -LiteralPath $dll){
   try{$identity=[Reflection.AssemblyName]::GetAssemblyName($dll);if($identity.Name -cne 'TokenForge.Credentials' -or $identity.Version.ToString() -cne ($expectedVersion+'.0')){throw 'Identity mismatch.'}}
   catch{throw 'Bundled TokenForge credential runtime is invalid. Reinstall the package; source fallback is disabled for an existing DLL.'}

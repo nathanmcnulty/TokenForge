@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 <# .SYNOPSIS
 Create a compact gzip download from a validated public application catalog.
 #>

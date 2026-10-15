@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 # Build input is a Git checkout. Copy tracked source files, never local state.
 function Copy-TokenForgePackageSource {
  [CmdletBinding()]

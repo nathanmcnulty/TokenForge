@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 <# .SYNOPSIS
 Validate native lab authentication without publishing credentials or identity metadata.
 .DESCRIPTION
@@ -160,7 +160,7 @@ try{
   }finally{$password=$null}
  }
  $stage='OriginalKey';if($PasskeyPath -and (Get-FileHash -LiteralPath $original).Hash -cne $originalHash){throw 'Original software passkey changed.'}
- $report=[ordered]@{SchemaVersion=1;DateUTC=[DateTimeOffset]::UtcNow.ToString('yyyy-MM-dd');Runtime=$Runtime;Version=$version.Version;SourceCommit=$SourceCommit;RunAttempt=$RunAttempt;ExecutableSha256=(Get-FileHash $exe).Hash.ToLowerInvariant();CredentialAssemblySha256=(Get-FileHash (Join-Path $package 'src/TokenForge/lib/net8.0/TokenForge.Credentials.dll')).Hash.ToLowerInvariant();ExpectedAccountIndependentlyConfirmed=$true;FreshInventoryConfirmed=$true;Profiles=$profileResults;OriginalPasskeyUnchanged=$true;OwnedPrivateStateRemoved=$true;CredentialsPublished=$false;ConsentChanges=$false;RegistrationsCreated=$false;SignatureValidated=$false;Scope='FixedGraphUserReadForOneLabAccountNotUniversalFlowSupport'}
+ $report=[ordered]@{SchemaVersion=1;DateUTC=[DateTimeOffset]::UtcNow.ToString('yyyy-MM-dd');Runtime=$Runtime;Version=$version.Version;SourceCommit=$SourceCommit;RunAttempt=$RunAttempt;ExecutableSha256=(Get-FileHash $exe).Hash.ToLowerInvariant();CredentialAssemblySha256=(Get-FileHash (Join-Path $package 'src/TokenForge/lib/net10.0/TokenForge.Credentials.dll')).Hash.ToLowerInvariant();ExpectedAccountIndependentlyConfirmed=$true;FreshInventoryConfirmed=$true;Profiles=$profileResults;OriginalPasskeyUnchanged=$true;OwnedPrivateStateRemoved=$true;CredentialsPublished=$false;ConsentChanges=$false;RegistrationsCreated=$false;SignatureValidated=$false;Scope='FixedGraphUserReadForOneLabAccountNotUniversalFlowSupport'}
 }catch{$failed=$true}
 finally{
  $inputValues.Clear();foreach($name in $secretNames){[Environment]::SetEnvironmentVariable($name,$null)}

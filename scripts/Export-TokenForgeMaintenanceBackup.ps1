@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 <# .SYNOPSIS
 Keep an immutable local copy of an encrypted maintenance snapshot.
 .DESCRIPTION

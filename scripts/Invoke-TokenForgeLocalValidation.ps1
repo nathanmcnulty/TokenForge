@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 [CmdletBinding()]
 param(
     [ValidateSet('Weekly', 'Native', 'Discovery', 'ReleaseGuards')]

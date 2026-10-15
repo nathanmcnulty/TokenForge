@@ -38,6 +38,14 @@ param(
 )
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1') -Force
+# Status is read-only and remains available while a discovery writer holds its lock.
+if($Action -eq 'CohortStatus'){
+ if(-not $DatabasePath){$DatabasePath=Join-Path $StatePath 'scopes.sqlite'}
+ if(-not (Test-Path -LiteralPath $DatabasePath -PathType Leaf)){throw 'Cohort status requires an existing scope database.'}
+ if(-not $CohortId){$CohortId=& (Get-Module TokenForge) {param($p) Get-TokenForgeDiscoveryRunId $p} (Join-Path $StatePath 'discovery-run.json')}
+ Get-TokenForgeResearchCohort $DatabasePath $CohortId -NativeExecutablePath $NativeExecutablePath -SummaryOnly:$SummaryOnly
+ return
+}
 $null=New-Item -ItemType Directory -Path $StatePath -Force
 if (-not $IsWindows) { [IO.File]::SetUnixFileMode($StatePath, ([IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite -bor [IO.UnixFileMode]::UserExecute)) }
 $discoveryPath=Join-Path $StatePath 'discovery.json'
@@ -57,10 +65,6 @@ try {
   'NewCohort' {
    $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
    New-TokenForgeResearchCohort -Inventory $inventory -DatabasePath $DatabasePath -GraphOnly:$GraphOnly -ClientId $ClientId @principalOptions -BatchSize $BatchSize -MaxRedirects $MaxRedirects -ExploreAllFlows:$ExploreAllFlows -Tenant $Tenant -NativeExecutablePath $NativeExecutablePath -WhatIf:$WhatIfPreference -Confirm:$false
-  }
-  'CohortStatus' {
-   if(-not $CohortId){throw 'CohortStatus requires CohortId.'}
-   Get-TokenForgeResearchCohort $DatabasePath $CohortId -NativeExecutablePath $NativeExecutablePath
   }
   'ProbeChunk' {
    if(-not $CohortId -or -not $EstsAuth){throw 'ProbeChunk requires CohortId and EstsAuth.'}

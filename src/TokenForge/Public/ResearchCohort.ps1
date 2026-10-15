@@ -22,10 +22,13 @@ function New-TokenForgeResearchCohort {
 
 function Get-TokenForgeResearchCohort {
     [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$DatabasePath,[Parameter(Mandatory)][ValidatePattern('^[a-f0-9]{64}$')][string]$CohortId,[string]$NativeExecutablePath)
+    param([Parameter(Mandatory)][string]$DatabasePath,[Parameter(Mandatory)][ValidatePattern('^[a-f0-9]{64}$')][string]$CohortId,[string]$NativeExecutablePath,[switch]$SummaryOnly)
     $plan=Invoke-TokenForgeNativeEvidence $DatabasePath cohort-export -Domain evidence -PlanFingerprint $CohortId -NativeExecutablePath $NativeExecutablePath
     $pending=@(Invoke-TokenForgeNativeEvidence $DatabasePath pending -Domain evidence -PlanFingerprint $CohortId -NativeExecutablePath $NativeExecutablePath)
     $members=@($plan.Cohort.Pairs.ClientId|Sort-Object -Unique)
+    if($SummaryOnly){
+        return [pscustomobject]@{PlanId=$plan.PlanId;Status=if($pending.Count){'Pending'}else{'Complete'};ClientCount=$members.Count;PairCount=$plan.Cohort.Pairs.Count;BatchSize=$plan.BatchSize;CompletedClients=($members.Count-$pending.Count);PendingClients=$pending.Count;CredentialOutput=$false}
+    }
     [pscustomobject]@{PlanId=$plan.PlanId;BatchSize=$plan.BatchSize;Cohort=$plan.Cohort;ClientCount=$members.Count;PairCount=$plan.Cohort.Pairs.Count;ChunkCount=[int][Math]::Ceiling($members.Count/[double]$plan.BatchSize);CompletedClients=$members.Count-$pending.Count;Pending=$pending}
 }
 

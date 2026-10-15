@@ -21,6 +21,17 @@ pwsh -NoProfile -File ./scripts/Invoke-TokenForgeDiscoveryRun.ps1 `
 
 Rerun the same command to resume. Completed flow cells are checkpointed before the next request; a completed client is not requested again within that cohort. A run stops at its chunk or time budget, or when an error prevents progress. Throttling, server errors, and transport timeouts leave the affected client pending; rerun after the service recovers. The time budget is checked between chunks, so one chunk may extend beyond it. Smaller `-BatchSize` values give shorter stopping intervals.
 
+Check progress in another terminal without authentication:
+
+```powershell
+./scripts/Invoke-TokenForgeInventory.ps1 -Action CohortStatus `
+    -StatePath /private/tokenforge/nora `
+    -NativeExecutablePath /path/to/linux-x64/tokenforge -SummaryOnly |
+    ConvertTo-Json -Compress
+```
+
+This reads the saved cohort even while discovery holds the writer lock. `Pending` means clients remain to be checkpointed; it does not mean a process is running. Completed clients include failed probes. Omit `-SummaryOnly` for the private recipe and pending membership. Use `-CohortId` to inspect a separately created or older cohort.
+
 The bootstrap requests `User.Read` and `Application.Read.All` through Microsoft Graph PowerShell and verifies the issued permissions and `/me` identity. These permissions must already be authorized; the runner stops when they are unavailable. Optional grant enumeration may be unavailable without its separate read permission.
 
 A refreshed inventory replaces the saved snapshot only after metadata writes succeed. Failed writes retain the previous snapshot rather than advertising a successful refresh.

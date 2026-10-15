@@ -24,11 +24,8 @@ function Invoke-TokenForgeDiscoveryRun {
         $lockPath=Resolve-TokenForgeVaultPath (Join-Path $root '.writer.lock') -CreateDirectory
         $lock=if(Test-Path -LiteralPath $lockPath){Open-TokenForgeVaultFile $lockPath}else{Open-TokenForgeVaultFile $lockPath -Create}
         if((Test-Path -LiteralPath $manifest) -and -not $NewRun){
-            $file=Get-Item -LiteralPath (Resolve-TokenForgeVaultPath $manifest)
-            if($file.Length -gt 1024){throw 'Invalid discovery run manifest.'}
-            $saved=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((Get-Content -LiteralPath $file.FullName -Raw))
-            if($saved.Count -ne 2 -or -not $saved.Contains('SchemaVersion') -or -not $saved.Contains('CohortId') -or $saved.SchemaVersion -ne 1 -or $saved.CohortId -cnotmatch '^[a-f0-9]{64}$'){throw 'Invalid discovery run manifest.'}
-            $cohort=Get-TokenForgeResearchCohort -DatabasePath $database -CohortId $saved.CohortId -NativeExecutablePath $NativeExecutablePath
+            $id=Get-TokenForgeDiscoveryRunId $manifest
+            $cohort=Get-TokenForgeResearchCohort -DatabasePath $database -CohortId $id -NativeExecutablePath $NativeExecutablePath
         }else{
             $cohort=New-TokenForgeResearchCohort -Inventory $Inventory -DatabasePath $database -GraphOnly:$GraphOnly -BatchSize $BatchSize -MaxRedirects $MaxRedirects -ExploreAllFlows:$ExploreAllFlows -NativeExecutablePath $NativeExecutablePath -Confirm:$false
             Save-TokenForgeDocument -Path $manifest -Document @{SchemaVersion=1;CohortId=$cohort.PlanId}

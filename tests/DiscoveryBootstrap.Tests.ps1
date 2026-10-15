@@ -26,6 +26,10 @@ Describe 'Standalone discovery bootstrap boundaries' {
   Should -Invoke Get-TokenForgeToken -Times 1 -ParameterFilter {$Request.Scopes -contains 'Application.Read.All'}
   Should -Invoke Invoke-TokenForgeDiscoveryRun -Times 1
  }
+ It 'forwards the pending-client execution cap' {
+  $null=& $runner -StatePath $state -NativeExecutablePath /synthetic/tokenforge -EstsAuth $cookie -MaxPendingClients 25
+  Should -Invoke Invoke-TokenForgeDiscoveryRun -Times 1 -Exactly -ParameterFilter {$MaxPendingClients -eq 25}
+ }
  It 'forwards bounded retry options' {
   $null=& $runner -StatePath $state -NativeExecutablePath /synthetic/tokenforge -EstsAuth $cookie -MaxTransientRetries 2 -RetryDelaySeconds 7
   Should -Invoke Invoke-TokenForgeDiscoveryRun -Times 1 -ParameterFilter {$MaxTransientRetries -eq 2 -and $RetryDelaySeconds -eq 7}

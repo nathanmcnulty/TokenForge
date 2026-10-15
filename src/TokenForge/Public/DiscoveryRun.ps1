@@ -15,7 +15,8 @@ function Invoke-TokenForgeDiscoveryRun {
         [ValidateRange(1,10080)][int]$MaxMinutes=60,
         [ValidateRange(0,10)][int]$MaxTransientRetries=3,
         [ValidateRange(1,300)][int]$RetryDelaySeconds=30,
-        [switch]$ExploreAllFlows=$true
+        [switch]$ExploreAllFlows=$true,
+        [ValidateRange(0,1000)][int]$MaxPendingClients=0
     )
     if(-not $PSCmdlet.ShouldProcess($StatePath,'Run resumable discovery with existing authorization')){return}
     $root=Split-Path (Resolve-TokenForgeVaultPath (Join-Path $StatePath '.state') -CreateDirectory) -Parent
@@ -41,7 +42,7 @@ function Invoke-TokenForgeDiscoveryRun {
             $before=$pending
             $attempts++
             try{
-                $result=Invoke-TokenForgeResearchChunk -Inventory $Inventory -EstsAuth $EstsAuth -DatabasePath $database -CohortId $cohort.PlanId -FlowDatabasePath $flows -MetadataPath $metadata -NativeExecutablePath $NativeExecutablePath -Confirm:$false
+                $result=Invoke-TokenForgeResearchChunk -Inventory $Inventory -EstsAuth $EstsAuth -DatabasePath $database -CohortId $cohort.PlanId -MaxPendingClients $MaxPendingClients -FlowDatabasePath $flows -MetadataPath $metadata -NativeExecutablePath $NativeExecutablePath -Confirm:$false
             }catch{
                 # Only the probe's explicit transient identity error can trigger another attempt.
                 if($_.FullyQualifiedErrorId.Split(',')[0] -cne 'TokenForge.TransientIdentity' -or $_.CategoryInfo.Category -ne [Management.Automation.ErrorCategory]::ResourceUnavailable -or $retries -ge $MaxTransientRetries){throw}

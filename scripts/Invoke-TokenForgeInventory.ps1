@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 <#
 .SYNOPSIS
 Run one resumable discovery, registration, or scope-observation stage.

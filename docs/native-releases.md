@@ -1,6 +1,6 @@
 # Native releases
 
-Versioned releases provide durable downloads beyond the one-day native CI artifacts. Each release contains the complete self-contained CLI package, its PowerShell adapters, and documentation. Extract the entire archive; some commands still need the bundled files and PowerShell 7.4+. No authentication state, passkeys, cookies, tokens, or tenant research snapshots belong in a release.
+Versioned releases provide durable downloads beyond the one-day native CI artifacts. Each release contains the complete self-contained CLI package, its PowerShell adapters, and documentation. Extract the entire archive; some commands still need the bundled files and PowerShell 7.6+. No authentication state, passkeys, cookies, tokens, or tenant research snapshots belong in a release.
 
 | Platform | Architecture | Archive |
 | --- | --- | --- |

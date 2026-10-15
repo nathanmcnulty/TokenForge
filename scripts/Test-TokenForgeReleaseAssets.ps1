@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$AssetPath,[Parameter(Mandatory)][ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version,
  [Parameter(Mandatory)][ValidatePattern('^[a-f0-9]{40}$')][string]$SourceCommit,

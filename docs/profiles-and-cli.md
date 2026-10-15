@@ -124,7 +124,7 @@ Failure preserves the existing ciphertext. Owned plaintext byte buffers and fail
 cleared or disposed; managed strings and library allocations cannot be guaranteed immediate
 erasure. The checks inspect JWT payloads and do not verify token signatures.
 
-Packages contain `src/TokenForge/lib/net8.0/TokenForge.Credentials.dll`, with no SQLite dependency.
+Packages contain `src/TokenForge/lib/net10.0/TokenForge.Credentials.dll`, with no SQLite dependency.
 Source imports compile the same sources together. Restart PowerShell after changing runtime
 versions; mixed or incompatible credential types fail with a fresh-process instruction.
 

@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 [CmdletBinding()]
 param([Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$')][string]$Repository,
  [Parameter(Mandatory)][ValidatePattern('^[a-f0-9]{40}$')][string]$SourceCommit,

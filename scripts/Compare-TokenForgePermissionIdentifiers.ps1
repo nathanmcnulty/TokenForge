@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 <# .SYNOPSIS
 Compare a public application catalog with Graph permission identifiers offline.
 #>

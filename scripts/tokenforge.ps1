@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 [CmdletBinding()]
 param(
  [Parameter(Position=0,Mandatory)][ValidateSet('profile','login','logout','status','doctor','token','scopes','graph','research')][string]$Command,

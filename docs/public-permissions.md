@@ -2,7 +2,7 @@
 
 Permission definitions describe what an API exposes. They do not say which clients have consent, which tokens an account can obtain, or whether an API will accept a token.
 
-TokenForge can save Microsoft Graph's [public permission descriptions](https://github.com/microsoftgraph/microsoft-graph-devx-content/tree/master/permissions) as a compact JSON snapshot. This first source covers Graph only. It requires PowerShell 7.4+, no account, native package, TokenForge module, or model quota.
+TokenForge can save Microsoft Graph's [public permission descriptions](https://github.com/microsoftgraph/microsoft-graph-devx-content/tree/master/permissions) as a compact JSON snapshot. This first source covers Graph only. It requires PowerShell 7.6+, no account, native package, TokenForge module, or model quota.
 
 ```powershell
 ./scripts/Save-TokenForgeGraphPermissions.ps1 `

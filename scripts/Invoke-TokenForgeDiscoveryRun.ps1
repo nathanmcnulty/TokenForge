@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 <# .SYNOPSIS
 Run local application discovery without an agent or hosted runner.
 #>

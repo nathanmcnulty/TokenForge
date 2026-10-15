@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 [CmdletBinding()]
 param([Parameter(Mandatory,ParameterSetName='Research')][ValidatePattern('^[a-f0-9]{64}$')][string]$PlanId,[Parameter(ParameterSetName='Research')][ValidateRange(0,100000)][int]$Index,[Parameter(Mandatory,ParameterSetName='Maintenance')][switch]$Maintenance,[Parameter(Mandatory)][string]$OutputPath)
 $ErrorActionPreference='Stop'

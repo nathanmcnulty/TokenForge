@@ -1,4 +1,4 @@
-# Application metadata and scheduled discovery
+# Application metadata
 
 Every successful `Discover` run now merges its results into `applications.json` next to `discovery.json`. The inventory CLI also updates that file after `Inventory`, `SignIns`, `Register`, `Probe`, and `Merge`. Override the location with `-MetadataPath`. Existing state continues to work: the first run creates the catalog. It does not automatically import older files.
 
@@ -24,7 +24,9 @@ Writes use an exclusive per-file lock and an atomic replacement. On Unix, tempor
 
 ## GitHub Actions
 
-`.github/workflows/discovery.yml` checks every six hours and supports manual runs. After both current-week recipes complete, it retains one source refresh per UTC day and skips later scheduled refreshes that day; manual runs always refresh. Code runs from `main`; PRs cannot trigger the credentialed job. Nora's software passkey values are stored separately as `NORA_PASSKEY_CREDENTIAL_ID`, `NORA_PASSKEY_USER_HANDLE`, `NORA_PASSKEY_PRIVATE_KEY`, and `NORA_PASSKEY_UPN` secrets. `NORA_TENANT_FINGERPRINT` and `NORA_PRINCIPAL_FINGERPRINT` pin the expected existing account; the bootstrap client, resource, namespace, and Graph `/me` identity must match before inventory is read. The login action is pinned to a reviewed commit. Application-intent confirmation is explicitly enabled only for the expected Azure CLI client; this is separate from OAuth permission consent. The action omits generated assertions and identity response bodies from diagnostics. It passes a masked ESTS cookie to the next step. No cookie jar is saved by CI.
+Hosted Actions are disabled and scheduled triggers have been removed. The following describes the retained workflow architecture; running it requires explicit approval. Use the [local discovery runner](discovery.md) for current collection.
+
+`.github/workflows/discovery.yml` retains manual execution support. After both current-week recipes complete, it retains one source refresh per UTC day and skips later scheduled refreshes that day; manual runs always refresh. Code runs from `main`; PRs cannot trigger the credentialed job. Nora's software passkey values are stored separately as `NORA_PASSKEY_CREDENTIAL_ID`, `NORA_PASSKEY_USER_HANDLE`, `NORA_PASSKEY_PRIVATE_KEY`, and `NORA_PASSKEY_UPN` secrets. `NORA_TENANT_FINGERPRINT` and `NORA_PRINCIPAL_FINGERPRINT` pin the expected existing account; the bootstrap client, resource, namespace, and Graph `/me` identity must match before inventory is read. The login action is pinned to a reviewed commit. Application-intent confirmation is explicitly enabled only for the expected Azure CLI client; this is separate from OAuth permission consent. The action omits generated assertions and identity response bodies from diagnostics. It passes a masked ESTS cookie to the next step. No cookie jar is saved by CI.
 
 The [weekly controller](weekly-ci.md) refreshes public sources, freezes all published IDs into a UTC weekly recipe, and selects pending/failed batches for independent workers. Fresh private inventory determines whether each selected ID can be probed. Shallow mode stops after first issuance; Auto starts separately capped deeper research after shallow coverage completes. The workflow never registers apps, grants consent, or collects sign-in logs.
 

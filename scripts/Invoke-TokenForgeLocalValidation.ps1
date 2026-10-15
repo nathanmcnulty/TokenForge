@@ -1,7 +1,7 @@
 #Requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Weekly', 'Native', 'ReleaseGuards')]
+    [ValidateSet('Weekly', 'Native', 'Discovery', 'ReleaseGuards')]
     [string]$Preset = 'Weekly',
     [string]$NativeExecutable,
     [string]$ReportPath
@@ -41,8 +41,8 @@ try {
             $cursor = if ($cursor.Parent) { Get-Item -LiteralPath $cursor.Parent.FullName -Force } else { $null }
         }
     }
-    if ($Preset -in @('Weekly', 'Native')) {
-        if ([string]::IsNullOrWhiteSpace($NativeExecutable)) { throw 'NativeExecutable is required for the Weekly and Native presets.' }
+    if ($Preset -in @('Weekly', 'Native', 'Discovery')) {
+        if ([string]::IsNullOrWhiteSpace($NativeExecutable)) { throw 'NativeExecutable is required for the Weekly, Native, and Discovery presets.' }
         $exe = (Resolve-Path -LiteralPath $NativeExecutable).Path
         if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'NativeExecutable must be an existing Linux executable file.' }
         $executeBits = [IO.UnixFileMode]::UserExecute -bor [IO.UnixFileMode]::GroupExecute -bor [IO.UnixFileMode]::OtherExecute
@@ -60,6 +60,7 @@ try {
         'Weekly' {
             @('./tests/WeeklyCli.Tests.ps1', './tests/NativeWeekly.Tests.ps1', './tests/CiWeekly.Tests.ps1', './tests/CredentialBootstrap.Tests.ps1')
         }
+        'Discovery' { @('./tests/DiscoveryRun.Tests.ps1', './tests/DiscoveryBootstrap.Tests.ps1', './tests/ResearchCohort.Tests.ps1', './tests/SqliteCatalog.Tests.ps1', './tests/SqliteFlow.Tests.ps1', './tests/SqliteScope.Tests.ps1') }
         'Native' {
             $workflow = Get-Content -LiteralPath (Join-Path $repo '.github/workflows/native.yml') -Raw
             $match = [regex]::Match($workflow, '(?m)^\s*\$result\s*=\s*Invoke-Pester\s+(.+?)\s+-PassThru\b')

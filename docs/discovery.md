@@ -33,8 +33,18 @@ The working databases are `applications.sqlite`, `scopes.sqlite`, and `flows.sql
 
 Keep working databases private. Generate public observations separately with the existing `Export` and `ExportFlows` actions in `Invoke-TokenForgeInventory.ps1`; see [inventory](inventory.md) and [research cohorts](research-cohorts.md). Public source metadata, observed token scopes, and API permission definitions are separate kinds of evidence. Token scopes do not establish API acceptance or universal consent.
 
-SQLite is the working format. JSON is the exchange format. Avoid publishing private history snapshots or repeating the full application ledger inside every observation. Public exports retain their current schema for compatibility. Compact serialization, compression for downloads, and partitioned exports are the next storage improvements; they can be added without changing the transactional working stores.
+SQLite is the working format. JSON is the exchange format. Avoid publishing private history snapshots or repeating the full application ledger inside every observation. Public exports retain their current schema for compatibility. Generate a compact gzip copy with:
 
-The schema-2 public snapshot inspected during this work contained 5,455 applications: 31,932,994 bytes as published, 19,699,256 bytes after compact UTF-8 serialization, and 1,684,078 bytes after gzip. These are serialization measurements, not a completed discovery claim. Compression should be offered alongside the readable catalog so existing consumers keep working.
+```powershell
+./scripts/Export-TokenForgeCatalogDownload.ps1 `
+    -InputPath /path/to/public/applications.json `
+    -OutputPath /path/to/downloads/applications-2026-10-15.json.gz
+```
+
+The exporter validates the complete public catalog, including historical records, before creating output. It rejects tenant evidence and private source paths. It accepts JSON or a public-only SQLite ledger; SQLite input also requires `-NativeExecutablePath`. Existing output is never overwritten. Output uses UTF-8 without a BOM and preserves the complete document, dates, and field values. The summary contains application count, byte sizes, and a SHA-256 hash of the decompressed compact JSON. Gzip bytes may vary between runtime versions; the content hash identifies the JSON payload.
+
+Create downloads in a directory you control and publish them after the command succeeds. Generation is offline and does not replace the readable catalog or update published assets automatically. Give snapshots a date or content hash so consumers can distinguish them. A compressed snapshot describes the catalog at export time; it does not establish that every application has been tested. Partitioned exports remain future work.
+
+The schema-2 public snapshot inspected during this work contained 5,455 applications: 31,932,994 bytes as published, 19,699,256 bytes after compact UTF-8 serialization, and 1,770,783 bytes after export with the gzip command above. The complete read, public validation, and export took 158.7 seconds locally; an independent decompression check matched every source value. These are serialization measurements, not a completed discovery claim. Compression should be offered alongside the readable catalog so existing consumers keep working.
 
 The final JSON contains aggregate counts or a bounded failure stage (`Configuration`, `Authentication`, `Authorization`, `Identity`, `PublicSources`, `Inventory`, or `Discovery`). A nonzero exit means work stopped; checkpoints are retained. No identity response body or raw exception is printed.

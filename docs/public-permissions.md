@@ -29,3 +29,20 @@ Each file describes one resource, identified by `ResourceId`; join that ID to `a
 Output is UTF-8 compact JSON, limited to 4 MiB. Downloads use a fixed HTTPS endpoint, no redirects, no cookies or credentials, a 30-second deadline, and a streamed size bound. Reads reject duplicate JSON fields, unknown attributes, malformed types, duplicate IDs/values within a permission kind, invalid text, and linked paths. An output is published atomically from a temporary file and never overwrites an existing path. `-WhatIf` performs no download or write.
 
 Keep immutable snapshots under commit-specific names when publishing. Reproduce them with the importer and compare the raw-source hash; a structurally valid file alone does not authenticate its provenance. Preserve the source's MIT license and attribution alongside redistributed definitions. The existing CI publisher does not generate or stage this new dataset automatically. Additional resource sources and automated publication remain future work.
+
+## Compare identifiers with the application catalog
+
+Documentation sources can contain permission GUIDs as well as app IDs. Compare a public application ledger with a saved permission snapshot offline:
+
+```powershell
+./scripts/Compare-TokenForgePermissionIdentifiers.ps1 `
+    -CatalogPath ./applications.json `
+    -PermissionSnapshotPath ./graph-permissions-b9a67f1.json |
+    ConvertTo-Json -Depth 16
+```
+
+The default returns counts and input provenance. Add `-IncludeMatches` for sorted IDs and their permission type/value pairs. One ID can have definitions in both permission kinds; identifier and definition counts are separate. A match establishes an overlap with a public Graph permission definition. It does not establish an application identity, ownership, consent, or the absence of an application with the same ID. Unmatched IDs remain unknown.
+
+This comparison uses the TokenForge module and its complete public-ledger validator, including historical records. It accepts a public-only SQLite catalog with `-NativeExecutablePath`, or public JSON. It performs no login, network requests, registration, or input updates. It rejects private catalogs rather than filtering their contents into a public report. Permission snapshot validation alone does not authenticate the publisher's provenance.
+
+Source metadata is stored once in the result, with compact validated-document hashes for both inputs (`HashKind=ValidatedCompactJson`). These hashes identify the PowerShell serialization of the documents actually compared, rather than the original files' byte layout. The output contains no full catalog history or repeated permission descriptions. JSON serialization and any output-file permissions are controlled by the caller.

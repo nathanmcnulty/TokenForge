@@ -9,6 +9,7 @@ The runner downloads public application sources, confirms the signed-in account 
 - PowerShell 7.4+ and a trusted Linux TokenForge native package matching the source version.
 - An authorized software passkey and XDRInternals authentication module, or an existing SecureString ESTS session.
 - A private state directory outside your Git checkout, with one directory per account.
+- A private passkey file and containing directory. On Unix use mode 0600 for the file and 0700 for its directory; file permissions alone are insufficient.
 
 ```powershell
 pwsh -NoProfile -File ./scripts/Invoke-TokenForgeDiscoveryRun.ps1 `

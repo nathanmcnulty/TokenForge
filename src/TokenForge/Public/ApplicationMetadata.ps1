@@ -182,7 +182,7 @@ function Update-TokenForgeApplicationMetadata {
                 $fields=switch($nested){
                     {$_ -in @('Grants','PublishedGrants')} {@('ResourceId','Scopes')}
                     DelegatedScopeDefinitions {@('Id','Value','Enabled','ConsentType','AdminConsentDisplayName','AdminConsentDescription','UserConsentDisplayName','UserConsentDescription')}
-                    AppRoleDefinitions {@('Id','Value','DisplayName','Description','AllowedMemberTypes','Enabled')}
+                    AppRoleDefinitions {@('Id','Value','DisplayName','Description','AllowedMemberTypes','Enabled','Origin')}
                     default {@('Value','Count')}
                 }
                 $attributes[$nested]=@(foreach($entry in $attributes[$nested]){

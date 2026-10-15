@@ -95,8 +95,11 @@ public static class ApplicationCatalogPolicy
             var value=field.Value;if(value.ValueKind==JsonValueKind.Null)continue;
             if(field.Name is "Grants" or "PublishedGrants" or "DelegatedScopeDefinitions" or "AppRoleDefinitions" || field.Name.EndsWith("Counts",StringComparison.Ordinal)){
                 if(value.ValueKind!=JsonValueKind.Array)throw Invalid();foreach(var item in value.EnumerateArray()){
-                    var columns=field.Name switch {"Grants" or "PublishedGrants"=>"ResourceId Scopes","DelegatedScopeDefinitions"=>"Id Value Enabled ConsentType AdminConsentDisplayName AdminConsentDescription UserConsentDisplayName UserConsentDescription","AppRoleDefinitions"=>"Id Value DisplayName Description AllowedMemberTypes Enabled",_=>"Value Count"};
-                    AllowedKeys(item,columns);foreach(var leaf in item.EnumerateObject())ValidateLeaf(leaf.Name,leaf.Value);
+                    var columns=field.Name switch {"Grants" or "PublishedGrants"=>"ResourceId Scopes","DelegatedScopeDefinitions"=>"Id Value Enabled ConsentType AdminConsentDisplayName AdminConsentDescription UserConsentDisplayName UserConsentDescription","AppRoleDefinitions"=>"Id Value DisplayName Description AllowedMemberTypes Enabled Origin",_=>"Value Count"};
+                    AllowedKeys(item,columns);
+                    if(field.Name=="AppRoleDefinitions" && item.TryGetProperty("Origin",out var origin) &&
+                        (origin.ValueKind!=JsonValueKind.String || origin.GetString() is not ("Application" or "ServicePrincipal" or "Unknown")))throw Invalid();
+                    foreach(var leaf in item.EnumerateObject())ValidateLeaf(leaf.Name,leaf.Value);
                 }
             }else ValidateLeaf(field.Name,value);
         }

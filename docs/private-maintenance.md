@@ -1,74 +1,80 @@
 # Private metadata maintenance
 
-Hosted Actions are currently disabled to protect the runner budget. Scheduled runs have been removed; execution requires a new explicit user instruction and manual enable/dispatch. No background catalog or maintenance runs are authorized.
+Use encrypted CI artifacts as short-lived recovery snapshots, with a separate protected backup for long-term history. Artifacts in this public repository are downloadable by readers, so upload only `maintenance.sealed`, never plaintext metadata or credentials.
 
-A public repository's artifacts are downloadable by readers. This workflow therefore uploads **only authenticated-encrypted metadata**, using artifacts as recovery snapshots. Keep a separate protected backup for authoritative long-term history; artifact retention is not a durable database.
+GitHub Actions are currently disabled. The workflow is manual-only and requires a new explicit instruction before enabling or dispatching it. Use [local discovery](discovery.md) for collection that does not consume runner minutes.
 
-When an explicitly approved manual run is enabled, the main-only workflow:
+## What a maintenance run does
 
-1. Downloads the newest unexpired `maintenance-snapshot-v1` artifact from a main-branch run. Missing artifacts start a new catalog; damaged or incompatible snapshots stop restoration rather than silently discarding history.
-2. Signs Nora in using repository-secret software passkey values. It obtains a fresh Graph token through the fixed Graph Command Line Tools client using existing authorization, checks the expected tenant/account/client/audience, and verifies the account through Graph `/me`.
-3. Authenticates and decrypts the prior snapshot inside a temporary private directory. The encryption context binds `private-maintenance/v1`, the tenant fingerprint, and the account fingerprint.
-4. Refreshes public source discovery and preserves private candidates previously observed in sign-ins. A sign-in observation does not establish Microsoft ownership. Fresh inventory separately checks tenant service-principal registration, ownership, configuration, API definitions, and configured grants.
-5. Reads at most 20 pages of sign-ins from the preceding seven days and retains only app IDs and bounded authentication summaries. It stores no raw events, usernames, IP addresses, cookies, or tokens. Manual `skip_signins` permits inventory-only maintenance; `sign_in_days` (1–31) and `max_pages` (1–1000) bound log volume.
-6. Updates the application catalog's provenance, observation dates, changed attributes, prior versions, and successful query windows. Distinct complete configured-grant snapshots retain their first/last observation dates. Failed or forbidden enumerations preserve the previous successful history and dates; the new attempt receives a separate status.
-7. Encrypts the projected catalog, grant history, and latest run status; writes the ciphertext atomically; disposes credentials; removes temporary plaintext; and uploads only `maintenance.sealed`.
+When explicitly approved, the main-branch Linux workflow:
 
-The workflow never registers applications, grants consent, or probes a matrix of tokens. Administrative registration remains a separate explicit CLI stage. No private metadata is committed to `discovery-data`, and no privileged secadmin passkey is added to Actions.
+1. Downloads the newest unexpired `maintenance-snapshot-v1` artifact from a main-branch run. A missing artifact starts a new catalog; a damaged or incompatible snapshot stops restoration.
+2. Uses Nora's repository-secret software passkey values to obtain a fresh Graph session through the fixed Graph Command Line Tools client. It checks the tenant, account, client, audience, and Graph `/me` identity before accepting saved history.
+3. Authenticates and decrypts the prior snapshot in a temporary private directory.
+4. Refreshes public application sources and tenant inventory, retaining private candidates previously observed in sign-ins. It records registration, ownership, configuration, API definitions, and configured grants.
+5. Reads a bounded sign-in window and retains app IDs and authentication summaries. It excludes raw events, usernames, IP addresses, cookies, and tokens.
+6. Encrypts the catalog, grant history, and run status, removes temporary plaintext, and uploads only the encrypted snapshot.
 
-## Interpreting status
+The default sign-in window is seven days with a 20-page limit. Manual inputs allow 1–31 days and 1–1000 pages; `skip_signins` selects inventory-only maintenance. Reaching a page limit fails the enumeration rather than saving an incomplete result as complete.
 
-`Complete` means the selected read stages completed, not that every app supports every authentication flow. `Partial` means inventory completed but grants or sign-ins were unavailable, including HTTP 403. Prior evidence remains historical and does not become fresh. `Failed` means a required stage or bounded sign-in enumeration failed; when possible the workflow still uploads encrypted recovery metadata. Pagination limits do not produce an empty complete sign-in snapshot. The encrypted latest status records a bounded failure category such as `EnumerationBounded` or `TransientTransport`, without retaining exception bodies.
+Maintenance does not register applications, grant consent, or request a token matrix. Registration is a separate explicit [inventory stage](inventory.md). Sign-in observations identify candidates; they do not establish Microsoft ownership. Private metadata is never committed to `discovery-data`, and the secadmin passkey is not added to Actions.
 
-Successful sign-in query windows remain in `Metadata.Runs[].Window`. `LastRun.SignInSince/Until` describe the latest attempted window, which can differ from the last successful window. `GrantHistory` contains only complete sanitized grant sets, with hashed principal identifiers; a later forbidden grant read leaves them intact.
+## Read the results
 
-## Storage and recovery
+| Status | Meaning |
+| --- | --- |
+| `Complete` | The selected read stages completed. This does not prove support for every authentication flow. |
+| `Partial` | Inventory completed, but grants or sign-ins were unavailable, including HTTP 403. |
+| `Failed` | A required stage or bounded sign-in enumeration failed. An encrypted recovery snapshot is still saved when possible. |
 
-`TOKENFORGE_CHECKPOINT_KEY` is a random 256-bit repository **secret**, shared with research checkpoints. Independent random AES-GCM nonces and different authenticated contexts separate the payloads. The encrypted envelope is capped at 128 MiB. It contains diagnostic metadata only; authentication profiles and credential directories are excluded. The code rejects credential-bearing restore fields and mismatched account namespaces.
+Failed or forbidden reads preserve prior successful observations and their dates. They record a separate attempt status instead of making historical data appear fresh. Complete configured-grant snapshots retain their first and last observation dates.
 
-Snapshots have 15-day retention, enough to bridge one missed weekly run. Two missed runs, artifact deletion, or loss of the key can still lose recovery history. Back up the ciphertext and key separately in protected storage. Key rotation requires an intentional migration or a fresh catalog; old ciphertext cannot be decrypted with the new key. Use short retention for artifacts and a dedicated private store when longer retention, audit guarantees, or multiple observers become necessary.
+`Metadata.Runs[].Window` records successful sign-in query windows. `LastRun.SignInSince/Until` records the latest attempted window, which may differ. Only aggregate stage statuses appear in runner logs; detailed metadata and bounded failure categories remain encrypted.
 
-Only aggregate stage statuses appear in runner logs. Detailed IDs, counts, configured grants, and history are inside the encrypted payload. GitHub's passkey login action necessarily handles credentials during authentication; its values remain repository secrets and are never part of the metadata snapshot.
+## Protect the snapshot and key
 
-## Weekly plan portability
+`TOKENFORGE_CHECKPOINT_KEY` is a random 256-bit repository **secret**, shared with research checkpoints. AES-GCM uses independent random nonces and an authenticated context containing `private-maintenance/v1`, the tenant fingerprint, and the account fingerprint. Restoration rejects a mismatched context or credential-bearing fields. The encrypted envelope is limited to 128 MiB plus its 29-byte framing.
 
-Recipe hashes now normalize parsed dates to UTC offsets, so a plan created on a UTC runner verifies on Windows, macOS, or Linux in another timezone. Existing UTC CI hashes remain unchanged. Recipes generated outside UTC by the earlier hashing implementation may require rebuilding; this does not change the meaning of historical anonymous scope observations.
+The snapshot contains diagnostic metadata, not authentication profiles or credential directories. Passkey values also belong in repository **secrets**. Neither the key nor the passkey belongs in an artifact.
 
-## Bounded validation on 2026-10-07
+Artifacts expire after 15 days. This can bridge one missed weekly run, but deletion, a longer gap, or loss of the key can lose recovery history. Save ciphertext on an independently protected backup medium and keep the key separately. Key rotation requires an intentional migration or a fresh catalog; the new key cannot decrypt old snapshots.
 
-The [sanitized report](private-maintenance-validation-2026-10-07.json) covers encrypted maintenance and restored-history proofs with both Nora and secadmin. Nora completed inventory and grant reads while sign-in access was forbidden. Secadmin completed a one-day sign-in read with a 50-page cap; the initial five-page limit correctly refused incomplete enumeration. Neither proof registered applications, granted consent, or persisted credentials. Hosted runs [37685631049](https://github.com/nathanmcnulty/TokenForge/actions/runs/37685631049) and [37685952513](https://github.com/nathanmcnulty/TokenForge/actions/runs/37685952513) subsequently passed initial snapshot upload and encrypted restoration. Downloaded artifacts verified the expected account context, preserved catalog history, and contained no credential fields.
+## Save and verify a local backup
 
-## Keeping a durable local backup
+Download `maintenance.sealed` into a private directory outside the repository, then create an immutable copy:
 
-After downloading `maintenance.sealed` into a private local directory, save an immutable copy outside the repository:
+```sh
+tokenforge research backup --snapshot-path /private/maintenance.sealed --backup-directory /private/backups --json
+```
+
+The PowerShell equivalent is:
 
 ```powershell
 ./scripts/Export-TokenForgeMaintenanceBackup.ps1 `
-  -SnapshotPath /private/path/maintenance.sealed `
-  -BackupDirectory /private/path/maintenance-backups
+    -SnapshotPath /private/maintenance.sealed `
+    -BackupDirectory /private/backups
 ```
 
-The command also ships in the PowerShell CLI ZIP. It creates private backup storage when needed, rejects links and broadly accessible source or destination directories, and uses the ciphertext SHA-256 as the filename. Identical snapshots reuse the existing file; corrupt or different bytes at that filename cause failure. `-WhatIf` reads no snapshot and writes nothing. No key, passkey, cookie, or decrypted metadata is needed or copied.
+Backup runs offline without an authentication profile or key. It names the copy by its ciphertext SHA-256, reuses identical bytes, and refuses conflicting content. It rejects links and broadly accessible source or destination directories. Unix backup storage must support hard links for atomic publication. The hash verifies byte identity; `Authenticated=false` means this copy operation has not authenticated the encrypted payload.
 
-The hash checks copied bytes; it does not authenticate the encrypted payload. The output explicitly reports `Authenticated=false`. Version 0.46 adds packaged native `research inspect-backup` and `research restore-backup` commands for offline recovery; see [native CLI examples](native-cli.md#encrypted-maintenance-backups). These authenticate the encrypted envelope with the original separately protected key and explicit expected account fingerprints, validate all catalog history, grants and run metadata, and report `FreshAuthenticationPerformed=false`. Restoration preserves the exact validated full envelope in a new private plaintext file without overwriting an existing destination. Early schema-1 snapshots may lack `LastRun.SignInFailureReason`; the missing category remains unknown and is preserved as absent. All other run fields are required, and unknown fields are rejected.
+Authenticate the snapshot with the original separately protected Base64 key file and both expected account fingerprints:
 
-To resume fresh account maintenance, use the repository's `Invoke-TokenForgeCiMaintenance.ps1 -CheckpointInputPath <backup-file>` with the original key and expected context. That workflow additionally verifies fresh account identity before using history; its scripts are not included in the CLI ZIP. Keep periodic ciphertext copies on an independently protected backup medium and keep the key separately. A local copy alone does not protect against loss of the same disk, and the backup command does not upload keys or select an external storage provider. Restored plaintext is private historical evidence; remove it when finished.
-
-The [0.46 local validation report](native-maintenance-recovery-validation-2026-10-13.json) covers native recovery fixtures and read-only restoration of both existing account snapshots. CI uses the same full-envelope validation before reuse and before encryption, with string-preserving parsing so date-looking application names retain their source text. Hosted and final published-package validation are separate gates.
-
-The same copy is available through both CLI entry points without an authentication profile:
-
-```powershell
-./scripts/tokenforge.ps1 research backup -SnapshotPath /private/path/maintenance.sealed -BackupDirectory /private/path/maintenance-backups -Json
-tokenforge research backup --snapshot-path /private/path/maintenance.sealed --backup-directory /private/path/maintenance-backups --json
+```sh
+tokenforge research inspect-backup --snapshot-path /private/maintenance.sealed --key-file /private/key.txt --tenant-fingerprint <expected-tenant-hash> --principal-fingerprint <expected-account-hash> --json
 ```
 
-Version 0.34 runs research backup directly in the native CLI, without PowerShell or an authentication profile. The script and CLI share the same BCL backup service. The command handles ciphertext only and performs no login or token request. Concurrent identical copies converge on one file; conflicting content is never overwritten. It checks the envelope version and bounded size, but does not decrypt or authenticate the payload.
+For offline plaintext restoration, use `research restore-backup` with a new `--output-path`; see [native CLI recovery](native-cli.md#encrypted-maintenance-backups) for the full command and key-file requirements. Inspection and restoration validate the complete historical envelope. They report `FreshAuthenticationPerformed=false`: authenticating saved ciphertext does not establish current account authorization.
 
-The [0.34 validation report](native-maintenance-backup-validation-2026-10-11.json) records native copies and deduplicated repeats of existing Nora and secadmin maintenance snapshots, plus bounded corruption, concurrency and private-path fixtures. The native child ran without PowerShell on its PATH. These copy proofs do not refresh metadata or authenticate the ciphertext.
+Restoration never overwrites an existing destination. Keep restored plaintext private and delete it when finished. If the result reports `CleanupFailed=true`, inspect the private directory for leftovers before retrying.
 
-Version 0.34.1 fixes concurrent publication on Unix: a hard link publishes the complete, flushed temporary file only when the destination does not exist. Windows uses its no-overwrite move. Exactly one concurrent writer reports `Saved=true`; other writers verify the existing bytes. Unix backup storage must support hard links; unsupported filesystems fail without an overwrite or copy fallback. The temporary file is removed after publication.
+To refresh account maintenance using a backup, pass `-CheckpointInputPath <backup-file>` to the repository's `Invoke-TokenForgeCiMaintenance.ps1` with its required credentials and original expected context. It verifies fresh account identity before reusing history. The CI maintenance script is not included in the CLI ZIP; the backup script is.
 
-The [0.34.1 publication report](native-backup-publication-validation-2026-10-11.json) records the failing hosted regression and the fixed Linux races and existing-snapshot copy proofs.
+## Validation evidence
 
-Version 0.35.1 reuses that publication primitive for profile and vault creation too. Backup behavior and key custody are unchanged.
+These reports record bounded historical checks, not a claim that a current maintenance run has completed:
+
+- [Private maintenance](private-maintenance-validation-2026-10-07.json): encrypted maintenance and preserved history with Nora and secadmin.
+- [Native backup](native-maintenance-backup-validation-2026-10-11.json) and [atomic publication](native-backup-publication-validation-2026-10-11.json): copies, deduplication, corruption, concurrency, and private-path checks.
+- [Native recovery](native-maintenance-recovery-validation-2026-10-13.json): complete-envelope validation and offline restoration of both account snapshots.
+
+For research recipe portability and scheduling, see [weekly discovery](weekly-ci.md).

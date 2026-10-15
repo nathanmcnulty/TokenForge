@@ -20,6 +20,7 @@ Describe 'Bounded local discovery orchestration' {
   }
   Mock Invoke-TokenForgeResearchChunk -ModuleName TokenForge {
    $n=[int](Get-Content $counter);Set-Content $counter ($n-1)
+   [pscustomobject]@{PlanId=('c'*64);PendingClients=($n-1)}
   }
  }
  AfterEach {$cookie.Dispose()}
@@ -29,6 +30,7 @@ Describe 'Bounded local discovery orchestration' {
   $r.CompletedClients|Should -Be 3
   $r.ChunksExecuted|Should -Be 3
   $r.CredentialOutput|Should -BeFalse
+  Should -Invoke Get-TokenForgeResearchCohort -ModuleName TokenForge -Times 0 -Exactly
   Should -Invoke Invoke-TokenForgeResearchChunk -ModuleName TokenForge -Times 3 -Exactly -ParameterFilter {$DatabasePath.EndsWith('scopes.sqlite') -and $FlowDatabasePath.EndsWith('flows.sqlite') -and $MetadataPath.EndsWith('applications.sqlite')}
  }
  It 'stops at a chunk budget and resumes the saved cohort without creating another' {
@@ -37,6 +39,7 @@ Describe 'Bounded local discovery orchestration' {
   $r.PendingClients|Should -Be 2
   $r=Invoke-TokenForgeDiscoveryRun @options
   $r.Status|Should -Be Complete
+  Should -Invoke Get-TokenForgeResearchCohort -ModuleName TokenForge -Times 1 -Exactly
   Should -Invoke New-TokenForgeResearchCohort -ModuleName TokenForge -Times 1 -Exactly
  }
  It 'does not request tokens when a saved run is complete' {
@@ -68,14 +71,29 @@ Describe 'Bounded local discovery orchestration' {
   Should -Invoke New-TokenForgeResearchCohort -ModuleName TokenForge -Times 1 -Exactly
  }
  It 'stops instead of looping when no checkpoints advance' {
-  Mock Invoke-TokenForgeResearchChunk -ModuleName TokenForge {}
+  Mock Invoke-TokenForgeResearchChunk -ModuleName TokenForge {[pscustomobject]@{PlanId=('c'*64);PendingClients=3}}
   {Invoke-TokenForgeDiscoveryRun @options}|Should -Throw '*no checkpoint progress*'
   Test-Path (Join-Path $state 'discovery-run.json')|Should -BeTrue
+ }
+ It 'rejects an invalid chunk summary (<Case>) and retains the run manifest' -ForEach @(
+  @{Case='missing result';Summary=$null},
+  @{Case='missing cohort';Summary=@{PendingClients=0}},
+  @{Case='wrong cohort';Summary=@{PlanId=('e'*64);PendingClients=0}},
+  @{Case='missing pending count';Summary=@{PlanId=('c'*64)}},
+  @{Case='string count';Summary=@{PlanId=('c'*64);PendingClients='0'}},
+  @{Case='fractional count';Summary=@{PlanId=('c'*64);PendingClients=0.5}},
+  @{Case='negative count';Summary=@{PlanId=('c'*64);PendingClients=-1}},
+  @{Case='count above membership';Summary=@{PlanId=('c'*64);PendingClients=4}}
+ ) {
+  Mock Invoke-TokenForgeResearchChunk -ModuleName TokenForge {if($null -ne $Summary){[pscustomobject]$Summary}}
+  {Invoke-TokenForgeDiscoveryRun @options}|Should -Throw '*chunk summary*'
+  Test-Path (Join-Path $state 'discovery-run.json')|Should -BeTrue
+  Should -Invoke Get-TokenForgeResearchCohort -ModuleName TokenForge -Times 0 -Exactly
  }
  It 'releases the workspace lock on failure' {
   Mock Invoke-TokenForgeResearchChunk -ModuleName TokenForge {throw 'synthetic failure'}
   {Invoke-TokenForgeDiscoveryRun @options}|Should -Throw
-  Mock Invoke-TokenForgeResearchChunk -ModuleName TokenForge {Set-Content $counter 0}
+  Mock Invoke-TokenForgeResearchChunk -ModuleName TokenForge {Set-Content $counter 0;[pscustomobject]@{PlanId=('c'*64);PendingClients=0}}
   (Invoke-TokenForgeDiscoveryRun @options).Status|Should -Be Complete
  }
  It 'rejects a changed manifest before requesting tokens' {

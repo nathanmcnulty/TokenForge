@@ -36,15 +36,16 @@ function Invoke-TokenForgeDiscoveryRun {
         $recipe=$cohort.Cohort
         $inventoryHash=Get-TokenForgeFingerprint (ConvertTo-Json -InputObject @($Inventory.Applications|Sort-Object {[string]$_.AppId}) -Depth 32 -Compress)
         if($Inventory.TenantFingerprint -cne $recipe.TenantFingerprint -or $Inventory.PrincipalFingerprint -cne $recipe.PrincipalFingerprint -or $inventoryHash -cne $recipe.InventoryHash -or $Inventory.DiscoveryCatalogHash -cne $recipe.CatalogHash){throw 'Inventory differs from the frozen cohort. Create a new run after reviewing refreshed metadata.'}
-        $reason='Complete'
-        while($cohort.Pending.Count){
+        $reason='Complete';$pending=$cohort.Pending.Count
+        while($pending){
             if($chunks -ge $MaxChunks -or $timer.Elapsed.TotalMinutes -ge $MaxMinutes){$reason='BudgetReached';break}
-            $before=$cohort.Pending.Count
+            $before=$pending
             $result=Invoke-TokenForgeResearchChunk -Inventory $Inventory -EstsAuth $EstsAuth -DatabasePath $database -CohortId $cohort.PlanId -FlowDatabasePath $flows -MetadataPath $metadata -NativeExecutablePath $NativeExecutablePath -Confirm:$false
             $chunks++
-            $cohort=Get-TokenForgeResearchCohort -DatabasePath $database -CohortId $cohort.PlanId -NativeExecutablePath $NativeExecutablePath
-            if($cohort.Pending.Count -ge $before){throw 'Discovery made no checkpoint progress; inspect the saved evidence before retrying.'}
+            if($null -eq $result -or $null -eq $result.PSObject.Properties['PlanId'] -or $null -eq $result.PSObject.Properties['PendingClients'] -or $result.PlanId -cne $cohort.PlanId -or ($result.PendingClients -isnot [int] -and $result.PendingClients -isnot [long]) -or $result.PendingClients -lt 0 -or $result.PendingClients -gt $cohort.ClientCount){throw 'Invalid discovery chunk summary; saved checkpoints are retained for retry.'}
+            $pending=$result.PendingClients
+            if($pending -ge $before){throw 'Discovery made no checkpoint progress; inspect the saved evidence before retrying.'}
         }
-        [pscustomobject]@{SchemaVersion=1;Status=$reason;CohortId=$cohort.PlanId;Clients=$cohort.ClientCount;CompletedClients=$cohort.CompletedClients;PendingClients=$cohort.Pending.Count;ChunksExecuted=$chunks;CredentialOutput=$false}
+        [pscustomobject]@{SchemaVersion=1;Status=$reason;CohortId=$cohort.PlanId;Clients=$cohort.ClientCount;CompletedClients=($cohort.ClientCount-$pending);PendingClients=$pending;ChunksExecuted=$chunks;CredentialOutput=$false}
     }finally{if($lock){$lock.Dispose()}}
 }

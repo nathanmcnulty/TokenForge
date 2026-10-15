@@ -6,7 +6,9 @@ The project provides a PowerShell module and a native CLI. Discovery execution c
 
 ## Application database
 
-The [public application catalog](https://github.com/nathanmcnulty/TokenForge/blob/discovery-data/applications.json) tracks known app IDs, published metadata, sources, and observation dates. [Observed scopes](https://github.com/nathanmcnulty/TokenForge/tree/discovery-data/scopes) are published separately.
+The [public application catalog](https://github.com/nathanmcnulty/TokenForge/blob/discovery-data/applications.json) tracks candidate IDs, published metadata, sources, and observation dates. [Observed scopes](https://github.com/nathanmcnulty/TokenForge/tree/discovery-data/scopes) are published separately.
+
+Documentation sources can also contain permission IDs and other GUIDs; catalog inclusion does not establish application identity. The [offline identifier comparison](docs/public-permissions.md#compare-identifiers-with-the-application-catalog) helps distinguish permission-ID overlaps.
 
 Published permissions and observed token scopes are evidence, not a guarantee of consent or API access. Results depend on the account, tenant, application, resource, and authentication flow. Missing metadata means unknown; it does not mean an application has no permissions.
 

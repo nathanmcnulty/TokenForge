@@ -13,7 +13,9 @@ param(
  [ValidateRange(1,1000)][int]$BatchSize=25,
  [ValidateRange(1,1000)][int]$MaxRedirects=8,
  [ValidateRange(1,100000)][int]$MaxChunks=100000,
- [ValidateRange(1,10080)][int]$MaxMinutes=60
+ [ValidateRange(1,10080)][int]$MaxMinutes=60,
+ [ValidateRange(0,10)][int]$MaxTransientRetries=3,
+ [ValidateRange(1,300)][int]$RetryDelaySeconds=30
 )
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1') -Force -Verbose:$false
@@ -65,10 +67,11 @@ try{
  if($inventory.TenantFingerprint -cne $claims.TenantFingerprint -or $inventory.PrincipalFingerprint -cne $claims.PrincipalFingerprint){throw 'Inventory account mismatch.'}
  $failure='Discovery'
  Write-Verbose 'Discovery stage: Discovery'
- $result=Invoke-TokenForgeDiscoveryRun -Inventory $inventory -EstsAuth $cookie -StatePath $root -NativeExecutablePath $NativeExecutablePath -NewRun:$NewRun -GraphOnly:$GraphOnly -BatchSize $BatchSize -MaxRedirects $MaxRedirects -MaxChunks $MaxChunks -MaxMinutes $MaxMinutes -ExploreAllFlows:$ExploreAllFlows -Verbose:$false
+ $result=Invoke-TokenForgeDiscoveryRun -Inventory $inventory -EstsAuth $cookie -StatePath $root -NativeExecutablePath $NativeExecutablePath -NewRun:$NewRun -GraphOnly:$GraphOnly -BatchSize $BatchSize -MaxRedirects $MaxRedirects -MaxChunks $MaxChunks -MaxMinutes $MaxMinutes -MaxTransientRetries $MaxTransientRetries -RetryDelaySeconds $RetryDelaySeconds -ExploreAllFlows:$ExploreAllFlows -Verbose:$false
  Write-Verbose 'Discovery stage: Finished'
  $result|ConvertTo-Json -Compress
 }catch{
+ if($_.FullyQualifiedErrorId.Split(',')[0] -ceq 'TokenForge.TransientIdentity' -and $_.CategoryInfo.Category -eq [Management.Automation.ErrorCategory]::ResourceUnavailable){$failure='TransientIdentity'}
  [pscustomobject]@{SchemaVersion=1;Status='Stopped';Reason=$failure;CheckpointsRetained=$true;CredentialOutput=$false}|ConvertTo-Json -Compress
  exit 1
 }finally{

@@ -44,7 +44,11 @@ Describe 'Frozen namespace-bound research cohorts' -Skip:(-not $nativeAvailable)
   $cohort=New-TokenForgeResearchCohort @create
   Mock Get-TokenForgeToken -ModuleName TokenForge {throw 'Identity request failed (HTTP 429); details suppressed.'}
   $run=@{Inventory=$inventory;EstsAuth=$secret;DatabasePath=$path;CohortId=$cohort.PlanId;MetadataPath=$metadata;NativeExecutablePath=$native;DelayMilliseconds=0}
-  {Invoke-TokenForgeResearchChunk @run}|Should -Throw '*transient identity failure*'
+  $caught=$null
+  try {Invoke-TokenForgeResearchChunk @run} catch {$caught=$_}
+  $caught|Should -Not -BeNullOrEmpty
+  $caught.FullyQualifiedErrorId.Split(',')[0]|Should -BeExactly 'TokenForge.TransientIdentity'
+  $caught.CategoryInfo.Category|Should -Be ([Management.Automation.ErrorCategory]::ResourceUnavailable)
   (Get-TokenForgeResearchCohort $path $cohort.PlanId -NativeExecutablePath $native).Pending.Count|Should -Be 2
   (Get-TokenForgeScopeDatabase $path -NativeExecutablePath $native).Observations.Count|Should -Be 0
   $flow=Get-TokenForgeFlowEvidence (Join-Path $root flows.sqlite) -NativeExecutablePath $native

@@ -20,7 +20,7 @@ pwsh -NoProfile -File ./scripts/Invoke-TokenForgeDiscoveryRun.ps1 `
     -MaxMinutes 60
 ```
 
-Rerun the same command to resume. Completed flow cells are checkpointed before the next request; a completed client is not requested again within that cohort. A run stops at its chunk or time budget, or when an error prevents progress. Throttling, server errors, and transport timeouts leave the affected client pending; rerun after the service recovers. The time budget is checked between chunks, so one chunk may extend beyond it. Smaller `-BatchSize` values give shorter stopping intervals.
+Rerun the same command to resume. Completed flow cells are checkpointed before the next request; a completed client is not requested again within that cohort. A run stops at its chunk or time budget, or when an error prevents progress. Throttling, server errors, and transport timeouts leave the affected client pending. The runner retries these failures up to three times per invocation, waiting 30, 60, then 120 seconds. Completed clients remain checkpointed. Use `-MaxTransientRetries 0` to disable retries or change the initial wait with `-RetryDelaySeconds` (subsequent waits double, capped at 300 seconds). Other failures stop immediately. Retries reuse the current session; they never sign in again or request consent. The time budget is checked between chunks, so one chunk may extend beyond it. Smaller `-BatchSize` values give shorter stopping intervals. Failed chunk attempts count toward `-MaxChunks`; the runner also stops before a retry wait that would consume its remaining time budget. Results distinguish `ChunkAttempts`, successfully returned `ChunksExecuted`, and `TransientRetries`.
 
 Check progress in another terminal without authentication:
 
@@ -61,6 +61,6 @@ Create downloads in a directory you control and publish them after the command s
 
 The schema-2 public snapshot inspected during this work contained 5,455 applications: 31,932,994 bytes as published, 19,699,256 bytes after compact UTF-8 serialization, and 1,770,783 bytes after export with the gzip command above. The complete read, public validation, and export took 158.7 seconds locally; an independent decompression check matched every source value. These are serialization measurements, not a completed discovery claim. Compression should be offered alongside the readable catalog so existing consumers keep working.
 
-The final JSON contains aggregate counts or a bounded failure stage (`Configuration`, `Authentication`, `Authorization`, `Identity`, `PublicSources`, `Inventory`, or `Discovery`). A nonzero exit means work stopped; checkpoints are retained. No identity response body or raw exception is printed.
+The final JSON contains aggregate counts or a bounded failure stage (`Configuration`, `Authentication`, `Authorization`, `Identity`, `PublicSources`, `Inventory`, `Discovery`, or `TransientIdentity` after retry exhaustion). A nonzero exit means work stopped; checkpoints are retained. No identity response body or raw exception is printed.
 
 Use `-Verbose` to see fixed stage names while a run is active. These messages identify preparation versus token research without printing URLs, request bodies, scopes, or account identifiers. Normal output remains one JSON result. For automated runs, capture PowerShell verbose stream 4 separately from the JSON output.

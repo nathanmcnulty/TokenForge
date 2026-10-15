@@ -102,3 +102,11 @@ $combined = Merge-TokenForgeScopeDatabase -Database $sources -Path $combinedPath
 A merge of live checkpoint files is a snapshot of their progress, not proof that their scans completed. Save a final merged snapshot after the source workers finish, then compare it with the previous snapshot and export anonymous observations as needed.
 
 For current primary storage and frozen batch maintenance, see [SQLite application metadata](sqlite-application-catalog.md), [scope/registration history](sqlite-scope-history.md), and [research cohorts](research-cohorts.md).
+
+## Registration interruptions
+
+Registration keeps a checkpoint for each attempted app. Resume repairs skipped checkpoints in one metadata update before making another request. After Graph exhausts its per-call retries, HTTP 429 or 5xx stops the batch before another candidate is attempted. Resume later with the same state; these temporary failures are reconsidered automatically. Other failed candidates remain skipped unless you deliberately use `-RetryFailures`.
+
+HTTP 401/403, transport failures, and unverified responses also stop after checkpointing. Restore the authorized session or service first, then inspect the checkpoint and use `-RetryFailures` where appropriate. The tool does not sign in again or grant consent automatically.
+
+If creation fails and reconciliation finds a principal whose Microsoft ownership cannot be verified, registration records `CleanupRequired` and stops. It does not delete that ambiguously created object. Verify cleanup and append the existing `CleanupResolved` record before resuming; `-RetryFailures` cannot bypass this requirement.

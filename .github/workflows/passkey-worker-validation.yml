@@ -40,21 +40,20 @@ jobs:
           EXPECTED_UPN: ${{ secrets.PASSKEY_PRIVATE_USER_PRINCIPAL_NAME }}
           EXPECTED_OBJECT_ID: ${{ vars.PASSKEY_EXPECTED_OBJECT_ID }}
           TENANT_ID: ${{ vars.PASSKEY_TENANT_ID }}
-          TENANT_APP_METADATA: ${{ vars.PASSKEY_TENANT_APP_METADATA }}
         run: |
           $ErrorActionPreference = 'Stop'
           if ($env:AUTHENTICATED -ne 'true' -or -not $env:ESTS_COOKIE -or
-              -not $env:EXPECTED_UPN -or -not $env:EXPECTED_OBJECT_ID -or -not $env:TENANT_ID -or -not $env:TENANT_APP_METADATA) {
+              -not $env:EXPECTED_UPN -or -not $env:EXPECTED_OBJECT_ID -or -not $env:TENANT_ID) {
             throw 'Verified passkey login and explicit test-account configuration are required.'
           }
           Import-Module ./src/TokenForge/TokenForge.psd1
-          # Selected app ownership and Graph scope definitions were read through Graph
-          # in this tenant during setup. This metadata does not assert client consent.
-          $inventory = $env:TENANT_APP_METADATA | ConvertFrom-Json
-          if ($inventory.TenantId -ine $env:TENANT_ID) { throw 'App metadata belongs to another tenant.' }
-          $request = New-TokenForgeTenantRequest -Inventory $inventory -ClientId '04b07795-8ddb-461a-bbee-02f9e1bf7b46' `
-            -ResourceId '00000003-0000-0000-c000-000000000000' `
-            -Scope User.Read -RedirectUri 'http://localhost' -Tenant $env:TENANT_ID
+          # Azure CLI rejects User.Read with AADSTS65002; User.Read.All is published
+          # for this client. Entra can return its broader fixed first-party scope set.
+          # The only API request below is the signed-in account's /me record.
+          $catalog = Update-TokenForgeCatalog -SourceUri 'https://raw.githubusercontent.com/dirkjanm/ROADtools/f72a752700ff5142cc9bfd4cc90391ce5653415d/roadtx/roadtools/roadtx/firstpartyscopes.json' -Path "$env:RUNNER_TEMP/catalog.json"
+          $request = New-TokenForgeRequest -Catalog $catalog -ClientId '04b07795-8ddb-461a-bbee-02f9e1bf7b46' `
+            -ResourceId '00000003-0000-0000-c000-000000000000' -ResourceUri 'https://graph.microsoft.com' `
+            -Scope User.Read.All -RedirectUri 'http://localhost' -Tenant $env:TENANT_ID
           $cookie = ConvertTo-SecureString $env:ESTS_COOKIE -AsPlainText -Force
           $env:ESTS_COOKIE = $null
           $token = $null
@@ -68,6 +67,7 @@ jobs:
               throw 'Graph returned a different account than the configured test account.'
             }
             Add-Content $env:GITHUB_STEP_SUMMARY 'Verified: passkey Action login, TokenForge token acquisition, and Graph /me matched the configured test account.'
+            Add-Content $env:GITHUB_STEP_SUMMARY "Requested User.Read.All; additional API scopes returned by Entra: $(@($token.AdditionalScopes).Count). No consent grant was changed."
           } finally {
             $cookie.Dispose()
             if ($token) {

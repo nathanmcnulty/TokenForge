@@ -214,7 +214,7 @@ function Invoke-TokenForgeScopeProbe {
                             }
                             if($CheckpointAction){& $CheckpointAction}
                         }
-                        if($transientFailure){throw 'A transient identity failure interrupted this flow; resume its checkpoint later.'}
+                        if($transientFailure){$PSCmdlet.ThrowTerminatingError([Management.Automation.ErrorRecord]::new([InvalidOperationException]::new('A transient identity failure interrupted this flow; resume its checkpoint later.'),'TokenForge.TransientIdentity',[Management.Automation.ErrorCategory]::ResourceUnavailable,$null))}
                         if ($DelayMilliseconds) { Start-Sleep -Milliseconds $DelayMilliseconds }
                     }
                     if ($observation.Outcome -eq 'ContextMismatch' -or (-not $ExploreAllFlows -and $observation.Outcome -in @('Succeeded','OpaqueToken','NoDelegatedScp'))) { break }

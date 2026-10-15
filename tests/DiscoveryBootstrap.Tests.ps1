@@ -26,6 +26,22 @@ Describe 'Standalone discovery bootstrap boundaries' {
   Should -Invoke Get-TokenForgeToken -Times 1 -ParameterFilter {$Request.Scopes -contains 'Application.Read.All'}
   Should -Invoke Invoke-TokenForgeDiscoveryRun -Times 1
  }
+ It 'forwards bounded retry options' {
+  $null=& $runner -StatePath $state -NativeExecutablePath /synthetic/tokenforge -EstsAuth $cookie -MaxTransientRetries 2 -RetryDelaySeconds 7
+  Should -Invoke Invoke-TokenForgeDiscoveryRun -Times 1 -ParameterFilter {$MaxTransientRetries -eq 2 -and $RetryDelaySeconds -eq 7}
+ }
+ It 'reports exhausted typed retries without exposing exception details' {
+  Mock Invoke-TokenForgeDiscoveryRun {throw [Management.Automation.ErrorRecord]::new([InvalidOperationException]::new('synthetic private detail'),'TokenForge.TransientIdentity',[Management.Automation.ErrorCategory]::ResourceUnavailable,$null)}
+  $r=& $runner -StatePath $state -NativeExecutablePath /synthetic/tokenforge -EstsAuth $cookie|ConvertFrom-Json
+  $r.Status|Should -Be Stopped
+  $r.Reason|Should -Be TransientIdentity
+  ($r|ConvertTo-Json -Compress)|Should -Not -Match 'synthetic private detail'
+ }
+ It 'does not classify an untyped failure as retryable' {
+  Mock Invoke-TokenForgeDiscoveryRun {throw 'TokenForge.TransientIdentity'}
+  $r=& $runner -StatePath $state -NativeExecutablePath /synthetic/tokenforge -EstsAuth $cookie|ConvertFrom-Json
+  $r.Reason|Should -Be Discovery
+ }
  It 'keeps JSON output clean and emits only fixed orchestration stages with Verbose' {
   Mock Get-TokenForgeToken {
    Write-Warning 'synthetic token warning'

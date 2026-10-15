@@ -31,8 +31,8 @@ try{
  $output.Dispose();$output=$null
  [pscustomobject]@{SchemaVersion=1;Applications=$document.Applications.Count;UncompressedBytes=$bytes.Length;CompressedBytes=$size;ContentSha256=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant();CredentialOutput=$false}
 }catch{
- if($gzip){$gzip.Dispose();$gzip=$null}
- if($output){$output.Dispose();$output=$null}
+ if($gzip){try{$gzip.Dispose()}catch{};$gzip=$null}
+ if($output){try{$output.Dispose()}catch{};$output=$null}
  if($created){Remove-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue}
  throw 'Catalog download could not be created; details suppressed.'
 }finally{if($gzip){$gzip.Dispose()};if($output){$output.Dispose()}}

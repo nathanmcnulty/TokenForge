@@ -1,6 +1,6 @@
 # Frozen research cohorts
 
-Version 0.16 connects SQLite research plans to the inventory CLI. A cohort is one frozen research run: client/resource pairs, account namespace, application metadata hash, catalog hash, authority, protocol order, redirect bound, and exploration mode. Client IDs are sorted and assigned to fixed chunks. New IDs discovered later do not shift the current run's chunk membership.
+A cohort is one frozen research run: client/resource pairs, account namespace, application metadata hash, catalog hash, authority, protocol order, redirect bound, and exploration mode. Client IDs are sorted and assigned to fixed chunks. New IDs discovered later do not shift the current run's chunk membership.
 
 Creating the same recipe again creates a new run because creation time participates in its identity. Resubmitting the exact cohort document through `evidence cohort` remains idempotent. Each cohort also has separate flow-plan fingerprints, so a new run performs new observations rather than inheriting a previous run's completed cells.
 

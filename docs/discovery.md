@@ -33,6 +33,19 @@ Check progress in another terminal without authentication:
 
 This reads the saved cohort even while discovery holds the writer lock. `Pending` means clients remain to be checkpointed; it does not mean a process is running. Completed clients include failed probes. Omit `-SummaryOnly` for the private recipe and pending membership. Use `-CohortId` to inspect a separately created or older cohort.
 
+For a richer read-only summary of catalog categories and observed flow coverage:
+
+```powershell
+./scripts/Invoke-TokenForgeInventory.ps1 -Action Report `
+    -StatePath /private/tokenforge/nora `
+    -NativeExecutablePath /path/to/linux-x64/tokenforge `
+    -InventoryAccount -SummaryOnly | ConvertTo-Json -Compress
+```
+
+`-InventoryAccount` selects the tenant/account fingerprints in the saved inventory. It reads no credentials and performs no authentication. Omit it for catalog-only reporting, or use the existing `-PrincipalFingerprint` option to select another observer in the inventory's tenant. These account selectors cannot be combined. Reports run while the writer lock is held and never create a state directory, lock file, or missing flow file. Missing explicit input files still fail. Inventory must already satisfy the private-path policy; reporting does not change its permissions.
+
+A report reads metadata and flow snapshots separately, so counts can move while collection runs; it is not a transaction across both databases. The richer report validates the full catalog and flow history, so use cohort status for frequent checkpoint polling. Reported successes describe observed issuance; they do not infer a required authentication flow, consent, or API authorization.
+
 The bootstrap requests `User.Read` and `Application.Read.All` through Microsoft Graph PowerShell and verifies the issued permissions and `/me` identity. These permissions must already be authorized; the runner stops when they are unavailable. Optional grant enumeration may be unavailable without its separate read permission.
 
 A refreshed inventory replaces the saved snapshot only after metadata writes succeed. Failed writes retain the previous snapshot rather than advertising a successful refresh.

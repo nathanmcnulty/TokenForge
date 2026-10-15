@@ -13,7 +13,7 @@ non-Microsoft principals. Probe uses existing consent and stops at interactive p
 param(
  [Parameter(Mandatory)][ValidateSet('Discover','SignIns','Inventory','Register','Probe','Merge','Export','Report','ExportFlows','NewCohort','ProbeChunk','CohortStatus')][string]$Action,
  [Parameter(Mandatory)][string]$StatePath,
- [string]$MetadataPath,[string]$DatabasePath,[string]$FlowPath,[string]$NativeExecutablePath,[switch]$ExploreAllFlows,[switch]$SummaryOnly,
+ [string]$MetadataPath,[string]$DatabasePath,[string]$FlowPath,[string]$NativeExecutablePath,[switch]$ExploreAllFlows,[switch]$SummaryOnly,[switch]$InventoryAccount,
  [securestring]$GraphToken,
  [securestring]$EstsAuth,
  [ValidateSet('ESTSAUTH','ESTSAUTHPERSISTENT')][string]$CookieName='ESTSAUTH',
@@ -38,6 +38,34 @@ param(
 )
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1') -Force
+if($InventoryAccount -and ($Action -ne 'Report' -or $PrincipalFingerprint)){throw 'InventoryAccount requires Report without PrincipalFingerprint.'}
+# Reports inspect existing files without creating directories, changing modes, or taking the writer lock.
+if($Action -eq 'Report'){
+ if(-not $MetadataPath){$MetadataPath=Join-Path $StatePath $(if(Test-Path (Join-Path $StatePath 'applications.sqlite')){'applications.sqlite'}else{'applications.json'})}
+ if(-not $FlowPath){
+  $candidate=Join-Path $StatePath $(if(Test-Path (Join-Path $StatePath 'flows.sqlite')){'flows.sqlite'}else{'flows.json'})
+  if(Test-Path -LiteralPath $candidate -PathType Leaf){$FlowPath=$candidate}
+ }
+ $options=@{MetadataPath=$MetadataPath;SummaryOnly=$SummaryOnly;NativeExecutablePath=$NativeExecutablePath}
+ if($FlowPath){$options.FlowPath=$FlowPath}
+ if($InventoryAccount -or $PrincipalFingerprint){
+  $stream=$null
+  try{
+   $path=[TokenForge.Core.V0220.PrivateFiles]::Resolve((Join-Path $StatePath 'inventory.json'),$false)
+   $stream=[IO.File]::OpenRead($path)
+   if($stream.Length -lt 1 -or $stream.Length -gt 134217728){throw 'Invalid inventory size.'}
+   $bytes=[byte[]]::new([int]$stream.Length);$stream.ReadExactly($bytes)
+   if($stream.ReadByte() -ne -1){throw 'Inventory changed during reading.'}
+   $inventory=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([Text.UTF8Encoding]::new($false,$true).GetString($bytes))
+   if($inventory -isnot [Collections.IDictionary]){throw 'Invalid inventory object.'}
+   $reportTenant=$inventory.TenantFingerprint;$reportPrincipal=if($InventoryAccount){$inventory.PrincipalFingerprint}else{$PrincipalFingerprint}
+   foreach($fingerprint in @($reportTenant,$reportPrincipal)){if($fingerprint -isnot [string] -or $fingerprint -cnotmatch '\A[a-f0-9]{64}\z'){throw 'Invalid inventory account.'}}
+   $options.TenantFingerprint=$reportTenant;$options.PrincipalFingerprint=$reportPrincipal
+  }catch{throw 'Cannot select a valid account from the saved inventory.'}finally{if($stream){$stream.Dispose()}}
+ }
+ Get-TokenForgeResearchCoverage @options
+ return
+}
 # Status is read-only and remains available while a discovery writer holds its lock.
 if($Action -eq 'CohortStatus'){
  if(-not $DatabasePath){$DatabasePath=Join-Path $StatePath 'scopes.sqlite'}
@@ -124,11 +152,6 @@ try {
    $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $merged -Kind ScopeObservations -NativeExecutablePath $NativeExecutablePath
    $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $merged -Kind RegistrationAttempts -NativeExecutablePath $NativeExecutablePath
    $merged
-  }
-  'Report' {
-   $options=@{MetadataPath=$MetadataPath;FlowPath=$FlowPath;SummaryOnly=$SummaryOnly;NativeExecutablePath=$NativeExecutablePath}
-   if($PrincipalFingerprint){$inventory=Get-Content $inventoryPath -Raw|ConvertFrom-Json;$options.TenantFingerprint=$inventory.TenantFingerprint;$options.PrincipalFingerprint=$PrincipalFingerprint}
-   Get-TokenForgeResearchCoverage @options
   }
   'ExportFlows' {if(-not $ExportPath){throw 'ExportFlows requires ExportPath.'};Export-TokenForgeFlowEvidence $FlowPath -OutputPath $ExportPath -NativeExecutablePath $NativeExecutablePath}
   'Export' {

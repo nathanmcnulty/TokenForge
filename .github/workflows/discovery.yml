@@ -115,7 +115,7 @@ jobs:
           Add-Content $env:GITHUB_OUTPUT 'ready=True'
       - name: Save validated data without a separate publisher job
         if: steps.no_worker_publish.outputs.ready == 'True'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: validated-data
           overwrite: true
@@ -129,7 +129,7 @@ jobs:
           if-no-files-found: error
       - name: Upload public recipe
         if: steps.idle.outputs.idle != 'True'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: weekly-plan
           path: |
@@ -140,7 +140,7 @@ jobs:
           if-no-files-found: error
       - name: Upload prepared public data
         if: steps.plan.outputs.has_work == 'True'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: prepared-data
           path: |
@@ -168,7 +168,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: weekly-plan
           path: ${{ runner.temp }}/plan
@@ -237,7 +237,7 @@ jobs:
           Add-Content $env:GITHUB_STEP_SUMMARY 'Isolated encrypted resume: completed receipt preserved; added flow attempts 0; added scope rows 0.'
       - name: Save encrypted diagnostic checkpoint
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: checkpoint-${{ matrix.plan }}-${{ matrix.index }}
           path: ${{ runner.temp }}/private/checkpoint.sealed
@@ -246,7 +246,7 @@ jobs:
           if-no-files-found: ignore
       - name: Upload public receipt and anonymous scope evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: result-${{ matrix.index }}
           path: ${{ runner.temp }}/result/*.json
@@ -265,11 +265,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: prepared-data
           path: ${{ runner.temp }}/discovery-data
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: weekly-plan
           path: ${{ runner.temp }}/plan
@@ -303,7 +303,7 @@ jobs:
           }
       - name: Save isolated aggregate validation report
         if: inputs.validation_only
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: validation-report-${{ github.run_attempt }}
           path: ${{ runner.temp }}/discovery-data/coverage-deep.json
@@ -312,7 +312,7 @@ jobs:
           if-no-files-found: error
       - name: Save validated public data for the branch writer
         if: ${{ !inputs.validation_only }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: validated-data
           overwrite: true
@@ -335,11 +335,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: validated-data
           path: ${{ runner.temp }}/discovery-data
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: weekly-plan
           path: ${{ runner.temp }}/plan

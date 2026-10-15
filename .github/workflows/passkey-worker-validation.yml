@@ -1,0 +1,77 @@
+name: Passkey worker validation
+
+on:
+  push:
+    branches: [codex/tokenforge-passkey-worker-validation]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  POWERSHELL_TELEMETRY_OPTOUT: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/codex/tokenforge-passkey-worker-validation' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Sign in with the dedicated test passkey
+        id: login
+        uses: nathanmcnulty/action-passkey-login@af45e499721ac73c3c500c0c46c41c415330ce41
+        with:
+          confirm-application: 'true'
+          expected-client-id: '04b07795-8ddb-461a-bbee-02f9e1bf7b46'
+          credential-id: ${{ secrets.PASSKEY_PRIVATE_CREDENTIAL_ID }}
+          user-handle: ${{ secrets.PASSKEY_PRIVATE_USER_HANDLE }}
+          user-principal-name: ${{ secrets.PASSKEY_PRIVATE_USER_PRINCIPAL_NAME }}
+          private-key: ${{ secrets.PASSKEY_PRIVATE_KEY }}
+      - name: Verify TokenForge token acquisition and the signed-in Graph identity
+        shell: pwsh
+        env:
+          AUTHENTICATED: ${{ steps.login.outputs.authenticated }}
+          ESTS_COOKIE: ${{ steps.login.outputs.auth-cookie }}
+          COOKIE_NAME: ${{ steps.login.outputs.cookie-name }}
+          EXPECTED_UPN: ${{ secrets.PASSKEY_PRIVATE_USER_PRINCIPAL_NAME }}
+          EXPECTED_OBJECT_ID: ${{ vars.PASSKEY_EXPECTED_OBJECT_ID }}
+          TENANT_ID: ${{ vars.PASSKEY_TENANT_ID }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:AUTHENTICATED -ne 'true' -or -not $env:ESTS_COOKIE -or
+              -not $env:EXPECTED_UPN -or -not $env:EXPECTED_OBJECT_ID -or -not $env:TENANT_ID) {
+            throw 'Verified passkey login and explicit test-account configuration are required.'
+          }
+          Import-Module ./src/TokenForge/TokenForge.psd1
+          # Azure CLI rejects User.Read with AADSTS65002; User.Read.All is published
+          # for this client. Entra can return its broader fixed first-party scope set.
+          # The only API request below is the signed-in account's /me record.
+          $catalog = Update-TokenForgeCatalog -SourceUri 'https://raw.githubusercontent.com/dirkjanm/ROADtools/f72a752700ff5142cc9bfd4cc90391ce5653415d/roadtx/roadtools/roadtx/firstpartyscopes.json' -Path "$env:RUNNER_TEMP/catalog.json"
+          $request = New-TokenForgeRequest -Catalog $catalog -ClientId '04b07795-8ddb-461a-bbee-02f9e1bf7b46' `
+            -ResourceId '00000003-0000-0000-c000-000000000000' -ResourceUri 'https://graph.microsoft.com' `
+            -Scope User.Read.All -RedirectUri 'http://localhost' -Tenant $env:TENANT_ID
+          $cookie = ConvertTo-SecureString $env:ESTS_COOKIE -AsPlainText -Force
+          $env:ESTS_COOKIE = $null
+          $token = $null
+          try {
+            $token = Get-TokenForgeToken -Request $request -EstsAuth $cookie -CookieName $env:COOKIE_NAME
+            try {
+              $me = Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/me?$select=id,userPrincipalName' `
+                -Authentication Bearer -Token $token.AccessToken -Verbose:$false -Debug:$false
+            } catch { throw 'Read-only Graph identity validation failed; response details suppressed.' }
+            if ($me.id -ine $env:EXPECTED_OBJECT_ID -or $me.userPrincipalName -ine $env:EXPECTED_UPN) {
+              throw 'Graph returned a different account than the configured test account.'
+            }
+            Add-Content $env:GITHUB_STEP_SUMMARY 'Verified: passkey Action login, TokenForge token acquisition, and Graph /me matched the configured test account.'
+            Add-Content $env:GITHUB_STEP_SUMMARY "Requested User.Read.All; additional API scopes returned by Entra: $(@($token.AdditionalScopes).Count). No consent-grant mutation API was called."
+          } finally {
+            $cookie.Dispose()
+            if ($token) {
+              $token.AccessToken.Dispose()
+              if ($token.RefreshToken) { $token.RefreshToken.Dispose() }
+            }
+          }

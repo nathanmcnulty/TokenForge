@@ -103,7 +103,7 @@ function Register-TokenForgeApplication {
     Ensure a discovered Microsoft application has a tenant service principal; do not grant permissions.
     #>
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
-    param([Parameter(Mandatory)][securestring]$GraphToken, [Parameter(Mandatory)]$Application, [switch]$ResolvePublishedCandidate, [switch]$ResolveSignInCandidate)
+    param([Parameter(Mandatory)][securestring]$GraphToken, [Parameter(Mandatory)]$Application, [switch]$ResolvePublishedCandidate, [switch]$ResolveDocumentationCandidate, [switch]$ResolveSignInCandidate)
     $id = [guid]::Empty
     if (-not [guid]::TryParse([string]$Application.AppId,[ref]$id)) { throw 'Invalid application ID.' }
     $uri = "https://graph.microsoft.com/v1.0/servicePrincipals(appId='$id')"
@@ -115,9 +115,11 @@ function Register-TokenForgeApplication {
     # A caller-provided display name is never sufficient evidence to create an application.
     $publishedOwner = $Application.OwnerTenantId -in $script:MicrosoftOwnerTenants -and $Application.Ownership -in @('PublishedMicrosoftOwner','VerifiedMicrosoftOwner')
     $sources=if($Application -is [Collections.IDictionary]){$Application['Sources']}elseif($Application.PSObject.Properties['Sources']){$Application.Sources}else{@()}
-    $publishedCandidate = $ResolvePublishedCandidate -and @($sources | Where-Object { $_.Evidence -in @('PublishedMetadata','PublishedResource','PublishedGraph','PublishedEntraDocs','PublishedLearn','PublishedGitHub') }).Count -gt 0
+    $publishedCandidate = $ResolvePublishedCandidate -and @($sources | Where-Object { $_.Evidence -in @('PublishedMetadata','PublishedResource','PublishedGraph','PublishedLearn','PublishedGitHub') }).Count -gt 0
+    # EntraDocs comes from a general known-GUID dictionary, not an application registry.
+    $documentationCandidate = $ResolveDocumentationCandidate -and @($sources | Where-Object { $_.Evidence -eq 'PublishedEntraDocs' }).Count -gt 0
     $signInCandidate = $ResolveSignInCandidate -and @($sources | Where-Object {$_.Evidence -eq 'ObservedSignInNotOwnership'}).Count -gt 0
-    if (-not $publishedOwner -and -not $publishedCandidate -and -not $signInCandidate) { throw 'Creation requires published Microsoft ownership evidence, or explicit resolution of a published/sign-in candidate.' }
+    if (-not $publishedOwner -and -not $publishedCandidate -and -not $documentationCandidate -and -not $signInCandidate) { throw 'Creation requires published Microsoft ownership evidence, or explicit resolution of a published, documentation, or sign-in candidate.' }
     if (-not $PSCmdlet.ShouldProcess($id.ToString(), 'Create Microsoft application service principal without granting consent')) {
         return [pscustomobject]@{ AppId = $id.ToString(); Outcome = 'NotCreated'; Ownership = $Application.Ownership }
     }

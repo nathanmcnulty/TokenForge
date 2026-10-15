@@ -23,7 +23,7 @@ $cohort = & $runner -Action NewCohort -StatePath $state -DatabasePath $database 
   -EstsAuth $cookie -NativeExecutablePath $native
 ```
 
-`ProbeChunk` chooses the lowest chunk containing pending clients. Repeat it between bounded credential sessions until status reports no pending clients. Use `-ChunkIndex 0` to resume or repair a particular chunk, including a completed chunk. The original authority, principal, pairs, protocols, and limits come from the stored recipe. `-ClientId` on NewCohort narrows membership; otherwise every eligible client/resource pair from the existing probe planner is frozen. Missing, disabled, and unverified applications remain in the application catalog but are excluded from active cohorts until eligible.
+`ProbeChunk` chooses the lowest chunk containing pending clients. Automatic selection skips checkpointed clients within that chunk. Repeat it between bounded credential sessions until status reports no pending clients. Use `-ChunkIndex 0` to resume or repair a particular chunk, including a completed chunk; this explicit repair revisits all frozen members and projects their saved evidence into metadata. The original authority, principal, pairs, protocols, and limits come from the stored recipe. `-ClientId` on NewCohort narrows membership; otherwise every eligible client/resource pair from the existing probe planner is frozen. Missing, disabled, and unverified applications remain in the application catalog but are excluded from active cohorts until eligible.
 
 Cohort creation and execution support `-WhatIf`; it suppresses recipe/checkpoint writes and token requests. The runner may still create its private directory and operation lock.
 

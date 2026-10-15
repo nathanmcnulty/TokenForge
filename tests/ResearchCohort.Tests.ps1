@@ -40,23 +40,35 @@ Describe 'Frozen namespace-bound research cohorts' -Skip:(-not $nativeAvailable)
   (Invoke-TokenForgeResearchChunk @run -MetadataPath $metadata).PendingClients|Should -Be 1
   Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 1
  }
- It 'leaves throttled work pending and resumes the unfinished attempt' {
+ It 'leaves throttled work pending and skips completed members on resume' {
+  $create.BatchSize=2
   $cohort=New-TokenForgeResearchCohort @create
-  Mock Get-TokenForgeToken -ModuleName TokenForge {throw 'Identity request failed (HTTP 429); details suppressed.'}
+  $script:partialCalls=0
+  Mock Get-TokenForgeToken -ModuleName TokenForge {param($Request)
+   $script:partialCalls++
+   if($script:partialCalls -eq 2){throw 'Identity request failed (HTTP 429); details suppressed.'}
+   [pscustomobject]@{AccessToken=ConvertTo-SecureString private-access -AsPlainText -Force;RefreshToken=$null;GrantedScopes=@('User.Read');TokenClaims=[pscustomobject]@{Readable=$true;HasDelegatedScopeClaim=$true;Scopes=@('User.Read');TenantFingerprint=('a'*64);PrincipalFingerprint=('b'*64);ClientId=$Request.ClientId;Audience=$Request.ResourceId}}
+  }
   $run=@{Inventory=$inventory;EstsAuth=$secret;DatabasePath=$path;CohortId=$cohort.PlanId;MetadataPath=$metadata;NativeExecutablePath=$native;DelayMilliseconds=0}
   $caught=$null
   try {Invoke-TokenForgeResearchChunk @run} catch {$caught=$_}
   $caught|Should -Not -BeNullOrEmpty
   $caught.FullyQualifiedErrorId.Split(',')[0]|Should -BeExactly 'TokenForge.TransientIdentity'
   $caught.CategoryInfo.Category|Should -Be ([Management.Automation.ErrorCategory]::ResourceUnavailable)
-  (Get-TokenForgeResearchCohort $path $cohort.PlanId -NativeExecutablePath $native).Pending.Count|Should -Be 2
-  (Get-TokenForgeScopeDatabase $path -NativeExecutablePath $native).Observations.Count|Should -Be 0
+  (Get-TokenForgeResearchCohort $path $cohort.PlanId -NativeExecutablePath $native).Pending.Count|Should -Be 1
+  (Get-TokenForgeScopeDatabase $path -NativeExecutablePath $native).Observations.Count|Should -Be 1
   $flow=Get-TokenForgeFlowEvidence (Join-Path $root flows.sqlite) -NativeExecutablePath $native
-  $flow.Attempts.Count|Should -Be 1
-  $flow.Attempts[0].Outcome|Should -Be Started
-  Mock Get-TokenForgeToken -ModuleName TokenForge {param($Request) [pscustomobject]@{AccessToken=ConvertTo-SecureString private-access -AsPlainText -Force;RefreshToken=$null;GrantedScopes=@('User.Read');TokenClaims=[pscustomobject]@{Readable=$true;HasDelegatedScopeClaim=$true;Scopes=@('User.Read');TenantFingerprint=('a'*64);PrincipalFingerprint=('b'*64);ClientId=$Request.ClientId;Audience=$Request.ResourceId}}}
-  (Invoke-TokenForgeResearchChunk @run).PendingClients|Should -Be 1
-  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 2 -Exactly
+  @($flow.Attempts|Where-Object Outcome -eq Started).Count|Should -Be 1
+  $resumed=Invoke-TokenForgeResearchChunk @run
+  $resumed.SelectedClients|Should -Be 1
+  $resumed.PendingClients|Should -Be 0
+  $resumed.CompletedClients|Should -Be 2
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 1 -Exactly -ParameterFilter {$Request.ClientId -eq $clients[0]}
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 2 -Exactly -ParameterFilter {$Request.ClientId -eq $clients[1]}
+  $completed=Invoke-TokenForgeResearchChunk @run -ChunkIndex 0
+  $completed.SelectedClients|Should -Be 2
+  $completed.Complete|Should -BeTrue
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 3 -Exactly
  }
  It 'rejects changed, stale, or mismatched inventory before token issuance' {
   $cohort=New-TokenForgeResearchCohort @create

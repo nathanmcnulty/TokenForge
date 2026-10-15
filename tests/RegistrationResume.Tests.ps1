@@ -10,15 +10,19 @@ Describe 'Registration source shapes' {
  AfterEach {$secret.Dispose()}
  It 'preserves explicit <Kind> candidate resolution after <Shape> serialization' -ForEach @(
   @{Kind='Published';Shape='PSObject'},@{Kind='Published';Shape='Hashtable'},@{Kind='Published';Shape='BclDictionary'},
+  @{Kind='Documentation';Shape='PSObject'},@{Kind='Documentation';Shape='Hashtable'},@{Kind='Documentation';Shape='BclDictionary'},
   @{Kind='SignIn';Shape='PSObject'},@{Kind='SignIn';Shape='Hashtable'},@{Kind='SignIn';Shape='BclDictionary'}
  ) {
-  $evidence=if($Kind -eq 'Published'){'PublishedResource'}else{'ObservedSignInNotOwnership'}
+  $evidence=if($Kind -eq 'Published'){'PublishedResource'}elseif($Kind -eq 'Documentation'){'PublishedEntraDocs'}else{'ObservedSignInNotOwnership'}
   $app=[pscustomobject]@{AppId='11111111-1111-1111-1111-111111111111';Ownership='Unverified';OwnerTenantId=$null;Sources=@([pscustomobject]@{Evidence=$evidence})}
   $json=$app|ConvertTo-Json -Depth 10
   if($Shape -eq 'Hashtable'){$app=$json|ConvertFrom-Json -AsHashtable}
   if($Shape -eq 'BclDictionary'){$app=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson($json)}
   {Register-TokenForgeApplication $secret $app -Confirm:$false}|Should -Throw '*requires*'
-  $flags=if($Kind -eq 'Published'){@{ResolvePublishedCandidate=$true}}else{@{ResolveSignInCandidate=$true}}
+  if($Kind -eq 'Documentation') {
+   {Register-TokenForgeApplication $secret $app -ResolvePublishedCandidate -Confirm:$false}|Should -Throw '*requires*'
+  }
+  $flags=if($Kind -eq 'Published'){@{ResolvePublishedCandidate=$true}}elseif($Kind -eq 'Documentation'){@{ResolveDocumentationCandidate=$true}}else{@{ResolveSignInCandidate=$true}}
   (Register-TokenForgeApplication $secret $app @flags -Confirm:$false).Outcome|Should -Be Created
   Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -Exactly -ParameterFilter {$Method -eq 'POST' -and $Body.Count -eq 1}
   Mock Get-TokenForgeTokenClaims -ModuleName TokenForge {[pscustomobject]@{TenantFingerprint=('a'*64)}}
@@ -26,10 +30,28 @@ Describe 'Registration source shapes' {
   if($app -is [Collections.IDictionary]){$app['Registration']='Missing'}else{$app|Add-Member Registration Missing}
   $cached=[pscustomobject]@{TenantFingerprint=('a'*64);Applications=@($app)}
   if($Shape -eq 'BclDictionary'){$cached=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson(($cached|ConvertTo-Json -Depth 10))}
-  $resolve=if($Kind -eq 'Published'){@{ResolvePublishedCandidates=$true}}else{@{ResolveSignInCandidates=$true}}
+  $resolve=if($Kind -eq 'Published'){@{ResolvePublishedCandidates=$true}}elseif($Kind -eq 'Documentation'){@{ResolveDocumentationCandidates=$true}}else{@{ResolveSignInCandidates=$true}}
+  if($Kind -eq 'Documentation'){
+   @(Sync-TokenForgeApplicationRegistration -Inventory $cached -GraphToken $secret -DatabasePath (Join-Path $state scopes.json) -ResolvePublishedCandidates -DelayMilliseconds 0 -Confirm:$false).Count|Should -Be 0
+   Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -Exactly -ParameterFilter {$Method -eq 'POST'}
+  }
   @(Sync-TokenForgeApplicationRegistration -Inventory $cached -GraphToken $secret -DatabasePath (Join-Path $state scopes.json) @resolve -DelayMilliseconds 0 -Confirm:$false).Count|Should -Be 1
 
  }
+ It 'keeps documentation candidates eligible with independent <Evidence> evidence' -ForEach @(@{Evidence='PublishedResource'},@{Evidence='MicrosoftOwner'}) {
+  $app=[pscustomobject]@{AppId='11111111-1111-1111-1111-111111111111';Ownership='Unverified';OwnerTenantId=$null;Registration='Missing';Sources=@([pscustomobject]@{Evidence='PublishedEntraDocs'})}
+  $flags=@{}
+  if($Evidence -eq 'MicrosoftOwner'){$app.Ownership='PublishedMicrosoftOwner';$app.OwnerTenantId='f8cdef31-a31e-4b4a-93e4-5f571e91255a'}
+  else{$app.Sources+=@([pscustomobject]@{Evidence=$Evidence});$flags.ResolvePublishedCandidates=$true}
+  Mock Get-TokenForgeTokenClaims -ModuleName TokenForge {[pscustomobject]@{TenantFingerprint=('a'*64)}}
+  $root=Join-Path $TestDrive ([guid]::NewGuid().ToString());$null=Get-TokenForgeFlowEvidence (Join-Path $root missing.json)
+  $inventory=[pscustomobject]@{TenantFingerprint=('a'*64);Applications=@($app)}
+  $attempts=@(Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $secret -DatabasePath (Join-Path $root scopes.json) @flags -DelayMilliseconds 0 -Confirm:$false)
+  $attempts.Count|Should -Be 1
+  $attempts[0].Outcome|Should -Be Created
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -Exactly -ParameterFilter {$Method -eq 'POST'}
+ }
+
 }
 Describe 'Ambiguous registration ownership' {
  It 'checkpoints cleanup and refuses later retries without deleting the observed principal' {

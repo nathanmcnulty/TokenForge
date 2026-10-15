@@ -6,7 +6,8 @@ Run one resumable discovery, registration, or scope-observation stage.
 Pass SecureString credentials from the current PowerShell session. No credential is serialized.
 StatePath is private assessment metadata. Only one writer may use a state directory at a time.
 Registration changes the tenant but does not grant permissions. ResolvePublishedCandidates
-also resolves published candidates whose owner is unknown, rolling back newly created
+also resolves app-source candidates whose owner is unknown. Documentation-only GUIDs
+require ResolveDocumentationCandidates. Registration rolls back newly created
 non-Microsoft principals. Probe uses existing consent and stops at interactive policy pages.
 #>
 [CmdletBinding(SupportsShouldProcess)]
@@ -24,6 +25,7 @@ param(
  [ValidateRange(1,1000)][int]$MaxRedirects=8,
  [switch]$GraphOnly,
  [switch]$ResolvePublishedCandidates,
+ [switch]$ResolveDocumentationCandidates,
  [switch]$ResolveSignInCandidates,
  [DateTimeOffset]$Since=[DateTimeOffset]::UtcNow.AddDays(-7),
  [DateTimeOffset]$Until=[DateTimeOffset]::UtcNow,
@@ -132,7 +134,7 @@ try {
   'Register' {
    if(-not $GraphToken){throw 'Register requires GraphToken.'}
    $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
-   Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $GraphToken -DatabasePath $databasePath -ClientId $ClientId -MaxApplications $MaxApplications -ResolvePublishedCandidates:$ResolvePublishedCandidates -ResolveSignInCandidates:$ResolveSignInCandidates -RetryFailures:$RetryFailures -MetadataPath $MetadataPath -NativeExecutablePath $NativeExecutablePath -WhatIf:$WhatIfPreference
+   Sync-TokenForgeApplicationRegistration -Inventory $inventory -GraphToken $GraphToken -DatabasePath $databasePath -ClientId $ClientId -MaxApplications $MaxApplications -ResolvePublishedCandidates:$ResolvePublishedCandidates -ResolveDocumentationCandidates:$ResolveDocumentationCandidates -ResolveSignInCandidates:$ResolveSignInCandidates -RetryFailures:$RetryFailures -MetadataPath $MetadataPath -NativeExecutablePath $NativeExecutablePath -WhatIf:$WhatIfPreference
   }
   'Probe' {
    if(-not $EstsAuth){throw 'Probe requires EstsAuth.'}

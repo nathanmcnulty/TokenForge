@@ -13,7 +13,7 @@ function New-TokenForgeResearchCohort {
     if(-not $principal){throw 'A cohort principal fingerprint is required.'}
     $pairs=@(Get-TokenForgeProbePlan -Inventory $Inventory -ClientId $ClientId -GraphOnly:$GraphOnly -PrincipalFingerprint $principal|ForEach-Object {@{ClientId=$_.ClientId;ResourceId=$_.ResourceId}})
     if(-not $pairs.Count){throw 'No eligible client/resource pairs were selected for the cohort.'}
-    $inventoryHash=Get-TokenForgeFingerprint (ConvertTo-Json -InputObject @($Inventory.Applications|Sort-Object AppId) -Depth 32 -Compress)
+    $inventoryHash=Get-TokenForgeFingerprint (ConvertTo-Json -InputObject @($Inventory.Applications|Sort-Object {[string]$_.AppId}) -Depth 32 -Compress)
     $document=@{Format='TokenForgeResearchCohort';SchemaVersion=1;CreatedAt=[DateTimeOffset]::UtcNow.ToString('o');TenantFingerprint=$Inventory.TenantFingerprint;PrincipalFingerprint=$principal;CatalogHash=$Inventory.DiscoveryCatalogHash;InventoryHash=$inventoryHash;Authority=$Tenant;Protocols=@($Protocols|Select-Object -Unique);MaxRedirects=$MaxRedirects;ExploreAllFlows=[bool]$ExploreAllFlows;Pairs=$pairs}
     if(-not $PSCmdlet.ShouldProcess($DatabasePath,'Create a frozen research cohort')){return}
     $created=Invoke-TokenForgeNativeEvidence $DatabasePath cohort -Domain evidence -Document $document -BatchSize $BatchSize -NativeExecutablePath $NativeExecutablePath
@@ -47,7 +47,7 @@ function Invoke-TokenForgeResearchChunk {
         $lock=if(Test-Path -LiteralPath $lockPath){Open-TokenForgeVaultFile $lockPath}else{Open-TokenForgeVaultFile $lockPath -Create}
         $plan=Get-TokenForgeResearchCohort $DatabasePath $CohortId -NativeExecutablePath $NativeExecutablePath
         $recipe=$plan.Cohort
-        $inventoryHash=Get-TokenForgeFingerprint (ConvertTo-Json -InputObject @($Inventory.Applications|Sort-Object AppId) -Depth 32 -Compress)
+        $inventoryHash=Get-TokenForgeFingerprint (ConvertTo-Json -InputObject @($Inventory.Applications|Sort-Object {[string]$_.AppId}) -Depth 32 -Compress)
         if($Inventory.TenantFingerprint -ne $recipe.TenantFingerprint -or $inventoryHash -ne $recipe.InventoryHash -or $Inventory.DiscoveryCatalogHash -ne $recipe.CatalogHash){throw 'Inventory differs from the frozen cohort. Create a new cohort after refreshing metadata.'}
         $captured=[DateTimeOffset]$Inventory.CapturedAt
         if($captured -lt [DateTimeOffset]::UtcNow.AddHours(-$MaxAgeHours) -or $captured -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Cohort execution requires a fresh inventory.'}

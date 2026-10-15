@@ -55,6 +55,18 @@ Describe 'Bounded local discovery orchestration' {
   $inventory.Applications=@(@{AppId='changed'})
   {Invoke-TokenForgeDiscoveryRun @options}|Should -Throw '*frozen cohort*'
  }
+ It 'resumes the same frozen inventory after a literal JSON dictionary round trip' {
+  $inventory.Applications=@(
+   [pscustomobject]@{AppId='33333333-3333-3333-3333-333333333333';Name='three'},
+   [pscustomobject]@{AppId='11111111-1111-1111-1111-111111111111';Name='2026-01-01T00:00:00Z'},
+   [pscustomobject]@{AppId='22222222-2222-2222-2222-222222222222';Name='two'}
+  )
+  $recipe.InventoryHash=& (Get-Module TokenForge) {param($i) Get-TokenForgeFingerprint (ConvertTo-Json -InputObject @($i.Applications|Sort-Object AppId) -Depth 32 -Compress)} $inventory
+  $null=Invoke-TokenForgeDiscoveryRun @options -MaxChunks 1
+  $options.Inventory=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((ConvertTo-Json -InputObject $inventory -Depth 100))
+  (Invoke-TokenForgeDiscoveryRun @options).Status|Should -Be Complete
+  Should -Invoke New-TokenForgeResearchCohort -ModuleName TokenForge -Times 1 -Exactly
+ }
  It 'stops instead of looping when no checkpoints advance' {
   Mock Invoke-TokenForgeResearchChunk -ModuleName TokenForge {}
   {Invoke-TokenForgeDiscoveryRun @options}|Should -Throw '*no checkpoint progress*'

@@ -47,7 +47,7 @@ function Invoke-TokenForgeScopeProbe {
     if(-not $FlowDatabasePath){$FlowDatabasePath=$DatabasePath+'.flows.json'}
     $sqliteFlows=$FlowDatabasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)
     $flows=if($sqliteFlows){$null}else{Get-TokenForgeFlowEvidence $FlowDatabasePath}
-    $apps = @($Inventory.Applications | Where-Object { -not $ClientId -or $_.AppId -in @($ClientId | ForEach-Object ToString) } | Sort-Object AppId)
+    $apps = @($Inventory.Applications | Where-Object { -not $ClientId -or $_.AppId -in @($ClientId | ForEach-Object ToString) } | Sort-Object {[string]$_.AppId})
     $processedApplications = 0
     foreach ($app in $apps) {
         $resources = @($ResourceId)
@@ -68,7 +68,7 @@ function Invoke-TokenForgeScopeProbe {
                 SignatureValidated = $false; NamespaceVerification = 'Unverifiable'; RequestVerification = 'Unverifiable'; ErrorCodes = @(); AttemptCount = 0; ElapsedSeconds = 0
                 CatalogHash = $Inventory.DiscoveryCatalogHash
             }
-            $aliases=@($resource.ToString())+@($Inventory.Applications|Where-Object AppId -eq $resource.ToString()|ForEach-Object { $_.IdentifierUris })
+            $aliases=@($resource.ToString())+@($Inventory.Applications|Where-Object {[string]$_.AppId -eq $resource.ToString()}|ForEach-Object { $_.IdentifierUris })
             if($resource.ToString() -eq '00000003-0000-0000-c000-000000000000'){$aliases+='https://graph.microsoft.com'}
             if($resource.ToString() -eq '797f4846-ba00-4fd7-ba43-dac1f8f63013'){$aliases+=@('https://management.azure.com','https://management.core.windows.net')}
             $aliases=@($aliases|Where-Object {$_ -is [string] -and $_ -match '^[A-Za-z0-9_.:/-]{1,256}$'}|ForEach-Object {$_.TrimEnd('/')}|Sort-Object -Unique)

@@ -93,9 +93,8 @@ try {
    if(-not $GraphToken){throw 'Inventory requires GraphToken.'}
    $discovery=Get-Content -LiteralPath $discoveryPath -Raw|ConvertFrom-Json
    $inventory=Get-TokenForgeTenantInventory -GraphToken $GraphToken -Discovery $discovery
-   $inventory|ConvertTo-Json -Depth 100|Set-Content -LiteralPath $inventoryPath -Encoding utf8
-   if (-not $IsWindows) { [IO.File]::SetUnixFileMode($inventoryPath, ([IO.UnixFileMode]::UserRead -bor [IO.UnixFileMode]::UserWrite)) }
    $null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $inventory -Kind Inventory -NativeExecutablePath $NativeExecutablePath
+   & (Get-Module TokenForge) {param($document,$path) Save-TokenForgeDocument -Document $document -Path $path} $inventory $inventoryPath
    $inventory
   }
   'Register' {

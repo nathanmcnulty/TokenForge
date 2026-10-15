@@ -271,24 +271,27 @@ function Sync-TokenForgeApplicationRegistration {
     }else{$database=Get-TokenForgeScopeDatabase $DatabasePath}
     $completed = @{};$unresolvedCleanup=@{}
     foreach ($attempt in $database.RegistrationAttempts) {
-        if ($attempt.TenantFingerprint -eq $Inventory.TenantFingerprint) { $completed[$attempt.AppId] = $attempt.Outcome; if($attempt.Outcome -eq 'CleanupRequired'){$unresolvedCleanup[$attempt.AppId]=$true}elseif($attempt.Outcome -eq 'CleanupResolved'){$unresolvedCleanup.Remove($attempt.AppId)} }
+        if ($attempt.TenantFingerprint -eq $Inventory.TenantFingerprint) { $completed[$attempt.AppId] = $attempt; if($attempt.Outcome -eq 'CleanupRequired'){$unresolvedCleanup[$attempt.AppId]=$true}elseif($attempt.Outcome -eq 'CleanupResolved'){$unresolvedCleanup.Remove($attempt.AppId)} }
     }
-    foreach($id in @($completed.Keys)){if($completed[$id] -eq 'CleanupResolved'){$completed.Remove($id)}}
+    foreach($id in @($completed.Keys)){if($completed[$id].Outcome -eq 'CleanupResolved'){$completed.Remove($id)}}
     if ($unresolvedCleanup.Count) { throw 'Registration stopped by an unresolved ownership-cleanup checkpoint. Verify cleanup and append a CleanupResolved record before resuming.' }
-    $apps = @($Inventory.Applications | Where-Object { $_.Registration -eq 'Missing' -and ($_.Ownership -eq 'PublishedMicrosoftOwner' -or ($ResolvePublishedCandidates -and @($_.Sources | Where-Object { $_.Evidence -in @('PublishedMetadata','PublishedResource','PublishedGraph','PublishedEntraDocs','PublishedLearn','PublishedGitHub') }).Count -gt 0) -or ($ResolveSignInCandidates -and @($_.Sources|Where-Object Evidence -eq 'ObservedSignInNotOwnership').Count -gt 0)) -and (-not $ClientId -or $_.AppId -in @($ClientId | ForEach-Object ToString)) } | Sort-Object AppId)
-    $processedApplications = 0
+    $apps = @($Inventory.Applications | Where-Object { $_.Registration -eq 'Missing' -and ($_.Ownership -eq 'PublishedMicrosoftOwner' -or ($ResolvePublishedCandidates -and @($_.Sources | Where-Object { $_.Evidence -in @('PublishedMetadata','PublishedResource','PublishedGraph','PublishedEntraDocs','PublishedLearn','PublishedGitHub') }).Count -gt 0) -or ($ResolveSignInCandidates -and @($_.Sources|Where-Object {$_.Evidence -eq 'ObservedSignInNotOwnership'}).Count -gt 0)) -and (-not $ClientId -or $_.AppId -in @($ClientId | ForEach-Object ToString)) } | Sort-Object AppId)
+    $pendingApps=[Collections.Generic.List[object]]::new();$repairs=[Collections.Generic.List[object]]::new()
     foreach ($app in $apps) {
-        if ($completed.ContainsKey($app.AppId) -and (-not $RetryFailures -or $completed[$app.AppId] -ne 'Failed')) {
-            $saved=@($database.RegistrationAttempts|Where-Object {$_.AppId -eq $app.AppId -and $_.TenantFingerprint -eq $Inventory.TenantFingerprint}|Select-Object -Last 1)
-            if($saved.Count -and -not $WhatIfPreference){$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document @{UpdatedAt=$database.UpdatedAt;RegistrationAttempts=$saved} -Kind RegistrationAttempts -NativeExecutablePath $NativeExecutablePath}
-            continue
-        }
+        $previous=$completed[$app.AppId]
+        $temporary=$previous -and $previous.Outcome -eq 'Failed' -and ($previous.HttpStatus -eq 429 -or ($previous.HttpStatus -ge 500 -and $previous.HttpStatus -le 599))
+        if ($previous -and -not $temporary -and (-not $RetryFailures -or $previous.Outcome -ne 'Failed')) {$repairs.Add($previous)}else{$pendingApps.Add($app)}
+    }
+    # Repair skipped records together before another request; avoid one native process per saved candidate.
+    if($repairs.Count -and -not $WhatIfPreference){$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document @{UpdatedAt=$database.UpdatedAt;RegistrationAttempts=$repairs.ToArray()} -Kind RegistrationAttempts -NativeExecutablePath $NativeExecutablePath}
+    $processedApplications = 0
+    foreach ($app in $pendingApps) {
         if ($processedApplications -ge $MaxApplications) { break }
         $processedApplications++
         if (-not $PSCmdlet.ShouldProcess($app.AppId,'Register Microsoft-owned candidate without granting consent')) { continue }
-        $httpStatus = $null
+        $httpStatus = $null;$transportFailure=$false
         try { $result = Register-TokenForgeApplication -GraphToken $GraphToken -Application $app -ResolvePublishedCandidate:$ResolvePublishedCandidates -ResolveSignInCandidate:$ResolveSignInCandidates -Confirm:$false; $outcome = $result.Outcome }
-        catch { $outcome = 'Failed'; if ($_.Exception.Data['TokenForgeOutcome'] -in @('OwnerRejected','CleanupRequired')) { $outcome = [string]$_.Exception.Data['TokenForgeOutcome'] }; $match = [regex]::Match($_.Exception.Message,'\bHTTP ([0-9]{3})\b'); if ($match.Success) { $httpStatus = [int]$match.Groups[1].Value } }
+        catch { $transportFailure=$_.Exception.Message -cin @('Graph transport failed; details suppressed.','Graph returned invalid JSON; details suppressed.','Service principal creation failed; no consent was granted.'); $outcome = 'Failed'; if ($_.Exception.Data['TokenForgeOutcome'] -in @('OwnerRejected','CleanupRequired')) { $outcome = [string]$_.Exception.Data['TokenForgeOutcome'] }; $match = [regex]::Match($_.Exception.Message,'\bHTTP ([0-9]{3})\b'); if ($match.Success) { $httpStatus = [int]$match.Groups[1].Value } }
         $attempt = [pscustomobject]@{ AppId = $app.AppId; TenantFingerprint = $Inventory.TenantFingerprint; AttemptedAt = [DateTimeOffset]::UtcNow.ToString('o'); Outcome = $outcome; HttpStatus = $httpStatus }
         $database.RegistrationAttempts += $attempt
         $database.UpdatedAt = [DateTimeOffset]::UtcNow.ToString('o')
@@ -300,6 +303,10 @@ function Sync-TokenForgeApplicationRegistration {
         $attempt
         if($httpStatus -in @(401,403)){throw "Registration stopped (HTTP $httpStatus); the failure was checkpointed before stopping."}
         if ($outcome -eq 'CleanupRequired') { throw 'Registration stopped because ownership cleanup is required; inspect the last application ID in RegistrationAttempts.' }
+        if($httpStatus -eq 429 -or ($httpStatus -ge 500 -and $httpStatus -le 599)){
+            $PSCmdlet.ThrowTerminatingError([Management.Automation.ErrorRecord]::new([InvalidOperationException]::new("Registration paused after a temporary Graph failure (HTTP $httpStatus); resume this state later."),'TokenForge.TransientRegistration',[Management.Automation.ErrorCategory]::ResourceUnavailable,$null))
+        }
+        if($transportFailure){throw 'Registration stopped after an unverified Graph response; inspect the checkpoint and use RetryFailures after recovery.'}
         if ($DelayMilliseconds) { Start-Sleep -Milliseconds $DelayMilliseconds }
     }
     }finally{if($registrationLock){$registrationLock.Dispose()}}

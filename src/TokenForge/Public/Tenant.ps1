@@ -114,8 +114,9 @@ function Register-TokenForgeApplication {
     }
     # A caller-provided display name is never sufficient evidence to create an application.
     $publishedOwner = $Application.OwnerTenantId -in $script:MicrosoftOwnerTenants -and $Application.Ownership -in @('PublishedMicrosoftOwner','VerifiedMicrosoftOwner')
-    $publishedCandidate = $ResolvePublishedCandidate -and $Application.PSObject.Properties['Sources'] -and @($Application.Sources | Where-Object { $_.Evidence -in @('PublishedMetadata','PublishedResource','PublishedGraph','PublishedEntraDocs','PublishedLearn','PublishedGitHub') }).Count -gt 0
-    $signInCandidate = $ResolveSignInCandidate -and $Application.PSObject.Properties['Sources'] -and @($Application.Sources | Where-Object Evidence -eq 'ObservedSignInNotOwnership').Count -gt 0
+    $sources=if($Application -is [Collections.IDictionary]){$Application['Sources']}elseif($Application.PSObject.Properties['Sources']){$Application.Sources}else{@()}
+    $publishedCandidate = $ResolvePublishedCandidate -and @($sources | Where-Object { $_.Evidence -in @('PublishedMetadata','PublishedResource','PublishedGraph','PublishedEntraDocs','PublishedLearn','PublishedGitHub') }).Count -gt 0
+    $signInCandidate = $ResolveSignInCandidate -and @($sources | Where-Object {$_.Evidence -eq 'ObservedSignInNotOwnership'}).Count -gt 0
     if (-not $publishedOwner -and -not $publishedCandidate -and -not $signInCandidate) { throw 'Creation requires published Microsoft ownership evidence, or explicit resolution of a published/sign-in candidate.' }
     if (-not $PSCmdlet.ShouldProcess($id.ToString(), 'Create Microsoft application service principal without granting consent')) {
         return [pscustomobject]@{ AppId = $id.ToString(); Outcome = 'NotCreated'; Ownership = $Application.Ownership }
@@ -126,6 +127,11 @@ function Register-TokenForgeApplication {
         # Concurrent creation may race; only verified existing state can turn failure into success.
         $existing = Invoke-TokenForgeGraph -AccessToken $GraphToken -Uri $uri -AllowNotFound
         if ($existing -and $existing['appOwnerOrganizationId'] -in $script:MicrosoftOwnerTenants) { return [pscustomobject]@{ AppId = $id.ToString(); Outcome = 'AlreadyPresent'; Ownership = 'VerifiedMicrosoftOwner' } }
+        if($existing){
+            $failure=[InvalidOperationException]::new('Creation failed and reconciliation found an unverified principal; registration stopped for manual cleanup verification.')
+            $failure.Data['TokenForgeOutcome']='CleanupRequired'
+            throw $failure
+        }
         if ($failureStatus) { throw "Service principal creation failed (HTTP $failureStatus); no consent was granted." }
         throw 'Service principal creation failed; no consent was granted.'
     }

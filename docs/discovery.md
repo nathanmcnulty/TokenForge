@@ -19,7 +19,7 @@ pwsh -NoProfile -File ./scripts/Invoke-TokenForgeDiscoveryRun.ps1 `
     -MaxMinutes 60
 ```
 
-Rerun the same command to resume. Completed flow cells are checkpointed before the next request; a completed client is not requested again within that cohort. A run stops at its chunk or time budget, or when an error prevents progress. The time budget is checked between chunks, so one chunk may extend beyond it. Smaller `-BatchSize` values give shorter stopping intervals.
+Rerun the same command to resume. Completed flow cells are checkpointed before the next request; a completed client is not requested again within that cohort. A run stops at its chunk or time budget, or when an error prevents progress. Throttling, server errors, and transport timeouts leave the affected client pending; rerun after the service recovers. The time budget is checked between chunks, so one chunk may extend beyond it. Smaller `-BatchSize` values give shorter stopping intervals.
 
 The bootstrap requests `User.Read` and `Application.Read.All` through Microsoft Graph PowerShell and verifies the issued permissions and `/me` identity. These permissions must already be authorized; the runner stops when they are unavailable. Optional grant enumeration may be unavailable without its separate read permission.
 
@@ -31,7 +31,7 @@ Missing, disabled, or ownership-unverified applications stay in metadata but are
 
 ## Storage and exports
 
-The working databases are `applications.sqlite`, `scopes.sqlite`, and `flows.sqlite`. They update individual records transactionally rather than serializing all history after every request. `discovery.json` and `inventory.json` are private snapshots; `discovery-run.json` contains the resume identifier. No credential is saved by this runner.
+The working databases are `applications.sqlite`, `scopes.sqlite`, and `flows.sqlite`. They update individual records transactionally rather than serializing all history after every request. Cohort probes read saved observations for the exact account, client, resource, and flow plan; they do not reload the account's full observation history for each chunk. `discovery.json` and `inventory.json` are private snapshots; `discovery-run.json` contains the resume identifier. No credential is saved by this runner.
 
 Keep working databases private. Generate public observations separately with the existing `Export` and `ExportFlows` actions in `Invoke-TokenForgeInventory.ps1`; see [inventory](inventory.md) and [research cohorts](research-cohorts.md). Public source metadata, observed token scopes, and API permission definitions are separate kinds of evidence. Token scopes do not establish API acceptance or universal consent.
 

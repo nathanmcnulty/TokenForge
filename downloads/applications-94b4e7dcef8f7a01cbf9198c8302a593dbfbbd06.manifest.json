@@ -1,0 +1,17 @@
+{
+  "SchemaVersion": 1,
+  "Format": "TokenForgeCatalogSnapshot",
+  "File": "applications-94b4e7dcef8f7a01cbf9198c8302a593dbfbbd06.json.gz",
+  "CatalogSchemaVersion": 2,
+  "Applications": 5455,
+  "CatalogUpdatedAt": "2026-10-13T18:20:56.7107194+00:00",
+  "SourceCommit": "61073498e524556cc08d21ec50137aeaa5eb9bdb",
+  "SourcePath": "applications.json",
+  "SourceGitBlob": "94b4e7dcef8f7a01cbf9198c8302a593dbfbbd06",
+  "SourceSha256": "a77104a55b37bdd4f57c3df23d3bcec1afcd503b0f2b60a31fe0b7a1b6457b6f",
+  "ContentSha256": "17554fc3134ef468b7912a442bb21806fb0bbe5c4584a32e6182e411680405e5",
+  "CompressedSha256": "6127c95b42b48b904527e2755fbd3509dfba856284963de348f2ca31d8462929",
+  "UncompressedBytes": 19699256,
+  "CompressedBytes": 1770783,
+  "Evidence": "PublicSourceMetadataNotCompletedTokenDiscovery"
+}

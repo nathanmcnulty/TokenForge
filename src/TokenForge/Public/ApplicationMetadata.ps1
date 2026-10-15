@@ -12,7 +12,16 @@ function Get-TokenForgeApplicationMetadata {
         }else{
             $file=Get-Item -LiteralPath $Path -ErrorAction Stop
             if($file.PSIsContainer -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -gt 134217728){throw 'Invalid metadata file.'}
-            $document=[TokenForge.Core.DiscoverySourceClaims]::ReadCatalog((Get-Content -LiteralPath $Path -Raw))
+            $inputStream=[IO.FileStream]::new($file.FullName,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+            try{
+                if($inputStream.Length -gt 134217728){throw 'Invalid metadata size.'}
+                $bytes=[byte[]]::new([int]$inputStream.Length)
+                $inputStream.ReadExactly($bytes,0,$bytes.Length)
+                if($inputStream.ReadByte() -ne -1){throw 'Metadata changed during reading.'}
+                $offset=if($bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191){3}else{0}
+                $json=[Text.UTF8Encoding]::new($false,$true).GetString($bytes,$offset,$bytes.Length-$offset)
+            }finally{$inputStream.Dispose()}
+            $document=[TokenForge.Core.DiscoverySourceClaims]::ReadCatalog($json)
         }
         # PowerShell 7.4 parses ISO dates as DateTime; normalize them back to UTC text.
         $normalizeDates={param($value)
@@ -80,7 +89,11 @@ function Get-TokenForgeApplicationMetadata {
             foreach($run in $document.Runs){
                 & $keys $run @('Id','Kind','ObservedAt','RecordedAt','ApplicationRecordCount','IgnoredEmptyAppIdCount','TenantFingerprint','SourceSnapshots')
                 if($run.Kind -cne 'Discovery' -or $run.TenantFingerprint){throw 'Private runs cannot be published.'}
-                foreach($snapshot in $run.SourceSnapshots){& $keys $snapshot @('Location','Sha256','HashKind')}
+                foreach($snapshot in $run.SourceSnapshots){
+                    & $keys $snapshot @('Location','Sha256','HashKind')
+                    # Legacy imports use these source labels rather than private filesystem paths.
+                    if($snapshot.Location -cnotin @('LocalMicrosoftApps','LocalResources')){[TokenForge.Core.DiscoverySourceClaims]::ValidatePublicLocation($snapshot.Location)}
+                }
             }
         }
         if($AppId -ne [guid]::Empty){$selected=@{};if($document.Applications.Contains($AppId.ToString())){$selected[$AppId.ToString()]=$document.Applications[$AppId.ToString()]};$document.Applications=$selected}

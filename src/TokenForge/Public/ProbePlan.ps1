@@ -16,7 +16,12 @@ function Get-TokenForgeProbePlan {
                 if (-not $resources.ContainsKey($grant.ResourceId)) { $resources[$grant.ResourceId] = @() }
                 $resources[$grant.ResourceId] += 'PublishedScopeEdge'
             }
-            foreach ($grant in @($Inventory.TenantGrants | Where-Object { $_.ClientId -eq $app.AppId -and (($_.PSObject.Properties['ConsentType'] -and $_.ConsentType -eq 'AllPrincipals') -or ($_.PSObject.Properties['PrincipalFingerprint'] -and $_.PrincipalFingerprint -and $_.PrincipalFingerprint -eq $probePrincipal) -or (-not $_.PSObject.Properties['PrincipalFingerprint'] -and $probePrincipal -eq $Inventory.PrincipalFingerprint -and $_.PSObject.Properties['AppliesToCurrentPrincipal'] -and $_.AppliesToCurrentPrincipal)) })) {
+            foreach ($grant in @($Inventory.TenantGrants | Where-Object {
+                $hasConsent=$_.PSObject.Properties['ConsentType'] -or ($_ -is [Collections.IDictionary] -and $_.Contains('ConsentType'))
+                $hasPrincipal=$_.PSObject.Properties['PrincipalFingerprint'] -or ($_ -is [Collections.IDictionary] -and $_.Contains('PrincipalFingerprint'))
+                $hasApplies=$_.PSObject.Properties['AppliesToCurrentPrincipal'] -or ($_ -is [Collections.IDictionary] -and $_.Contains('AppliesToCurrentPrincipal'))
+                $_.ClientId -eq $app.AppId -and (($hasConsent -and $_.ConsentType -eq 'AllPrincipals') -or ($hasPrincipal -and $_.PrincipalFingerprint -and $_.PrincipalFingerprint -eq $probePrincipal) -or (-not $hasPrincipal -and $probePrincipal -eq $Inventory.PrincipalFingerprint -and $hasApplies -and $_.AppliesToCurrentPrincipal))
+            })) {
                 if (-not $resources.ContainsKey($grant.ResourceId)) { $resources[$grant.ResourceId] = @() }
                 $resources[$grant.ResourceId] += 'TenantGrantEdge'
             }

@@ -4,18 +4,35 @@ function ConvertTo-TokenForgePlanningDatabase {
  $fields=@('ClientId','ResourceId','TenantFingerprint','PrincipalFingerprint','ObservedAt','Outcome','NamespaceVerification','RequestVerification','ScpScopes','RedirectFingerprint','Protocol','Spa','RequestedScopes')
  @{SchemaVersion=$Database.SchemaVersion;Observations=@($Database.Observations|Select-Object -Property $fields)}|ConvertTo-Json -Depth 8 -Compress
 }
+# Select-Object does not project BCL OrderedDictionary keys. Preserve its
+# ordered allowlist and missing-member-as-null behavior for saved snapshots.
+function Select-TokenForgePlanningFields {
+ param($InputObject,[string[]]$Property)
+ $selected=[ordered]@{}
+ foreach($field in $Property){
+  $selected[$field]=$null
+  if($null -eq $InputObject){continue}
+  if($InputObject -is [Collections.IDictionary]){
+   if($InputObject.Contains($field)){$selected[$field]=$InputObject[$field]}
+  }else{
+   $member=$InputObject.PSObject.Properties[$field]
+   if($null -ne $member){$selected[$field]=$member.Value}
+  }
+ }
+ [pscustomobject]$selected
+}
 function ConvertTo-TokenForgePlanningInventory {
  param($Inventory)
  $apps=@(foreach($app in $Inventory.Applications){
-  $row=$app|Select-Object AppId,Name,Registration,Ownership,AccountEnabled,RedirectUris,PublishedGrants,DelegatedScopeDefinitions
-  $row.DelegatedScopeDefinitions=@($row.DelegatedScopeDefinitions|Where-Object {$null -ne $_}|Select-Object Value,Enabled)
-  $row.PublishedGrants=@($row.PublishedGrants|Where-Object {$null -ne $_}|Select-Object ResourceId,Scopes)
+  $row=Select-TokenForgePlanningFields $app @('AppId','Name','Registration','Ownership','AccountEnabled','RedirectUris','PublishedGrants','DelegatedScopeDefinitions')
+  $row.DelegatedScopeDefinitions=@($row.DelegatedScopeDefinitions|Where-Object {$null -ne $_}|ForEach-Object {Select-TokenForgePlanningFields $_ @('Value','Enabled')})
+  $row.PublishedGrants=@($row.PublishedGrants|Where-Object {$null -ne $_}|ForEach-Object {Select-TokenForgePlanningFields $_ @('ResourceId','Scopes')})
   $row
  })
- $enumeration=if($Inventory.PSObject.Properties['GrantEnumeration']){$Inventory.GrantEnumeration}else{'Unknown'}
- $grants=if($Inventory.PSObject.Properties['TenantGrants']){@($Inventory.TenantGrants|Select-Object ClientId,ResourceId,PrincipalFingerprint,ConsentType,Scopes)}else{@()}
+ $enumeration=if(($Inventory.PSObject.Properties['GrantEnumeration'] -or ($Inventory -is [Collections.IDictionary] -and $Inventory.Contains('GrantEnumeration')))){$Inventory.GrantEnumeration}else{'Unknown'}
+ $grants=if(($Inventory.PSObject.Properties['TenantGrants'] -or ($Inventory -is [Collections.IDictionary] -and $Inventory.Contains('TenantGrants')))){@($Inventory.TenantGrants|ForEach-Object {Select-TokenForgePlanningFields $_ @('ClientId','ResourceId','PrincipalFingerprint','ConsentType','Scopes')})}else{@()}
  $document=@{CapturedAt=$Inventory.CapturedAt;TenantFingerprint=$Inventory.TenantFingerprint;GrantEnumeration=$enumeration;Applications=$apps;TenantGrants=@($grants)}
- if($Inventory.PSObject.Properties['SchemaVersion']){$document.SchemaVersion=$Inventory.SchemaVersion}
+ if(($Inventory.PSObject.Properties['SchemaVersion'] -or ($Inventory -is [Collections.IDictionary] -and $Inventory.Contains('SchemaVersion')))){$document.SchemaVersion=$Inventory.SchemaVersion}
  $document|ConvertTo-Json -Depth 10 -Compress
 }
 function ConvertFrom-TokenForgePlanningResult {

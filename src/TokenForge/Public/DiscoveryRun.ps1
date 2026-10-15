@@ -34,7 +34,7 @@ function Invoke-TokenForgeDiscoveryRun {
             Save-TokenForgeDocument -Path $manifest -Document @{SchemaVersion=1;CohortId=$cohort.PlanId}
         }
         $recipe=$cohort.Cohort
-        $inventoryHash=Get-TokenForgeFingerprint (ConvertTo-Json -InputObject @($Inventory.Applications|Sort-Object AppId) -Depth 32 -Compress)
+        $inventoryHash=Get-TokenForgeFingerprint (ConvertTo-Json -InputObject @($Inventory.Applications|Sort-Object {[string]$_.AppId}) -Depth 32 -Compress)
         if($Inventory.TenantFingerprint -cne $recipe.TenantFingerprint -or $Inventory.PrincipalFingerprint -cne $recipe.PrincipalFingerprint -or $inventoryHash -cne $recipe.InventoryHash -or $Inventory.DiscoveryCatalogHash -cne $recipe.CatalogHash){throw 'Inventory differs from the frozen cohort. Create a new run after reviewing refreshed metadata.'}
         $reason='Complete'
         while($cohort.Pending.Count){

@@ -26,6 +26,20 @@ Describe 'Standalone discovery bootstrap boundaries' {
   Should -Invoke Get-TokenForgeToken -Times 1 -ParameterFilter {$Request.Scopes -contains 'Application.Read.All'}
   Should -Invoke Invoke-TokenForgeDiscoveryRun -Times 1
  }
+ It 'keeps JSON output clean and emits only fixed orchestration stages with Verbose' {
+  Mock Get-TokenForgeToken {
+   Write-Warning 'synthetic token warning'
+   Write-Verbose 'synthetic provider details'
+   [pscustomobject]@{AccessToken=(ConvertTo-SecureString synthetic -AsPlainText -Force);TokenClaims=$claims}
+  }
+  $output=@(& $runner -StatePath $state -NativeExecutablePath /synthetic/tokenforge -EstsAuth $cookie -Verbose 3>&1 4>&1)
+  $messages=@($output|Where-Object {$_ -is [Management.Automation.VerboseRecord]}|ForEach-Object Message)
+  $messages|Should -Be @('Discovery stage: Configuration','Discovery stage: Authentication','Discovery stage: Authorization','Discovery stage: Identity','Discovery stage: PublicSources','Discovery stage: Inventory','Discovery stage: Discovery','Discovery stage: Finished')
+  @($output|Where-Object {$_ -is [Management.Automation.WarningRecord]}).Count|Should -Be 0
+  $json=@($output|Where-Object {$_ -is [string]})
+  $json.Count|Should -Be 1
+  ($json[0]|ConvertFrom-Json).Status|Should -Be Complete
+ }
  It 'stops before inventory or discovery when issued permissions are insufficient' {
   $claims.Scopes=@('User.Read')
   $r=& $runner -StatePath $state -NativeExecutablePath /synthetic/tokenforge -EstsAuth $cookie|ConvertFrom-Json

@@ -9,6 +9,7 @@ param(
 )
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'TokenForgeCiState.ps1')
+. (Join-Path $PSScriptRoot 'TokenForgeCiEvidenceQueue.ps1')
 Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1') -Force
 function Save-CiJson($Value,[string]$Path){$temp=$Path+'.'+[guid]::NewGuid()+'.tmp';try{$Value|ConvertTo-Json -Depth 100|Set-Content $temp;Move-Item -LiteralPath $temp -Destination $Path -Force}finally{if(Test-Path $temp){Remove-Item $temp -Force}}}
 if($ValidationOnly){
@@ -52,18 +53,28 @@ if($Action -eq 'Prepare'){
    $options.ResourceId=@('00000003-0000-0000-c000-000000000000','797f4846-ba00-4fd7-ba43-dac1f8f63013')
    if($AppId -and $AppId.Count -gt $DeepMaxApplications){throw 'Deep selection exceeds its independent weekly budget.'}
    if(-not $AppId){
-    $prior=@{};if($state){foreach($app in $state.Recipe.Discovery.Applications){$prior[$app.AppId]=Get-TfCiHash $app}}
-    $candidates=@($public.Applications|Where-Object {$_.RedirectUris.Count -gt 0}|Sort-Object AppId)
-    $changed=@($candidates|Where-Object {-not $prior.ContainsKey($_.AppId) -or $prior[$_.AppId] -cne (Get-TfCiHash $_)}|ForEach-Object AppId)
-    # Shallow successes do not establish coverage of other flows. Select
-    # changed hints first, then never-selected and oldest selected candidates.
-    $rotated=@($candidates|Sort-Object @{Expression={if($history.ContainsKey($_.AppId)){$history[$_.AppId]}else{''}}},AppId|ForEach-Object AppId)
-    $selection=[Collections.Generic.List[string]]::new();foreach($id in @($changed)+@($rotated)){if(-not $selection.Contains($id)){$selection.Add($id)};if($selection.Count -ge $DeepMaxApplications){break}}
-    $options.AppId=@($selection)
+    $queue=Get-TfCiEvidenceQueue -Discovery $public -PreviousState $state -MaxApplications $DeepMaxApplications
+    Save-CiJson $queue (Join-Path $BundlePath evidence-queue.json)
+    $options.AppId=@($queue.Items|ForEach-Object AppId)
+    if($queue.CandidateCount -gt 0 -and $queue.PendingCount -eq 0){
+     # No new recipe is needed. Do not reuse an old bundle request or imply
+     # that a previous week's coverage constitutes a current frozen recipe.
+     foreach($name in @('state.json','request.json','selection-deep.json')){$path=Join-Path $BundlePath $name;if(Test-Path -LiteralPath $path){Remove-Item -LiteralPath $path -Force}}
+     if($env:GITHUB_OUTPUT){Add-Content $env:GITHUB_OUTPUT 'matrix={"include":[]}';Add-Content $env:GITHUB_OUTPUT 'mode=Deep';Add-Content $env:GITHUB_OUTPUT 'has_work=False';Add-Content $env:GITHUB_OUTPUT 'has_plan=False'}
+     return $queue
+    }
    }
   }
   if($Mode -eq 'Deep' -and (-not $options.AppId.Count -or $options.AppId.Count -gt $DeepMaxApplications)){throw 'No bounded deep selection is available; inspect public callback hints.'}
   $state=New-TfCiState $public -Mode $Mode @options
+  if($Mode -eq 'Deep' -and -not $AppId){
+   $snapshot=[ordered]@{SchemaVersion=1;PlanId=$state.PlanId;SelectedAppIds=$state.Recipe.AppIds;Queue=$queue}
+   $state.EvidenceSelectionSha256=Get-TfCiHash $snapshot
+   Assert-TfCiEvidenceSelection $state ([TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((ConvertTo-Json -InputObject $snapshot -Depth 100)))
+   Save-CiJson $snapshot (Join-Path $DataPath selection-deep.json)
+  }elseif($Mode -eq 'Deep'){
+   $oldSelection=Join-Path $DataPath selection-deep.json;if(Test-Path -LiteralPath $oldSelection){Remove-Item -LiteralPath $oldSelection -Force}
+  }
  }elseif($AppId){throw 'An existing weekly recipe cannot change membership.'}
  if($Mode -eq 'Deep'){
   $published=@($state.Recipe.Discovery.Applications|ForEach-Object AppId)
@@ -71,6 +82,12 @@ if($Action -eq 'Prepare'){
   foreach($id in $state.Recipe.AppIds){$history[$id]=$state.Recipe.Week}
   $state.DeepSelectionHistory=$history
   Assert-TfCiState $state
+ }
+ if($state.Contains('EvidenceSelectionSha256')){
+  $snapshot=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((Get-Content -LiteralPath (Join-Path $DataPath selection-deep.json) -Raw))
+  Assert-TfCiEvidenceSelection $state $snapshot
+  Save-CiJson $snapshot.Queue (Join-Path $BundlePath evidence-queue.json)
+  Save-CiJson $snapshot (Join-Path $BundlePath selection-deep.json)
  }
  $selection=@(Get-TfCiWork $state -Workers $(if($Mode -eq 'Deep'){[Math]::Min(2,$Workers)}else{$Workers}) -MaxAttempts $(if($RetryExhausted){10}else{3}))
  Save-CiJson $state $statePath
@@ -82,7 +99,7 @@ if($Action -eq 'Prepare'){
  $report=Get-TfCiReport $state
  Save-CiJson $report (Join-Path $DataPath ('coverage-'+$Mode.ToLowerInvariant()+'.json'))
  $matrix=@{include=@($selection|ForEach-Object {@{index=$_;plan=$state.PlanId}})}|ConvertTo-Json -Compress
- if($env:GITHUB_OUTPUT){Add-Content $env:GITHUB_OUTPUT "matrix=$matrix";Add-Content $env:GITHUB_OUTPUT "mode=$Mode";Add-Content $env:GITHUB_OUTPUT "has_work=$([bool]$selection.Count)"}
+ if($env:GITHUB_OUTPUT){Add-Content $env:GITHUB_OUTPUT "matrix=$matrix";Add-Content $env:GITHUB_OUTPUT "mode=$Mode";Add-Content $env:GITHUB_OUTPUT "has_work=$([bool]$selection.Count)";Add-Content $env:GITHUB_OUTPUT 'has_plan=True'}
  $report
 }else{
  $null=Get-TokenForgeApplicationMetadata (Join-Path $DataPath applications.json) -PublicOnly

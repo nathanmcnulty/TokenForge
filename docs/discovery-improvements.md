@@ -44,6 +44,8 @@ Do not start with broad parallel token requests. First eliminate local overhead.
 
 ## Run without model supervision
 
+The [bounded Linux VM cycle](vm-operational-cycle.md) now provides a frozen-input resume wrapper, exclusive lock, sanitized durable receipt, operator stop marker, and declared session deadline. Offline tests include a real process kill/restart with synthetic checkpoints. Authenticated VM proof, service-side expiry handling, reboot/session-provider integration, scheduler activation, and the separate [#113 staged-publication gate](https://github.com/nathanmcnulty/TokenForge/issues/113) remain open; these are not implied by offline success.
+
 Provide one documented start/resume command and one cheap offline status command. Report stable exit codes or structured reasons for completion, budget stop, transient exhaustion, expired session, authorization failure, configuration error, and required human interaction. Include selected/completed/pending counts and a meaningful progress timestamp.
 
 Use an ordinary local scheduler or service for repeated runs; the collector must not require an agent to poll it. A supervisor should use an exclusive lock and durable run identity rather than trusting a saved PID alone. Support cancellation, stale-run detection, restart after a machine reboot, and explicit session renewal policy. Credentials stay in the existing protected storage/session mechanisms. Do not turn a transient retry into repeated automatic sign-ins or consent prompts.

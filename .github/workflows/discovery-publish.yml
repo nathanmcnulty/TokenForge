@@ -1,0 +1,114 @@
+name: Publish reviewed discovery candidate
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_run_id:
+        description: 'Existing completed discovery run; no collection or authentication is performed'
+        required: true
+      candidate_attempt:
+        description: 'Attempt containing the retained candidate artifact'
+        required: true
+        default: '1'
+      candidate_hash:
+        description: 'Reviewed manifest SHA256; approval must already exist on main'
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: discovery-data-writer
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Retrieve and verify the already reviewed candidate
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_RUN: ${{ inputs.candidate_run_id }}
+          CANDIDATE_ATTEMPT: ${{ inputs.candidate_attempt }}
+          CANDIDATE_HASH: ${{ inputs.candidate_hash }}
+        run: |
+          $ErrorActionPreference='Stop'
+          if($env:CANDIDATE_RUN -cnotmatch '^[1-9][0-9]*$' -or $env:CANDIDATE_ATTEMPT -cnotmatch '^[1-9][0-9]*$' -or $env:CANDIDATE_HASH -cnotmatch '^[a-f0-9]{64}$'){throw 'Invalid candidate identifiers.'}
+          $run=gh api "repos/$env:GITHUB_REPOSITORY/actions/runs/$env:CANDIDATE_RUN/attempts/$env:CANDIDATE_ATTEMPT" | ConvertFrom-Json
+          if($LASTEXITCODE -ne 0 -or $run.path -cne '.github/workflows/discovery.yml' -or $run.head_branch -cne 'main' -or $run.event -cne 'workflow_dispatch' -or $run.status -cne 'completed' -or $run.conclusion -cnotin @('success','failure') -or $run.head_repository.full_name -cne $env:GITHUB_REPOSITORY){throw 'Candidate provenance is not a completed manual discovery run on main.'}
+          $pages=gh api --paginate --slurp "repos/$env:GITHUB_REPOSITORY/actions/runs/$env:CANDIDATE_RUN/attempts/$env:CANDIDATE_ATTEMPT/jobs?per_page=100" | ConvertFrom-Json
+          if($LASTEXITCODE -ne 0){throw 'Candidate job provenance lookup failed.'}
+          $sealers=@($pages.jobs | Where-Object {$_.name -ceq 'candidate'})
+          if($sealers.Count -ne 1 -or $sealers[0].conclusion -cne 'success'){throw 'The exact candidate sealing job must have succeeded. Worker failure may leave valid partial coverage for explicit review.'}
+          gh run download $env:CANDIDATE_RUN --repo $env:GITHUB_REPOSITORY --name "discovery-candidate-$env:CANDIDATE_ATTEMPT-$env:CANDIDATE_HASH" --dir "$env:RUNNER_TEMP/candidate"
+          if($LASTEXITCODE -ne 0){throw 'Retained candidate unavailable. Do not recollect to retry publication.'}
+          . ./scripts/TokenForgeDiscoveryCandidate.ps1
+          $review=Join-Path $env:GITHUB_WORKSPACE "discovery-reviews/$env:CANDIDATE_HASH.json"
+          if(-not (Test-Path -LiteralPath $review)){throw 'No committed explicit review exists on main. Publication is blocked.'}
+          $manifest=Assert-TfDiscoveryCandidate -CandidatePath "$env:RUNNER_TEMP/candidate" -CandidateHash $env:CANDIDATE_HASH -ReviewPath $review
+          if($manifest.SourceCommit -cne $run.head_sha -or $manifest.ProducerRunId -cne $env:CANDIDATE_RUN -or $manifest.ProducerAttempt -cne $env:CANDIDATE_ATTEMPT){throw 'Candidate source does not match the collecting run.'}
+      - name: Advance only the reviewed frozen parent
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_HASH: ${{ inputs.candidate_hash }}
+        run: |
+          $ErrorActionPreference='Stop'
+          . ./scripts/TokenForgeDiscoveryCandidate.ps1
+          $candidate="$env:RUNNER_TEMP/candidate"
+          $manifest=Assert-TfDiscoveryCandidate -CandidatePath $candidate -CandidateHash $env:CANDIDATE_HASH -ReviewPath "$env:GITHUB_WORKSPACE/discovery-reviews/$env:CANDIDATE_HASH.json"
+          $destination="$env:RUNNER_TEMP/publication"
+          git init --quiet $destination
+          if($LASTEXITCODE -ne 0){throw 'Publication initialization failed.'}
+          Set-Location $destination
+          git remote add origin "https://github.com/$env:GITHUB_REPOSITORY.git"
+          git fetch --depth=1 origin discovery-data
+          if($LASTEXITCODE -ne 0){throw 'Data branch fetch failed.'}
+          git checkout --quiet -B discovery-data FETCH_HEAD
+          if($LASTEXITCODE -ne 0){throw 'Data checkout failed.'}
+          $actual=git rev-parse HEAD
+          if($LASTEXITCODE -ne 0){throw 'Data parent lookup failed.'}
+          if($actual -cne $manifest.BaseCommit){
+            # A completed push can have lost its acknowledgement. Verify the exact
+            # reviewed file set as well as the marker before treating a retry as done.
+            $message=git log -1 --format=%B
+            $same=($message -join "`n") -match "(?m)^Discovery-Candidate: $env:CANDIDATE_HASH$"
+            $files=@(Get-TfCiPublicStagePaths $destination)
+            $expected=@($manifest.Files|Where-Object {$_.Path.StartsWith('data/')}|ForEach-Object {$_.Path.Substring(5)})
+            if(@(Compare-Object $files $expected -CaseSensitive).Count){$same=$false}
+            foreach($entry in @($manifest.Files|Where-Object {$_.Path.StartsWith('data/')})){
+              $path=Join-Path $destination $entry.Path.Substring(5)
+              if(-not (Test-Path -LiteralPath $path) -or (Get-TfCandidateFileHash $path) -cne $entry.Sha256){$same=$false}
+            }
+            if($same){Add-Content $env:GITHUB_STEP_SUMMARY 'Reviewed candidate was already published; no new collection or commit needed.';exit 0}
+            throw 'Data parent advanced. Candidate is stale; reconcile and review a new candidate. Never automatically overwrite or recollect.'
+          }
+          # Remove only allowlisted public paths; unrelated branch files are retained.
+          foreach($path in @(Get-TfCiPublicStagePaths $destination)){Remove-Item -LiteralPath (Join-Path $destination $path)}
+          foreach($entry in @($manifest.Files|Where-Object {$_.Path.StartsWith('data/')})){
+            $relative=$entry.Path.Substring(5);$target=Join-Path $destination $relative
+            New-Item -ItemType Directory (Split-Path $target) -Force | Out-Null
+            Copy-Item -LiteralPath (Join-Path $candidate $entry.Path) -Destination $target
+          }
+          Assert-TfCiPublicData $destination
+          $paths=@(Get-TfCiPublicStagePaths $destination)
+          # Include reviewed deletions in the index without staging unrelated files.
+          $prior=@(git ls-tree -r --name-only HEAD | Where-Object {$_ -cmatch '^(applications|selection-deep|weekly-(shallow|deep)|coverage-(shallow|deep)|reports/\d{4}-W\d{2}-(shallow|deep)|scopes/chunk-[0-9]{4,6})\.json$'})
+          git add -A -- @(@($paths)+@($prior)|Sort-Object -Unique)
+          if($LASTEXITCODE -ne 0){throw 'Reviewed staging failed.'}
+          git diff --cached --quiet
+          if($LASTEXITCODE -eq 0){Add-Content $env:GITHUB_STEP_SUMMARY 'Reviewed candidate has no data changes.';exit 0}
+          if($LASTEXITCODE -ne 1){throw 'Staged diff failed.'}
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Publish reviewed discovery candidate' -m "Discovery-Candidate: $env:CANDIDATE_HASH"
+          if($LASTEXITCODE -ne 0){throw 'Reviewed commit failed.'}
+          $env:GIT_CONFIG_COUNT='1'
+          $env:GIT_CONFIG_KEY_0='http.https://github.com/.extraheader'
+          $env:GIT_CONFIG_VALUE_0='AUTHORIZATION: basic '+[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('x-access-token:'+$env:GH_TOKEN))
+          try{Publish-TfDiscoveryGitCommit -RepositoryPath $destination -BaseCommit $manifest.BaseCommit}
+          finally{$env:GIT_CONFIG_VALUE_0=$null;$env:GIT_CONFIG_COUNT=$null}
+          Add-Content $env:GITHUB_STEP_SUMMARY "Published reviewed candidate $env:CANDIDATE_HASH."

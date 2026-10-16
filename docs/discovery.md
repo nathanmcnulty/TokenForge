@@ -4,6 +4,8 @@ Discovery runs in PowerShell on your machine. It does not require Codex, an LLM 
 
 The runner downloads public application sources, confirms the signed-in account through Graph, collects tenant inventory, freezes a research cohort, and requests tokens for its pending client/resource pairs. It records scope and authentication-flow results as it goes. It never grants consent or registers applications automatically.
 
+For the engineering backlog and proposed collection improvements, see the [discovery improvement plan](discovery-improvements.md).
+
 ## Requirements
 
 - PowerShell 7.4+ and a trusted Linux TokenForge native package matching the source version.

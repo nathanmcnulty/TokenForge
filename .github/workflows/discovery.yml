@@ -64,6 +64,29 @@ jobs:
             if($LASTEXITCODE -ne 0){throw 'Repository access failed.'}
             git checkout --quiet --orphan discovery-data
           }
+      - name: Preserve the frozen public baseline for semantic review
+        if: ${{ !inputs.validation_only }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          . ./scripts/TokenForgeCiState.ps1
+          $source="$env:RUNNER_TEMP/discovery-data"
+          $baseline="$env:RUNNER_TEMP/baseline"
+          New-Item -ItemType Directory $baseline | Out-Null
+          foreach($path in @(Get-TfCiPublicStagePaths $source)){
+            $target=Join-Path $baseline $path
+            New-Item -ItemType Directory (Split-Path $target) -Force | Out-Null
+            Copy-Item -LiteralPath (Join-Path $source $path) -Destination $target
+          }
+      - name: Save frozen public baseline
+        if: ${{ !inputs.validation_only }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: discovery-baseline
+          overwrite: true
+          path: ${{ runner.temp }}/baseline
+          retention-days: 8
+          if-no-files-found: error
       - name: Check whether completed weekly work already refreshed today
         id: idle
         shell: pwsh
@@ -101,7 +124,7 @@ jobs:
           if($validation){Remove-Item -LiteralPath $source -Recurse -Force;Move-Item -LiteralPath $data -Destination $source}
       - name: Validate publication when no token workers are needed
         id: no_worker_publish
-        if: steps.plan.outputs.has_work == 'False' && !inputs.validation_only
+        if: steps.plan.outputs.has_work == 'False' && steps.plan.outputs.has_plan != 'False' && !inputs.validation_only
         shell: pwsh
         env:
           MODE: ${{ steps.plan.outputs.mode }}
@@ -121,6 +144,7 @@ jobs:
           overwrite: true
           path: |
             ${{ runner.temp }}/discovery-data/applications.json
+            ${{ runner.temp }}/discovery-data/selection-deep.json
             ${{ runner.temp }}/discovery-data/weekly-*.json
             ${{ runner.temp }}/discovery-data/coverage-*.json
             ${{ runner.temp }}/discovery-data/reports/*.json
@@ -128,13 +152,14 @@ jobs:
           retention-days: 1
           if-no-files-found: error
       - name: Upload public recipe
-        if: steps.idle.outputs.idle != 'True'
+        if: steps.idle.outputs.idle != 'True' && steps.plan.outputs.has_plan != 'False'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: weekly-plan
           path: |
             ${{ runner.temp }}/plan/state.json
             ${{ runner.temp }}/plan/request.json
+            ${{ runner.temp }}/plan/selection-deep.json
           overwrite: true
           retention-days: 8
           if-no-files-found: error
@@ -145,6 +170,7 @@ jobs:
           name: prepared-data
           path: |
             ${{ runner.temp }}/discovery-data/applications.json
+            ${{ runner.temp }}/discovery-data/selection-deep.json
             ${{ runner.temp }}/discovery-data/weekly-*.json
             ${{ runner.temp }}/discovery-data/coverage-*.json
             ${{ runner.temp }}/discovery-data/reports/*.json
@@ -285,7 +311,7 @@ jobs:
             gh run download $env:GITHUB_RUN_ID --repo $env:GITHUB_REPOSITORY --name $artifact.name --dir (Join-Path "$env:RUNNER_TEMP/plan" $artifact.name)
             if($LASTEXITCODE -ne 0){throw 'Worker download failed.'}
           }
-      - name: Validate receipts and publish one coherent update
+      - name: Validate receipts and assemble one coherent candidate
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -310,7 +336,7 @@ jobs:
           retention-days: 8
           overwrite: true
           if-no-files-found: error
-      - name: Save validated public data for the branch writer
+      - name: Save validated public data for candidate sealing
         if: ${{ !inputs.validation_only }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -318,17 +344,18 @@ jobs:
           overwrite: true
           path: |
             ${{ runner.temp }}/discovery-data/applications.json
+            ${{ runner.temp }}/discovery-data/selection-deep.json
             ${{ runner.temp }}/discovery-data/weekly-*.json
             ${{ runner.temp }}/discovery-data/coverage-*.json
             ${{ runner.temp }}/discovery-data/reports/*.json
             ${{ runner.temp }}/discovery-data/scopes/*.json
           retention-days: 1
           if-no-files-found: error
-  push:
+  candidate:
     needs: [prepare, publish]
     if: always() && needs.prepare.result == 'success' && !inputs.validation_only && (needs.publish.result == 'success' || (needs.publish.result == 'skipped' && needs.prepare.outputs.inline_publication == 'True' && needs.prepare.outputs.has_work == 'False'))
     permissions:
-      contents: write
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -341,46 +368,27 @@ jobs:
           path: ${{ runner.temp }}/discovery-data
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
+          name: discovery-baseline
+          path: ${{ runner.temp }}/baseline
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
           name: weekly-plan
           path: ${{ runner.temp }}/plan
-      - name: Validate public files and advance the frozen data parent
+      - name: Seal immutable candidate and semantic review packet
+        id: seal
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference='Stop'
-          . ./scripts/TokenForgeCiState.ps1
-          Import-Module ./src/TokenForge/TokenForge.psd1
-          $request=Get-Content "$env:RUNNER_TEMP/plan/request.json" -Raw|ConvertFrom-Json -AsHashtable
-          Assert-TfCiKeys $request @('SchemaVersion','PlanId','Mode','Indices','BaseCommit')
-          if($request.SchemaVersion -ne 1 -or $request.BaseCommit -notmatch '^[a-f0-9]{40}$' -or $request.PlanId -notmatch '^[a-f0-9]{64}$' -or $request.Mode -cnotin @('Shallow','Deep')){throw 'Only normal publication requests can advance the data branch.'}
-          Assert-TfCiPublicData "$env:RUNNER_TEMP/discovery-data"
-          $null=Get-TokenForgeApplicationMetadata "$env:RUNNER_TEMP/discovery-data/applications.json" -PublicOnly
-          $published=Get-Content (Join-Path "$env:RUNNER_TEMP/discovery-data" ('weekly-'+$request.Mode.ToLowerInvariant()+'.json')) -Raw|ConvertFrom-Json -AsHashtable
-          if($published.PlanId -cne $request.PlanId -or $published.Recipe.Mode -cne $request.Mode){throw 'Validated data does not match the publication request.'}
-          Set-Location "$env:RUNNER_TEMP/discovery-data"
-          git init --quiet
-          git remote add origin "https://github.com/$env:GITHUB_REPOSITORY.git"
-          git fetch --depth=1 origin discovery-data
-          if($LASTEXITCODE -ne 0){throw 'Data branch fetch failed.'}
-          $expected=(Get-Content "$env:RUNNER_TEMP/plan/request.json" -Raw|ConvertFrom-Json).BaseCommit
-          $actual=git rev-parse FETCH_HEAD
-          if($actual -cne $expected){throw 'Data branch advanced; rerun the coordinator before publishing.'}
-          # Retain the fetched parent while preserving validated files for this run.
-          git reset --mixed FETCH_HEAD
-          if($LASTEXITCODE -ne 0){throw 'Data parent setup failed.'}
-          git checkout -b discovery-data
-          $stagePaths=@(Get-TfCiPublicStagePaths "$env:RUNNER_TEMP/discovery-data")
-          git add -- @stagePaths
-          if($LASTEXITCODE -ne 0){throw 'Public staging failed.'}
-          git diff --cached --quiet
-          if($LASTEXITCODE -eq 0){exit 0}
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'Refresh frozen weekly research coverage and anonymous scope evidence'
-          if($LASTEXITCODE -ne 0){throw 'Data commit failed.'}
-          $env:GIT_CONFIG_COUNT='1'
-          $env:GIT_CONFIG_KEY_0='http.https://github.com/.extraheader'
-          $env:GIT_CONFIG_VALUE_0='AUTHORIZATION: basic '+[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('x-access-token:'+$env:GH_TOKEN))
-          try{git push origin HEAD:refs/heads/discovery-data;if($LASTEXITCODE -ne 0){throw 'Data push failed.'}}
-          finally{$env:GIT_CONFIG_VALUE_0=$null;$env:GIT_CONFIG_COUNT=$null}
+          . ./scripts/TokenForgeDiscoveryCandidate.ps1
+          $hash=New-TfDiscoveryCandidate -DataPath "$env:RUNNER_TEMP/discovery-data" -BaselinePath "$env:RUNNER_TEMP/baseline" -RequestPath "$env:RUNNER_TEMP/plan/request.json" -OutputPath "$env:RUNNER_TEMP/candidate" -SourceCommit $env:GITHUB_SHA -ProducerRunId $env:GITHUB_RUN_ID -ProducerAttempt $env:GITHUB_RUN_ATTEMPT
+          $null=Assert-TfDiscoveryCandidate -CandidatePath "$env:RUNNER_TEMP/candidate" -CandidateHash $hash
+          Add-Content $env:GITHUB_OUTPUT "hash=$hash"
+          Add-Content $env:GITHUB_STEP_SUMMARY "Candidate SHA256: $hash. Pending explicit semantic review; discovery cannot publish. Retry publication with this retained artifact, without recollection."
+          Get-Content "$env:RUNNER_TEMP/candidate/review.md" | Add-Content $env:GITHUB_STEP_SUMMARY
+      - name: Retain immutable candidate for independent review and publication retry
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: discovery-candidate-${{ github.run_attempt }}-${{ steps.seal.outputs.hash }}
+          path: ${{ runner.temp }}/candidate
+          retention-days: 30
+          if-no-files-found: error

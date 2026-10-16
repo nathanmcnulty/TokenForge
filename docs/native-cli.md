@@ -523,3 +523,7 @@ checks and the separate two-account Linux proof remain distinct evidence.
 Native 0.43 adds [pending software-passkey recovery](native-passkey-recovery.md), with fresh sign-in and Graph identity confirmation before a private local receipt is saved.
 
 Version 0.44 extends pending-passkey receipt checks to the legacy PowerShell authentication adapter and uses the requested imported XDRInternals provider. See [private-file requirements and provider trust](native-passkey-recovery.md#the-powershell-adapter).
+
+### Scope explanation without observation history
+
+`tokenforge scopes explain --profile lab --resource <resource-app-id> --scope User.Read --json` accepts a nonempty resource GUID as well as `graph` and `arm`. A configured profile with expected tenant/account fingerprints and a matching `inventory.json` is still required for account-specific planning. Missing `scopes.sqlite` and `scopes.json` now means `NotObserved`; published hints and applicable configured grants can still be explained, without creating an empty store. Existing malformed history remains an error, not an empty-history fallback. For public-only lookup without a profile or inventory, use `Find-TokenForgeApplicationEvidence` instead. Neither output guarantees token acquisition.

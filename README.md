@@ -16,11 +16,18 @@ Published permissions and observed token scopes are evidence, not a guarantee of
 
 ```powershell
 Import-Module ./src/TokenForge/TokenForge.psd1
-$catalog = Update-TokenForgeCatalog
-Find-TokenForgeApplication -Catalog $catalog `
+# Download the public ledger, or use an existing local copy.
+Invoke-WebRequest 'https://raw.githubusercontent.com/nathanmcnulty/TokenForge/discovery-data/applications.json' `
+    -OutFile ./applications.json
+Find-TokenForgeApplicationEvidence -Path ./applications.json -Name 'Azure'
+Find-TokenForgeApplicationEvidence -Path ./applications.json `
     -ResourceId '00000003-0000-0000-c000-000000000000' `
     -Scope 'User.Read'
 ```
+
+This read-only lookup reports published metadata with provenance, observation date, freshness, and evidence type. Add `-ObservationPath ./public-scopes.json` (or multiple paths) to search downloaded anonymous [scope exports](https://github.com/nathanmcnulty/TokenForge/tree/discovery-data/scopes) alongside published hints. It needs no profile, private history, or login. Filter by `-AppId`, `-Name`, `-ResourceId`, and/or `-Scope`; all scopes must match one evidence row. No match means unknown, not unsupported. See [lookup details](docs/application-metadata.md#public-evidence-lookup).
+
+The older `Update-TokenForgeCatalog` / `Find-TokenForgeApplication` commands remain available for ROADtools published grants only.
 
 To collect and test application metadata, follow the [discovery guide](docs/discovery.md). Runs use private SQLite databases for checkpoints and can resume after interruption. They run on your machine without Codex or GitHub Actions.
 

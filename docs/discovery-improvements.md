@@ -15,7 +15,7 @@ Already implemented:
 - Separate public metadata, permission definitions, anonymous observations, and private tenant evidence. Compact gzip catalog export preserves existing JSON compatibility.
 - Explicit Microsoft ownership checks for registration. Documentation-only GUIDs require separate opt-in because permission IDs, examples, and tenant IDs can resemble applications.
 
-The PowerShell-to-native SQLite reporting shortcut is currently under validation. Its benefit must be measured before adoption.
+The [PowerShell-to-native SQLite reporting shortcut](native-research-coverage.md#powershell-sqlite-reports) preserves report output while reducing expansion overhead. Continue measuring against larger histories before extending it to other operations.
 
 ## Priority order
 
@@ -33,6 +33,8 @@ The PowerShell-to-native SQLite reporting shortcut is currently under validation
 Measure each stage separately: source download/validation, inventory paging, planning, native process startup, database reads/writes, token requests, metadata projection, reporting, and export. Record elapsed time, request/process counts, retry waits, bytes read/written, and peak memory. Summaries should be bounded and contain no response bodies or credentials. Distinguish CPU cost, service latency, and intentional pacing before optimizing.
 
 Prefer narrow projections for frequent status checks. Keep full validation for imports, publication, and authoritative reports. Do not gain speed by dropping historical validation, hiding malformed records, or treating incomplete work as complete.
+
+Measure inventory sorting and canonical hashing separately: the frozen recipe currently binds the complete inventory, so a small selected batch can still pay for a large snapshot. Any cached digest must be bound to verified content and schema, preserve existing cohort identity, and invalidate on content changes. File modification time alone is insufficient.
 
 Reduce repeated serialization and native invocations. Consider a bounded native batch operation only if measurements show startup or serialization dominates. Preserve per-attempt durability: metadata projection may lag and be repaired, but an issued observation must not disappear because a large batch crashes. Test crash boundaries before increasing transaction size.
 

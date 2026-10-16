@@ -51,14 +51,35 @@ Describe 'Native scope explanation without authentication or PowerShell' -Skip:(
   $row.CandidateRank|Should -Be 0;$row.ObservationStatus|Should -Be FreshCoverage
   (Get-FileHash $sqlite).Hash|Should -Be $before
  }
- It 'fails for missing evidence without creating it' {
+ It 'explains published hints without history and without creating it' {
   Remove-Item $databasePath
-  Invoke-NativeScope @('--scope','User.Read') 1
+  $row=Invoke-NativeScope @('--scope','User.Read')|ConvertFrom-Json
+  $row.ObservationStatus|Should -Be NotObserved
+  $row.PublishedScopes|Should -Contain 'User.Read'
   Test-Path $databasePath|Should -BeFalse;Test-Path (Join-Path $p.StatePath scopes.sqlite)|Should -BeFalse
+
+  # The same missing-history path also supports a custom resource GUID.
+  $custom='22222222-2222-2222-2222-222222222222'
+  $inventory.Applications[0].PublishedGrants[0].ResourceId=$custom
+  $inventory.Applications[1].AppId=$custom
+  & (Get-Module TokenForge) {param($i,$ip)Save-TokenForgeDocument $i $ip} $inventory $inventoryPath
+  $row=Invoke-NativeScope @('--resource',$custom,'--scope','User.Read')|ConvertFrom-Json
+  $row.ResourceId|Should -Be $custom;$row.ObservationStatus|Should -Be NotObserved
+  $row.ResourceEligible|Should -BeTrue
+  foreach($bad in @('https://example.test','00000000-0000-0000-0000-000000000000','invalid')){Invoke-NativeScope @('--resource',$bad,'--scope','User.Read') 1}
  }
- It 'rejects duplicate JSON properties with sanitized errors' {
+ It 'rejects malformed history and unsafe paths rather than treating them as absent' {
   [IO.File]::WriteAllText($databasePath,'{"SchemaVersion":1,"Observations":[],"observations":[],"AccessToken":"synthetic-private-token"}')
   Invoke-NativeScope @('--scope','User.Read') 1
+  Remove-Item $databasePath
+  foreach($candidate in @($databasePath,(Join-Path $p.StatePath scopes.sqlite))){
+   $null=New-Item -ItemType Directory -Path $candidate
+   try{Invoke-NativeScope @('--scope','User.Read') 1}finally{Remove-Item $candidate}
+   if(-not $IsWindows){
+    $null=New-Item -ItemType SymbolicLink -Path $candidate -Target (Join-Path $p.StatePath missing-history)
+    try{Invoke-NativeScope @('--scope','User.Read') 1}finally{Remove-Item $candidate}
+   }
+  }
  }
  It 'accepts legacy UTF8 BOM metadata without relaxing validation' {
   $text=Get-Content $inventoryPath -Raw

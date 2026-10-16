@@ -19,7 +19,7 @@ internal static class NativeScopeCommand
         }
         if(!options.TryGetValue("--scope",out var scope))throw new InvalidOperationException();
         string resource=options.GetValueOrDefault("--resource") ?? "graph";
-        resource=resource switch{"graph"=>"00000003-0000-0000-c000-000000000000","arm"=>"797f4846-ba00-4fd7-ba43-dac1f8f63013",_=>throw new InvalidOperationException()};
+        resource=resource switch{"graph"=>"00000003-0000-0000-c000-000000000000","arm"=>"797f4846-ba00-4fd7-ba43-dac1f8f63013",_=>Guid.TryParse(resource,out var id) && id!=Guid.Empty?id.ToString():throw new InvalidOperationException()};
         using var configuration=JsonDocument.Parse(ProfileStore.Read(options.GetValueOrDefault("--profile") ?? "default",options.GetValueOrDefault("--root")));
         var profile=configuration.RootElement;
         string principal=profile.GetProperty("ExpectedPrincipalFingerprint").GetString() ?? throw new InvalidOperationException();
@@ -27,14 +27,16 @@ internal static class NativeScopeCommand
         string state=profile.GetProperty("StatePath").GetString()!;
         string inventoryJson=ReadJson(Path.Combine(state,"inventory.json"));
         using(var inventory=JsonDocument.Parse(inventoryJson))if(inventory.RootElement.GetProperty("TenantFingerprint").GetString()!=tenant)throw new InvalidOperationException();
-        string sqlite=Path.Combine(state,"scopes.sqlite"),json=Path.Combine(state,"scopes.json");
+        // Missing history is allowed; malformed or unsafe paths are not absence.
+        string sqlite=PrivateFiles.Resolve(Path.Combine(state,"scopes.sqlite"),false);
+        string json=PrivateFiles.Resolve(Path.Combine(state,"scopes.json"),false);
         string databaseJson;
         if(File.Exists(sqlite))
         {
             using var store=new EvidenceStore(sqlite,readOnly:true);
             databaseJson=store.Export(latest:false,tenant:tenant,principal:principal,resource:resource);
         }
-        else databaseJson=ReadJson(json);
+        else databaseJson=File.Exists(json)?ReadJson(json):"{\"SchemaVersion\":1,\"Observations\":[]}";
         Console.WriteLine(ScopePlanning.Candidates(inventoryJson,databaseJson,resource,scope.Split(','),principal,profile.GetProperty("MaxAgeHours").GetInt32()));
         return 0;
     }

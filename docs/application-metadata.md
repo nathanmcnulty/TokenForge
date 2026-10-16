@@ -35,3 +35,21 @@ Hosted Actions are disabled and scheduled triggers have been removed. The follow
 The [weekly controller](weekly-ci.md) refreshes public sources, freezes all published IDs into a UTC weekly recipe, and selects pending/failed batches for independent workers. Fresh private inventory determines whether each selected ID can be probed. Shallow mode stops after first issuance; Auto starts separately capped deeper research after shallow coverage completes. The workflow never registers apps, grants consent, or collects sign-in logs.
 
 Private scope/flow checkpoints are encrypted with the `TOKENFORGE_CHECKPOINT_KEY` repository secret before artifact upload; credentials are excluded. Public artifacts contain only validated public recipes, aggregate receipts/reports, and anonymous successful observations. The sole publisher commits public application metadata, weekly recipes, coverage reports, and anonymous scope batches to `discovery-data`. Partial worker failures produce coherent **incomplete** coverage rather than a false full-catalog success. Earlier successful observation dates remain unchanged. Dispatch offers Auto/Shallow/Deep, bounded worker count, Deep target IDs, and exhausted retry controls; the previous `public_only` and rotating chunk inputs are replaced.
+
+## Public evidence lookup
+
+`Find-TokenForgeApplicationEvidence -Path ./applications.json` reads the unified public application ledger (JSON or SQLite with a matching native executable). The full ledger is validated with `PublicOnly`, including history, before any filters are applied; private ledgers are rejected. This command does not fetch data, authenticate, create profiles, or write state.
+
+```powershell
+Find-TokenForgeApplicationEvidence -Path ./applications.json -Name 'Azure'
+Find-TokenForgeApplicationEvidence -Path ./applications.json -AppId '04b07795-8ddb-461a-bbee-02f9e1bf7b46'
+Find-TokenForgeApplicationEvidence -Path ./applications.json `
+    -ObservationPath ./public-scopes-a.json,./public-scopes-b.json `
+    -ResourceId '00000003-0000-0000-c000-000000000000' -Scope User.Read
+```
+
+Optional observation inputs must be anonymous JSON exports produced by `Export-TokenForgeScopeDatabase`; private databases are rejected. Observations for IDs absent from the application ledger are retained with an unknown name. Public exports intentionally lack account and tenant identifiers, so they cannot be used to plan authorization for your account.
+
+Rows keep `PublishedApplicationMetadata`, `PublishedScopeHint`, and `AnonymousTenantTokenObservation` separate. All requested scopes must occur in one row for one resource; scopes are case-sensitive and names use case-insensitive substring matching. The lookup does not combine evidence rows across resources, observation dates, or unknown accounts. A ledger grant can already aggregate upstream source claims; inspect its provenance and conflicts. Metadata rows without grants remain searchable by name/ID. A missing result means unknown. Current ledger records are shown, including records marked `PresentInLatestRun=false`; historical versions remain available through `Get-TokenForgeApplicationMetadata`.
+
+Each row includes `Sources`, `ContentSha256`, `ObservedAt`, `PresentInLatestRun`, `SourceClaims`, `MetadataConflicts`, and `Freshness`. Freshness uses the source observation date, not download/import time: `Fresh` within `MaxAgeHours` (default 168), `Stale` otherwise, or `FutureDated` beyond five minutes ahead. Fresh metadata can still describe conflicting or unsupported claims. Hashes identify input content, not publisher signatures. Anonymous exports are not signature-validated. None of these rows proves consent, successful token acquisition, silent authentication, or API access.

@@ -8,7 +8,7 @@ For the engineering backlog and proposed collection improvements, see the [disco
 
 ## Requirements
 
-- PowerShell 7.4+ and a trusted Linux TokenForge native package matching the source version.
+- PowerShell 7.6+ and a trusted Linux TokenForge native package matching the source version.
 - An authorized software passkey and XDRInternals authentication module, or an existing SecureString ESTS session.
 - A private state directory outside your Git checkout, with one directory per account.
 - A private passkey file and containing directory. On Unix use mode 0600 for the file and 0700 for its directory; file permissions alone are insufficient.
@@ -57,6 +57,8 @@ A refreshed inventory replaces the saved snapshot only after metadata writes suc
 A fresh session may be needed between runs. Inventory older than 24 hours is refreshed. If application metadata changed, the frozen cohort refuses it; use `-NewRun` after reviewing the change. `-RefreshDiscovery` fetches updated public sources and refreshes inventory. `-GraphOnly` limits a new cohort to Graph; otherwise the planner uses known resource relationships. Use `-ExploreAllFlows:$false` on a new cohort to stop each pair after its first issuance; the default explores all three implemented protocols, with at most eight callbacks per client by default. The saved cohort retains its original exploration settings when resumed. These bounds do not prove support for every possible authentication method.
 
 Missing, disabled, or ownership-unverified applications stay in metadata but are excluded from token requests. Use the separate [registration stage](inventory.md) if you intentionally want to register candidates. Unknown metadata or an excluded request is not a successful token observation.
+
+For an offline-tested, bounded Linux VM resume wrapper, durable cycle receipts, cooperative stop/session deadlines, and the remaining authenticated deployment checklist, see [VM operational cycle](vm-operational-cycle.md). This does not activate a scheduler or integrate publication.
 
 ## Storage and exports
 

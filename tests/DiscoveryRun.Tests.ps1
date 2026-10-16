@@ -160,6 +160,41 @@ Describe 'Bounded local discovery orchestration' {
   Should -Invoke Invoke-TokenForgeResearchChunk -ModuleName TokenForge -Times 1 -Exactly
   Should -Invoke Start-Sleep -ModuleName TokenForge -Times 0 -Exactly
  }
+ It 'stops an expired session before issuance and resumes only with a renewed deadline' {
+  (Invoke-TokenForgeDiscoveryRun @options -SessionExpiresAt ([DateTimeOffset]::UtcNow.AddSeconds(-1))).Status|Should -Be SessionExpired
+  Should -Invoke Invoke-TokenForgeResearchChunk -ModuleName TokenForge -Times 0 -Exactly
+  (Invoke-TokenForgeDiscoveryRun @options -SessionExpiresAt ([DateTimeOffset]::UtcNow.AddHours(1))).Status|Should -Be Complete
+  Should -Invoke New-TokenForgeResearchCohort -ModuleName TokenForge -Times 1 -Exactly
+ }
+ It 'checks cancellation at the next chunk boundary and preserves completed work' {
+  $stop=Join-Path $state 'stop.requested'
+  Mock Invoke-TokenForgeResearchChunk -ModuleName TokenForge {
+   Set-Content $counter 2
+   [IO.File]::WriteAllText($stop,'')
+   if(-not $IsWindows){[IO.File]::SetUnixFileMode($stop,[IO.UnixFileMode]384)}
+   [pscustomobject]@{PlanId=('c'*64);PendingClients=2}
+  }
+  $r=Invoke-TokenForgeDiscoveryRun @options -StopFilePath $stop
+  $r.Status|Should -Be Cancelled
+  $r.CompletedClients|Should -Be 1
+  Should -Invoke Invoke-TokenForgeResearchChunk -ModuleName TokenForge -Times 1 -Exactly
+ }
+ It 'honors a stop marker after a transient failure without a retry wait' {
+  $stop=Join-Path $state 'stop.requested'
+  Mock Invoke-TokenForgeResearchChunk -ModuleName TokenForge {
+   [IO.File]::WriteAllText($stop,'')
+   if(-not $IsWindows){[IO.File]::SetUnixFileMode($stop,[IO.UnixFileMode]384)}
+   throw [Management.Automation.ErrorRecord]::new([InvalidOperationException]::new('synthetic'),'TokenForge.TransientIdentity',[Management.Automation.ErrorCategory]::ResourceUnavailable,$null)
+  }
+  (Invoke-TokenForgeDiscoveryRun @options -StopFilePath $stop).Status|Should -Be Cancelled
+  Should -Invoke Start-Sleep -ModuleName TokenForge -Times 0 -Exactly
+ }
+ It 'does not retry across the declared session deadline' {
+  Mock Invoke-TokenForgeResearchChunk -ModuleName TokenForge {throw [Management.Automation.ErrorRecord]::new([InvalidOperationException]::new('synthetic'),'TokenForge.TransientIdentity',[Management.Automation.ErrorCategory]::ResourceUnavailable,$null)}
+  $options.RetryDelaySeconds=30
+  (Invoke-TokenForgeDiscoveryRun @options -SessionExpiresAt ([DateTimeOffset]::UtcNow.AddSeconds(10))).Status|Should -Be SessionExpired
+  Should -Invoke Start-Sleep -ModuleName TokenForge -Times 0 -Exactly
+ }
  It 'rejects a changed manifest before requesting tokens' {
   $null=Invoke-TokenForgeDiscoveryRun @options -MaxChunks 1
   Set-Content (Join-Path $state 'discovery-run.json') '{"SchemaVersion":1,"CohortId":"invalid","AccessToken":"synthetic"}'

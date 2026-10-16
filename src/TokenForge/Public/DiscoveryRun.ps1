@@ -9,6 +9,8 @@ function Invoke-TokenForgeDiscoveryRun {
         [Parameter(Mandatory)][string]$StatePath,
         [Parameter(Mandatory)][string]$NativeExecutablePath,
         [switch]$NewRun,[switch]$GraphOnly,
+        [Nullable[DateTimeOffset]]$SessionExpiresAt,
+        [string]$StopFilePath,
         [ValidateRange(1,1000)][int]$BatchSize=25,
         [ValidateRange(1,1000)][int]$MaxRedirects=8,
         [ValidateRange(1,100000)][int]$MaxChunks=100000,
@@ -39,6 +41,8 @@ function Invoke-TokenForgeDiscoveryRun {
         $reason='Complete';$pending=$cohort.Pending.Count
         while($pending){
             if($attempts -ge $MaxChunks -or $timer.Elapsed.TotalMinutes -ge $MaxMinutes){$reason='BudgetReached';break}
+            if($SessionExpiresAt -and [DateTimeOffset]::UtcNow -ge $SessionExpiresAt){$reason='SessionExpired';break}
+            if($StopFilePath -and (Test-Path -LiteralPath (Resolve-TokenForgeVaultPath $StopFilePath))){$reason='Cancelled';break}
             $before=$pending
             $attempts++
             try{
@@ -49,8 +53,10 @@ function Invoke-TokenForgeDiscoveryRun {
                 $fresh=Get-TokenForgeResearchCohort -DatabasePath $database -CohortId $cohort.PlanId -NativeExecutablePath $NativeExecutablePath
                 $pending=$fresh.Pending.Count
                 if(-not $pending){break}
+                if($StopFilePath -and (Test-Path -LiteralPath (Resolve-TokenForgeVaultPath $StopFilePath))){$reason='Cancelled';break}
                 $delay=[int][Math]::Min(300,$RetryDelaySeconds*[Math]::Pow(2,$retries))
                 if($attempts -ge $MaxChunks -or $timer.Elapsed.TotalSeconds+$delay -ge $MaxMinutes*60){$reason='BudgetReached';break}
+                if($SessionExpiresAt -and [DateTimeOffset]::UtcNow.AddSeconds($delay) -ge $SessionExpiresAt){$reason='SessionExpired';break}
                 $retries++
                 Start-Sleep -Seconds $delay
                 continue

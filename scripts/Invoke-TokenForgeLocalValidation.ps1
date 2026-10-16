@@ -60,7 +60,7 @@ try {
         'Weekly' {
             @('./tests/WeeklyCli.Tests.ps1', './tests/NativeWeekly.Tests.ps1', './tests/CiWeekly.Tests.ps1', './tests/CredentialBootstrap.Tests.ps1')
         }
-        'Discovery' { @('./tests/DiscoveryRun.Tests.ps1', './tests/DiscoveryStatus.Tests.ps1', './tests/DiscoveryReport.Tests.ps1', './tests/DiscoveryBootstrap.Tests.ps1', './tests/InventoryCheckpoint.Tests.ps1', './tests/InventoryShape.Tests.ps1', './tests/ProbeReadBounds.Tests.ps1', './tests/RoleOrigin.Tests.ps1', './tests/ResearchCohort.Tests.ps1', './tests/ResearchChunkPending.Tests.ps1', './tests/PublicPermissions.Tests.ps1', './tests/PermissionIdentifiers.Tests.ps1', './tests/RegistrationResume.Tests.ps1') }
+        'Discovery' { @('./tests/VmCycle.Tests.ps1', './tests/DiscoveryRun.Tests.ps1', './tests/DiscoveryStatus.Tests.ps1', './tests/DiscoveryReport.Tests.ps1', './tests/DiscoveryBootstrap.Tests.ps1', './tests/InventoryCheckpoint.Tests.ps1', './tests/InventoryShape.Tests.ps1', './tests/ProbeReadBounds.Tests.ps1', './tests/RoleOrigin.Tests.ps1', './tests/ResearchCohort.Tests.ps1', './tests/ResearchChunkPending.Tests.ps1', './tests/PublicPermissions.Tests.ps1', './tests/PermissionIdentifiers.Tests.ps1', './tests/RegistrationResume.Tests.ps1') }
         'Native' {
             $workflow = Get-Content -LiteralPath (Join-Path $repo '.github/workflows/native.yml') -Raw
             $match = [regex]::Match($workflow, '(?m)^\s*\$result\s*=\s*Invoke-Pester\s+(.+?)\s+-PassThru\b')

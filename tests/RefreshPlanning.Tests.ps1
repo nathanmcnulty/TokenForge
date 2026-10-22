@@ -288,3 +288,9 @@ Describe 'Goal 4 latest visibility with retained records' {
   $i.History.Entries[1].CoverageReferences.Count|Should -Be 1
  }
 }
+Describe 'Goal 4 single-request priority' {
+ It 'preserves the highest priority when a fairness seat would consume the entire single-request budget' {
+  $i=New-RefreshInput;$t=Copy-Refresh $i.Requirements.Tools[0];$t.Id='explore';$i.Requirements.Tools+=@($t);$i.Policy.CriticalToolIds=@('read-profile');$i.Policy.MaxSelectedRequests=1
+  $p=Plan-Refresh $i;@($p.Candidates|Where-Object Selected)[0].Reason|Should -Be MissingEvidence;@($p.Candidates|Where-Object FairnessSelected).Count|Should -Be 0
+ }
+}

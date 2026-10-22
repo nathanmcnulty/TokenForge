@@ -55,7 +55,7 @@ function Get-TfCiEvidenceQueue {
  })
  $pending=@($rows|Where-Object Reason -cne FreshEvidence|Sort-Object Priority,ObservedAt,LastSelectedWeek,AppId)
  $fair=@($pending|Where-Object Priority -gt $(if($pending.Count){$pending[0].Priority}else{99})|Sort-Object LastSelectedWeek,ObservedAt,AppId|Select-Object -First 1)
- $chosen=if($fair.Count -and $pending.Count -gt $MaxApplications){@(@($pending|Where-Object AppId -cne $fair[0].AppId|Select-Object -First ($MaxApplications-1))+$fair|Sort-Object Priority,ObservedAt,LastSelectedWeek,AppId)}else{@($pending|Select-Object -First $MaxApplications)}
+ $chosen=if($MaxApplications -ge 2 -and $fair.Count -and $pending.Count -gt $MaxApplications){@(@($pending|Where-Object AppId -cne $fair[0].AppId|Select-Object -First ($MaxApplications-1))+$fair|Sort-Object Priority,ObservedAt,LastSelectedWeek,AppId)}else{@($pending|Select-Object -First $MaxApplications)}
  [pscustomobject][ordered]@{
   SchemaVersion=1;EvaluatedAt=$nowUtc.ToString('o');FreshnessDays=$FreshnessDays;MaxApplications=$MaxApplications
   EvidenceType='CompletedDeepAssessment';CandidateCount=$rows.Count;FreshCount=@($rows|Where-Object Reason -ceq FreshEvidence).Count

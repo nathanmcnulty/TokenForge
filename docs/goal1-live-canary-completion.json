@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "collectionStatus": "CompletedAllSelectedPairs",
+  "assessmentStatus": {
+    "SchemaVersion": 1,
+    "Status": "Failed",
+    "ExitCode": 1,
+    "SelectedPairs": 10,
+    "Pairs": {
+      "Complete": 8,
+      "StructurallyExcluded": 0,
+      "Pending": 0,
+      "Paused": 0,
+      "RequestBlocked": 1,
+      "TransientExhausted": 0,
+      "InFlightUnknown": 0,
+      "Failed": 1
+    },
+    "PlannedCells": 10,
+    "UnmaterializedPairs": 0,
+    "Cells": {
+      "Complete": 8,
+      "StructurallyExcluded": 0,
+      "Pending": 0,
+      "Paused": 0,
+      "RequestBlocked": 1,
+      "TransientExhausted": 0,
+      "InFlightUnknown": 0,
+      "Failed": 1
+    },
+    "CompletedClients": 10,
+    "PendingClients": 0,
+    "SnapshotConsistency": "SeparateValidatedReads",
+    "CredentialOutput": false,
+    "ApiAcceptance": "NotEstablished"
+  },
+  "liveCanaryEvidence": "Account verification, bounded stop/restart, renewed same-account continuation, unchanged checked before/after visibility, original evidence preservation and saved export verified. Not all requests succeeded; API acceptance not established.",
+  "implementationSourceRevision": "f5df773c177cd11dcf3befc53b3e7507f08e2041",
+  "previousImplementationSourceRevision": "3bf93cbcee318e8758005d12258808ec7184394f",
+  "baseRevision": "1be12d75c7e2a63eac8e14c32d54e79cec4a23ef",
+  "handoffRevision": "19470aeba7a949e4204e4ecf5586a6ffb3171c69",
+  "branch": "codex/goal1-bounded-collector",
+  "confirmedCause": {
+    "SchemaVersion": 1,
+    "FlowChanged": false,
+    "PermissionChangingApiOperations": 0,
+    "AllowlistedCodes": [
+      "9002327"
+    ],
+    "Reason": "RequestPlatformRedemptionRejected",
+    "Outcome": "RequestBlocked"
+  },
+  "otherTerminalFailure": {
+    "Outcome": "Failed",
+    "AllowlistedCode": "7000218",
+    "Meaning": "This client/flow requires a confidential-client credential; none was supplied or sought."
+  },
+  "requestRecipeChanged": false,
+  "originalCompletedEvidence": {
+    "Rows": 3,
+    "AttemptIdsPreserved": true,
+    "OriginalObservationDatesPreserved": true,
+    "ContentHashesPreserved": true,
+    "Reissued": 0
+  },
+  "budget": {
+    "aggregateLimits": {
+      "IssuanceAttempts": 30,
+      "BootstrapRequests": 60,
+      "InventoryRequests": 350,
+      "InventoryPages": 300,
+      "SourceRequests": 0,
+      "TotalRequests": 500
+    },
+    "aggregateConsumedAcrossAllAttempts": {
+      "IssuanceAttempts": 20,
+      "IssuanceRetries": 4,
+      "BootstrapAttempts": 6,
+      "BootstrapRequests": 42,
+      "InventoryRequests": 133,
+      "InventoryPages": 127,
+      "SourceRequests": 0,
+      "IdentityRequests": 28,
+      "TotalRequests": 203,
+      "RequestRetries": 0,
+      "PreflightRequests": 149,
+      "InFlightOverruns": 0,
+      "ReservedUnknownRequests": 0
+    },
+    "finalInvocation": {
+      "SchemaVersion": 1,
+      "Scope": "CurrentInvocationIncludingPreflight",
+      "StartedAt": "2026-10-22T08:06:12.2196672+00:00",
+      "MaxSeconds": 900.0,
+      "TransportTimeoutSeconds": 30.0,
+      "ElapsedSeconds": 82.349,
+      "OverrunSeconds": 0.0,
+      "StopReason": null,
+      "Limits": {
+        "IssuanceAttempts": 18,
+        "BootstrapAttempts": 1,
+        "BootstrapRequests": 25,
+        "InventoryRequests": 244,
+        "InventoryPages": 199,
+        "SourceRequests": 0,
+        "TotalRequests": 345,
+        "TransientRetries": 1
+      },
+      "Counts": {
+        "IssuanceAttempts": 8,
+        "IssuanceRetries": 1,
+        "BootstrapAttempts": 1,
+        "BootstrapRequests": 7,
+        "InventoryRequests": 27,
+        "InventoryPages": 26,
+        "SourceRequests": 0,
+        "IdentityRequests": 14,
+        "TotalRequests": 48,
+        "RequestRetries": 0,
+        "PreflightRequests": 8,
+        "InFlightOverruns": 0,
+        "ReservedUnknownRequests": 0
+      }
+    },
+    "explicitSignInsAcrossAllAttempts": 6,
+    "automaticSignInRetries": 0,
+    "standaloneDiagnostics": 2,
+    "standaloneDiagnosticLimitsEach": {
+      "IssuanceAttemptsIncludingBootstrap": 2,
+      "TotalHttpRequests": 30,
+      "Seconds": 900
+    },
+    "deadlineUtc": "2026-10-22T08:21:12.1620128+00:00"
+  },
+  "sameAccountRenewalVerified": true,
+  "checkedBeforeAfter": {
+    "ServicePrincipals": {
+      "Count": 2327,
+      "EqualCountAndHash": true
+    },
+    "Applications": {
+      "Count": 186,
+      "EqualCountAndHash": true
+    },
+    "Grants": {
+      "Count": 85,
+      "EqualCountAndHash": true
+    }
+  },
+  "permissionChangingApiOperations": 0,
+  "credentialsPersisted": false,
+  "credentialOutput": false,
+  "candidate": {
+    "SchemaVersion": 1,
+    "CandidateHash": "8583f0b60e24b67d3165060ee8e77538c81f85973496f18c995b145e2130654e",
+    "CollectionIssuanceDuringExport": 0,
+    "ReviewStatus": "Pending",
+    "Published": false
+  },
+  "candidateIndependentReview": {
+    "IntegrityPrivacyVerified": true,
+    "SevenFilesOnly": true,
+    "OriginalThreeExportedDatesPreserved": true,
+    "ReviewStatus": "Pending",
+    "PublicationApproved": false,
+    "RawStoresAndAfterSnapshotNotReadByReviewer": true
+  },
+  "package": {
+    "sourceRevision": "f5df773c177cd11dcf3befc53b3e7507f08e2041",
+    "manifestSha256": "6e203055aa9414d894ef7763f488479b2c1f8d19ca4cbfc17a5503f54d19aa15",
+    "archiveSha256": "71d2dc939219b18fbe53ec8d377a6623920b571e6aca41a89a36dfe07c0b8c9b",
+    "executableSha256": "d65f1686542444dcfab9fe1bb38eb5989a815a2e743fc04a6276648fcf7de196",
+    "credentialDllSha256": "13590ca58fc86b195525ac25507620366b86413d477040416398f10914a7f460",
+    "nativeInputsUnchanged": true,
+    "payloadFiles": 133,
+    "totalFilesIncludingManifest": 134,
+    "version": "0.48.0",
+    "runtime": "linux-x64",
+    "nativeInputsSha256": "e045aa00fe2cc1a2bfc3c9a9dca2098f45bd658610650d8ad51646bac4dd648c",
+    "reusedNativeBuildSourceRevision": "3bf93cbcee318e8758005d12258808ec7184394f"
+  },
+  "validation": {
+    "PowerShell": "7.6.7",
+    "AvailablePester6Suite": {
+      "PassedCount": 116,
+      "FailedCount": 0,
+      "SkippedCount": 0
+    },
+    "Pester6Version": "6.2.0",
+    "InitialPinnedRunner": {
+      "Code": "SetupFailed",
+      "Failed": 1,
+      "TestsExecuted": 0,
+      "Reason": "Pester 5.7.1 absent; observed runner stdout, no report file written."
+    },
+    "PinnedDependencyRestoration": "Operator authorized restore of Pester 5.7.1; keep repository pin unchanged.",
+    "SafeDiagnosticSyntheticChecksPerVersion": {
+      "Passed": 5,
+      "Failed": 0,
+      "ExternalRequests": 0
+    },
+    "ExactCodeContinuationGuard": {
+      "Passed": 4,
+      "Failed": 0,
+      "ExternalRequests": 0
+    },
+    "RestoredPinnedRunner": {
+      "preset": "Collector",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 116,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": []
+    },
+    "RestoredPesterVersion": "5.7.1"
+  },
+  "independentReview": "No remaining must-fix findings after first-cell exact-code guard and cleanup/explicit-retry fixes; source-compatible package verified separately.",
+  "localHarnessSha256": {
+    "CanarySafeDiagnostic.ps1": "ff13ae97fda6933291c8baa5145f4011162fe74e52459b479c56c7b88d46c7d7",
+    "CanarySafeDiagnostic2.ps1": "a50eec0a4bd59be3db4bd050721b44af058bb2d4510cad3679d7bea618c8ec32",
+    "CanarySafeDiagnostic3.ps1": "18771558b582e34d4693a61eda3d04f25dcd624996eb5a96120e08bb729f64b3",
+    "Invoke-LiveCanaryDiagnostic.ps1": "c7feb860bf41411f424350421c077de8e768584fcf03f79aad15f4fcd1396bfd",
+    "Invoke-LiveCanaryDiagnostic2.ps1": "889c83338043c9260cfa2367c4414b631a15613cb168e0b3dcb4f835a9fae004",
+    "Invoke-LiveCanaryFinal.ps1": "ae3bdaa9c33ab3749a2c44cf817d621381aea79376cf2f4f0ac42e4e3ceddc26",
+    "Published-EntraErrorCodes3.json": "3560b14484eaada1ed2343e81ffa8a5eefc2a4d9fb289799df925c9b7fc9feb2",
+    "Verify-RequestFixSource.py": "5c1ca33c62188452ddd700556acc208ef90f3a4d36efb930d4fa6c5e6d039f94",
+    "Test-FinalCauseGuard.ps1": "c77e39b6c4f9da0ff3ed9af2efeb215d2b7b7aafb3c3eaf94e08ab29c5f95d3c"
+  },
+  "boundaries": {
+    "ActionsUsed": false,
+    "Pushed": false,
+    "PullRequestOpened": false,
+    "Published": false,
+    "Goal2Started": false,
+    "ProductionCompletionClaimed": false
+  },
+  "offlineGateStatus": "OfflineReadyAtThisImplementationSource"
+}

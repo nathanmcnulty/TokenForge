@@ -43,3 +43,5 @@ Single paused-cell recovery consumed. No further automatic authentication/retry.
 Partial candidate verified; review pending; no publication.
 Actions disabled. Stop before Goal 2.
 ```
+
+The operator subsequently authorized diagnosis, a fix and another bounded recovery. The completed collection, retained failed assessment and unchanged checked visibility are recorded in [the completion receipt](goal1-live-canary-completion.md). This paused receipt remains historical.

@@ -1,0 +1,218 @@
+{
+  "schemaVersion": 1,
+  "status": "offline-ready; live acceptance paused",
+  "implementationSourceRevision": "3bf93cbcee318e8758005d12258808ec7184394f",
+  "implementationBaseRevision": "1be12d75c7e2a63eac8e14c32d54e79cec4a23ef",
+  "handoffRevision": "19470aeba7a949e4204e4ecf5586a6ffb3171c69",
+  "packageEvidence": "goal1-offline-validation.json",
+  "budgetAuthorization": "Operator delegated finite budget selection and prioritized quality; prior consumption retained.",
+  "aggregateLimits": {
+    "IssuanceAttempts": 30,
+    "BootstrapRequests": 40,
+    "InventoryRequests": 300,
+    "InventoryPages": 250,
+    "SourceRequests": 0,
+    "TotalRequests": 400
+  },
+  "aggregateConsumedIncludingFirstAttempt": {
+    "IssuanceAttempts": 8,
+    "IssuanceRetries": 1,
+    "BootstrapAttempts": 3,
+    "BootstrapRequests": 21,
+    "InventoryRequests": 104,
+    "InventoryPages": 101,
+    "SourceRequests": 0,
+    "IdentityRequests": 10,
+    "TotalRequests": 135,
+    "RequestRetries": 0,
+    "PreflightRequests": 125,
+    "InFlightOverruns": 0,
+    "ReservedUnknownRequests": 0
+  },
+  "newWindowSeconds": 900,
+  "deadlineUtc": "2026-10-22T06:47:15.8346576+00:00",
+  "start": {
+    "budget": {
+      "SchemaVersion": 1,
+      "Scope": "CurrentInvocationIncludingPreflight",
+      "StartedAt": "2026-10-22T06:32:15.8613249+00:00",
+      "MaxSeconds": 900.0,
+      "TransportTimeoutSeconds": 30.0,
+      "ElapsedSeconds": 69.452,
+      "OverrunSeconds": 0.0,
+      "StopReason": null,
+      "Limits": {
+        "IssuanceAttempts": 29,
+        "BootstrapAttempts": 1,
+        "BootstrapRequests": 33,
+        "InventoryRequests": 249,
+        "InventoryPages": 200,
+        "SourceRequests": 0,
+        "TotalRequests": 342,
+        "TransientRetries": 3
+      },
+      "Counts": {
+        "IssuanceAttempts": 5,
+        "IssuanceRetries": 0,
+        "BootstrapAttempts": 1,
+        "BootstrapRequests": 7,
+        "InventoryRequests": 52,
+        "InventoryPages": 51,
+        "SourceRequests": 0,
+        "IdentityRequests": 8,
+        "TotalRequests": 67,
+        "RequestRetries": 0,
+        "PreflightRequests": 59,
+        "InFlightOverruns": 0,
+        "ReservedUnknownRequests": 0
+      }
+    },
+    "status": "SessionPaused"
+  },
+  "resume": {
+    "budget": {
+      "SchemaVersion": 1,
+      "Scope": "CurrentInvocationIncludingPreflight",
+      "StartedAt": "2026-10-22T06:35:47.2494852+00:00",
+      "MaxSeconds": 688.6401757,
+      "TransportTimeoutSeconds": 30.0,
+      "ElapsedSeconds": 9.52,
+      "OverrunSeconds": 0.0,
+      "StopReason": null,
+      "Limits": {
+        "IssuanceAttempts": 24,
+        "BootstrapAttempts": 1,
+        "BootstrapRequests": 26,
+        "InventoryRequests": 197,
+        "InventoryPages": 149,
+        "SourceRequests": 0,
+        "TotalRequests": 275,
+        "TransientRetries": 3
+      },
+      "Counts": {
+        "IssuanceAttempts": 2,
+        "IssuanceRetries": 1,
+        "BootstrapAttempts": 1,
+        "BootstrapRequests": 7,
+        "InventoryRequests": 1,
+        "InventoryPages": 0,
+        "SourceRequests": 0,
+        "IdentityRequests": 2,
+        "TotalRequests": 10,
+        "RequestRetries": 0,
+        "PreflightRequests": 8,
+        "InFlightOverruns": 0,
+        "ReservedUnknownRequests": 0
+      }
+    },
+    "status": "SessionPaused",
+    "sameAccountVerificationPassedBeforeCollection": true,
+    "explicitSessionRecoveryAttempts": 1
+  },
+  "authentication": {
+    "totalExplicitSignIns": 3,
+    "nativeHttpExchanges": 15,
+    "automaticRetries": 0,
+    "credentialOutput": false,
+    "credentialPersistence": false
+  },
+  "visibilityBefore": {
+    "ServicePrincipals": {
+      "Count": 2327,
+      "Requests": 24,
+      "Pages": 24,
+      "Seconds": 19.01
+    },
+    "Applications": {
+      "Count": 186,
+      "Requests": 1,
+      "Pages": 1,
+      "Seconds": 0.705
+    },
+    "Grants": {
+      "Count": 85,
+      "Requests": 1,
+      "Pages": 1,
+      "Seconds": 0.566
+    }
+  },
+  "inventoryCost": {
+    "Pages": 25,
+    "Seconds": 21.509,
+    "StopReason": null,
+    "SchemaVersion": 1,
+    "Requests": 25
+  },
+  "finalSavedStatus": {
+    "SchemaVersion": 1,
+    "Status": "Paused",
+    "ExitCode": 3,
+    "SelectedPairs": 10,
+    "Pairs": {
+      "Complete": 3,
+      "StructurallyExcluded": 0,
+      "Pending": 6,
+      "Paused": 1,
+      "RequestBlocked": 0,
+      "TransientExhausted": 0,
+      "InFlightUnknown": 0,
+      "Failed": 0
+    },
+    "PlannedCells": 4,
+    "UnmaterializedPairs": 6,
+    "Cells": {
+      "Complete": 3,
+      "StructurallyExcluded": 0,
+      "Pending": 0,
+      "Paused": 1,
+      "RequestBlocked": 0,
+      "TransientExhausted": 0,
+      "InFlightUnknown": 0,
+      "Failed": 0
+    },
+    "CompletedClients": 3,
+    "PendingClients": 7,
+    "SnapshotConsistency": "SeparateValidatedReads",
+    "CredentialOutput": false,
+    "ApiAcceptance": "NotEstablished"
+  },
+  "originalTerminalEvidence": {
+    "rowsPreserved": 3,
+    "attemptIdsAndOriginalDatesAndContentHashesVerified": true,
+    "completedCellsReissued": 0
+  },
+  "export": {
+    "SchemaVersion": 1,
+    "OriginalTerminalRowsPreserved": 3,
+    "CandidateHash": "fea3cf1c7c2f46f48e0cdaaad126e88fba7cf63e2564be9296cd05f8a2639366",
+    "ReviewStatus": "Pending",
+    "Published": false,
+    "OriginalObservationDatesPreserved": true,
+    "CollectionIssuanceDuringExport": 0
+  },
+  "liveAcceptance": {
+    "complete": false,
+    "blockingReason": "Same frozen pair returned an ambiguous session failure before and after one same-account renewal; no allowlisted numeric diagnostics.",
+    "afterVisibilityVerified": false,
+    "universalCapabilityOrApiAcceptanceEstablished": false,
+    "nextStep": "Diagnose the paused request with a reviewed bounded diagnostic plan; do not replay completed cells or automatically renew/retry again."
+  },
+  "localHarnessSha256": {
+    "Invoke-LiveCanary2.ps1": "33a3b12cee2790be08fb44ad7c8186d49514352e972de92186bd4befd092dfe5",
+    "Invoke-LiveCanaryRecovery.ps1": "702db75697177a5d0190788b81e5ebfdd924cad0310bb27257874fd5d0f9b928",
+    "Prepare-CanaryRecovery.ps1": "c7e38735e62328129fbc71284e916be8441734171f5379573e634b82e1d70fbc",
+    "Export-PausedCanary.ps1": "783550a6f6d4953f594cdb7999c85dfe808d0708d0127e6f39b1cb846bcd3f39",
+    "Verify-LiveSource.py": "fe5d97d7518934a4cb53811c9e4d3b1cc4a86dfb8352d17b423b56065e1837c7",
+    "CanaryHttpCounter.cs": "003979e03567a60965b070ed9af6b4bab9285522680c7f4022954ef04d50aadd"
+  },
+  "validationNotes": [
+    "Offline source/package verification and ValidateOnly passed before each live phase.",
+    "The export wrapper initially compared native export UpdatedAt as if it were evidence; corrected to Plans/Attempts, then reverified the sealed candidate and unchanged authoritative content. No production code change.",
+    "Actions disabled; no push, PR, merge, publication, source refresh or permission-changing API operation."
+  ],
+  "independentReview": {
+    "harness": "No remaining must-fix findings after strict envelope validation and Start/Resume hash binding.",
+    "recovery": "No remaining must-fix findings.",
+    "candidate": "Seven-file integrity/privacy review passed; raw stores excluded; publication approval pending."
+  }
+}

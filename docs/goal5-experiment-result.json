@@ -1,0 +1,1559 @@
+{
+  "schemaVersion": 1,
+  "goal": "Goal5",
+  "status": "CompletedRejectedExperiment",
+  "disposition": "Rejected",
+  "productionPromotion": false,
+  "productionPolicyChanged": false,
+  "goal6Started": false,
+  "preregistrationRevision": "8bbe31edf07e499facc598ff14f10fa002c44254",
+  "experimentSourceRevision": "6e8479ad4a78999fce61c242759c0ef5b5d4f5d6",
+  "runtimeSourceRevision": "8d625be62ef70a43a765e37faf29b3f4c9e780d4",
+  "goal4Parent": "9476bb952e1d4fb0896781991eb794ad308a1b13",
+  "roadmapHandoff": "19470aeba7a949e4204e4ecf5586a6ffb3171c69",
+  "package": {
+    "sourceRevision": "8d625be62ef70a43a765e37faf29b3f4c9e780d4",
+    "packagePath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal4/accepted-package/linux-x64",
+    "manifestSha256": "1cee964b74fe63c8ffffecec8d2ed4075963d217c28d9554e3da5196f3caceea",
+    "archivePath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal4/TokenForge-0.48.0-goal4-accepted-linux-x64.tar.gz",
+    "archiveSha256": "23656191835272d65cedbb6574e1527a44ff5fc44a7a97b1ae1f000f74550876",
+    "executableSha256": "d45619f1238d858d918b8b36d1b3c551d06fee6bbb75a215e660bc4219757eaa",
+    "credentialDllSha256": "d977e4ea04a015ed80a3c46ceaa23a0cb09af6e8628cd878cb673dbe5dbeba34",
+    "payloadFileCount": 150,
+    "moduleSourceFileCount": 87,
+    "nativeInputCount": 97,
+    "nativeInputsSha256": "150445e941c1d0ad4df882dc721a1be42e977cbf6a47d35f391777ee8e5c27f9"
+  },
+  "integrityVerification": {
+    "runtimeSourceRevision": "8d625be62ef70a43a765e37faf29b3f4c9e780d4",
+    "experimentSourceRevision": "6e8479ad4a78999fce61c242759c0ef5b5d4f5d6",
+    "packageManifestSha256": "1cee964b74fe63c8ffffecec8d2ed4075963d217c28d9554e3da5196f3caceea",
+    "packagePayloadFilesVerified": 150,
+    "moduleSourcesVerified": 87,
+    "nativeInputsVerified": 97,
+    "validationInputs": {
+      "scripts/Invoke-TokenForgeCallbackExperiment.ps1": "458adcbf19b60e0478447a0242e62fc8cb62c10c453ae8a4f7923581f76fd5f6",
+      "scripts/Invoke-TokenForgeLocalValidation.ps1": "5f43096dcd6cb104f15264f532d377e55566d62b3c0be0bc642231806b2fe7c8",
+      "tests/CallbackExperiment.Tests.ps1": "a6ff665b2497063c123a2d040be44f2f6b4839d8d4f60e82cc15ebddb65559c6",
+      "tests/fixtures/lab/callback-cap-v1.json": "36a2b88ae045959f41637f82ce000cfa9e64f2b5a8a5f07fa16ca3a7e3a25547",
+      "tests/ScopeCandidates.Tests.ps1": "fba3fae68ca34c3e5a4940eeed37fb1b444c9cffb86b6fc949107a6182c3729e",
+      "tests/NativeScopePlanning.Tests.ps1": "3ee461c2bc8433306cdea4ef0335a2084c655a93fc8a99b90469f722a9ecd7c7"
+    },
+    "workflowFilesUnchanged": 7,
+    "productionSourceUnchanged": true,
+    "handoffPreserved": true,
+    "archiveSha256Verified": "23656191835272d65cedbb6574e1527a44ff5fc44a7a97b1ae1f000f74550876"
+  },
+  "localValidation": {
+    "preset": "Lab",
+    "platform": "linux",
+    "version": "0.48.0",
+    "passed": 35,
+    "failed": 0,
+    "skipped": 0,
+    "containersfailed": 0,
+    "code": "Success",
+    "failedTests": []
+  },
+  "armSummary": {
+    "Baseline": {
+      "trials": 12,
+      "successes": 9,
+      "issuanceAttempts": 31,
+      "coreOutcomes": {
+        "VerifiedScopedToken": 9,
+        "NoVerifiedToken": 1,
+        "Cancelled": 2
+      },
+      "injectedScenarios": {
+        "Success": 21,
+        "Rejected": 4,
+        "ExcessScopes": 1,
+        "Opaque": 1,
+        "Throttled": 1,
+        "SessionLost": 1,
+        "WrongPrincipal": 1,
+        "PromptRequired": 1
+      },
+      "executorTokenOwnersCreated": 24,
+      "executorTokenOwnersDisposed": 24,
+      "maxTrialMilliseconds": 81.695
+    },
+    "Candidate": {
+      "trials": 12,
+      "successes": 3,
+      "issuanceAttempts": 24,
+      "coreOutcomes": {
+        "VerifiedScopedToken": 3,
+        "NoVerifiedToken": 7,
+        "Cancelled": 2
+      },
+      "injectedScenarios": {
+        "Success": 15,
+        "Rejected": 3,
+        "ExcessScopes": 1,
+        "Opaque": 1,
+        "Throttled": 1,
+        "SessionLost": 1,
+        "WrongPrincipal": 1,
+        "PromptRequired": 1
+      },
+      "executorTokenOwnersCreated": 18,
+      "executorTokenOwnersDisposed": 18,
+      "maxTrialMilliseconds": 7.654
+    }
+  },
+  "aggregateEffect": {
+    "baselineSuccesses": 9,
+    "candidateSuccesses": 3,
+    "pairsPerArm": 12,
+    "lostBaselineSuccesses": 6,
+    "newCandidateSuccesses": 0,
+    "successRateDifferencePercentagePoints": -50,
+    "baselineIssuanceAttempts": 31,
+    "candidateIssuanceAttempts": 24,
+    "attemptReductionPercent": 22.581,
+    "baselineAttemptsPerSuccessfulPair": 3.444,
+    "candidateAttemptsPerSuccessfulPair": 8,
+    "interpretation": "Six lost baseline successes fail the preregistered primary gate, regardless of lower attempt count. Synthetic counterexample only; no population inference."
+  },
+  "independentReview": {
+    "protocolAndAllowlist": "Passed before actual comparison execution",
+    "implementationAndStopAccounting": "Passed after fixes",
+    "recordedInputsAndAll24Trials": "Passed; independent reviewer approved Rejected disposition",
+    "scope": "Read-only sanitized synthetic inputs/source/evidence; reviewer performed no authentication, network requests or private-store reads"
+  },
+  "validationRepairs": [
+    "Retained the active charged stopped trial before escape; a reduced-cap fixture verifies reconciliation",
+    "Preserved callback lists as arrays in synthetic inventory generation",
+    "Avoided duplicate module import while retaining exact loaded DLL hash check",
+    "Used SecureString.Copy to test disposal because PowerShell property access suppressed the disposed-Length exception; no runtime leak found"
+  ],
+  "evidence": {
+    "localRoot": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal5",
+    "artifactHashes": {
+      "experiment.json": "155c6bcf968dbb48e64edd7e98dde53d7e973cd85e9db1c495902150a3179665",
+      "experiment.json.inputs.json": "c2529a6bc85be3cb480106b6e68c31ad71835ec024285b025babc991bd5d2c44",
+      "experiment.log": "ff5e4a41ac6d45165f45f2ce168fda59d9e3d8683df049b76294d6356c02eab8",
+      "lab-final-summary.json": "83f6c65117b571f5dabb8a603d4360902c14303ee202e20a4db98eb809a8fc1c",
+      "lab-final.log": "83f6c65117b571f5dabb8a603d4360902c14303ee202e20a4db98eb809a8fc1c",
+      "boundary-tests.log": "f36aee1355129a34e80fe617c84a56208af58e65d32a8eaeab7f4c95f50120b3",
+      "lab-initial-summary.json": "abece5d14eeaca332b5a31b48bfd068368d488c604a2909def69b60d94d3744a",
+      "lab-initial.log": "abece5d14eeaca332b5a31b48bfd068368d488c604a2909def69b60d94d3744a",
+      "lab-failures-detailed.log": "00089b07b106804b09e13bef33d20bb8e0c90c29e3b15d8b293423688eb4bb43",
+      "lab-corrected-summary.json": "adedd8c7e01acba061be294edadf72032a883b211d78e86af2a686a0777b2a61",
+      "lab-corrected.log": "adedd8c7e01acba061be294edadf72032a883b211d78e86af2a686a0777b2a61",
+      "lab-comparison-failure.log": "7256765cc849b3314689aeee21b906c8e51c17c283dbc80ebb338a94364267c3",
+      "stopped-diagnostic.json": "ff93f2417230713a29ad1c87f71266a21281dcf46a7cd46963ba638a179ae586",
+      "stopped-diagnostic.json.inputs.json": "9a80f28da91cc0a5ee3b181c26a4a8d6f19e3b492694b918b2833ec4fd368a09",
+      "stopped-diagnostic.log": "0ae11838cb5316a7d57f196c0d512f1db2b9c985f2fbf179f429a09e508a8cde",
+      "integrity-verification.json": "38d4e52bdd6a9da623830c98bdce99e94b34f3e8cc10b018a4a9d897732bdb7b"
+    },
+    "fixturePath": "tests/fixtures/lab/callback-cap-v1.json",
+    "fixtureSha256": "36a2b88ae045959f41637f82ce000cfa9e64f2b5a8a5f07fa16ca3a7e3a25547",
+    "experimentScriptSha256": "458adcbf19b60e0478447a0242e62fc8cb62c10c453ae8a4f7923581f76fd5f6",
+    "frozenInputsSha256": "c2529a6bc85be3cb480106b6e68c31ad71835ec024285b025babc991bd5d2c44",
+    "reportsMode": "0600",
+    "networkIsolation": "unshare -Urn; PowerShell and dotnet telemetry disabled before startup; no remote connectivity"
+  },
+  "experiment": {
+    "Format": "TokenForgeCallbackExperiment",
+    "SchemaVersion": 1,
+    "StudyId": "goal5-observed-callback-cap-v1",
+    "RunStatus": "Complete",
+    "StopReason": null,
+    "Disposition": "Rejected",
+    "ProductionPromotion": false,
+    "PolicyChanged": false,
+    "Evidence": "SyntheticExecutorUsingUnchangedProfileScopeAcquisition",
+    "Anchor": "2026-10-22T23:16:06.0452780+00:00",
+    "ExperimentSourceRevision": "6e8479ad4a78999fce61c242759c0ef5b5d4f5d6",
+    "ExperimentScriptSha256": "458adcbf19b60e0478447a0242e62fc8cb62c10c453ae8a4f7923581f76fd5f6",
+    "RuntimeSourceRevision": "8d625be62ef70a43a765e37faf29b3f4c9e780d4",
+    "PackageManifestSha256": "1cee964b74fe63c8ffffecec8d2ed4075963d217c28d9554e3da5196f3caceea",
+    "FixtureSha256": "36a2b88ae045959f41637f82ce000cfa9e64f2b5a8a5f07fa16ca3a7e3a25547",
+    "FrozenInputsSha256": "c2529a6bc85be3cb480106b6e68c31ad71835ec024285b025babc991bd5d2c44",
+    "FrozenInputsPath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal5/experiment.json.inputs.json",
+    "Namespace": {
+      "TenantFingerprint": "4242a3bcf13673bba791a95451c6edd9463f3d678a6dba4953a59d2d8112feae",
+      "PrincipalFingerprint": "d39ddaf05b24547f565fdb5d76aadeef1ed422f754a9e89b149a278a02f6e8e0",
+      "Kind": "Synthetic"
+    },
+    "Recipe": {
+      "OAuthAdditionalRequestNames": [
+        "offline_access"
+      ],
+      "MaxCandidates": 1,
+      "Hypothesis": "Observed-callback-only reduces logical issuance by at least10percent while retaining every baseline verified pair in both partitions",
+      "CandidateMaxRedirects": 1,
+      "Protocol": "OAuth2V2Pkce",
+      "BaselineMaxRedirects": 2,
+      "ResponsesKeyedBy": "Case/Phase/ConcreteCallback",
+      "ApiScopes": [
+        "User.Read"
+      ],
+      "Warm": true,
+      "Version": 1,
+      "Order": "AlternatingAB/BA;discoverythenpredeclaredholdout",
+      "Holdout": "Predeclared synthetic challenge set; not blind or a population sample",
+      "ObservedCallback": "http://localhost",
+      "FallbackCallback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+      "MaxAdditionalApiScopes": 0,
+      "PrimaryOutcome": "No lost baseline successes, then at least10percent attempt reduction"
+    },
+    "Budgets": {
+      "MaxExternalRequests": 0,
+      "MaxPromptInvocations": 0,
+      "MaxTrialSeconds": 5,
+      "MaxSeconds": 60,
+      "MaxAuthenticationAttempts": 0,
+      "MaxTrials": 24,
+      "MaxConcurrency": 1,
+      "MaxSyntheticIssuanceAttempts": 72
+    },
+    "CompletedTrials": 24,
+    "AttemptedTrials": 24,
+    "SyntheticIssuanceAttempts": 55,
+    "ExternalRequests": 0,
+    "AuthenticationAttempts": 0,
+    "PromptInvocations": 0,
+    "SourceRequests": 0,
+    "InventoryPages": 0,
+    "DatabaseReads": 0,
+    "DatabaseWrites": 0,
+    "ChildProcessStartsDuringTrials": 0,
+    "RetryWaitMilliseconds": 0,
+    "ElapsedMilliseconds": 423.368,
+    "Partitions": [
+      {
+        "BaselineSuccesses": 6,
+        "CandidateSuccesses": 2,
+        "NewCandidateSuccesses": 0,
+        "Pairs": 8,
+        "BaselineIssuanceAttempts": 21,
+        "LostBaselineSuccesses": 4,
+        "CandidateIssuanceAttempts": 16,
+        "Partition": "Discovery",
+        "AttemptReductionPercent": 23.81
+      },
+      {
+        "BaselineSuccesses": 3,
+        "CandidateSuccesses": 1,
+        "NewCandidateSuccesses": 0,
+        "Pairs": 4,
+        "BaselineIssuanceAttempts": 10,
+        "LostBaselineSuccesses": 2,
+        "CandidateIssuanceAttempts": 8,
+        "Partition": "Holdout",
+        "AttemptReductionPercent": 20.0
+      }
+    ],
+    "Trials": [
+      {
+        "ObservedCoreOutcome": "VerifiedScopedToken",
+        "IssuanceAttempts": 2,
+        "CaseId": "d01",
+        "TokenObjectsDisposed": 2,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 81.695,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": true,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000001",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 2,
+        "Arm": "Baseline",
+        "Partition": "Discovery",
+        "TokenObjectsCreated": 2,
+        "SharedProcessPeakWorkingSetBytes": 155971584,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "VerifiedScopedToken",
+        "IssuanceAttempts": 2,
+        "CaseId": "d01",
+        "TokenObjectsDisposed": 2,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 3.991,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": true,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000001",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 1,
+        "Arm": "Candidate",
+        "Partition": "Discovery",
+        "TokenObjectsCreated": 2,
+        "SharedProcessPeakWorkingSetBytes": 155975680,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "NoVerifiedToken",
+        "IssuanceAttempts": 2,
+        "CaseId": "d02",
+        "TokenObjectsDisposed": 1,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 4.768,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": false,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000002",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Rejected",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 1,
+        "Arm": "Candidate",
+        "Partition": "Discovery",
+        "TokenObjectsCreated": 1,
+        "SharedProcessPeakWorkingSetBytes": 155987968,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "VerifiedScopedToken",
+        "IssuanceAttempts": 3,
+        "CaseId": "d02",
+        "TokenObjectsDisposed": 2,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 6.071,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": true,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000002",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Rejected",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000002",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 2,
+        "Arm": "Baseline",
+        "Partition": "Discovery",
+        "TokenObjectsCreated": 2,
+        "SharedProcessPeakWorkingSetBytes": 155996160,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "VerifiedScopedToken",
+        "IssuanceAttempts": 3,
+        "CaseId": "d03",
+        "TokenObjectsDisposed": 3,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 6.344,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": true,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000003",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "ExcessScopes",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000003",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 2,
+        "Arm": "Baseline",
+        "Partition": "Discovery",
+        "TokenObjectsCreated": 3,
+        "SharedProcessPeakWorkingSetBytes": 155996160,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "NoVerifiedToken",
+        "IssuanceAttempts": 2,
+        "CaseId": "d03",
+        "TokenObjectsDisposed": 2,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 4.936,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": false,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000003",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "ExcessScopes",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 1,
+        "Arm": "Candidate",
+        "Partition": "Discovery",
+        "TokenObjectsCreated": 2,
+        "SharedProcessPeakWorkingSetBytes": 156889088,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "NoVerifiedToken",
+        "IssuanceAttempts": 2,
+        "CaseId": "d04",
+        "TokenObjectsDisposed": 1,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 3.578,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": false,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000004",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Rejected",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 1,
+        "Arm": "Candidate",
+        "Partition": "Discovery",
+        "TokenObjectsCreated": 1,
+        "SharedProcessPeakWorkingSetBytes": 156090368,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "NoVerifiedToken",
+        "IssuanceAttempts": 3,
+        "CaseId": "d04",
+        "TokenObjectsDisposed": 1,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 4.032,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": false,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000004",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Rejected",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000004",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Rejected",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 2,
+        "Arm": "Baseline",
+        "Partition": "Discovery",
+        "TokenObjectsCreated": 1,
+        "SharedProcessPeakWorkingSetBytes": 156549120,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "VerifiedScopedToken",
+        "IssuanceAttempts": 3,
+        "CaseId": "d05",
+        "TokenObjectsDisposed": 3,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 5.194,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": true,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000005",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Opaque",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000005",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 2,
+        "Arm": "Baseline",
+        "Partition": "Discovery",
+        "TokenObjectsCreated": 3,
+        "SharedProcessPeakWorkingSetBytes": 157343744,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "NoVerifiedToken",
+        "IssuanceAttempts": 2,
+        "CaseId": "d05",
+        "TokenObjectsDisposed": 2,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 3.824,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": false,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000005",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Opaque",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 1,
+        "Arm": "Candidate",
+        "Partition": "Discovery",
+        "TokenObjectsCreated": 2,
+        "SharedProcessPeakWorkingSetBytes": 158040064,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "NoVerifiedToken",
+        "IssuanceAttempts": 2,
+        "CaseId": "d06",
+        "TokenObjectsDisposed": 1,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 3.625,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": false,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000006",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Throttled",
+            "Phase": "Final",
+            "ModeledHttpStatus": 429
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 1,
+        "Arm": "Candidate",
+        "Partition": "Discovery",
+        "TokenObjectsCreated": 1,
+        "SharedProcessPeakWorkingSetBytes": 158670848,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "VerifiedScopedToken",
+        "IssuanceAttempts": 3,
+        "CaseId": "d06",
+        "TokenObjectsDisposed": 2,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 5.588,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": true,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000006",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Throttled",
+            "Phase": "Final",
+            "ModeledHttpStatus": 429
+          },
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000006",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 2,
+        "Arm": "Baseline",
+        "Partition": "Discovery",
+        "TokenObjectsCreated": 2,
+        "SharedProcessPeakWorkingSetBytes": 160059392,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "Cancelled",
+        "IssuanceAttempts": 2,
+        "CaseId": "d07",
+        "TokenObjectsDisposed": 1,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 8.476,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": false,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000007",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "SessionLost",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": true,
+        "MaxRedirects": 2,
+        "Arm": "Baseline",
+        "Partition": "Discovery",
+        "TokenObjectsCreated": 1,
+        "SharedProcessPeakWorkingSetBytes": 163917824,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "Cancelled",
+        "IssuanceAttempts": 2,
+        "CaseId": "d07",
+        "TokenObjectsDisposed": 1,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 4.306,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": false,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000007",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "SessionLost",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": true,
+        "MaxRedirects": 1,
+        "Arm": "Candidate",
+        "Partition": "Discovery",
+        "TokenObjectsCreated": 1,
+        "SharedProcessPeakWorkingSetBytes": 165130240,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "VerifiedScopedToken",
+        "IssuanceAttempts": 2,
+        "CaseId": "d08",
+        "TokenObjectsDisposed": 2,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 7.654,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": true,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000008",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 1,
+        "Arm": "Candidate",
+        "Partition": "Discovery",
+        "TokenObjectsCreated": 2,
+        "SharedProcessPeakWorkingSetBytes": 173072384,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "VerifiedScopedToken",
+        "IssuanceAttempts": 2,
+        "CaseId": "d08",
+        "TokenObjectsDisposed": 2,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 20.408,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": true,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000008",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 2,
+        "Arm": "Baseline",
+        "Partition": "Discovery",
+        "TokenObjectsCreated": 2,
+        "SharedProcessPeakWorkingSetBytes": 188022784,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "VerifiedScopedToken",
+        "IssuanceAttempts": 3,
+        "CaseId": "h01",
+        "TokenObjectsDisposed": 3,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 5.258,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": true,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000009",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "WrongPrincipal",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000009",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 2,
+        "Arm": "Baseline",
+        "Partition": "Holdout",
+        "TokenObjectsCreated": 3,
+        "SharedProcessPeakWorkingSetBytes": 188174336,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "NoVerifiedToken",
+        "IssuanceAttempts": 2,
+        "CaseId": "h01",
+        "TokenObjectsDisposed": 2,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 3.556,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": false,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000009",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "WrongPrincipal",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 1,
+        "Arm": "Candidate",
+        "Partition": "Holdout",
+        "TokenObjectsCreated": 2,
+        "SharedProcessPeakWorkingSetBytes": 188289024,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "VerifiedScopedToken",
+        "IssuanceAttempts": 2,
+        "CaseId": "h02",
+        "TokenObjectsDisposed": 2,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 3.368,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": true,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000010",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 1,
+        "Arm": "Candidate",
+        "Partition": "Holdout",
+        "TokenObjectsCreated": 2,
+        "SharedProcessPeakWorkingSetBytes": 188297216,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "VerifiedScopedToken",
+        "IssuanceAttempts": 2,
+        "CaseId": "h02",
+        "TokenObjectsDisposed": 2,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 3.552,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": true,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000010",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 2,
+        "Arm": "Baseline",
+        "Partition": "Holdout",
+        "TokenObjectsCreated": 2,
+        "SharedProcessPeakWorkingSetBytes": 188297216,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "VerifiedScopedToken",
+        "IssuanceAttempts": 3,
+        "CaseId": "h03",
+        "TokenObjectsDisposed": 2,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 3.766,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": true,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000011",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Rejected",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000011",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 2,
+        "Arm": "Baseline",
+        "Partition": "Holdout",
+        "TokenObjectsCreated": 2,
+        "SharedProcessPeakWorkingSetBytes": 188276736,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "NoVerifiedToken",
+        "IssuanceAttempts": 2,
+        "CaseId": "h03",
+        "TokenObjectsDisposed": 1,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 2.765,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": false,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000011",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Rejected",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": false,
+        "MaxRedirects": 1,
+        "Arm": "Candidate",
+        "Partition": "Holdout",
+        "TokenObjectsCreated": 1,
+        "SharedProcessPeakWorkingSetBytes": 188276736,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "Cancelled",
+        "IssuanceAttempts": 2,
+        "CaseId": "h04",
+        "TokenObjectsDisposed": 1,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 2.927,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": false,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000012",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "PromptRequired",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": true,
+        "MaxRedirects": 1,
+        "Arm": "Candidate",
+        "Partition": "Holdout",
+        "TokenObjectsCreated": 1,
+        "SharedProcessPeakWorkingSetBytes": 188280832,
+        "StopReason": null
+      },
+      {
+        "ObservedCoreOutcome": "Cancelled",
+        "IssuanceAttempts": 2,
+        "CaseId": "h04",
+        "TokenObjectsDisposed": 1,
+        "AcceptedExtraScopes": 0,
+        "ElapsedMilliseconds": 2.7,
+        "IdentityChecks": 1,
+        "TrialStatus": "Complete",
+        "Success": false,
+        "Trace": [
+          {
+            "Callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "22222222-2222-2222-2222-222222222222",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "Success",
+            "Phase": "Bootstrap",
+            "ModeledHttpStatus": null
+          },
+          {
+            "Callback": "http://localhost",
+            "RequestedScopes": [
+              "User.Read"
+            ],
+            "ClientId": "11111111-1111-1111-1111-000000000012",
+            "OAuthScopes": [
+              "00000003-0000-0000-c000-000000000000/User.Read",
+              "offline_access"
+            ],
+            "ResourceId": "00000003-0000-0000-c000-000000000000",
+            "InjectedScenario": "PromptRequired",
+            "Phase": "Final",
+            "ModeledHttpStatus": null
+          }
+        ],
+        "SyntheticCancellation": true,
+        "MaxRedirects": 2,
+        "Arm": "Baseline",
+        "Partition": "Holdout",
+        "TokenObjectsCreated": 1,
+        "SharedProcessPeakWorkingSetBytes": 188280832,
+        "StopReason": null
+      }
+    ]
+  },
+  "validationReuse": {
+    "newBuildOrInstallNeeded": false,
+    "reason": "Only laboratory scripts, tests and documentation changed. All 87 module sources and 97 native build inputs still match the reviewed 8d625 package. The old broad suite is evidence for that unchanged runtime, not a newly executed full Goal 5 suite; new behavior is covered by the 35-case Lab gate.",
+    "priorGoal4FullSuite": {
+      "passed": 1217,
+      "failed": 0,
+      "skipped": 4
+    },
+    "priorNativeCorePassed": 1086,
+    "priorRuntimeBuildInputsUnchanged": true,
+    "newLaboratoryTestsCoveredByLabPreset": true
+  },
+  "remainingBlockers": [],
+  "limits": [
+    "Predeclared synthetic counterexample set, not a blind holdout or service population sample",
+    "Logical synthetic issuance attempts are not actual HTTP requests; zero authentication or external traffic",
+    "Session/prompt cancellation and throttle labels are injected, not live service classification evidence",
+    "Existing core retains offline_access in both arms; no refresh tokens are synthesized or saved",
+    "Timing includes only the trial phase; shared-process peak working set is not an isolated arm measurement; no speed or memory improvement claimed",
+    "Fresh synthetic timestamps are regenerated on replay; no real observations are relabeled",
+    "No policy promotion; a future proposal needs a separately reviewed new policy version and any separately necessary live approval"
+  ],
+  "prohibitedActionsPerformed": [],
+  "productionReady": false
+}

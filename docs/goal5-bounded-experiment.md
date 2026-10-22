@@ -35,3 +35,5 @@ Record exact experiment source/script/cohort/package/input hashes; both partitio
 Production remains unchanged regardless of the experiment's disposition. Any later promotion requires independent review, demonstrated benefit without privacy/correctness/scope/prompt regression, a new policy version and any separately needed live authorization. Hosted Actions, authentication, tenant permissions, publication, push, PR, merge and Goal 6 are outside this milestone.
 
 Run the `Lab` preset in a fresh PowerShell process with the existing exact package. The recorded experiment then invokes the same script function once in a separate isolated process, using new report paths. Validation replays the same frozen protocol; it is not a second hypothesis or a live A/B trial. Final reviewed acceptance will record actual results and the keep/discard disposition.
+
+The [reviewed recorded result](goal5-experiment-result.md) closes this protocol with a **rejected** candidate: fewer attempts did not preserve baseline successful pairs. No production policy was promoted.

@@ -34,10 +34,10 @@ Describe 'Incremental completed-assessment evidence queue' {
   $q.FreshCount|Should -Be $q.CandidateCount
  }
  It 'treats exact expiry as stale and records observation and expiry' {
-  $s=New-QueueState $now.AddDays(-1)
+  $s=New-QueueState $now.AddDays(-7)
   $q=Get-TfCiEvidenceQueue $discovery $s -Now $now
   $q.Items[0].Reason|Should -Be StaleEvidence
-  $q.Items[0].ObservedAt|Should -Be $now.AddDays(-1).ToString('o')
+  $q.Items[0].ObservedAt|Should -Be $now.AddDays(-7).ToString('o')
   $q.Items[0].FreshUntil|Should -Be $now.ToString('o')
  }
  It 'does not treat missing resource, failed, pending, or shallow evidence as fresh' {
@@ -55,7 +55,7 @@ Describe 'Incremental completed-assessment evidence queue' {
   }
  }
  It 'prioritizes changed hints then missing evidence then stale evidence' {
-  $s=New-QueueState $now.AddDays(-1)
+  $s=New-QueueState $now.AddDays(-7)
   $first=@($discovery.Applications|Where-Object {$_.RedirectUris.Count})[0].AppId
   foreach($b in $s.Batches){if(@(Get-TfCiMembers $s $b.Index)[0] -eq $first){$b.Status='Failed'}}
   $changed=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson(($discovery|ConvertTo-Json -Depth 100))
@@ -215,5 +215,34 @@ Describe 'Goal 4 immutable public generation crash boundaries' {
   $changed=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson(($discovery|ConvertTo-Json -Depth 100));$changed.Applications[-1].Name+=' renamed'
   (Get-TfCiHash $changed.Applications[-1])|Should -Not -Be (Get-TfCiHash $discovery.Applications[-1])
   (Get-TfCiPublicCompatibilityKey $changed.Applications[-1])|Should -Be (Get-TfCiPublicCompatibilityKey $discovery.Applications[-1])
+ }
+}
+Describe 'Goal 4 current public freshness is separate from frozen work' {
+ It 'uses seven days for broader assessments and a separate daily catalog target' {
+  $q=Get-TfCiEvidenceQueue $discovery -Now $now;$q.FreshnessDays|Should -Be 7
+  $current=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson(($discovery|ConvertTo-Json -Depth 100));$current.FetchedAt=$now.AddHours(-1).ToString('o')
+  $status=Get-TfCiFreshnessStatus -Discovery ([pscustomobject]$current) -Now $now -SourceCollectionConfirmed
+  $status.CatalogMetadata.Status|Should -Be Fresh;$status.CatalogMetadata.MaxAgeHours|Should -Be 24
+  $status.PublicPermissionDefinitions.Status|Should -Be NotCollected;$status.AuthorizationEstablished|Should -BeFalse
+  $status.Assessments.Reasons.MissingEvidence|Should -Be $status.Assessments.CandidateCount
+ }
+ It 'does not treat aggregation time alone, incomplete sources or stale catalog collection as fresh' -ForEach @(@{Case='Aggregation';Expected='AggregationOnly'},@{Case='Incomplete';Expected='Incomplete'},@{Case='Stale';Expected='Stale'}) {
+  $current=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson(($discovery|ConvertTo-Json -Depth 100));$current.FetchedAt=$now.AddHours(-1).ToString('o')
+  switch($Case){Incomplete {$current.InvalidSourceRecordCount=1} Stale {$current.FetchedAt=$now.AddHours(-24).ToString('o')}}
+  $status=Get-TfCiFreshnessStatus $current -Now $now -SourceCollectionConfirmed:($Case -ne 'Aggregation')
+  $status.CatalogMetadata.Status|Should -Be $Expected;@($status.FreshnessMisses|Where-Object Target -ceq PublicCatalogMetadata).Count|Should -Be 1
+ }
+ It 'measures a legacy one-day policy miss without altering its frozen selection or replaying completed work' {
+  $current=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson(($discovery|ConvertTo-Json -Depth 100));$current.FetchedAt=$now.AddHours(-1).ToString('o');$created=$now.AddDays(-2)
+  $q=Get-TfCiEvidenceQueue $current -Now $created -FreshnessDays 1 -MaxApplications 1
+  $s=New-TfCiState $current -Mode Deep -ResourceId $resources -AppId @($q.Items.AppId) -ChunkSize 1 -Now $created
+  $snap=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((@{SchemaVersion=1;PlanId=$s.PlanId;SelectedAppIds=$s.Recipe.AppIds;Queue=$q}|ConvertTo-Json -Depth 100));$s.EvidenceSelectionSha256=Get-TfCiHash $snap
+  foreach($b in $s.Batches){$b.Status='Complete';$b.Attempts=1;$b.Assessed=1;$b.AssessedPairs=2;$b.ObservedAt=$now.AddHours(-25).ToString('o')}
+  $hash=Get-TfCiHash $s;$selectionHash=Get-TfCiHash $snap
+  $status=Get-TfCiFreshnessStatus $current $s $snap -Now $now -SourceCollectionConfirmed
+  $status.Assessments.FreshnessDays|Should -Be 1;$status.Assessments.PolicyOrigin|Should -Be FrozenSelectionPolicy
+  $status.Assessments.Reasons.StaleEvidence|Should -Be 1;$status.Assessments.PendingCount|Should -BeGreaterThan 0
+  $status.CompletedWorkReplay|Should -BeFalse;$status.FrozenRecipePreserved|Should -BeTrue
+  (Get-TfCiHash $s)|Should -Be $hash;(Get-TfCiHash $snap)|Should -Be $selectionHash
  }
 }

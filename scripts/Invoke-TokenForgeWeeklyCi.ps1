@@ -59,6 +59,8 @@ if($Action -eq 'Prepare'){
     Save-CiJson $queue (Join-Path $BundlePath evidence-queue.json)
     $options.AppId=@($queue.Items|ForEach-Object AppId)
     if($queue.CandidateCount -gt 0 -and $queue.PendingCount -eq 0){
+     $priorSelection=if($state -and $state.Contains('EvidenceSelectionSha256')){Read-TfCiEvidenceSelection $state $DataPath}else{$null}
+     Save-CiJson (Get-TfCiFreshnessStatus -Discovery $discovery -State $state -Selection $priorSelection -SourceCollectionConfirmed) (Join-Path $BundlePath freshness-status.json)
      # No new recipe is needed. Do not reuse an old bundle request or imply
      # that a previous week's coverage constitutes a current frozen recipe.
      foreach($name in @('state.json','request.json','selection-deep.json')){$path=Join-Path $BundlePath $name;if(Test-Path -LiteralPath $path){Remove-Item -LiteralPath $path -Force}}
@@ -95,6 +97,7 @@ if($Action -eq 'Prepare'){
  $selection=@(Get-TfCiWork $state -Workers $(if($Mode -eq 'Deep'){[Math]::Min(2,$Workers)}else{$Workers}) -MaxAttempts $(if($RetryExhausted){10}else{3}))
  Save-TfCiEvidenceState $state $statePath $(if($state.Contains('EvidenceSelectionSha256')){$snapshot}else{$null})
  Save-CiJson $state (Join-Path $BundlePath state.json)
+ Save-CiJson (Get-TfCiFreshnessStatus -Discovery $discovery -State $state -Selection $(if($state.Contains('EvidenceSelectionSha256')){$snapshot}else{$null}) -SourceCollectionConfirmed) (Join-Path $BundlePath freshness-status.json)
  $base=git -C $DataPath rev-parse HEAD 2>$null;if($LASTEXITCODE -ne 0){throw 'Weekly CI requires an initialized data branch.'}
  $request=[ordered]@{SchemaVersion=1;PlanId=$state.PlanId;Mode=$Mode;Indices=$selection;BaseCommit=[string]$base}
  if($ValidationOnly){$request.SchemaVersion=2;$request.ValidationOnly=$true}

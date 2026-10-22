@@ -14,8 +14,9 @@ function Get-TfCiEvidenceQueue {
   [Parameter(Mandatory)]$Discovery,
   $PreviousState,
   [ValidateRange(1,100)][int]$MaxApplications=100,
-  [ValidateRange(1,90)][int]$FreshnessDays=1,
-  [DateTimeOffset]$Now=[DateTimeOffset]::UtcNow
+  [ValidateRange(1,90)][int]$FreshnessDays=7,
+  [DateTimeOffset]$Now=[DateTimeOffset]::UtcNow,
+  [switch]$IncludeDiagnostics
  )
  Assert-TfCiDiscovery $Discovery
  $nowUtc=$Now.ToUniversalTime()
@@ -56,12 +57,16 @@ function Get-TfCiEvidenceQueue {
  $pending=@($rows|Where-Object Reason -cne FreshEvidence|Sort-Object Priority,ObservedAt,LastSelectedWeek,AppId)
  $fair=@($pending|Where-Object Priority -gt $(if($pending.Count){$pending[0].Priority}else{99})|Sort-Object LastSelectedWeek,ObservedAt,AppId|Select-Object -First 1)
  $chosen=if($MaxApplications -ge 2 -and $fair.Count -and $pending.Count -gt $MaxApplications){@(@($pending|Where-Object AppId -cne $fair[0].AppId|Select-Object -First ($MaxApplications-1))+$fair|Sort-Object Priority,ObservedAt,LastSelectedWeek,AppId)}else{@($pending|Select-Object -First $MaxApplications)}
- [pscustomobject][ordered]@{
+ $queue=[pscustomobject][ordered]@{
   SchemaVersion=1;EvaluatedAt=$nowUtc.ToString('o');FreshnessDays=$FreshnessDays;MaxApplications=$MaxApplications
   EvidenceType='CompletedDeepAssessment';CandidateCount=$rows.Count;FreshCount=@($rows|Where-Object Reason -ceq FreshEvidence).Count
   PendingCount=$pending.Count;DeferredCount=[Math]::Max(0,$pending.Count-$MaxApplications)
   Items=@($chosen)
  }
+ if($IncludeDiagnostics){
+  return [pscustomobject]@{Queue=$queue;Rows=$rows;Reasons=[ordered]@{ChangedPublicHints=@($rows|Where-Object Reason -ceq ChangedPublicHints).Count;MissingEvidence=@($rows|Where-Object Reason -ceq MissingEvidence).Count;StaleEvidence=@($rows|Where-Object Reason -ceq StaleEvidence).Count;FreshEvidence=@($rows|Where-Object Reason -ceq FreshEvidence).Count}}
+ }
+ $queue
 }
 
 function Assert-TfCiEvidenceSelection($State,$Snapshot) {
@@ -139,4 +144,35 @@ function Save-TfCiEvidenceState($State,[string]$StatePath,$Selection,[scriptbloc
  if($Boundary){& $Boundary 'SelectionDurable'}
  Assert-TfCiState $State;Save-TfCiAtomicJson $State $StatePath
  if($Boundary){& $Boundary 'StateDurable'}
+}
+
+# Current reporting is separate from an immutable selection. It never schedules or replays work.
+function Get-TfCiFreshnessStatus {
+ [CmdletBinding()]param([Parameter(Mandatory)]$Discovery,$State,$Selection,[DateTimeOffset]$Now=[DateTimeOffset]::UtcNow,[switch]$SourceCollectionConfirmed)
+ $Discovery=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((ConvertTo-Json -InputObject $Discovery -Depth 100))
+ Assert-TfCiDiscovery $Discovery
+ if($State){Assert-TfCiState $State}
+ $days=7;$maximum=100;$origin='DefaultBroaderResearchPolicy'
+ if($State -and $State.Contains('EvidenceSelectionSha256')){
+  Assert-TfCiEvidenceSelection $State $Selection
+  $days=$Selection.Queue.FreshnessDays;$maximum=$Selection.Queue.MaxApplications;$origin='FrozenSelectionPolicy'
+ }elseif($Selection){throw 'Unbound freshness selection.'}
+ $at=$Now.ToUniversalTime();$collected=[TokenForge.Core.V0240.TimestampPolicy]::Parse($Discovery.FetchedAt)
+ $metadata=if(-not $SourceCollectionConfirmed){'AggregationOnly'}elseif($collected -gt $at){'Unknown'}elseif($Discovery.InvalidSourceRecordCount -gt 0){'Incomplete'}elseif($collected.AddHours(24) -le $at){'Stale'}else{'Fresh'}
+ $diagnostics=Get-TfCiEvidenceQueue -Discovery $Discovery -PreviousState $State -MaxApplications $maximum -FreshnessDays $days -Now $at -IncludeDiagnostics
+ $q=$diagnostics.Queue;$frozenIds=if($State){@($State.Recipe.AppIds)}else{@()}
+ $outside=@($diagnostics.Rows|Where-Object {$_.Reason -cne 'FreshEvidence' -and $_.AppId -cnotin $frozenIds}).Count
+ $misses=@()
+ if($metadata -cne 'Fresh'){$misses+=@([ordered]@{Target='PublicCatalogMetadata';Reason=$metadata;MaxAgeHours=24})}
+ # The three discovery catalogs carry hints, not a complete resource permission-definition collection.
+ $misses+=@([ordered]@{Target='PublicPermissionDefinitions';Reason='NotCollected';MaxAgeHours=24})
+ if($q.PendingCount){$misses+=@([ordered]@{Target='CompletedDeepAssessment';Reason='DueWithoutImplicitReplay';Count=$q.PendingCount;DeferredBySelectionBudget=$q.DeferredCount;OutsideFrozenMembership=$outside})}
+ [pscustomobject][ordered]@{
+  SchemaVersion=1;Kind='TokenForgePublicFreshnessStatus';EvaluatedAt=$at.ToString('o')
+  PlanId=$(if($State){$State.PlanId}else{$null});FrozenRecipePreserved=[bool]$State;CompletedWorkReplay=$false;AuthorizationEstablished=$false
+  CatalogMetadata=[ordered]@{Status=$metadata;AggregatedAt=$Discovery.FetchedAt;MaxAgeHours=24;SourceCollectionConfirmed=$SourceCollectionConfirmed.IsPresent;SourceSnapshotCount=@($Discovery.SourceSnapshots).Count;RequestAccounting='NotSuppliedByThisMetadataReport'}
+  PublicPermissionDefinitions=[ordered]@{Status='NotCollected';MaxAgeHours=24}
+  Assessments=[ordered]@{FreshnessDays=$days;PolicyOrigin=$origin;MaxApplications=$maximum;CandidateCount=$q.CandidateCount;FreshCount=$q.FreshCount;PendingCount=$q.PendingCount;DeferredCount=$q.DeferredCount;OutsideFrozenMembership=$outside;Reasons=$diagnostics.Reasons}
+  FreshnessMisses=$misses
+ }
 }

@@ -40,7 +40,11 @@ public static partial class ChangeReports
     private static void AddGrouped(CollectionBuilder collections,JsonObject collection,JsonObject record){var target=collections.GetOrAdd(collection);var source=Obj(target["Source"]);var incoming=Obj(collection["Source"]);if(Date(incoming["CollectedAt"])>Date(source["CollectedAt"]))source["CollectedAt"]=Copy(incoming["CollectedAt"]);Arr(target["Records"]).Add(record);}
     private static void Version(JsonObject r){if(Int(r["SchemaVersion"])!=1)throw Invalid();}
     private static void Leaf(string name,JsonNode? n){using var d=JsonDocument.Parse(n?.ToJsonString() ?? "null");ApplicationCatalogPolicy.ValidateLeaf(name,d.RootElement);}
-    private static void Attributes(JsonObject app,string kind){var attrs=(JsonObject)app.DeepClone();var sources=attrs["Sources"]?.DeepClone() ?? new JsonArray();attrs.Remove("Sources");var payload=Object(("Attributes",attrs),("Sources",sources),("ContentSha256",Hash(Canon(attrs))));using var d=JsonDocument.Parse(payload.ToJsonString());ApplicationCatalogPolicy.ValidatePayload(d.RootElement,kind,Text(app,"AppId"));}
+    private static void Attributes(JsonObject app,string kind){var attrs=(JsonObject)app.DeepClone();var sources=attrs["Sources"]?.DeepClone() ?? new JsonArray();
+        // Legacy tenant discovery supplied a local verification label without a source URL.
+        // Preserve that unknown location explicitly; never discard or repair other source fields.
+        if(kind=="Inventory")foreach(var n in Arr(sources)){var source=Obj(n);if(source.Count==2 && source.ContainsKey("Name") && source.ContainsKey("Evidence") && Text(source,"Name")=="TenantDiscovery" && Text(source,"Evidence")=="VerifiedMicrosoftOwner")source["Location"]=null;}
+        attrs.Remove("Sources");var payload=Object(("Attributes",attrs),("Sources",sources),("ContentSha256",Hash(Canon(attrs))));using var d=JsonDocument.Parse(payload.ToJsonString());ApplicationCatalogPolicy.ValidatePayload(d.RootElement,kind,Text(app,"AppId"));}
     private static void ScopeDatabase(JsonObject root,CollectionBuilder output,string digest){Keys(root,"SchemaVersion UpdatedAt Observations RegistrationAttempts","SchemaVersion Observations");Version(root);if(root["UpdatedAt"]!=null)Date(root["UpdatedAt"]);
         // Validate the whole saved history, including records unrelated to any requested comparison.
         foreach(var n in Arr(root["Observations"])){var r=Obj(n);ValidateScopeRow(r);AddScope(output,digest,r,"scope-database",root["UpdatedAt"] ?? r["ObservedAt"]);}

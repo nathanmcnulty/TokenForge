@@ -187,6 +187,18 @@ Describe 'Goal 2 saved evidence adapters' {
    @{Format='TokenForgePublicPermissions';SchemaVersion=1;Evidence='PublicSourceDefinitions';ResourceId=$g;RetrievedAt=$d;Source=@{Repository='https://github.com/microsoftgraph/microsoft-graph-devx-content';Path='permissions/permissions-descriptions.json';Commit=('1'*40);RawSha256=('2'*64)};Permissions=@{delegatedScopesList=@($delegate);applicationScopesList=@($role)}}
   }
  }
+ It 'accepts the legacy local tenant verification source without inventing its URL or refreshing dates' {
+  $i=New-SavedInventory;$i.Applications[0].Sources=@(@{Name='TenantDiscovery';Evidence='VerifiedMicrosoftOwner'})
+  $snapshot=ConvertTo-TokenForgeChangeSnapshot $i -Kind Inventory
+  $snapshot.Collections[0].Source.CollectedAt|Should -Be $i.CapturedAt
+  $i.Applications[0].Sources[0].Contains('Location')|Should -BeFalse
+ }
+ It 'does not repair unknown or credential-bearing legacy source rows' -TestCases @(@{Case='UnknownSource'},@{Case='CredentialField'}) {
+  param($Case)
+  $i=New-SavedInventory;$i.Applications[0].Sources=@(@{Name='TenantDiscovery';Evidence='VerifiedMicrosoftOwner'})
+  if($Case -eq 'UnknownSource'){$i.Applications[0].Sources[0].Name='OtherSource'}else{$i.Applications[0].Sources[0].AccessToken='synthetic-private'}
+  {ConvertTo-TokenForgeChangeSnapshot $i -Kind Inventory}|Should -Throw '*Change evidence*'
+ }
  It 'routes ordinary database comparison through exact request context' {
   $b=New-SavedScope;$a=Copy-ChangeFixture $b;$a.Observations[0].ScpScopes=@('User.Read')
   $e=@(Compare-TokenForgeScopeDatabase $b $a -AsOf ([DateTimeOffset]'2026-01-02T01:00:00Z'))[0]

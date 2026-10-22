@@ -33,6 +33,45 @@ Describe 'Bounded collector safe session and durable resume' {
   (Get-FileHash $flow).Hash|Should -Be $before
   Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 1 -Exactly
  }
+ It 'records platform redemption code <Code> as request-blocked without replay or raw diagnostics' -TestCases @(@{Code='9002325'},@{Code='9002326'},@{Code='9002327'}) {
+  param($Code)
+  $script:platformCode=$Code
+  Mock Get-TokenForgeToken -ModuleName TokenForge {throw ('Token request failed (HTTP 400). AADSTS'+$script:platformCode+' private-response private-cookie')}
+  $null=Invoke-TokenForgeScopeProbe @opts
+  $before=Get-TokenForgeFlowEvidence $flow
+  $before.Attempts[-1].Outcome|Should -Be RequestBlocked
+  $before.Attempts[-1].ErrorCodes|Should -Contain $Code
+  $null=Invoke-TokenForgeScopeProbe @opts
+  $after=Get-TokenForgeFlowEvidence $flow
+  $after.Attempts.Count|Should -Be 1
+  $after.Attempts[0].ObservedAt|Should -Be $before.Attempts[0].ObservedAt
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 1 -Exactly
+  (Get-Content $flow -Raw)|Should -Not -Match 'private-response|private-cookie'
+ }
+ It 'continues an explicitly renewed paused platform request without rewriting historical evidence' {
+  Mock Get-TokenForgeToken -ModuleName TokenForge {throw 'ambiguous synthetic pause'}
+  {Invoke-TokenForgeScopeProbe @opts}|Should -Throw '*paused*'
+  $old=(Get-TokenForgeFlowEvidence $flow).Attempts[0]
+  Mock Get-TokenForgeToken -ModuleName TokenForge {throw 'AADSTS9002327 private-response'}
+  $null=Invoke-TokenForgeScopeProbe @opts -ResumePaused
+  $rows=(Get-TokenForgeFlowEvidence $flow).Attempts
+  $rows.Count|Should -Be 2
+  $rows[0].AttemptId|Should -Be $old.AttemptId
+  $rows[0].ObservedAt|Should -Be $old.ObservedAt
+  $rows[0].Outcome|Should -Be SessionPaused
+  $rows[1].Outcome|Should -Be RequestBlocked
+  $null=Invoke-TokenForgeScopeProbe @opts
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 2 -Exactly
+ }
+ It 'prioritizes an evidenced session failure over a platform code and keeps unknown failures paused' {
+  $er=[Management.Automation.ErrorRecord]::new([InvalidOperationException]::new('AADSTS50173 AADSTS9002327'),'Synthetic',[Management.Automation.ErrorCategory]::AuthenticationError,$null)
+  $mixed=& (Get-Module TokenForge) {param($e) Get-TokenForgeProbeFailure $e} $er
+  $mixed.Status|Should -Be SessionPaused
+  $er=[Management.Automation.ErrorRecord]::new([InvalidOperationException]::new('AADSTS123456789 private-response'),'Synthetic',[Management.Automation.ErrorCategory]::AuthenticationError,$null)
+  $unknown=& (Get-Module TokenForge) {param($e) Get-TokenForgeProbeFailure $e} $er
+  $unknown.Status|Should -Be SessionPaused
+  $unknown.ErrorCodes.Count|Should -Be 0
+ }
  It 'pauses expired context and retains numeric allowlist only' {
   Mock Get-TokenForgeToken -ModuleName TokenForge {throw 'AADSTS50173 AADSTS123456789 private-user'}
   {Invoke-TokenForgeScopeProbe @opts}|Should -Throw '*paused*'
@@ -60,6 +99,8 @@ Describe 'Bounded collector safe session and durable resume' {
   Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 1 -Exactly
  }
  It 'leaves remote result unknown if terminal durability fails' {
+  $script:saveFlowImplementation=& (Get-Module TokenForge) {(Get-Item Function:Save-TokenForgeFlowEvidence).ScriptBlock}
+  Mock Save-TokenForgeFlowEvidence -ModuleName TokenForge {param($Path,$Plan,$PlanFingerprint,$Attempt,$ExistingDocument,$NativeExecutablePath,$Changes) & $script:saveFlowImplementation -Path $Path -Plan $Plan -PlanFingerprint $PlanFingerprint -Attempt $Attempt -ExistingDocument $ExistingDocument -NativeExecutablePath $NativeExecutablePath -Changes $Changes }
   Mock Save-TokenForgeFlowEvidence -ModuleName TokenForge {throw 'synthetic lost checkpoint'} -ParameterFilter {$Attempt -and $Attempt.Outcome -eq 'Succeeded'}
   {Invoke-TokenForgeScopeProbe @opts}|Should -Throw '*checkpoint*'
   (Get-TokenForgeFlowEvidence $flow).Attempts[-1].Outcome|Should -Be Started

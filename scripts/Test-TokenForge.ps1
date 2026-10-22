@@ -1,6 +1,6 @@
 #Requires -Version 7.4
 $ErrorActionPreference = 'Stop'
-Import-Module Pester -MinimumVersion 5.7.1
+Import-Module Pester -RequiredVersion 6.2.0 -ErrorAction Stop
 $manifest = Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1'
 $null = Test-ModuleManifest $manifest
 $result = Invoke-Pester -Path (Join-Path $PSScriptRoot '../tests') -PassThru -Output Detailed

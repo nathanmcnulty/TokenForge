@@ -78,7 +78,7 @@ try {
         'ReleaseGuards' { @('./tests/ReleaseSource.Tests.ps1', './tests/ReleaseAssets.Tests.ps1') }
     }
 
-    Import-Module Pester -RequiredVersion 5.7.1 -ErrorAction Stop
+    Import-Module Pester -RequiredVersion 6.2.0 -ErrorAction Stop
     $summary.code = 'Ready'
 } catch {
     $summary.code = 'SetupFailed'

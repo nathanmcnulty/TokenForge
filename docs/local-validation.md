@@ -1,6 +1,6 @@
 # Local validation
 
-GitHub Actions remain disabled. Run the smallest relevant local preset in a fresh PowerShell process; use an existing trusted Linux package rather than rebuilding unchanged code. The runner needs PowerShell 7.4+ and Pester 5.7.1 already installed. It does not install dependencies, build packages, authenticate, or dispatch workflows.
+GitHub Actions remain disabled. Run the smallest relevant local preset in a fresh PowerShell process; use an existing trusted Linux package rather than rebuilding unchanged code. The runner needs PowerShell 7.4+ and Pester 6.2.0 already installed. It does not install dependencies, build packages, authenticate, or dispatch workflows. Both test entry points and the manual workflow setup use the exact Pester 6.2.0 pin. Historical validation receipts retain the versions actually used for those runs.
 
 ```powershell
 pwsh -NoProfile -File ./scripts/Invoke-TokenForgeLocalValidation.ps1 -Preset ReleaseGuards
@@ -15,3 +15,5 @@ Collector checks Goal 1 session/status, finite request budgets, native uncertain
 The final JSON summary records the preset, source version, counts, and a bounded status code. Exit zero means the selected checks passed and at least one test ran. Optional `-ReportPath` writes a new summary file into an existing directory and refuses overwrites. Raw exception text, credentials, and test output are excluded from the summary. Individual tests may still print progress or fixture messages.
 
 Reuse passing results when the relevant source, test selection, package, and fixtures have not changed. A saved summary alone is not a cache-validity check. Use Maximum reasoning for Luna. Give Luna deterministic execution or read-only assessment tasks with explicit files, commands, and expected behavior. Keep production coding with the primary agent or Sol, and ask Sol to review security-sensitive changes or investigate unclear failures.
+
+The [Pester 6.2 migration receipt](pester-6-validation.md) records the full Linux suite, native selection parity and entry-point validation for the current pin.

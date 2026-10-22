@@ -37,8 +37,8 @@ jobs:
           if (-not (Get-PSResourceRepository -Name PSGallery -ErrorAction SilentlyContinue)) {
             Register-PSResourceRepository -PSGallery -ErrorAction Stop
           }
-          Install-PSResource Pester -Version 5.7.1 -Repository PSGallery -Scope CurrentUser -TrustRepository -Reinstall -ErrorAction Stop
-          Import-Module Pester -RequiredVersion 5.7.1 -Force -ErrorAction Stop
+          Install-PSResource Pester -Version 6.2.0 -Repository PSGallery -Scope CurrentUser -TrustRepository -Reinstall -ErrorAction Stop
+          Import-Module Pester -RequiredVersion 6.2.0 -Force -ErrorAction Stop
           $env:TOKENFORGE_TEST_NATIVE = (Resolve-Path './dist/native/linux-x64/tokenforge').Path
           Import-Module (Join-Path (Split-Path $env:TOKENFORGE_TEST_NATIVE -Parent) src/TokenForge/TokenForge.psd1) -Force
           Remove-Module TokenForge # Keep compiled credential types loaded while tests import their source module.

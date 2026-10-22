@@ -3,13 +3,13 @@ function Get-TokenForgeFlowEvidence {
     param([Parameter(Mandatory)][string]$Path,[string]$NativeExecutablePath,
         [ValidatePattern('^[a-f0-9]{64}$')][string]$PlanFingerprint,
         [ValidatePattern('^[a-f0-9]{64}$')][string]$TenantFingerprint,
-        [ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,[switch]$Latest)
+        [ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,[switch]$Latest,[switch]$IncludeHistory)
     if([bool]$TenantFingerprint -ne [bool]$PrincipalFingerprint){throw 'Select both tenant and principal.'}
     $full=Resolve-TokenForgeVaultPath $Path -CreateDirectory
     if(-not(Test-Path -LiteralPath $full)){return @{Format='TokenForgeFlowEvidence';SchemaVersion=1;UpdatedAt=[DateTimeOffset]::UtcNow.ToString('o');Plans=@{};Attempts=@()}}
     try{
         if($full.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){
-            $db=Invoke-TokenForgeNativeEvidence $full export -NativeExecutablePath $NativeExecutablePath -PlanFingerprint $PlanFingerprint -Latest:($Latest -or [bool]$PlanFingerprint) -TenantFingerprint $TenantFingerprint -PrincipalFingerprint $PrincipalFingerprint
+            $db=Invoke-TokenForgeNativeEvidence $full export -NativeExecutablePath $NativeExecutablePath -PlanFingerprint $PlanFingerprint -Latest:($Latest -or ([bool]$PlanFingerprint -and -not $IncludeHistory)) -TenantFingerprint $TenantFingerprint -PrincipalFingerprint $PrincipalFingerprint
         }else{
         if((Get-Item -LiteralPath $full).Length -gt 134217728){throw 'Oversized flow evidence.'}
         $json=Get-Content -LiteralPath $full -Raw
@@ -21,7 +21,7 @@ function Get-TokenForgeFlowEvidence {
         if(-not $full.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){
             $selected=@{};foreach($hash in $db.Plans.Keys){$plan=$db.Plans[$hash];if(($PlanFingerprint -and $hash -ne $PlanFingerprint) -or ($TenantFingerprint -and ($plan.TenantFingerprint -ne $TenantFingerprint -or $plan.PrincipalFingerprint -ne $PrincipalFingerprint))){continue};$selected[$hash]=$plan}
             $db.Plans=$selected;$db.Attempts=@($db.Attempts|Where-Object {$selected.ContainsKey($_.PlanFingerprint)})
-            if($Latest -or $PlanFingerprint){$slots=@{};foreach($row in @($db.Attempts|Sort-Object ObservedAt)){$slots[$row.AttemptKey]=$row};$db.Attempts=@($slots.Values)}
+            if($Latest -or ($PlanFingerprint -and -not $IncludeHistory)){$slots=@{};foreach($row in @($db.Attempts|Sort-Object ObservedAt)){$slots[$row.AttemptKey]=$row};$db.Attempts=@($slots.Values)}
         }
         $db
     }catch{throw 'Flow evidence cannot be read; check private path, format, size, and context. Details suppressed.'}

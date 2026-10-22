@@ -42,7 +42,8 @@ function Invoke-TokenForgeResearchChunk {
         [ValidateRange(-1,100000)][int]$ChunkIndex=-1,[string]$FlowDatabasePath,[string]$MetadataPath,[string]$NativeExecutablePath,
         [ValidateSet('ESTSAUTH','ESTSAUTHPERSISTENT')][string]$CookieName='ESTSAUTH',
         [ValidateRange(1,8760)][int]$MaxAgeHours=24,[ValidateRange(0,60000)][int]$DelayMilliseconds=250,
-        [ValidateRange(0,1000)][int]$MaxPendingClients=0)
+        [ValidateRange(0,1000)][int]$MaxPendingClients=0,
+        $OperationBudget,[switch]$RecoverUnknown,[switch]$ResumePaused)
     if(-not $DatabasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){throw 'Research cohorts require a SQLite scope database.'}
     if($MaxPendingClients -and $ChunkIndex -ge 0){throw 'MaxPendingClients cannot be combined with an explicit ChunkIndex.'}
     if(-not $PSCmdlet.ShouldProcess($CohortId,'Execute the frozen research chunk using existing authorization')){return}
@@ -79,7 +80,7 @@ function Invoke-TokenForgeResearchChunk {
         if(-not $MetadataPath){$MetadataPath=Join-Path $directory $(if(Test-Path (Join-Path $directory applications.sqlite)){'applications.sqlite'}else{'applications.json'})}
         $flowChanges=@{Plans=@{};Attempts=@{}};$scopeChanges=@{};$observations=@()
         try{
-            $observations=@(Invoke-TokenForgeScopeProbe -Inventory $Inventory -EstsAuth $EstsAuth -CookieName $CookieName -Plan $pairs -Protocols $recipe.Protocols -DatabasePath $DatabasePath -FlowDatabasePath $FlowDatabasePath -NativeExecutablePath $NativeExecutablePath -FlowChanges $flowChanges -ScopeChanges $scopeChanges -CohortFingerprint $CohortId -ClientId $selected -PrincipalFingerprint $recipe.PrincipalFingerprint -Tenant $recipe.Authority -MaxApplications $selected.Count -MaxRedirects $recipe.MaxRedirects -ExploreAllFlows:$recipe.ExploreAllFlows -StopOnTransientFailure -DelayMilliseconds $DelayMilliseconds)
+            $observations=@(Invoke-TokenForgeScopeProbe -Inventory $Inventory -EstsAuth $EstsAuth -CookieName $CookieName -Plan $pairs -Protocols $recipe.Protocols -DatabasePath $DatabasePath -FlowDatabasePath $FlowDatabasePath -NativeExecutablePath $NativeExecutablePath -FlowChanges $flowChanges -ScopeChanges $scopeChanges -CohortFingerprint $CohortId -ClientId $selected -PrincipalFingerprint $recipe.PrincipalFingerprint -Tenant $recipe.Authority -MaxApplications $selected.Count -MaxRedirects $recipe.MaxRedirects -ExploreAllFlows:$recipe.ExploreAllFlows -StopOnTransientFailure -DelayMilliseconds $DelayMilliseconds -OperationBudget $OperationBudget -RecoverUnknown:$RecoverUnknown -ResumePaused:$ResumePaused)
         }finally{
             # Leave cohort members pending if either metadata projection fails; resume repairs from primary checkpoints.
             if($scopeChanges.Count){$null=Update-TokenForgeApplicationMetadata $MetadataPath -Document @{SchemaVersion=1;UpdatedAt=[DateTimeOffset]::UtcNow.ToString('o');Observations=@($scopeChanges.Values)} -Kind ScopeObservations -NativeExecutablePath $NativeExecutablePath}

@@ -1,7 +1,7 @@
 #Requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Weekly', 'Native', 'Discovery', 'ReleaseGuards')]
+    [ValidateSet('Weekly', 'Native', 'Discovery', 'Collector', 'ReleaseGuards')]
     [string]$Preset = 'Weekly',
     [string]$NativeExecutable,
     [string]$ReportPath
@@ -41,8 +41,8 @@ try {
             $cursor = if ($cursor.Parent) { Get-Item -LiteralPath $cursor.Parent.FullName -Force } else { $null }
         }
     }
-    if ($Preset -in @('Weekly', 'Native', 'Discovery')) {
-        if ([string]::IsNullOrWhiteSpace($NativeExecutable)) { throw 'NativeExecutable is required for the Weekly, Native, and Discovery presets.' }
+    if ($Preset -in @('Weekly', 'Native', 'Discovery', 'Collector')) {
+        if ([string]::IsNullOrWhiteSpace($NativeExecutable)) { throw 'NativeExecutable is required for the Weekly, Native, Discovery, and Collector presets.' }
         $exe = (Resolve-Path -LiteralPath $NativeExecutable).Path
         if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'NativeExecutable must be an existing Linux executable file.' }
         $executeBits = [IO.UnixFileMode]::UserExecute -bor [IO.UnixFileMode]::GroupExecute -bor [IO.UnixFileMode]::OtherExecute
@@ -60,6 +60,7 @@ try {
         'Weekly' {
             @('./tests/WeeklyCli.Tests.ps1', './tests/NativeWeekly.Tests.ps1', './tests/CiWeekly.Tests.ps1', './tests/CredentialBootstrap.Tests.ps1')
         }
+        'Collector' { @('./tests/CollectorSafety.Tests.ps1', './tests/CollectorNativeSafety.Tests.ps1', './tests/OperationBudget.Tests.ps1', './tests/DiscoveryCandidate.Tests.ps1', './tests/DiscoveryCandidateNative.Tests.ps1', './tests/CollectorKill.Tests.ps1') }
         'Discovery' { @('./tests/DiscoveryRun.Tests.ps1', './tests/DiscoveryStatus.Tests.ps1', './tests/DiscoveryReport.Tests.ps1', './tests/DiscoveryBootstrap.Tests.ps1', './tests/InventoryCheckpoint.Tests.ps1', './tests/InventoryShape.Tests.ps1', './tests/ProbeReadBounds.Tests.ps1', './tests/RoleOrigin.Tests.ps1', './tests/ResearchCohort.Tests.ps1', './tests/ResearchChunkPending.Tests.ps1', './tests/PublicPermissions.Tests.ps1', './tests/PermissionIdentifiers.Tests.ps1', './tests/RegistrationResume.Tests.ps1') }
         'Native' {
             $workflow = Get-Content -LiteralPath (Join-Path $repo '.github/workflows/native.yml') -Raw

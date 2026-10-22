@@ -6,7 +6,8 @@ function Invoke-TokenForgeGraph {
         [ValidateSet('GET','POST','DELETE')][string]$Method = 'GET',
         [hashtable]$Body,
         [switch]$AllowNotFound,
-        [switch]$IncludeUnknownEnumMembers
+        [switch]$IncludeUnknownEnumMembers,
+        $OperationBudget=$script:OperationBudget
     )
     if ($Uri.Scheme -ne 'https' -or $Uri.Host -ne 'graph.microsoft.com' -or $Uri.Port -ne 443 -or $Uri.UserInfo -or $Uri.Fragment -or $Uri.AbsolutePath -notmatch '^/(v1\.0|beta)/') { throw 'Graph URI is outside the supported boundary.' }
     $handler = [Net.Http.HttpClientHandler]::new(); $handler.AllowAutoRedirect = $false
@@ -19,17 +20,22 @@ function Invoke-TokenForgeGraph {
                 $request.Headers.Authorization = [Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', [Net.NetworkCredential]::new('', $AccessToken).Password)
                 if($IncludeUnknownEnumMembers){$null=$request.Headers.TryAddWithoutValidation('Prefer','include-unknown-enum-members')}
                 if ($Body) { $request.Content = [Net.Http.StringContent]::new(($Body | ConvertTo-Json -Depth 20 -Compress), [Text.Encoding]::UTF8, 'application/json') }
-                try { $response = $client.SendAsync($request).GetAwaiter().GetResult() } catch { throw 'Graph transport failed; details suppressed.' }
+                Start-TokenForgeBudgetRequest -Budget $OperationBudget -Category Inventory -Retry:($attempt -gt 0)
+                $cancellation=New-TokenForgeBudgetCancellation $OperationBudget
+                try {
+                    try { $response = $client.SendAsync($request,$cancellation.Token).GetAwaiter().GetResult() } catch { Assert-TokenForgeOperationBudget $OperationBudget;throw 'Graph transport failed; details suppressed.' }
+                } finally { $cancellation.Dispose();Complete-TokenForgeBudgetRequest -Budget $OperationBudget -OutcomeKnown ($null -ne $response) }
                 $status = [int]$response.StatusCode
                 if ($status -eq 404 -and $AllowNotFound) { return $null }
-                if ($status -in @(429,502,503,504) -and $attempt -lt 3) {
+                if ($status -in @(429,502,503,504) -and $attempt -lt $(if($OperationBudget){$OperationBudget.Limits.TransientRetries}else{3})) {
                     $delay = [math]::Pow(2,$attempt)
                     if ($response.Headers.RetryAfter) {
                         if ($response.Headers.RetryAfter.Delta) { $delay = $response.Headers.RetryAfter.Delta.TotalSeconds }
                         elseif ($response.Headers.RetryAfter.Date) { $delay = ($response.Headers.RetryAfter.Date - [DateTimeOffset]::UtcNow).TotalSeconds }
                     }
                     if ($delay -gt 60) { throw "Graph throttled (HTTP $status); Retry-After exceeds the per-call budget. Resume later." }
-                    Start-Sleep -Seconds ([math]::Max(1,$delay))
+                    if($OperationBudget -and $Method -ne 'GET'){throw "Graph request failed (HTTP $status); mutation retry requires a new explicit operation."}
+                    if($OperationBudget){Wait-TokenForgeOperationBudget -Seconds ([Math]::Max(1,$delay)) -Budget $OperationBudget}else{Start-Sleep -Seconds ([math]::Max(1,$delay))}
                     continue
                 }
                 if ($status -lt 200 -or $status -ge 300) { throw "Graph request failed (HTTP $status); response details suppressed." }
@@ -42,13 +48,14 @@ function Invoke-TokenForgeGraph {
 }
 
 function Get-TokenForgeGraphCollection {
-    param([securestring]$AccessToken, [uri]$Uri, [int]$MaxPages = 1000)
+    param([securestring]$AccessToken, [uri]$Uri, [int]$MaxPages = 1000,$OperationBudget=$script:OperationBudget)
     $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
     $items = [Collections.Generic.List[object]]::new()
     $next = $Uri.AbsoluteUri
     for ($page = 0; $next -and $page -lt $MaxPages; $page++) {
         if (-not $seen.Add($next)) { throw 'Graph pagination loop detected; no complete inventory returned.' }
-        $response = Invoke-TokenForgeGraph -AccessToken $AccessToken -Uri $next
+        Start-TokenForgeBudgetPage $OperationBudget
+        $response = Invoke-TokenForgeGraph -AccessToken $AccessToken -Uri $next -OperationBudget $OperationBudget
         if ($response -isnot [Collections.IDictionary] -or -not $response.Contains('value') -or $response['value'] -isnot [array]) { throw 'Invalid Graph collection response.' }
         foreach ($item in $response['value']) { $items.Add($item) }
         $next = [string]$response['@odata.nextLink']

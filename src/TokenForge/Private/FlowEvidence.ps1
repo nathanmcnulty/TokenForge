@@ -49,7 +49,7 @@ function Assert-TokenForgeFlowDocument {
         if($cell.Count -ne 1 -or $row.AttemptKey -cne (Get-TokenForgeFingerprint ($row.PlanFingerprint+'|'+$row.Protocol+'|'+[int]$row.Spa+'|'+$row.RedirectFingerprint))){throw 'Unknown flow slot.'}
         foreach($field in @('StartedAt','ObservedAt')){& $date $row[$field]}
         if(([DateTimeOffset]$row.StartedAt) -gt ([DateTimeOffset]$row.ObservedAt)){throw 'Invalid flow timing.'}
-        if($row.Outcome -cnotin @('Started','Failed','Succeeded','OpaqueToken','NoDelegatedScp','ContextMismatch') -or $row.NamespaceVerification -cnotin @('Matched','Mismatch','Unverifiable') -or $row.RequestVerification -cnotin @('Matched','Mismatch','Unverifiable')){throw 'Invalid flow outcome.'}
+        if($row.Outcome -cnotin @('Started','Failed','Succeeded','OpaqueToken','NoDelegatedScp','ContextMismatch','SessionPaused','RequestBlocked','TransientFailure') -or $row.NamespaceVerification -cnotin @('Matched','Mismatch','Unverifiable') -or $row.RequestVerification -cnotin @('Matched','Mismatch','Unverifiable')){throw 'Invalid flow outcome.'}
         foreach($field in @('Spa','ClaimsReadable','HasScpClaim','SignatureValidated')){if($row[$field] -isnot [bool]){throw 'Invalid flow boolean.'}}
         if($row.SignatureValidated){throw 'Flow evidence does not establish signature validation.'}
         if(($row.ElapsedSeconds -isnot [int] -and $row.ElapsedSeconds -isnot [long] -and $row.ElapsedSeconds -isnot [double] -and $row.ElapsedSeconds -isnot [decimal]) -or -not [double]::IsFinite([double]$row.ElapsedSeconds) -or $row.ElapsedSeconds -lt 0 -or $row.ElapsedSeconds -gt 86400){throw 'Invalid flow duration.'}
@@ -80,7 +80,18 @@ function Save-TokenForgeFlowEvidence {
         if(-not $lock){$lock=Open-TokenForgeVaultFile $lockPath}
         $db=Get-TokenForgeFlowEvidence $full
         if($Plan){$db.Plans[$PlanFingerprint]=$Plan}
-        if($Attempt){$db.Attempts=@($db.Attempts|Where-Object AttemptId -ne $Attempt.AttemptId)+@($Attempt)}
+        if($Attempt){
+            $prior=@($db.Attempts|Where-Object AttemptId -CEQ $Attempt.AttemptId)
+            if($prior.Count){
+                foreach($field in @('AttemptId','PlanFingerprint','AttemptKey','Protocol','RedirectFingerprint','TenantFingerprint','PrincipalFingerprint','ClientId','ResourceId','Spa')){if($prior[0][$field] -cne $Attempt[$field]){throw 'Immutable flow attempt identity.'}}
+                if([DateTimeOffset]$prior[0].StartedAt -ne [DateTimeOffset]$Attempt.StartedAt -or [DateTimeOffset]$prior[0].ObservedAt -gt [DateTimeOffset]$Attempt.ObservedAt){throw 'Immutable flow attempt timing.'}
+                $oldJson=[Text.Json.JsonDocument]::Parse((ConvertTo-Json $prior[0] -Depth 12 -Compress))
+                $newJson=[Text.Json.JsonDocument]::Parse((ConvertTo-Json $Attempt -Depth 12 -Compress))
+                try{$same=[TokenForge.Core.FlowEvidencePolicy]::Canonical($oldJson.RootElement) -ceq [TokenForge.Core.FlowEvidencePolicy]::Canonical($newJson.RootElement)}finally{$oldJson.Dispose();$newJson.Dispose()}
+                if(-not $same -and ($prior[0].Outcome -ne 'Started' -or $Attempt.Outcome -eq 'Started')){throw 'Terminal flow evidence is immutable.'}
+            }
+            $db.Attempts=@($db.Attempts|Where-Object AttemptId -ne $Attempt.AttemptId)+@($Attempt)
+        }
         $db.UpdatedAt=[DateTimeOffset]::UtcNow.ToString('o')
         # Reparse to dictionary form for the same strict boundary used by reads.
         $json=ConvertTo-Json -InputObject $db -Depth 12

@@ -12,7 +12,7 @@ non-Microsoft principals. Probe uses existing consent and stops at interactive p
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
- [Parameter(Mandatory)][ValidateSet('Discover','SignIns','Inventory','Register','Probe','Merge','Export','Report','ExportFlows','NewCohort','ProbeChunk','CohortStatus')][string]$Action,
+ [Parameter(Mandatory)][ValidateSet('Discover','SignIns','Inventory','Register','Probe','Merge','Export','Report','ExportFlows','NewCohort','ProbeChunk','CohortStatus','CollectorStatus')][string]$Action,
  [Parameter(Mandatory)][string]$StatePath,
  [string]$MetadataPath,[string]$DatabasePath,[string]$FlowPath,[string]$NativeExecutablePath,[switch]$ExploreAllFlows,[switch]$SummaryOnly,[switch]$InventoryAccount,
  [securestring]$GraphToken,
@@ -37,10 +37,12 @@ param(
  [string]$ExportPath,
  [ValidatePattern('^[a-f0-9]{64}$')][string]$CohortId,
  [ValidateRange(-1,100000)][int]$ChunkIndex=-1,[ValidateRange(1,1000)][int]$BatchSize=25,
- [ValidateRange(0,1000)][int]$MaxPendingClients=0
+ [ValidateRange(0,1000)][int]$MaxPendingClients=0,
+ $OperationBudget
 )
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1') -Force
+if($OperationBudget){& (Get-Module TokenForge) {param($budget) $script:OperationBudget=$budget;Assert-TokenForgeOperationBudget $budget} $OperationBudget}
 if($InventoryAccount -and ($Action -ne 'Report' -or $PrincipalFingerprint)){throw 'InventoryAccount requires Report without PrincipalFingerprint.'}
 # Reports inspect existing files without creating directories, changing modes, or taking the writer lock.
 if($Action -eq 'Report'){
@@ -70,11 +72,14 @@ if($Action -eq 'Report'){
  return
 }
 # Status is read-only and remains available while a discovery writer holds its lock.
-if($Action -eq 'CohortStatus'){
+if($Action -in @('CohortStatus','CollectorStatus')){
  if(-not $DatabasePath){$DatabasePath=Join-Path $StatePath 'scopes.sqlite'}
  if(-not (Test-Path -LiteralPath $DatabasePath -PathType Leaf)){throw 'Cohort status requires an existing scope database.'}
  if(-not $CohortId){$CohortId=& (Get-Module TokenForge) {param($p) Get-TokenForgeDiscoveryRunId $p} (Join-Path $StatePath 'discovery-run.json')}
- Get-TokenForgeResearchCohort $DatabasePath $CohortId -NativeExecutablePath $NativeExecutablePath -SummaryOnly:$SummaryOnly
+ if($Action -eq 'CollectorStatus'){
+  if(-not $FlowPath){$FlowPath=Join-Path $StatePath 'flows.sqlite'}
+  Get-TokenForgeCollectorStatus -DatabasePath $DatabasePath -CohortId $CohortId -FlowPath $FlowPath -NativeExecutablePath $NativeExecutablePath
+ }else{Get-TokenForgeResearchCohort $DatabasePath $CohortId -NativeExecutablePath $NativeExecutablePath -SummaryOnly:$SummaryOnly}
  return
 }
 $null=New-Item -ItemType Directory -Path $StatePath -Force

@@ -58,7 +58,7 @@ Describe 'Frozen namespace-bound research cohorts' -Skip:(-not $nativeAvailable)
   (Get-TokenForgeResearchCohort $path $cohort.PlanId -NativeExecutablePath $native).Pending.Count|Should -Be 1
   (Get-TokenForgeScopeDatabase $path -NativeExecutablePath $native).Observations.Count|Should -Be 1
   $flow=Get-TokenForgeFlowEvidence (Join-Path $root flows.sqlite) -NativeExecutablePath $native
-  @($flow.Attempts|Where-Object Outcome -eq Started).Count|Should -Be 1
+  @($flow.Attempts|Where-Object Outcome -eq TransientFailure).Count|Should -Be 1
   $resumed=Invoke-TokenForgeResearchChunk @run
   $resumed.SelectedClients|Should -Be 1
   $resumed.PendingClients|Should -Be 0

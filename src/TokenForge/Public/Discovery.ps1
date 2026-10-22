@@ -110,8 +110,8 @@ function Update-TokenForgeDiscovery {
     $catalogPath = [IO.Path]::GetTempFileName()
     try {
         $catalog = Update-TokenForgeCatalog -SourceUri $ScopesUri -Path $catalogPath
-        $appsResponse=Invoke-WebRequest -Uri $MicrosoftAppsUri -TimeoutSec 30 -ErrorAction Stop
-        $resourcesResponse=Invoke-WebRequest -Uri $ResourcesUri -TimeoutSec 30 -ErrorAction Stop
+        $appsResponse=Invoke-TokenForgeBudgetSource -Uri $MicrosoftAppsUri
+        $resourcesResponse=Invoke-TokenForgeBudgetSource -Uri $ResourcesUri
         $apps=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([string]$appsResponse.Content)
         $resources=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([string]$resourcesResponse.Content)
         $discovery = Get-TokenForgeDiscovery -Catalog $catalog -MicrosoftApps $apps -Resources $resources -MicrosoftAppsSource $MicrosoftAppsUri.AbsoluteUri -ResourcesSource $ResourcesUri.AbsoluteUri

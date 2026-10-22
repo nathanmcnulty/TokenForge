@@ -74,7 +74,7 @@ public static class FlowEvidencePolicy
         foreach (var field in new[] { "TenantFingerprint", "PrincipalFingerprint", "ClientId", "ResourceId" }) if (Text(row, field) != Text(plan, field)) throw Invalid();
         if (!plan.GetProperty("Cells").EnumerateArray().Any(x => Cell(x) == Cell(row)) || Text(row, "AttemptKey") != Hash(hash + "|" + Cell(row))) throw Invalid();
         var start = Date(row, "StartedAt"); var observed = Date(row, "ObservedAt"); if (StringComparer.Ordinal.Compare(start, observed) > 0) throw Invalid();
-        Choice(row, "Outcome", "Started Failed Succeeded OpaqueToken NoDelegatedScp ContextMismatch");
+        Choice(row, "Outcome", "Started Failed Succeeded OpaqueToken NoDelegatedScp ContextMismatch SessionPaused RequestBlocked TransientFailure");
         foreach (var field in new[] { "NamespaceVerification", "RequestVerification" }) Choice(row, field, "Matched Mismatch Unverifiable");
         foreach (var field in new[] { "Spa", "ClaimsReadable", "HasScpClaim" }) row.GetProperty(field).GetBoolean();
         if (row.GetProperty("SignatureValidated").GetBoolean()) throw Invalid();

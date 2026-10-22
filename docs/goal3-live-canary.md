@@ -4,6 +4,8 @@ The authorized canary ran once and **stopped safely at bootstrap**. It did not e
 
 This is an observed token-scope result for this dated account/request, not a JWT signature validation, universal client capability, tenant permission inventory or Microsoft-side root-cause claim. Token scope strings and actual authorization remain different evidence. Full scope names are preserved in private `acquisition.json`; repository evidence records counts and their digest.
 
+A separately authorized later trial using another approved client passed; see the [second live canary](goal3-live-canary2.md). This first trial retains its original stopped result.
+
 ## Approved request and observed consumption
 
 - Bootstrap client: `14d82eec-204b-4c2f-b7e8-296a70dab67e` (Microsoft Graph PowerShell).

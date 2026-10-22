@@ -24,6 +24,8 @@ Bounds: 24 trials; at most 72 synthetic logical issuance attempts total (bootstr
 
 Any unexpected request, cold checkpoint, unexpected cancellation, leaked token owner, accepted extra API scope, runtime budget expiration or global counter stop invalidates completion. The report must say `Stopped`/`Inconclusive` and retain completed trial records. No stop is recoded as an ordinary denied pair. No additional cases, retries, concurrency or live follow-up are implied.
 
+The active stopped trial and its charged partial trace must also remain in the report, excluded from completed-pair comparisons. The runner permits lowering the 72-attempt ceiling for stop-path validation; a one-attempt fixture must retain its bootstrap charge and return `Stopped`/`Inconclusive`. The recorded full experiment uses the original 72-attempt ceiling.
+
 Use only the exact reviewed Linux 0.48.0 package: runtime source `8d625be62ef70a43a765e37faf29b3f4c9e780d4`, manifest SHA-256 `1cee964b74fe63c8ffffecec8d2ed4075963d217c28d9554e3da5196f3caceea`. Full payload membership, hashes and the loaded DLL must match before execution. No native source change or rebuild is proposed. The frozen synthetic namespace, per-case profile/inventory/history/request lists and time anchor are saved separately with a content digest. Replays regenerate a clearly synthetic fresh time anchor because this existing core enforces wall-clock freshness; no real observation is relabeled.
 
 ## Evidence and disposition

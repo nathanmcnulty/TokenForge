@@ -1,6 +1,6 @@
 # Goal 4: bounded useful refresh
 
-Work starts from reviewed Goal 3 receipt `c3adeda2f1863c637da9190ffaff7452676a8fff` and roadmap handoff `19470aeba7a949e4204e4ecf5586a6ffb3171c69`. This is an implementation contract; acceptance is pending.
+Work starts from reviewed Goal 3 receipt `c3adeda2f1863c637da9190ffaff7452676a8fff` and roadmap handoff `19470aeba7a949e4204e4ecf5586a6ffb3171c69`. Goal 4 is [offline-ready at its recorded acceptance revisions](goal4-offline-acceptance.md); no Goal 4 live or production completion is claimed.
 
 ## Reconciliation
 
@@ -12,7 +12,7 @@ Immutable content-addressed selection generations precede one atomic weekly-stat
 
 Keep legacy cohort/catalog/inventory/request hashes exact. A separate versioned compatibility descriptor includes namespace, exact request/tool policy, chosen callback, relevant client/resource definitions, current-principal and all-principals grants for both request stages, grant visibility/query identity and collector semantics. A display-name change may alter exact input pins without invalidating compatibility. Reuse refers to original source/record IDs and observation dates; nothing is relabeled as newly collected. Full input/history validation precedes selection.
 
-Private requests come from approved Goal 3 named-tool requirements and strict profiles, with current inventory and typed saved evidence. Public weekly selections are a separate contract. Deterministic order is tool-critical relevant changes, missing evidence, bounded unresolved attempts, overdue refresh, exploration; reserve a bounded fairness share. Default public/tool planning freshness is 24 hours, broader research seven days; stable failure cooldown starts at 24 hours and backs off to seven days, reset by relevant change. Unknown/failed/latest attempts retain earlier success but cannot establish current successful authorization. No saved token is trusted as an acquisition credential.
+Private requests come from approved Goal 3 named-tool requirements and strict profiles, with current inventory and typed saved evidence. Public weekly selections are a separate contract. Deterministic order is tool-critical relevant changes, missing evidence, bounded unresolved attempts, overdue refresh, exploration; reserve a bounded fairness share. Catalog metadata has a 24-hour target, tool-critical private planning evidence is at most 24 hours old, and broader public assessment defaults to seven days; stable failure cooldown starts at 24 hours and backs off to seven days, reset by relevant change. Unknown/failed/latest attempts retain earlier success but cannot establish current successful authorization. No saved token is trusted as an acquisition credential.
 
 Use explicit global counters for issuance/retries/bootstrap/inventory/pages/source/other HTTP and elapsed time. Persist intent before dispatch, keep uncertain consumption charged, persist terminal evidence before completion and permit at most one explicitly requested recovery retry of a supported non-mutating operation. Recognized transient retries are capped at three within the global budget. Sign-in, registration, consent, publication and other mutations never retry automatically. Projection/export retries consume saved evidence only. Existing legacy resume identities remain unchanged.
 

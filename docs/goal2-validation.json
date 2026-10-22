@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "status": "OfflineReady",
+  "sourceRevision": "08fb8e4a41c307b858476d877aa922c611a54683",
+  "roadmapHandoff": "19470aeba7a949e4204e4ecf5586a6ffb3171c69",
+  "goal1FinalReceiptRevision": "68ae5749bbc609937290e2209a5cda89375d7313",
+  "pesterMigrationRevision": "63a782b4e54d84c0a947e78a3d6456d919748f9d",
+  "platform": "linux-x64",
+  "sdk": "10.0.401",
+  "powershell": "7.6.7",
+  "pester": "6.2.0",
+  "fullSuite": {
+    "TotalCount": 1045,
+    "PassedCount": 1041,
+    "FailedCount": 0,
+    "SkippedCount": 4,
+    "FailedContainersCount": 0,
+    "Duration": {
+      "Ticks": 4430383191,
+      "Days": 0,
+      "Hours": 0,
+      "Milliseconds": 38,
+      "Microseconds": 319,
+      "Nanoseconds": 100,
+      "Minutes": 7,
+      "Seconds": 23,
+      "TotalDays": 0.005127758322916667,
+      "TotalHours": 0.12306619975,
+      "TotalMilliseconds": 443038.3191,
+      "TotalMicroseconds": 443038319.1,
+      "TotalNanoseconds": 443038319100.0,
+      "TotalMinutes": 7.383971985,
+      "TotalSeconds": 443.0383191
+    }
+  },
+  "testFileCount": 66,
+  "focusedGoal2": {
+    "passed": 80,
+    "failed": 0,
+    "skipped": 0
+  },
+  "nativeCoreChecks": 1086,
+  "nativeWorkflowSelection": {
+    "passed": 340,
+    "failed": 0,
+    "skipped": 3,
+    "expectedPassesUnchanged": 340,
+    "testFiles": 21,
+    "provenance": "Per-file detailed full entrypoint results reconciled to its actual summary; no duplicate suite run."
+  },
+  "platformSkips": [
+    {
+      "file": "NativeOAuth.Tests.ps1",
+      "case": "rejects a Windows ACL permitting another principal 2ms"
+    },
+    {
+      "file": "NativeProfiles.Tests.ps1",
+      "case": "preserves moved OS-profile ciphertext on an unsupported platform 3ms"
+    },
+    {
+      "file": "Profiles.Tests.ps1",
+      "case": "fails closed on macOS until a signed helper exists 1ms"
+    },
+    {
+      "file": "Vault.Tests.ps1",
+      "case": "creates protected current-user ACLs on Windows 0ms"
+    }
+  ],
+  "package": {
+    "sourceRevision": "08fb8e4a41c307b858476d877aa922c611a54683",
+    "packagePath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal2/package/linux-x64",
+    "manifestSha256": "ee67dff9df60064cf6abafda9905609a841c96346d58b52467df9aa3a0d85875",
+    "archivePath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal2/TokenForge-0.48.0-goal2-linux-x64.tar.gz",
+    "archiveSha256": "ffaae9c7b1e297886a3723414e4771f0e216cf5764bc99aaccc0b25bda538df2",
+    "executableSha256": "a58ea6a623662474b3a1c0490d4ef8b55b3bbd19181d41807ac8f4c712e73dbb",
+    "credentialDllSha256": "fae3f09ce49251982177bccfc3f32425565983e045d0f85aaa2825d0510e6437",
+    "payloadFileCount": 137,
+    "moduleSourceFileCount": 76,
+    "nativeInputCount": 86,
+    "nativeInputsSha256": "7dac8e7b96617f34a8f9a9bc2d959f5f5ebc781e645f09e558abd4aeeccca8d3"
+  },
+  "packageVerification": {
+    "sourceRevision": "08fb8e4a41c307b858476d877aa922c611a54683",
+    "packageVerified": true,
+    "completeModuleSourceFiles": 76,
+    "packagePayloadFiles": 137,
+    "nativeInputsVerified": 86,
+    "validationFilesVerified": 68,
+    "validationInputsSha256": "a000c247caddd17017fa07cfcec80707096897cbcbdbb4c4209207fb2bf4fae5",
+    "workflowFilesUnchanged": 7,
+    "handoffPreserved": true
+  },
+  "requirements": [
+    {
+      "id": "G2.1",
+      "requirement": "Five typed evidence domains and versioned events",
+      "evidence": "65 shared-engine/source-adapter fixtures; 15 native consumer/persistence cases; strict version-1 typed snapshots and reports."
+    },
+    {
+      "id": "G2.2",
+      "requirement": "Stable permission IDs, kind, name, enabled state and origin; rename distinct from addition/removal",
+      "evidence": "Stable-ID rename and absence fixtures; same ID/name across delegated and application kinds remain separate; private namespace/origin checks."
+    },
+    {
+      "id": "G2.3",
+      "requirement": "Source-specific public hints and conflicting claims remain separate from consent/grants",
+      "evidence": "Discovery source adapter aggregates source/client variants, retains claims and conflict hashes, and downgrades missing/mixed legacy projections."
+    },
+    {
+      "id": "G2.4",
+      "requirement": "Visible configured grants retain tenant/observer, query coverage, beneficiary and consent type",
+      "evidence": "Inventory coverage receipts describe unchanged queries. Genuine aggregate-edge scope changes compare; unknown beneficiary, changed observer and inaccessible coverage cannot remove."
+    },
+    {
+      "id": "G2.5",
+      "requirement": "Issued-scope comparison uses exact verified request and execution context",
+      "evidence": "Bounded producer saves constructed scope selection, authority, protocol, callback/SPA class, recipe and execution-policy fingerprints before dispatch; JSON/native stores prevent descriptor changes through completion."
+    },
+    {
+      "id": "G2.6",
+      "requirement": "Optional API response evidence requires operation/version/account and separate approval context",
+      "evidence": "Saved ApiChecks adapter; complete operation context compares response changes, legacy missing operation context stays incomparable. Reports execute no API check."
+    },
+    {
+      "id": "G2.7",
+      "requirement": "No false removal from baseline, changed recipe, incomplete/missing/denied collection, failure, stale or unknown evidence",
+      "evidence": "Adverse fixtures cover all statuses, changed request fields, reversed/future chronology, conflicting simultaneous histories, empty collections and missing projected definitions."
+    },
+    {
+      "id": "G2.8",
+      "requirement": "Latest attempts, retained last success and original dates remain distinct",
+      "evidence": "Success/failure/recovery and maintenance interval fixtures; context/source-bound success reference; failed collection does not refresh last success; source-observed date remains independently nullable."
+    },
+    {
+      "id": "G2.9",
+      "requirement": "Anonymous evidence cannot establish private removal or authorization; provenance and uncertainty remain reviewable without credentials",
+      "evidence": "Public-only rejection, anonymous incomparability, strict full-input validation, record/source hashes and locations, explicit per-entry reasons, no root-cause or authorization claim."
+    },
+    {
+      "id": "G2.10",
+      "requirement": "Important suspected issuance regression confirmation remains separately authorized",
+      "evidence": "Reports always mark RegressionConfirmation=NotPerformed and RootCauseEstablished=false. Synthetic changes are not live regressions. No Goal2 live confirmation performed or required for this offline milestone."
+    },
+    {
+      "id": "G2.11",
+      "requirement": "Shared native and PowerShell saved-evidence consumers and a matching complete Linux package",
+      "evidence": "Ordinary scope database comparison uses the shared engine; native and PowerShell explicit-path parity, package-only consumer smoke, no-PowerShell PATH tests, SQLite/metadata persistence and verified complete package."
+    }
+  ],
+  "independentReview": {
+    "source": "No outstanding material static findings after fixes and fixtures.",
+    "package": "Exact archive/member set, payload hashes, complete module bytes and 86 build inputs independently verified.",
+    "finalGateReceipt": "Passed independent final receipt verification; no outstanding material finding."
+  },
+  "provisionalBuilds": "Earlier uncommitted v1/v2 builds exercised the executable and shared DLL but omitted four then-untracked module files; excluded as acceptance packages. Final package built from the committed source has 137 payload files and all 76 module source files.",
+  "evidenceSha256": {
+    "full-summary.json": "70986cca969226f07d5e010a07066577449f1a6174e0b2b7d10c95b81f336d56",
+    "full-suite.log": "0e206999221d9a4cc03b20336fcea658c45314a8772f70e85c3c68c53db4379d",
+    "core-tests.log": "52b9f7e1b237a995559f62f4c2778f886ec6e8908ae7857460bb0cfc0deb0259",
+    "package-build.log": "024852bbd2b7b5a7231944e744c063782a30b38f3c66c2a36942a3857f2bd34f",
+    "package-consumers.json": "106e8ba4af65774f6c4a26891ea1f26128234e3aa9d372347400f17abd471be7",
+    "package-verification.json": "8076564738fc9dbd0b34ad3383de37259ceceb3a131c7b2baf3f4068b9770895",
+    "changes-final-summary.json": "9e555ced9d16b8d250c6298818d74d81a6d077d5e7acde29544250de9055573d"
+  },
+  "liveAuthenticationPerformed": false,
+  "liveDiscoveryPerformed": false,
+  "tenantPermissionChanges": false,
+  "ActionsDispatched": false,
+  "workflowChanges": false,
+  "published": false,
+  "pullRequestOpened": false,
+  "merged": false,
+  "goal3Started": false,
+  "remainingOfflineBlockers": [],
+  "liveConfirmationApprovalNeeded": "Any new Goal2 live regression confirmation needs separate authorization for account, exact saved verified request and finite request/time budget. None is performed by these consumers or required for the offline acceptance result."
+}

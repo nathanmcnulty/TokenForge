@@ -1,5 +1,7 @@
 # Architecture and roadmap
 
+The [delivery roadmap](discovery-improvements.md) owns milestone order and release-readiness gates. Its [first coding goal](goals/01-trustworthy-bounded-collector.md) is a portable dedicated-VM handoff. This page describes architecture; deferred items below are not parallel delivery commitments.
+
 TokenForge separates credential-free planning, identity protocol execution, Graph tenant administration and persisted evidence. The PowerShell 7.4 module and script CLI run on Windows, Linux and macOS; self-contained native CLI packages are available, with native saved-cookie acquisition and advanced system-browser PKCE. Explicit browser and software-passkey profile login run natively; passkey enrollment and implicit passkey login adapters still require PowerShell.
 
 | Layer | Functions | Evidence boundary |

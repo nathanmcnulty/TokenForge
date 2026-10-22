@@ -29,7 +29,13 @@ public static class WeeklyResearchReport
         var state = document.RootElement;
         DiscoverySourceClaims.ValidateUniqueKeys(state);
         bool hasHistory = state.TryGetProperty("DeepSelectionHistory", out var history);
-        Keys(state, hasHistory ? new[] { "SchemaVersion", "PlanId", "Recipe", "Batches", "DeepSelectionHistory" } : new[] { "SchemaVersion", "PlanId", "Recipe", "Batches" });
+        var stateKeys = new List<string> { "SchemaVersion", "PlanId", "Recipe", "Batches" };
+        if (hasHistory) stateKeys.Add("DeepSelectionHistory");
+        bool hasSelection = state.TryGetProperty("EvidenceSelectionSha256", out var selectionDigest);
+        if (hasSelection) stateKeys.Add("EvidenceSelectionSha256");
+        Keys(state, stateKeys.ToArray());
+        if (hasSelection && (selectionDigest.ValueKind != JsonValueKind.String || !Regex.IsMatch(selectionDigest.GetString()!, "^[a-f0-9]{64}$", RegexOptions.CultureInvariant) || state.GetProperty("Recipe").GetProperty("Mode").GetString() != "Deep"))
+            throw Invalid();
         int version = Integer(state.GetProperty("SchemaVersion"), 1, 2);
         var recipe = state.GetProperty("Recipe");
         var recipeKeys = new List<string> { "SchemaVersion", "Week", "CreatedAt", "Mode", "ChunkSize", "MaxRedirects", "AppIds", "Discovery" };

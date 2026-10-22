@@ -79,6 +79,7 @@ function Get-TfCiResources($State) {
 }
 function Assert-TfCiState($State) {
  $fields=@('SchemaVersion','PlanId','Recipe','Batches');if($State -is [Collections.IDictionary] -and $State.Contains('DeepSelectionHistory')){$fields+='DeepSelectionHistory'}
+ if($State -is [Collections.IDictionary] -and $State.Contains('EvidenceSelectionSha256')){$fields+='EvidenceSelectionSha256';if($State.EvidenceSelectionSha256 -isnot [string] -or $State.EvidenceSelectionSha256 -cnotmatch '^[a-f0-9]{64}$' -or $State.Recipe.Mode -cne 'Deep'){throw 'Invalid evidence selection marker.'}}
  Assert-TfCiKeys $State $fields
  $recipeFields=@('SchemaVersion','Week','CreatedAt','Mode','ChunkSize','MaxRedirects','AppIds','Discovery');if($State.SchemaVersion -eq 2){$recipeFields+='ResourceIds'}
  Assert-TfCiKeys $State.Recipe $recipeFields
@@ -220,7 +221,7 @@ function Get-TfCiPublicStagePaths([string]$Path){
  # Artifact transport omits empty directories. Select existing allowlisted files
  # after Assert-TfCiPublicData rather than passing optional directories to git.
  foreach($file in Get-ChildItem -LiteralPath $Path -File){
-  if($file.Name -cin @('applications.json','weekly-shallow.json','weekly-deep.json','coverage-shallow.json','coverage-deep.json')){$file.Name}
+  if($file.Name -cin @('applications.json','weekly-shallow.json','weekly-deep.json','coverage-shallow.json','coverage-deep.json','selection-deep.json') -or $file.Name -cmatch '^selection-deep-[a-f0-9]{64}\.json$'){$file.Name}
  }
  foreach($folder in @('reports','scopes')){
   $directory=Join-Path $Path $folder
@@ -236,7 +237,22 @@ function Assert-TfCiPublicData([string]$Path){
  if(Test-Path (Join-Path $Path scopes)){
   foreach($file in Get-ChildItem (Join-Path $Path scopes) -Recurse -Force){if($file.PSIsContainer -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Name -notmatch '^chunk-[0-9]{4,6}\.json$'){throw 'Unexpected public scope file.'};Assert-TfCiScopeExport (Get-Content $file.FullName -Raw|ConvertFrom-Json -AsHashtable)}
  }
- foreach($file in @(Get-ChildItem $Path -File -Filter 'weekly-*.json')){Assert-TfCiState ([TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((Get-Content $file.FullName -Raw)))}
+ $validatedSelection=$false
+ foreach($file in @(Get-ChildItem $Path -File -Filter 'weekly-*.json')){
+  $frozen=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((Get-Content $file.FullName -Raw));Assert-TfCiState $frozen
+  if($frozen.Contains('EvidenceSelectionSha256')){
+   . (Join-Path $PSScriptRoot 'TokenForgeCiEvidenceQueue.ps1')
+   $null=Read-TfCiEvidenceSelection $frozen $Path
+   $validatedSelection=$true
+  }
+ }
+ foreach($generation in @(Get-ChildItem -LiteralPath $Path -File -Filter 'selection-deep-*.json')){
+  if($generation.Name -cnotmatch '^selection-deep-([a-f0-9]{64})\.json$'){throw 'Invalid selection generation name.'};$digest=$Matches[1]
+  . (Join-Path $PSScriptRoot 'TokenForgeCiEvidenceQueue.ps1')
+  $snapshot=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([IO.File]::ReadAllText($generation.FullName));Assert-TfCiEvidenceSelection $null $snapshot
+  if((Get-TfCiHash $snapshot) -cne $digest){throw 'Selection generation hash mismatch.'}
+ }
+ if((Test-Path -LiteralPath (Join-Path $Path selection-deep.json)) -and -not $validatedSelection){throw 'Unbound evidence selection snapshot.'}
 }
 function Assert-TfCiReport($Report){
  $fields=@('SchemaVersion','Week','Mode','GeneratedAt','PublishedApplications','AssessedApplications','SuccessfulApplications','TotalBatches','CompletedBatches','PendingBatches','ExhaustedBatches','Complete','OldestCompletedAssessmentAt','LatestCompletedAssessmentAt','OldestPendingHours','MedianBatchSeconds','P95BatchSeconds','EstimatedRemainingRunnerSeconds','Evidence','SuccessfulScopeFreshness')

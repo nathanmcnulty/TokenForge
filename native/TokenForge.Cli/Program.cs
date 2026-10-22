@@ -4,6 +4,7 @@ using TokenForge.Core;
 
 try
 {
+    if(args.Length>=1 && args[0]=="refresh")return NativeRefreshCommand.Run(args);
     if(args.Length>=1 && args[0]=="admin")return NativeAdminCommand.Run(args);
     if(args.Length>=2 && args[0]=="research" && args[1] is "changes" or "snapshot")return NativeChangesCommand.Run(args);
     if(args.Length>=2 && args[0]=="passkey" && args[1]=="recover")return NativePasskeyCommand.Run(args);
@@ -13,7 +14,7 @@ try
     if(args.Length==1 && args[0]=="--version"){Console.WriteLine(JsonSerializer.Serialize(new{Name="TokenForge",Version=CredentialRuntime.Version,AuthenticationDependency="Implicit authentication adapters: PowerShell 7.4+; explicit Memory software-passkey token acquisition: native; browser/software-passkey profile login and persisted profile token get/cache/renewal/storage: native; scopes explain, profile create/show/forget-key/inspect-vault, logout, research report/weekly/backup/inspect-backup/restore-backup and token acquire including system-browser PKCE and local software-passkey authentication: native"}));return 0;}
     if (args.Length == 0 || args[0] is "help" or "--help")
     {
-        Console.WriteLine("TokenForge: admin explain/check/acquire/evidence/packet; passkey recover; profile create/show/forget-key/inspect-vault, login, status, doctor, logout, scopes explain, token get/acquire, graph permissions; research changes/snapshot/report/weekly/export-flows/backup/inspect-backup/restore-backup; evidence import/update/export/plan/cohort/cohort-export/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Implicit authentication adapters require PowerShell 7.4+; explicit Memory software-passkey token acquisition runs natively; browser/software-passkey profile login and persisted profile token get, cache, renewal and storage run natively. Scopes explain, profile create/show/forget-key/inspect-vault, logout, research report/weekly/backup/inspect-backup/restore-backup and token acquire including system-browser PKCE and local software-passkey authentication run natively.");
+        Console.WriteLine("TokenForge: refresh plan/validate/capture/status/project; admin explain/check/acquire/evidence/packet; passkey recover; profile create/show/forget-key/inspect-vault, login, status, doctor, logout, scopes explain, token get/acquire, graph permissions; research changes/snapshot/report/weekly/export-flows/backup/inspect-backup/restore-backup; evidence import/update/export/plan/cohort/cohort-export/pending/checkpoint; flows import/export/plan/attempt; catalog import/update/export. See README.md beside this executable for examples. Implicit authentication adapters require PowerShell 7.4+; explicit Memory software-passkey token acquisition runs natively; browser/software-passkey profile login and persisted profile token get, cache, renewal and storage run natively. Scopes explain, profile create/show/forget-key/inspect-vault, logout, research report/weekly/backup/inspect-backup/restore-backup and token acquire including system-browser PKCE and local software-passkey authentication run natively.");
         return 0;
     }
     if (args.Length > 1 && args[0] == "research" && args[1] == "weekly") return NativeWeeklyCommand.Run(args);

@@ -121,8 +121,8 @@ function Update-TokenForgeApplicationMetadata {
         Inventory {@('AppId','Name','PublishedName','ServicePrincipalType','PreferredSingleSignOnMode','LoginUrl','LogoutUrl','Homepage','Registration','Ownership','OwnerTenantId','AccountEnabled','AssignmentRequired','SignInAudience','PublicClient','Foci','RedirectUris','TenantRedirectUris','PreferredRedirectUri','PublishedGrants','DelegatedScopeDefinitions','AppRoleDefinitions','IdentifierUris','IsResourceCandidate')}
         SignIns {@('AppId','SignInCount','KnownInInventory','RegisteredMicrosoft','Evidence','ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts','AuthenticationMethodCounts','CredentialTypeCounts','IncomingTokenTypeCounts')}
         RegistrationAttempts {@('AppId','Outcome','HttpStatus')}
-        FlowAttempts {@('AttemptKey','PlanFingerprint','Protocol','Spa','RedirectFingerprint','Outcome','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','NamespaceVerification','RequestVerification','SignatureValidated','ErrorCodes','ElapsedSeconds')}
-        ScopeObservations {@('ClientId','ResourceId','Outcome','Protocol','Spa','RequestedScopes','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','SignatureValidated','NamespaceVerification','RequestVerification','ErrorCodes','AttemptCount','ElapsedSeconds','RedirectFingerprint','CatalogHash','PlanFingerprint')}
+        FlowAttempts {@('AttemptKey','PlanFingerprint','Protocol','Spa','RedirectFingerprint','Outcome','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','NamespaceVerification','RequestVerification','SignatureValidated','ErrorCodes','ElapsedSeconds','ComparisonContext')}
+        ScopeObservations {@('ClientId','ResourceId','Outcome','Protocol','Spa','RequestedScopes','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','SignatureValidated','NamespaceVerification','RequestVerification','ErrorCodes','AttemptCount','ElapsedSeconds','RedirectFingerprint','CatalogHash','PlanFingerprint','ComparisonContext')}
     }
     $stamp=if($Kind -eq 'Discovery'){$Document.FetchedAt}elseif($Kind -in @('ScopeObservations','RegistrationAttempts','FlowAttempts')){$Document.UpdatedAt}else{$Document.CapturedAt}
     $observed=([DateTimeOffset]$stamp).ToUniversalTime()
@@ -197,6 +197,7 @@ function Update-TokenForgeApplicationMetadata {
             # Nested metadata records were projected above; remaining values must be simple leaves.
             # Reject credential-bearing objects rather than serializing them under an allowed field name.
             foreach($field in $attributes.Keys){
+                if($field -eq 'ComparisonContext'){$null=[TokenForge.Core.ChangeReports]::ValidateComparisonContext((ConvertTo-Json -InputObject $attributes[$field] -Depth 32 -Compress));continue}
                 if($field -in @('SourceClaims','MetadataConflicts')){continue} # Strict shared validation above includes every nested field.
                 $entries=if($field -in @('Grants','PublishedGrants','DelegatedScopeDefinitions','AppRoleDefinitions','ProtocolCounts','ClientTypeCounts','EventTypeCounts','ResourceCounts','OutcomeCounts','AuthenticationMethodCounts','CredentialTypeCounts','IncomingTokenTypeCounts')){
                     @($attributes[$field]|ForEach-Object {$_.Values})

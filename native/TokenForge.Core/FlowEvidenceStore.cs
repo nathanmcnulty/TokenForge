@@ -120,6 +120,8 @@ public sealed class FlowEvidenceStore : IDisposable
         if (existing != null)
         {
             using var old = Parse(existing); ValidateAttempt(old.RootElement, hash, planDoc.RootElement);
+            bool oldContext=old.RootElement.TryGetProperty("ComparisonContext",out var beforeContext),newContext=row.TryGetProperty("ComparisonContext",out var afterContext);
+            if(oldContext!=newContext || oldContext && Canonical(beforeContext)!=Canonical(afterContext))throw Invalid();
             foreach (var field in new[] { "AttemptId", "PlanFingerprint", "AttemptKey", "Protocol", "RedirectFingerprint", "TenantFingerprint", "PrincipalFingerprint", "ClientId", "ResourceId" })
                 if (Text(old.RootElement, field) != Text(row, field)) throw Invalid();
             if (Date(old.RootElement, "StartedAt") != Date(row, "StartedAt") || StringComparer.Ordinal.Compare(Date(old.RootElement, "ObservedAt"), Date(row, "ObservedAt")) > 0) throw Invalid();

@@ -523,3 +523,7 @@ checks and the separate two-account Linux proof remain distinct evidence.
 Native 0.43 adds [pending software-passkey recovery](native-passkey-recovery.md), with fresh sign-in and Graph identity confirmation before a private local receipt is saved.
 
 Version 0.44 extends pending-passkey receipt checks to the legacy PowerShell authentication adapter and uses the requested imported XDRInternals provider. See [private-file requirements and provider trust](native-passkey-recovery.md#the-powershell-adapter).
+
+### Saved evidence changes
+
+`research changes --before-path <private.json> --after-path <private.json> --kind <kind> --json` compares complete saved evidence through the same versioned engine as PowerShell. `research snapshot --input-path <private.json> --kind <kind> --json` normalizes one saved document. These commands require explicit bounded private JSON files and never discover profiles, authenticate or make requests. Optional change flags are `--max-age-hours`, `--as-of` (ISO timestamp with timezone), and `--public-only` (rejects private input). Kinds and the comparison/legacy limitations are documented in `docs/goal2-change-reports.md` in the source tree.

@@ -180,16 +180,20 @@ function Invoke-TokenForgeScopeProbe {
                             Assert-TokenForgeOperationBudget -Budget $OperationBudget
                             Start-TokenForgeBudgetIssuance -Budget $OperationBudget -Kind Issuance -Retry:($previous.Count -gt 0) -OperationId $attemptKey
                         }
+                        $request = New-TokenForgeDiscoveryRequest -Application $app -ResourceId $resource -RedirectUri $redirect -Tenant $Tenant -Spa:$spa -Protocol $attempt.Protocol
                         $started=[DateTimeOffset]::UtcNow.ToString('o')
                         $transientFailure=$false;$sessionPaused=$false;$budgetStop=$false;$unknownFailure=$false
                         $flowAttempt=@{AttemptId=[guid]::NewGuid().ToString();PlanFingerprint=$planHash;AttemptKey=$attemptKey;ClientId=$app.AppId;ResourceId=$resource.ToString();TenantFingerprint=$Inventory.TenantFingerprint;PrincipalFingerprint=$probePrincipal;StartedAt=$started;ObservedAt=$started;Protocol=$attempt.Protocol;Spa=[bool]$spa;RedirectFingerprint=$redirectHash;Outcome='Started';ResponseScopes=@();ScpScopes=@();ClaimsReadable=$false;HasScpClaim=$false;NamespaceVerification='Unverifiable';RequestVerification='Unverifiable';SignatureValidated=$false;ErrorCodes=@();ElapsedSeconds=0}
+                        if($OperationBudget){
+                            $recipe=@{Version=1;Protocols=@($Protocols);MaxRedirects=$MaxRedirects;ExploreAllFlows=[bool]$ExploreAllFlows;ResourceAliases=@($aliases);Cells=@($slots);SelectionPolicy='VerifiedMicrosoftRegistered/no-consent/v1'}
+                            $flowAttempt.ComparisonContext=New-TokenForgeFlowComparisonContext -Attempt $flowAttempt -FlowPlan $flowPlan -Recipe $recipe -Budget $OperationBudget -DelayMilliseconds $DelayMilliseconds -MaxApplications $MaxApplications -StopOnTransientFailure $StopOnTransientFailure.IsPresent -RecoverUnknown $RecoverUnknown.IsPresent -ResumePaused $ResumePaused.IsPresent -Redirect $redirect -Request $request
+                        }
                         $flows=Save-TokenForgeFlowEvidence $FlowDatabasePath -Attempt $flowAttempt -ExistingDocument $flows -NativeExecutablePath $NativeExecutablePath -Changes $FlowChanges
                         if($CheckpointAction){& $CheckpointAction}
                         $attemptWatch=[Diagnostics.Stopwatch]::StartNew()
                         $observation.AttemptCount++
                         if($observation.Outcome -notin @('Succeeded','OpaqueToken','NoDelegatedScp')){$observation.Protocol = $attempt.Protocol;$observation.Spa = $spa}
                         try {
-                            $request = New-TokenForgeDiscoveryRequest -Application $app -ResourceId $resource -RedirectUri $redirect -Tenant $Tenant -Spa:$spa -Protocol $attempt.Protocol
                             $tokenOptions=@{};if($OperationBudget){$tokenOptions.OperationBudget=$OperationBudget}
                             $token = Get-TokenForgeToken -Request $request -EstsAuth $EstsAuth -CookieName $CookieName -WarningAction SilentlyContinue @tokenOptions
                             $claims = $token.TokenClaims
@@ -265,8 +269,18 @@ function Invoke-TokenForgeScopeProbe {
             elseif($best.Count){
                 foreach($field in @('Outcome','ObservedAt','Protocol','Spa','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','NamespaceVerification','RequestVerification')){$observation.$field=$best[0][$field]}
                 $observation|Add-Member RedirectFingerprint $best[0].RedirectFingerprint -Force
+                if($best[0].Contains('ComparisonContext')){$observation|Add-Member ComparisonContext $best[0].ComparisonContext -Force;$observation.RequestedScopes=@($best[0].ComparisonContext.RequestedScopes)}
             }
             if(-not $best.Count -and $latest.Count){$observation.ObservedAt=@($latest.Values|Sort-Object {([DateTimeOffset]$_.ObservedAt).UtcDateTime} -Descending)[0].ObservedAt}
+            if(-not $best.Count -and $latest.Count){
+                $lastAttempt=@($latest.Values|Sort-Object {([DateTimeOffset]$_.ObservedAt).UtcDateTime} -Descending)[0]
+                if($lastAttempt.Contains('ComparisonContext')){
+                    $observation.Protocol=$lastAttempt.Protocol;$observation.Spa=$lastAttempt.Spa
+                    $observation|Add-Member RedirectFingerprint $lastAttempt.RedirectFingerprint -Force
+                    $observation|Add-Member ComparisonContext $lastAttempt.ComparisonContext -Force
+                    $observation.RequestedScopes=@($lastAttempt.ComparisonContext.RequestedScopes)
+                }
+            }
             $observation|Add-Member PlanFingerprint $planHash -Force
             $observation.ElapsedSeconds = [math]::Round($watch.Elapsed.TotalSeconds,3)
             $database = Add-TokenForgeScopeObservation -Database $database -Observation $observation -Path $DatabasePath -NativeExecutablePath $NativeExecutablePath

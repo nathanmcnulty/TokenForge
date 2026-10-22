@@ -17,3 +17,5 @@ The final JSON summary records the preset, source version, counts, and a bounded
 Reuse passing results when the relevant source, test selection, package, and fixtures have not changed. A saved summary alone is not a cache-validity check. Use Maximum reasoning for Luna. Give Luna deterministic execution or read-only assessment tasks with explicit files, commands, and expected behavior. Keep production coding with the primary agent or Sol, and ask Sol to review security-sensitive changes or investigate unclear failures.
 
 The [Pester 6.2 migration receipt](pester-6-validation.md) records the full Linux suite, native selection parity and entry-point validation for the current pin.
+
+The `Changes` preset runs the synthetic typed change-report fixtures and native/PowerShell saved-evidence parity checks against a matching existing Linux package. It uses Pester 6.2.0, performs no live collection, and covers the Goal 2 report contract. See [Goal 2 change reports](goal2-change-reports.md).

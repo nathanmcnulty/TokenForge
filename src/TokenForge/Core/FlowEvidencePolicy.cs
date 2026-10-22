@@ -67,7 +67,12 @@ public static class FlowEvidencePolicy
     }
     public static void ValidateAttempt(JsonElement row, string hash, JsonElement plan)
     {
-        Keys(row, "AttemptId PlanFingerprint AttemptKey ClientId ResourceId TenantFingerprint PrincipalFingerprint StartedAt ObservedAt Protocol Spa RedirectFingerprint Outcome ResponseScopes ScpScopes ClaimsReadable HasScpClaim NamespaceVerification RequestVerification SignatureValidated ErrorCodes ElapsedSeconds");
+        Keys(row, "AttemptId PlanFingerprint AttemptKey ClientId ResourceId TenantFingerprint PrincipalFingerprint StartedAt ObservedAt Protocol Spa RedirectFingerprint Outcome ResponseScopes ScpScopes ClaimsReadable HasScpClaim NamespaceVerification RequestVerification SignatureValidated ErrorCodes ElapsedSeconds"+(row.TryGetProperty("ComparisonContext",out var comparison)?" ComparisonContext":""));
+        if(comparison.ValueKind!=JsonValueKind.Undefined){
+            ChangeReports.ValidateBoundContext(comparison.GetRawText(),row.GetRawText());
+            using var c=JsonDocument.Parse(comparison.GetRawText());
+            if(c.RootElement.GetProperty("AuthorityFingerprint").GetString()!=Hash(Text(plan,"Tenant")))throw Invalid();
+        }
         GuidValue(Text(row, "AttemptId"));
         foreach (var field in new[] { "AttemptKey", "PlanFingerprint", "TenantFingerprint", "PrincipalFingerprint", "RedirectFingerprint" }) HashValue(Text(row, field));
         if (Text(row, "PlanFingerprint") != hash) throw Invalid();

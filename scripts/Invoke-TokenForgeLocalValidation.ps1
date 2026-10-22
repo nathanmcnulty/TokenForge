@@ -60,7 +60,7 @@ try {
         'Weekly' {
             @('./tests/WeeklyCli.Tests.ps1', './tests/NativeWeekly.Tests.ps1', './tests/CiWeekly.Tests.ps1', './tests/CredentialBootstrap.Tests.ps1')
         }
-        'Refresh' { @('./tests/RefreshPlanning.Tests.ps1', './tests/NativeRefresh.Tests.ps1', './tests/CiEvidenceQueue.Tests.ps1') }
+        'Refresh' { @('./tests/RefreshPlanning.Tests.ps1', './tests/RefreshGrantDependencies.Tests.ps1', './tests/NativeRefresh.Tests.ps1', './tests/CiEvidenceQueue.Tests.ps1') }
         'Admin' { @('./tests/AdminWorkflows.Tests.ps1', './tests/NativeAdminWorkflows.Tests.ps1') }
         'Changes' { @('./tests/ChangeReports.Tests.ps1', './tests/NativeChangeReports.Tests.ps1') }
         'Collector' { @('./tests/CollectorSafety.Tests.ps1', './tests/CollectorNativeSafety.Tests.ps1', './tests/OperationBudget.Tests.ps1', './tests/DiscoveryCandidate.Tests.ps1', './tests/DiscoveryCandidateNative.Tests.ps1', './tests/CollectorKill.Tests.ps1') }

@@ -21,12 +21,12 @@ function Export-TokenForgeRefreshHistory {
  try{[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson($run.ProjectHistory($HistoryJson))}finally{$run.Dispose()}
 }
 function Invoke-TokenForgeRefresh {
- [CmdletBinding()]param([Parameter(Mandatory)][string]$PlanJson,[Parameter(Mandatory)][string]$AccountStateDirectory,[securestring]$EstsAuth,[ValidateSet('ESTSAUTH','ESTSAUTHPERSISTENT')][string]$CookieName='ESTSAUTH',[Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None)
+ [CmdletBinding()]param([Parameter(Mandatory)][string]$PlanJson,[Parameter(Mandatory)][string]$AccountStateDirectory,[securestring]$EstsAuth,[ValidateSet('ESTSAUTH','ESTSAUTHPERSISTENT')][string]$CookieName='ESTSAUTH',[Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None,[switch]$OperationCheck)
  $plan=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([TokenForge.Core.AdminWorkflows]::ValidateRefresh($PlanJson))
  $path=Join-Path $AccountStateDirectory refresh-run.json
  foreach($row in @($plan.Candidates|Where-Object Selected)){
   if(Test-Path -LiteralPath $path){$status=Get-TokenForgeRefreshStatus -PlanJson $PlanJson -StatePath $path;$request=@($status.Requests|Where-Object RequestId -CEQ $row.RequestId)[0];if($request.Status -ceq 'Complete'){continue};if($request.Status -cin @('InFlightUnknown','Interrupted')){return $status}}
-  $result=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([TokenForge.Core.AdminWorkflows]::AcquireRefresh($PlanJson,$AccountStateDirectory,$row.RequestId,$EstsAuth,$CookieName,$CancellationToken,$null,$null,$null))
+  $result=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([TokenForge.Core.AdminWorkflows]::AcquireRefresh($PlanJson,$AccountStateDirectory,$row.RequestId,$EstsAuth,$CookieName,$CancellationToken,$null,$null,$null,$OperationCheck.IsPresent))
   $result
   if(-not $EstsAuth -or ($result.Contains('Run') -and $result.Run.InFlightUnknownCount -gt 0)){return}
  }

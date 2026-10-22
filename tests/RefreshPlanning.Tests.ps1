@@ -200,7 +200,7 @@ Describe 'Goal 4 bounded strict acquisition with synthetic HTTP' {
   $identity=[Func[Security.SecureString,string]]{param($token)$script:rfPrincipal}
   $proof=[Func[Security.SecureString,TokenForge.Core.ProfileApiCheck]]{param($token)[TokenForge.Core.ProfileApiCheck]::new(200,$true)}
   $cookie=ConvertTo-SecureString synthetic-cookie -AsPlainText -Force
-  function Invoke-RefreshAdapter {Read-RefreshJson ([TokenForge.Core.AdminWorkflows]::AcquireRefresh($json,$root,$id,$cookie,'ESTSAUTH',[Threading.CancellationToken]::None,$http,$identity,$proof))}
+  function Invoke-RefreshAdapter([bool]$ApprovedProof=$false) {Read-RefreshJson ([TokenForge.Core.AdminWorkflows]::AcquireRefresh($json,$root,$id,$cookie,'ESTSAUTH',[Threading.CancellationToken]::None,$http,$identity,$proof,$ApprovedProof))}
  }
  AfterEach {$cookie.Dispose()}
  It 'counts actual synthetic exchanges and retains terminal evidence without broadening scopes' {
@@ -219,6 +219,10 @@ Describe 'Goal 4 bounded strict acquisition with synthetic HTTP' {
  }
  It 'revalidates actual issued scope ceilings on every acquisition' {
   $script:rfFault='Extra';$r=Invoke-RefreshAdapter;$r.Acquisition.Status|Should -Be Blocked;$r.Acquisition.FinalAdditionalScopes|Should -Contain Mail.Read;$r.Run.CompletedCount|Should -Be 1
+ }
+ It 'requires explicit selected API proof approval independently of declared requirements' -ForEach @(@{Approved=$false;Expected='IssuedNeedsApiObservation';Requests=5},@{Approved=$true;Expected='IssuedWithinStrictPolicy';Requests=6}) {
+  $i.Requirements.Tools[0].Operations=@('GraphMeV1');$p=Plan-Refresh $i ([DateTimeOffset]::UtcNow);$json=$p|ConvertTo-Json -Depth 100 -Compress;$id=$p.Candidates[0].RequestId
+  $result=Invoke-RefreshAdapter $Approved;$result.Acquisition.Status|Should -Be $Expected;$result.Acquisition.ApiProofPerformed|Should -Be $Approved;$result.Run.TotalRequests|Should -Be $Requests;$result.Run.CompletedCount|Should -Be 1
  }
  It 'advances a completed canonical run only when exact original history is retained' {
   $null=Invoke-RefreshAdapter;$run=[TokenForge.Core.AdminWorkflows]::OpenRefreshRun($json,(Join-Path $root refresh-run.json));try{$history=Read-RefreshJson $run.ProjectHistory()}finally{$run.Dispose()}

@@ -527,3 +527,7 @@ Version 0.44 extends pending-passkey receipt checks to the legacy PowerShell aut
 ### Saved evidence changes
 
 `research changes --before-path <private.json> --after-path <private.json> --kind <kind> --json` compares complete saved evidence through the same versioned engine as PowerShell. `research snapshot --input-path <private.json> --kind <kind> --json` normalizes one saved document. These commands require explicit bounded private JSON files and never discover profiles, authenticate or make requests. Optional change flags are `--max-age-hours`, `--as-of` (ISO timestamp with timezone), and `--public-only` (rejects private input). Kinds and the comparison/legacy limitations are documented in `docs/goal2-change-reports.md` in the source tree.
+
+## Named administrator workflows
+
+`tokenforge admin explain/check/acquire/evidence/packet` share the Goal 3 strict-policy and saved-evidence contracts with PowerShell. See [administrator workflows](goal3-admin-workflows.md) for versioned manifests, private file requirements, metadata-only acquisition, exact health exit codes, bounded private packets and synthetic examples. These commands never initialize or renew authentication; acquisition requires a separately supplied existing session and explicit strict policy.

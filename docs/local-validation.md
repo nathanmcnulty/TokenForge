@@ -19,3 +19,5 @@ Reuse passing results when the relevant source, test selection, package, and fix
 The [Pester 6.2 migration receipt](pester-6-validation.md) records the full Linux suite, native selection parity and entry-point validation for the current pin.
 
 The `Changes` preset runs the synthetic typed change-report fixtures and native/PowerShell saved-evidence parity checks against a matching existing Linux package. It uses Pester 6.2.0, performs no live collection, and covers the Goal 2 report contract. See [Goal 2 change reports](goal2-change-reports.md).
+
+The `Admin` preset runs the Goal 3 strict-policy, synthetic acquisition, evidence conversion, named-tool health, private packet, and native consumer parity checks. It needs a matching Linux package and Pester 6.2.0. Run `pwsh -NoProfile -File ./scripts/Invoke-TokenForgeLocalValidation.ps1 -Preset Admin -NativeExecutable /path/to/linux-x64/tokenforge`. All fixtures are offline; see [administrator workflows](goal3-admin-workflows.md).

@@ -1,7 +1,22 @@
 #Requires -Version 7.4
-# Read-only GitHub verification and private handoff. No remote mutation or writer.
+# Read-only public verification. The internal operation is also used by the explicit writer entry point.
 . (Join-Path $PSScriptRoot TokenForgeDiscoveryCandidate.ps1)
 . (Join-Path $PSScriptRoot TokenForgePublicationRecovery.ps1)
+
+function Read-TfPublicationPolicySnapshot([string]$PolicyPath,[string]$PolicySha256) {
+ Assert-TokenForgePublicationPlanHash $PolicySha256
+  $PolicyPath=[TokenForge.Core.V0220.PrivateFiles]::Resolve([IO.Path]::GetFullPath($PolicyPath),$false)
+  # Hash and parse one bounded snapshot, never reopen the policy after pinning it.
+  $policyStream=[IO.File]::Open($PolicyPath,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None)
+  try{
+   if($policyStream.Length -lt 1 -or $policyStream.Length -gt 16KB){throw 'Policy bound.'}
+   $policyBytes=[byte[]]::new($policyStream.Length);$policyStream.ReadExactly($policyBytes,0,$policyBytes.Length)
+   if($policyStream.ReadByte() -ne -1){throw 'Policy grew beyond snapshot.'}
+  }finally{$policyStream.Dispose()}
+  if([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($policyBytes)).ToLowerInvariant() -cne $PolicySha256){throw 'Policy pin mismatch.'}
+  $policy=Read-TfPublicationJson $policyBytes;Assert-TfPublicationPolicy $policy
+  return ,$policy
+}
 
 function Read-TfPublicationJson([byte[]]$Bytes) {
  if($Bytes.Length -gt 4MB){throw 'Response bound.'}
@@ -15,7 +30,10 @@ function Get-TfPublicationId($Value) {
  $text=[string]$Value;if($text -cnotmatch '\A[1-9][0-9]{0,18}\z'){throw 'Identity shape.'};$text
 }
 function Test-TfPublicationBudget($Context) {
- if($Context.Watch.Elapsed.TotalSeconds -ge 60 -or $Context.Requests -gt 32 -or $Context.Bytes -gt 32MB){throw 'Verification budget exhausted.'}
+ $seconds=if($Context['DeadlineSeconds']){$Context['DeadlineSeconds']}else{60}
+ $requests=if($Context['MaxRequests']){$Context['MaxRequests']}else{32}
+ $bytes=if($Context['MaxBytes']){$Context['MaxBytes']}else{32MB}
+ if($Context.Watch.Elapsed.TotalSeconds -ge $seconds -or $Context.Requests -gt $requests -or $Context.Bytes -gt $bytes){throw 'Verification budget exhausted.'}
 }
 function Get-TfPublicationNow($Context) {if($Context.Synthetic){$Context.FixtureTime}else{[DateTimeOffset]::UtcNow}}
 function Get-TfPublicationBlobHash([byte[]]$Bytes) {
@@ -26,11 +44,12 @@ function Get-TfPublicationBlobHash([byte[]]$Bytes) {
 function Invoke-TfPublicationHttp($Context,[string]$Route) {
  # Route is constructed by the adapter, never taken from API URL/link fields.
  if($Route -cnotmatch '\A/(user|repos/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/[A-Za-z0-9_./?=&-]+|repos/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)\z' -or $Route -match '(^|/)\.\.?(/|$)'){throw 'API route.'}
- Test-TfPublicationBudget $Context;if($Context.Requests -ge 32){throw 'Request budget exhausted.'};$Context.Requests++
+ Test-TfPublicationBudget $Context;$requestLimit=if($Context['MaxRequests']){$Context['MaxRequests']}else{32};$aggregateLimit=if($Context['MaxBytes']){$Context['MaxBytes']}else{32MB};if($Context.Requests -ge $requestLimit){throw 'Request budget exhausted.'};$Context.Requests++
  if($Context.Synthetic){$response=& $Context.ReadFixture $Route}
  else{
   $handler=[Net.Http.HttpClientHandler]::new();$handler.AllowAutoRedirect=$false;$handler.UseCookies=$false;$handler.UseProxy=$false
-  $client=[Net.Http.HttpClient]::new($handler);$client.Timeout=[TimeSpan]::FromSeconds([math]::Min(10,60-$Context.Watch.Elapsed.TotalSeconds))
+  $deadline=if($Context['DeadlineSeconds']){$Context['DeadlineSeconds']}else{60}
+  $client=[Net.Http.HttpClient]::new($handler);$client.Timeout=[TimeSpan]::FromSeconds([math]::Min(10,$deadline-$Context.Watch.Elapsed.TotalSeconds))
   $cancel=[Threading.CancellationTokenSource]::new();$cancel.CancelAfter($client.Timeout)
   $request=[Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Get,('https://api.github.com'+$Route))
   try{
@@ -41,7 +60,7 @@ function Invoke-TfPublicationHttp($Context,[string]$Route) {
    try{
     if([int]$message.StatusCode -ne 200 -or $message.Headers.Contains('Link') -or $message.Content.Headers.ContentLength -gt 4MB){throw 'API refused or paginated.'}
     $stream=$message.Content.ReadAsStream();$memory=[IO.MemoryStream]::new();$buffer=[byte[]]::new(8192)
-    try{while(($n=$stream.ReadAsync($buffer,0,$buffer.Length,$cancel.Token).GetAwaiter().GetResult()) -gt 0){if($memory.Length+$n -gt 4MB -or $memory.Length+$n+$Context.Bytes -gt 32MB){throw 'Response bound.'};$memory.Write($buffer,0,$n);Test-TfPublicationBudget $Context};$bytes=$memory.ToArray()}finally{$memory.Dispose();$stream.Dispose()}
+    try{while(($n=$stream.ReadAsync($buffer,0,$buffer.Length,$cancel.Token).GetAwaiter().GetResult()) -gt 0){if($memory.Length+$n -gt 4MB -or $memory.Length+$n+$Context.Bytes -gt $aggregateLimit){throw 'Response bound.'};$memory.Write($buffer,0,$n);Test-TfPublicationBudget $Context};$bytes=$memory.ToArray()}finally{$memory.Dispose();$stream.Dispose()}
     $response=@{Status=200;Paginated=$false;Bytes=$bytes}
    }finally{$message.Dispose()}
   }finally{$request.Dispose();$client.Dispose();$cancel.Dispose()}
@@ -158,6 +177,7 @@ function Assert-TfPublicationCommit($Context,$Approval,[string]$Candidate) {
  $old=Invoke-TfPublicationHttp $Context ($Context.Api+'/git/commits/'+$Approval.ExpectedParent)
  $new=Invoke-TfPublicationHttp $Context ($Context.Api+'/git/commits/'+$Approval.ProposedCommit)
  if($old.sha -cne $Approval.ExpectedParent -or $new.sha -cne $Approval.ProposedCommit -or $new.parents -isnot [array] -or $new.parents.Count -ne 1 -or $new.parents[0].sha -cne $Approval.ExpectedParent){throw 'Commit parent mismatch.'}
+ $Context.ProposedTree=$new.tree.sha
  $before=Get-TfPublicationTree $Context $old.tree.sha;$after=Get-TfPublicationTree $Context $new.tree.sha;$prefix='candidates/'+$Approval.CandidateHash
  $permitted=@('candidates',$prefix)
  foreach($key in $before.Keys){
@@ -210,14 +230,8 @@ function Assert-TfPublicationProposal($Pr,$Policy,[string]$Pull,[string]$Head) {
 function Assert-TfPublicationMain($Main,$Protection,[string]$Source) {
  if($Main.commit.sha -isnot [string] -or $Main.commit.sha -cne $Source -or $Main.protected -isnot [bool] -or -not $Main.protected -or $Protection.enforce_admins.enabled -isnot [bool] -or -not $Protection.enforce_admins.enabled -or $Protection.required_pull_request_reviews.dismiss_stale_reviews -isnot [bool] -or -not $Protection.required_pull_request_reviews.dismiss_stale_reviews -or ($Protection.required_pull_request_reviews.required_approving_review_count -isnot [long] -and $Protection.required_pull_request_reviews.required_approving_review_count -isnot [int]) -or $Protection.required_pull_request_reviews.required_approving_review_count -lt 1){throw 'Current main/protection mismatch.'}
 }
-function Invoke-TokenForgePublicationVerification {
- <# .SYNOPSIS
- Verify an existing publication proposal. No remote write is performed or authorized.
- .DESCRIPTION
- Synthetic transports never establish authority. Live mode needs an explicitly supplied
- token and pinned attestation verifier; it consults no ambient GitHub credentials.
- A future writer must repeat verification and perform an exact expected-old CAS.
- #>
+function Invoke-TfPublicationOperation {
+ # Shared lock/verification scope. Only the explicit writer wrapper selects dispatch.
  [CmdletBinding(DefaultParameterSetName='Live')]
  param(
   [Parameter(Mandatory)][string]$PolicyPath,[Parameter(Mandatory)][string]$PolicySha256,
@@ -232,22 +246,20 @@ function Invoke-TokenForgePublicationVerification {
   [Parameter(Mandatory,ParameterSetName='Synthetic')][switch]$Synthetic,
   [Parameter(Mandatory,ParameterSetName='Synthetic')][scriptblock]$ReadFixture,
   [Parameter(Mandatory,ParameterSetName='Synthetic')][scriptblock]$VerifyFixtureAttestation,
-  [Parameter(Mandatory,ParameterSetName='Synthetic')][DateTimeOffset]$FixtureTime
+  [Parameter(Mandatory,ParameterSetName='Synthetic')][DateTimeOffset]$FixtureTime,
+  [switch]$PublicationWriter,[switch]$ExecutePublication,[string]$ApprovedTransaction,
+  [Parameter(ParameterSetName='Synthetic')][scriptblock]$WriteFixture
  )
- $ErrorActionPreference='Stop';$stage='Inputs';$lock=$null;$scratch=$null
+ $ErrorActionPreference='Stop';$stage='Inputs';$lock=$null;$scratch=$null;$context=$null
  try{
   if(-not $IsLinux){throw 'Linux validation only.'}
+  if($PublicationWriter){
+   if(-not $ExecutePublication){throw 'Explicit execution intent required.'}
+   Assert-TokenForgePublicationPlanHash $ApprovedTransaction
+   if($PSCmdlet.ParameterSetName -ceq 'Synthetic' -and -not $WriteFixture){throw 'Synthetic writer transport required.'}
+  }elseif($ExecutePublication -or $ApprovedTransaction -or $WriteFixture){throw 'Writer options require explicit writer entry.'}
   Assert-TokenForgePublicationPlanHash $PolicySha256
-  $PolicyPath=[TokenForge.Core.V0220.PrivateFiles]::Resolve([IO.Path]::GetFullPath($PolicyPath),$false)
-  # Hash and parse one bounded snapshot, never reopen the policy after pinning it.
-  $policyStream=[IO.File]::Open($PolicyPath,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None)
-  try{
-   if($policyStream.Length -lt 1 -or $policyStream.Length -gt 16KB){throw 'Policy bound.'}
-   $policyBytes=[byte[]]::new($policyStream.Length);$policyStream.ReadExactly($policyBytes,0,$policyBytes.Length)
-   if($policyStream.ReadByte() -ne -1){throw 'Policy grew beyond snapshot.'}
-  }finally{$policyStream.Dispose()}
-  if([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($policyBytes)).ToLowerInvariant() -cne $PolicySha256){throw 'Policy pin mismatch.'}
-  $policy=Read-TfPublicationJson $policyBytes;Assert-TfPublicationPolicy $policy
+  $policy=Read-TfPublicationPolicySnapshot $PolicyPath $PolicySha256
   $ArchivePath=[TokenForge.Core.V0220.PrivateFiles]::Resolve([IO.Path]::GetFullPath($ArchivePath),$false)
   if((Get-Item -LiteralPath $ArchivePath).Length -gt 8MB){throw 'Archive bound.'}
   $stateRoot=Join-Path $policy.JournalRoot ($policy.RepositoryId+'-'+$policy.DataBranch)
@@ -317,6 +329,12 @@ function Invoke-TokenForgePublicationVerification {
    Assert-TokenForgePublicationPlanHash $record.Transaction;Assert-TokenForgePublicationPlanHash $record.ProposedCommit -Length 40;Assert-TokenForgePublicationPlanHash $record.ExpectedParent -Length 40
    if($record.PreparedBeforeObservation -isnot [bool] -or $record.Applied -isnot [bool] -or (($record.ReviewerComment -ceq $ReviewerComment -or $record.MaintainerComment -ceq $MaintainerComment) -and $record.Transaction -cne $transaction)){throw 'Approval replay.'}
   }
+  if($PublicationWriter){
+   $stage='WriterDiscovery'
+   if($readerId -cin @($actor,$trigger,$proposer)){throw 'Worker/writer separation required.'}
+   $context.WriteFixture=$WriteFixture
+   $context.WriterTransport=Initialize-TfPublicationWrite $context $approval $transaction $stateRoot $ApprovedTransaction
+  }
   $stage='FinalObservations'
   # A final read pass closes ordinary metadata races, but is not atomic with a future CAS.
   foreach($id in @($ReviewerComment,$MaintainerComment)){
@@ -356,12 +374,41 @@ function Invoke-TokenForgePublicationVerification {
   }
   $stage='Persist';Save-TfPublicationLedger $statePath $ledger
   if(-not (Test-Path -LiteralPath $marker)){$file=[TokenForge.Core.V0220.PrivateFiles]::Open($marker,$true);try{$file.Flush($true)}finally{$file.Dispose()}}
+  if($PublicationWriter){
+   $stage='Writer'
+   $context.FinalObserved=$ref.object.sha;$context.ArtifactExpiry=$artifact.expires_at
+   return Invoke-TfPublicationWrite $context $approval $transaction $verdict $stateRoot $ApprovedTransaction $review.Expires $main.Expires $readerId
+  }
   [pscustomobject]@{SchemaVersion=1;Kind='TokenForgeTrustedPublicationVerification';Verdict=$verdict;Synthetic=$context.Synthetic;AuthorizationEstablished=$false;PublishAllowed=$false;RemoteMutationPerformed=$false;HostedExecutionProof=$false;ObservedAuthorityFromAuthenticatedApi=(-not $context.Synthetic);Transaction=$transaction;PolicySha256=$PolicySha256;CandidateHash=$approval.CandidateHash;ArchiveSha256=$archiveHash;RepositoryId=$policy.RepositoryId;Ref=$approval.Ref;ExpectedParent=$approval.ExpectedParent;ProposedCommit=$approval.ProposedCommit;ObservedParent=$ref.object.sha;Requests=$context.Requests;ResponseBytes=$context.Bytes;NextStep='SeparateApprovalAndFreshVerificationPlusExactExpectedOldCASRequired'}
- }catch{throw ('Publication verification failed at '+$stage+'; no remote write performed.')}
+ }catch{
+  if($context -and $context['DispatchPossible']){throw ('Publication writer failed at '+$stage+'; remote outcome may be unknown; recover without redispatch.')}
+  throw ('Publication verification failed at '+$stage+'; no remote write performed.')
+ }
  finally{
   $cleanupFailed=$false
   try{if($scratch -and (Test-Path -LiteralPath $scratch)){Remove-Item -LiteralPath $scratch -Recurse -Force}}catch{$cleanupFailed=$true}
   finally{if($lock){try{$lock.Dispose()}catch{$cleanupFailed=$true}}}
-  if($cleanupFailed){throw 'Publication verification cleanup failed; inspect saved handoff before retry; no remote write performed.'}
+  if($cleanupFailed){throw 'Publication cleanup failed; inspect saved handoff and recover before any further write.'}
  }
+}
+
+function Invoke-TokenForgePublicationVerification {
+ # This public entry point cannot select the writer or accept a write transport.
+ [CmdletBinding(DefaultParameterSetName='Live')]
+ param(
+  [Parameter(Mandatory)][string]$PolicyPath,[Parameter(Mandatory)][string]$PolicySha256,
+  [Parameter(Mandatory)][string]$ArchivePath,
+  [Parameter(Mandatory)][ValidatePattern('^[1-9][0-9]{0,18}$')][string]$PullRequest,
+  [Parameter(Mandatory)][ValidatePattern('^[1-9][0-9]{0,18}$')][string]$ReviewerComment,
+  [Parameter(Mandatory)][ValidatePattern('^[1-9][0-9]{0,18}$')][string]$MaintainerComment,
+  [Parameter(Mandatory,ParameterSetName='Live')][securestring]$AccessToken,
+  [Parameter(Mandatory,ParameterSetName='Live')][string]$VerifierPath,
+  [Parameter(Mandatory,ParameterSetName='Live')][string]$AttestationBundlePath,
+  [Parameter(Mandatory,ParameterSetName='Live')][string]$TrustRootPath,
+  [Parameter(Mandatory,ParameterSetName='Synthetic')][switch]$Synthetic,
+  [Parameter(Mandatory,ParameterSetName='Synthetic')][scriptblock]$ReadFixture,
+  [Parameter(Mandatory,ParameterSetName='Synthetic')][scriptblock]$VerifyFixtureAttestation,
+  [Parameter(Mandatory,ParameterSetName='Synthetic')][DateTimeOffset]$FixtureTime
+ )
+ Invoke-TfPublicationOperation @PSBoundParameters
 }

@@ -1,5 +1,7 @@
 # Goal 6 trusted publication verification adapter
 
+This describes the verification checkpoint at `9c2ee3e6cd2d6df3d6511cea4197926667b87378`. Subsequent [remote writer work](goal6-publication-writer.md) adds separate explicit publication and read-only recovery entry points; the public verification entry point remains read-only. Historical acceptance receipts are unchanged.
+
 `scripts/TokenForgePublicationAdapter.ps1` implements the read-only verification and durable handoff boundary for an existing publication proposal. It has no remote writer, workflow dispatch or publication command. A successful result is `VerifiedForSeparateWriterReview`; `AuthorizationEstablished`, `PublishAllowed`, `RemoteMutationPerformed` and `HostedExecutionProof` remain false. Synthetic results also leave `ObservedAuthorityFromAuthenticatedApi` false.
 
 This supplements the historical [offline release receipt](goal6-offline-readiness.md). It does not supersede its package acceptance results or complete Goal 6. The adapter is source-only and is not in that previously accepted package. The legacy discovery writer remains quarantined with `if: false`. Actions were not enabled or dispatched.

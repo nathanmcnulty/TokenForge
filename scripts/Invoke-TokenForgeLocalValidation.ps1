@@ -79,7 +79,7 @@ try {
             }
             $paths
         }
-        'Publication' { @('./tests/PublicationAdapter.Tests.ps1', './tests/PublicationRecovery.Tests.ps1', './tests/DiscoveryCandidate.Tests.ps1', './tests/ReleaseReadinessPolicy.Tests.ps1') }
+        'Publication' { @('./tests/PublicationAdapter.Tests.ps1', './tests/PublicationWriter.Tests.ps1', './tests/PublicationGitProtocol.Tests.ps1', './tests/PublicationRecovery.Tests.ps1', './tests/DiscoveryCandidate.Tests.ps1', './tests/ReleaseReadinessPolicy.Tests.ps1') }
         'ReleaseReadiness' { @('./tests/ReleaseSource.Tests.ps1', './tests/ReleaseAssets.Tests.ps1', './tests/PublicationRecovery.Tests.ps1', './tests/ReleaseReadinessPolicy.Tests.ps1', './tests/NativeStorage.Tests.ps1') }
         'ReleaseGuards' { @('./tests/ReleaseSource.Tests.ps1', './tests/ReleaseAssets.Tests.ps1') }
     }

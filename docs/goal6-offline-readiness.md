@@ -4,6 +4,8 @@ This is a local Linux x64 release candidate, not full Goal 6, live, publication 
 
 Subsequent source-only work: the [trusted publication verification adapter](goal6-publication-adapter.md) adds offline-tested authority/provenance verification and durable handoff. It supplies no remote writer or hosted proof and is not included in this historical package.
 
+The separate [remote writer checkpoint](goal6-publication-writer.md) subsequently implements bounded dispatch and recovery with offline fixtures. It also remains outside this historical package and has no real publication/hosted proof.
+
 ## Exact checkpoints
 
 - Goal 5 parent: `534520fd52a47b3cd80138efac5d2ce2081247cc`.

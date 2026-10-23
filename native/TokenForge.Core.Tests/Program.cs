@@ -7,9 +7,11 @@ using TokenForge.Core.V0220;
 var count=0;
 void Check(bool condition){if(!condition) throw new Exception("Check failed.");count++;}
 void Reject(Action action){try{action();}catch{count++;return;}throw new Exception("Expected rejection.");}
+if(args.Length==1 && args[0]=="--snapshot-only"){SqliteSnapshotChecks.Run(Check,Reject);Console.WriteLine($"{count} snapshot checks passed.");return 0;}
 if(args.Length==1 && args[0]=="--collector-only"){FlowEvidenceTests.Run(Check,Reject);count+=ResearchCohortTests.Run();Console.WriteLine($"{count} collector checks passed.");return 0;}
 if(args.Length==1 && args[0]=="--discovery-claims-only"){DiscoverySourceClaimChecks.Run(Check,Reject);Console.WriteLine($"{count} source-claim checks passed.");return 0;}
 if(args.Length==1 && args[0]=="--catalog-claims-only"){CatalogClaimsTests.Run(Check,Reject);Console.WriteLine($"{count} catalog-claim checks passed.");return 0;}
+SqliteSnapshotChecks.Run(Check,Reject);
 DiscoverySourceClaimChecks.Run(Check,Reject);
 CatalogClaimsTests.Run(Check,Reject);
 NativeTokenDiagnosticChecks.Run(Check);

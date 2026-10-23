@@ -1,7 +1,7 @@
 #Requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Weekly', 'Native', 'Discovery', 'Collector', 'Changes', 'Admin', 'Refresh', 'Lab', 'ReleaseGuards')]
+    [ValidateSet('Weekly', 'Native', 'Discovery', 'Collector', 'Changes', 'Admin', 'Refresh', 'Lab', 'ReleaseReadiness', 'ReleaseGuards')]
     [string]$Preset = 'Weekly',
     [string]$NativeExecutable,
     [string]$ReportPath
@@ -41,7 +41,7 @@ try {
             $cursor = if ($cursor.Parent) { Get-Item -LiteralPath $cursor.Parent.FullName -Force } else { $null }
         }
     }
-    if ($Preset -in @('Weekly', 'Native', 'Discovery', 'Collector', 'Changes', 'Admin', 'Refresh', 'Lab')) {
+    if ($Preset -in @('Weekly', 'Native', 'Discovery', 'Collector', 'Changes', 'Admin', 'Refresh', 'Lab', 'ReleaseReadiness')) {
         if ([string]::IsNullOrWhiteSpace($NativeExecutable)) { throw 'NativeExecutable is required for the Weekly, Native, Discovery, Collector, Changes, Admin, Refresh, and Lab presets.' }
         $exe = (Resolve-Path -LiteralPath $NativeExecutable).Path
         if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'NativeExecutable must be an existing Linux executable file.' }
@@ -79,6 +79,7 @@ try {
             }
             $paths
         }
+        'ReleaseReadiness' { @('./tests/ReleaseSource.Tests.ps1', './tests/ReleaseAssets.Tests.ps1', './tests/PublicationRecovery.Tests.ps1', './tests/ReleaseReadinessPolicy.Tests.ps1', './tests/NativeStorage.Tests.ps1') }
         'ReleaseGuards' { @('./tests/ReleaseSource.Tests.ps1', './tests/ReleaseAssets.Tests.ps1') }
     }
 

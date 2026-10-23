@@ -38,6 +38,14 @@ Describe 'Complete release asset validation' {
   Set-Content (Join-Path $dir private.log) 'synthetic'
   {& $validator -AssetPath $dir -Version $version -SourceCommit $commit}|Should -Throw '*exactly six*'
  }
+ It 'rejects duplicate receipt fields before permissive conversion' -ForEach @(@{Field='SourceCommit'},@{Field='Sha256'},@{Field='SchemaVersion'}) {
+  $path=Join-Path $dir TokenForge-1.2.3-linux-x64.tar.gz.json
+  $text=[IO.File]::ReadAllText($path)
+  $record=$text|ConvertFrom-Json
+  $value=ConvertTo-Json -InputObject $record.$Field -Compress
+  [IO.File]::WriteAllText($path,($text.TrimEnd().Substring(0,$text.TrimEnd().Length-1)+',"'+$Field+'":'+$value+'}'))
+  {& $validator -AssetPath $dir -Version $version -SourceCommit $commit}|Should -Throw '*Duplicate release receipt field*'
+ }
  It 'rejects changed archive bytes' {
   Set-Content (Join-Path $dir TokenForge-1.2.3-linux-x64.tar.gz) 'changed'
   {& $validator -AssetPath $dir -Version $version -SourceCommit $commit}|Should -Throw '*does not match*'

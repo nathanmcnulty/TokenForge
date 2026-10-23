@@ -1,5 +1,7 @@
 # Native CLI and evidence store
 
+Current release-candidate support is **Linux x64 offline only**. Start with the [operator runbook](goal6-operator-runbook.md) for verified installation, saved-evidence administration, recovery, export and maintenance. Historical version/platform/live reports below describe their dated evidence; they do not validate this candidate or authorize authentication, hosted execution or publication.
+
 The native CLI is a self-contained .NET executable per OS and architecture. Evidence commands
 run directly in the shared core with bundled SQLite. Passkey enrollment, implicit authentication adapters invoke the packaged PowerShell 7.4+ module;
 install `pwsh` and keep `src/` and `scripts/` beside the executable for those commands.
@@ -238,9 +240,9 @@ are not JWT signature validation or a substitute for a resource API check.
 
 ## Durable private evidence
 
-SQLite is an opt-in evidence workspace. Existing discovery still writes JSON and updates the
-application metadata catalog. Import/export bridges the existing scope database without putting
-credentials in SQLite or changing working CI discovery. It preserves validated observations and
+The bounded collector uses SQLite scope, flow and application-metadata stores alongside private
+JSON manifests and intents. Legacy JSON import/export remains available without putting
+credentials in SQLite. It preserves validated observations and
 registration outcomes and records each source path and latest import date. A repeated import
 is idempotent. Import validation and writes occur within one transaction; one malformed row
 rolls back the entire import. Exports use a consistent database snapshot.
@@ -282,13 +284,14 @@ silently migrated to these plans; integration is a later explicit migration.
 
 ```powershell
 ./scripts/Build-TokenForgeNative.ps1 -Runtime linux-x64
-# Also supported: linux-arm64, win-x64, win-arm64, osx-x64, osx-arm64
+# Other runtime build switches are legacy capabilities, outside this candidate's declared support.
 ```
 
 .NET 10 SDK builds the executables; the shared core targets .NET 8 for PowerShell 7.4 compatibility.
-Offline CI builds and exercises host executables on Linux, Windows, and macOS. Live auth proof
-remains Linux and the two lab accounts. Native AOT, OS-protected encryption keys, removal of the
-PowerShell authentication dependency, and a metadata visualization GUI remain separate milestones.
+Current candidate validation is local Linux x64 only; hosted Actions are disabled and manual-only.
+Historical platform/live reports do not establish current candidate coverage. Windows/Linux
+OS-backed storage has a separate documented implementation; other platform validation, native AOT,
+removal of remaining PowerShell dependencies and a metadata visualization GUI are outside this candidate.
 See [native architecture](native-architecture.md) for their boundaries and validation gates.
 
 Explicit Windows/Linux OS-backed profile storage is documented in [OS-backed vault](os-backed-vault.md).
@@ -526,8 +529,23 @@ Version 0.44 extends pending-passkey receipt checks to the legacy PowerShell aut
 
 ### Saved evidence changes
 
-`research changes --before-path <private.json> --after-path <private.json> --kind <kind> --json` compares complete saved evidence through the same versioned engine as PowerShell. `research snapshot --input-path <private.json> --kind <kind> --json` normalizes one saved document. These commands require explicit bounded private JSON files and never discover profiles, authenticate or make requests. Optional change flags are `--max-age-hours`, `--as-of` (ISO timestamp with timezone), and `--public-only` (rejects private input). Kinds and the comparison/legacy limitations are documented in `docs/goal2-change-reports.md` in the source tree.
+`research changes --before-path <private.json> --after-path <private.json> --kind <kind> --json` compares complete saved evidence through the same versioned engine as PowerShell. `research snapshot --input-path <private.json> --kind <kind> --json` normalizes one saved document. These commands require explicit bounded private JSON files and never discover profiles, authenticate or make requests. Optional change flags are `--max-age-hours`, `--as-of` (ISO timestamp with timezone), and `--public-only` (rejects private input). Kinds and comparison/legacy limitations are documented in the packaged [change-report guide](goal2-change-reports.md).
 
 ## Named administrator workflows
 
 `tokenforge admin explain/check/acquire/evidence/packet` share the Goal 3 strict-policy and saved-evidence contracts with PowerShell. See [administrator workflows](goal3-admin-workflows.md) for versioned manifests, private file requirements, metadata-only acquisition, exact health exit codes, bounded private packets and synthetic examples. These commands never initialize or renew authentication; acquisition requires a separately supplied existing session and explicit strict policy.
+
+
+## Offline collector, refresh and database snapshots
+
+The package includes the [bounded collector guide](goal1-collector.md), [saved candidate export](goal1-export.md) and [refresh contract](goal4-bounded-refresh.md), with their PowerShell operator scripts under `scripts/`. Read historical milestone scope separately from current support in the [operator runbook](goal6-operator-runbook.md). Low-level compatibility entry points do not acquire Goal 1 bounds merely because they ship in this package.
+
+The candidate database-copy interface is:
+
+```sh
+tokenforge storage snapshot --database /private/account/scopes.sqlite --output-path /private/backup/scopes.sqlite --domain scopes --json
+tokenforge storage snapshot --database /private/account/flows.sqlite --output-path /private/backup/flows.sqlite --domain flows --json
+tokenforge storage snapshot --database /private/account/applications.sqlite --output-path /private/backup/applications.sqlite --domain applications --json
+```
+
+It uses the SQLite backup API, validates typed contents and creates a new private destination (0600 on Linux). It includes committed WAL-backed data instead of copying just the main database file. Restore to another new path with the same command, using the saved snapshot as `--database`. It refuses an existing destination or SQLite companion (including broken links), does not authenticate or collect, and does not establish a transaction across separate stores. Typed validation checks supported logical contents, but a full SQLite copy is not credential sanitization or secure erasure of freed pages/other copied bytes; treat the whole result as private and do not publish it as an anonymous export. Quiesce all writers when taking an account-wide cut and retain the corresponding private JSON manifests, intents and journals separately. This candidate interface requires a matching source/package acceptance receipt; the example alone is not a completed validation claim. Encrypted `research backup` remains a distinct maintenance-envelope operation.

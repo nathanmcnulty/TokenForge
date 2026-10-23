@@ -21,3 +21,7 @@ The [Pester 6.2 migration receipt](pester-6-validation.md) records the full Linu
 The `Changes` preset runs the synthetic typed change-report fixtures and native/PowerShell saved-evidence parity checks against a matching existing Linux package. It uses Pester 6.2.0, performs no live collection, and covers the Goal 2 report contract. See [Goal 2 change reports](goal2-change-reports.md).
 
 The `Admin` preset runs the Goal 3 strict-policy, synthetic acquisition, evidence conversion, named-tool health, private packet, and native consumer parity checks. It needs a matching Linux package and Pester 6.2.0. Run `pwsh -NoProfile -File ./scripts/Invoke-TokenForgeLocalValidation.ps1 -Preset Admin -NativeExecutable /path/to/linux-x64/tokenforge`. All fixtures are offline; see [administrator workflows](goal3-admin-workflows.md).
+
+### Offline release readiness
+
+`-Preset ReleaseReadiness -NativeExecutable /absolute/matching/linux-x64/tokenforge` checks release-source mocks, exact archive receipts, offline publication recovery planning, manual-only workflow/quarantined-writer policy and native SQLite snapshot boundaries. It requires Pester 6.2.0 and an existing matching package; it does not build, install, authenticate or run Actions. `scripts/Test-TokenForgeOfflinePackage.ps1` is the separate Pester-free extracted-package synthetic operator walkthrough; run it in a fresh PowerShell process with a new private workspace. Neither proves live or hosted readiness.

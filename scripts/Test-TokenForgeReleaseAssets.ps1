@@ -19,7 +19,15 @@ $entries=@(foreach($runtime in $runtimes){
  if($file.Length -le 0 -or $file.Length -gt 512MB){throw 'Release archive size is outside its bound.'}
  $receipt=Get-Item -LiteralPath "$($file.FullName).json"
  if($receipt.Length -gt 16KB){throw 'Release receipt is too large.'}
- $record=Get-Content -LiteralPath $receipt.FullName -Raw|ConvertFrom-Json
+ $text=[Text.UTF8Encoding]::new($false,$true).GetString([IO.File]::ReadAllBytes($receipt.FullName))
+ if($text.StartsWith([string][char]0xfeff,[StringComparison]::Ordinal)){$text=$text.Substring(1)}
+ $document=[Text.Json.JsonDocument]::Parse([string]$text,[Text.Json.JsonDocumentOptions]::new())
+ try{
+  if($document.RootElement.ValueKind -ne [Text.Json.JsonValueKind]::Object){throw 'Invalid release receipt JSON.'}
+  $seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+  foreach($property in $document.RootElement.EnumerateObject()){if(-not $seen.Add($property.Name)){throw 'Duplicate release receipt field.'}}
+ }finally{$document.Dispose()}
+ $record=$text|ConvertFrom-Json
  $fields=@($record.PSObject.Properties.Name)
  if($fields.Count -ne 6 -or @('SchemaVersion','Runtime','Version','SourceCommit','Archive','Sha256'|Where-Object {$_ -cnotin $fields}).Count){throw 'Unexpected release receipt schema.'}
  if($record.SchemaVersion -isnot [long] -or @('Runtime','Version','SourceCommit','Archive','Sha256'|Where-Object {$record.$_ -isnot [string]}).Count){throw 'Unexpected release receipt field types.'}

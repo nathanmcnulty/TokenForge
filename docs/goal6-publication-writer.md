@@ -1,5 +1,7 @@
 # Goal 6 remote writer: offline checkpoint
 
+This records the writer checkpoint at `d9d5f16d3bbf645d425955d91c133c6c0a5749ba`. Subsequent [pinned verifier work](goal6-attestation-verifier.md) resolves real signed-bundle/CLI compatibility for reviewed public fixtures; operational TokenForge sealing and hosted publication proof remain separate gates. Historical receipts below remain unchanged.
+
 The source-only writer adds one exact-old Git ref update after fresh trusted verification, durable intent before dispatch, and independent read-only recovery. No real publication was performed. Actions remain disabled, the legacy workflow writer remains quarantined, and no workflow was connected to this implementation. Full Goal 6, hosted compatibility and publication readiness remain open.
 
 The existing [verification contract](goal6-publication-adapter.md) still applies to a new publication: exact candidate/archive hashes, producer and sealing identity, two independent current approvers, strict expiry/current-main/protection, exact parent and complete proposed commit contents. The seven-file `CandidateDirectoryV1` mapping remains append-only. Existing policy and approval schemas are unchanged. New operational policies and approvals must pin the reviewed current policy/tool/root bytes; test policies are never operational approvals.

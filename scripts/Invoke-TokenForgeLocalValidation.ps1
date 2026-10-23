@@ -1,9 +1,11 @@
 #Requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Weekly', 'Native', 'Discovery', 'Collector', 'Changes', 'Admin', 'Refresh', 'Lab', 'Publication', 'ReleaseReadiness', 'ReleaseGuards')]
+    [ValidateSet('Weekly', 'Native', 'Discovery', 'Collector', 'Changes', 'Admin', 'Refresh', 'Lab', 'Publication', 'Attestation', 'ReleaseReadiness', 'ReleaseGuards')]
     [string]$Preset = 'Weekly',
     [string]$NativeExecutable,
+    [string]$AttestationVerifierPath,
+    [string]$AttestationReleaseArchive,
     [string]$ReportPath
 )
 
@@ -25,10 +27,21 @@ $summary = [ordered]@{
     failedTests = @()
 }
 $previousNative = $env:TOKENFORGE_TEST_NATIVE
+$previousVerifier = $env:TOKENFORGE_TEST_ATTESTATION_VERIFIER
+$previousArchive = $env:TOKENFORGE_TEST_ATTESTATION_ARCHIVE
 $reportTarget = $null
 $testPaths = @()
 
 try {
+    if ($Preset -eq 'Attestation') {
+        if ([string]::IsNullOrWhiteSpace($AttestationVerifierPath) -or [string]::IsNullOrWhiteSpace($AttestationReleaseArchive)) { throw 'Attestation requires existing verifier and release archive paths; no install/download fallback.' }
+        $env:TOKENFORGE_TEST_ATTESTATION_VERIFIER = (Resolve-Path -LiteralPath $AttestationVerifierPath).Path
+        $env:TOKENFORGE_TEST_ATTESTATION_ARCHIVE = (Resolve-Path -LiteralPath $AttestationReleaseArchive).Path
+    } else {
+        # Other presets cannot accidentally inherit permission to execute an external verifier.
+        Remove-Item Env:TOKENFORGE_TEST_ATTESTATION_VERIFIER -ErrorAction SilentlyContinue
+        Remove-Item Env:TOKENFORGE_TEST_ATTESTATION_ARCHIVE -ErrorAction SilentlyContinue
+    }
     if (-not [string]::IsNullOrWhiteSpace($ReportPath)) {
         $reportTarget = [IO.Path]::GetFullPath($ReportPath)
         $reportEntry = [IO.FileInfo]::new($reportTarget)
@@ -80,6 +93,7 @@ try {
             $paths
         }
         'Publication' { @('./tests/PublicationAdapter.Tests.ps1', './tests/PublicationWriter.Tests.ps1', './tests/PublicationGitProtocol.Tests.ps1', './tests/PublicationRecovery.Tests.ps1', './tests/DiscoveryCandidate.Tests.ps1', './tests/ReleaseReadinessPolicy.Tests.ps1') }
+        'Attestation' { @('./tests/AttestationVerifier.Tests.ps1', './tests/PublicationAdapter.Tests.ps1', './tests/ReleaseReadinessPolicy.Tests.ps1') }
         'ReleaseReadiness' { @('./tests/ReleaseSource.Tests.ps1', './tests/ReleaseAssets.Tests.ps1', './tests/PublicationRecovery.Tests.ps1', './tests/ReleaseReadinessPolicy.Tests.ps1', './tests/NativeStorage.Tests.ps1') }
         'ReleaseGuards' { @('./tests/ReleaseSource.Tests.ps1', './tests/ReleaseAssets.Tests.ps1') }
     }
@@ -129,6 +143,10 @@ try {
 } finally {
     if ($null -eq $previousNative) { Remove-Item Env:TOKENFORGE_TEST_NATIVE -ErrorAction SilentlyContinue }
     else { $env:TOKENFORGE_TEST_NATIVE = $previousNative }
+    if ($null -eq $previousVerifier) { Remove-Item Env:TOKENFORGE_TEST_ATTESTATION_VERIFIER -ErrorAction SilentlyContinue }
+    else { $env:TOKENFORGE_TEST_ATTESTATION_VERIFIER = $previousVerifier }
+    if ($null -eq $previousArchive) { Remove-Item Env:TOKENFORGE_TEST_ATTESTATION_ARCHIVE -ErrorAction SilentlyContinue }
+    else { $env:TOKENFORGE_TEST_ATTESTATION_ARCHIVE = $previousArchive }
 }
 
 if ($null -ne $reportTarget -and $summary.code -ne 'SetupFailed') {

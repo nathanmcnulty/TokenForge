@@ -2,6 +2,8 @@
 
 This is a local Linux x64 release candidate, not full Goal 6, live, publication or production completion. The assigned offline validation/readiness assessment is complete; the remaining product gates below are still open. The machine-readable [receipt](goal6-offline-validation.json) preserves exact artifacts, hashes, diagnostics and remaining gates. The [operator runbook](goal6-operator-runbook.md) is included in the tested package.
 
+Subsequent source-only work: the [trusted publication verification adapter](goal6-publication-adapter.md) adds offline-tested authority/provenance verification and durable handoff. It supplies no remote writer or hosted proof and is not included in this historical package.
+
 ## Exact checkpoints
 
 - Goal 5 parent: `534520fd52a47b3cd80138efac5d2ce2081247cc`.

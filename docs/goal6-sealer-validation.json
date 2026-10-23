@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgeReusableSealerOfflineAcceptance",
+  "recordedUtc": "2026-10-23T22:02:50.606734+00:00",
+  "disposition": "ReusableSealerAndNonOperationalPolicyOfflineGatesPassed",
+  "goal6Complete": false,
+  "publicationReady": false,
+  "hostedSealingProven": false,
+  "dotOfflineReviewReady": true,
+  "source": {
+    "implementationCommit": "6d4f9fb6e0d9be371997585df6bcfbcbccb03188",
+    "workflowCommit": "7718a591d45beb236840412f35a2eb29ebf2f7cf",
+    "parent": "04b5ffd747cbe66eceaa9d8fe3b7690fa7bbe3e7",
+    "branch": "codex/goal6-reusable-sealer",
+    "preservedHandoff": "19470aeba7a949e4204e4ecf5586a6ffb3171c69",
+    "localOnly": true,
+    "unmerged": true,
+    "producerCommitInspected": "7718a591d45beb236840412f35a2eb29ebf2f7cf",
+    "producerCallsSealer": false,
+    "filesSha256": {
+      "docs/goal6-dot-review.md": "2749ab03231385403e50265d25322c4033e3bb3c36fca8cc213e671158456306",
+      "docs/goal6-sealer.md": "f01eec35d4086434d9841feaf0dea06af3993981978bfa1f6bdeb0a9d1a791ee",
+      "publication/sealer-dependencies.json": "ba4e40a2910ef6e599d790f1be3ecc65a5f91611bc77efc5eb466e16af42731f",
+      "publication/tokenforge-sealer.template.yml": "573d41970b371cfa2ff07177d7c8252b2bebf99d731a83823889a7150ecaec4d",
+      "scripts/Invoke-TokenForgeLocalValidation.ps1": "00efbe5efe2eab90ec03639b1c8bbbc0bbd6e2682501c3d874de3d48864d9329",
+      "scripts/Invoke-TokenForgeSealer.ps1": "eff2f145f81fb917e8f7cc5edda4453f6e56d1c2aeec8c33cfbd7a2db75238e2",
+      "scripts/Test-TokenForgeSealerCaller.py": "ad2ae2d2b662afd41537887b4aea7c533121a7fabe63e2869fa664b1e407babd",
+      "scripts/TokenForgeSealer.ps1": "c1fa23c2171970d72223642fb2aadcecbeeba79ad2001a6456603b456613dfdb",
+      "scripts/TokenForgeSealerPolicy.ps1": "47b35f99e32b96a2b0c4ac1c0ea664d9196d92ab629a5bc6569aca97d2f11804",
+      "tests/ReleaseReadinessPolicy.Tests.ps1": "1e1b412efef526f2d03604dc0ba36a950231b9f10e7fa4cb8464a77b6e7ced17",
+      "tests/Sealer.Tests.ps1": "f0a39db0356970e463af7accdc1d0756aad5a905f6e64c0df8625b556bd7e47b",
+      "tests/SealerPolicy.Tests.ps1": "3adfc99fccfd00612ac67d7517f5fa591a26eb6424bd2fecec22ab62faece32d",
+      ".github/workflows/tokenforge-sealer.yml": "61059c769010e99d87131cd887a86fe53fed24aa355004d4fcd9d52a3161b95a",
+      "publication/sealer-policy-review-plan.json": "a7e4cd366fdb04d15aa0066279370c74e2070df15475cc2fd29890edaa152a40"
+    }
+  },
+  "validation": {
+    "networkIsolation": "unshare -Urn; no external network interface",
+    "finalFocusedGate": {
+      "preset": "Sealer",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 186,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": []
+    },
+    "command": "unshare -Urn pwsh -NoProfile -File scripts/Invoke-TokenForgeLocalValidation.ps1 -Preset Sealer -NativeExecutable .cache/goal6/accepted-package/linux-x64/tokenforge -ReportPath <new-report-path>",
+    "afterImmutablePinWorkflowRecheck": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0
+    },
+    "afterCommittedPinPolicyCheck": {
+      "CommittedCodePinVerified": true,
+      "Quarantined": true,
+      "CallerConnected": false,
+      "MissingIdentityBindings": 6,
+      "OperationalEmissionRefused": true,
+      "Network": false,
+      "Authentication": false
+    },
+    "cleanCheckoutImport": {
+      "Imported": true,
+      "RuntimeVersion": "0.48.0",
+      "Assembly": "qynwmj1r.cia",
+      "Authentication": false,
+      "Signing": false
+    },
+    "coldImportLimits": "Local PowerShell source fallback compiled unchanged BCL-only core. This is not hosted compatibility proof or a changed native package build.",
+    "pythonSyntax": "Passed",
+    "gitDiffCheck": "Passed",
+    "historicalResultsNotRerun": {
+      "Publication": {
+        "passed": 225,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "docs/goal6-publication-writer-validation.json"
+      },
+      "Attestation": {
+        "passed": 119,
+        "failed": 0,
+        "skipped": 0,
+        "receipt": "docs/goal6-attestation-verifier-validation.json"
+      },
+      "fullPackageAndNative": "See docs/goal6-offline-validation.json; unchanged historical inputs, not a new broad-suite claim."
+    },
+    "diagnostics": [
+      {
+        "attempt": "First policy fixture gate",
+        "passed": 17,
+        "failed": 3,
+        "cause": "Synthetic binding file parent directory was not private; production resolver correctly refused it. Fixed fixture directory mode.",
+        "finalDisposition": "Final 186-case gate passes."
+      },
+      {
+        "attempt": "Initial narrow acceptance before additional budget cases",
+        "passed": 182,
+        "failed": 0,
+        "skipped": 0,
+        "finalDisposition": "Superseded by final 186-case gate after four deterministic budget fixtures and parser version pin."
+      }
+    ]
+  },
+  "independentReview": {
+    "reviewer": "independent_review",
+    "readOnly": true,
+    "disposition": "No outstanding material findings; clear to checkpoint A/B and affected pin checks.",
+    "closedFindings": [
+      "YAML scalar fake caller: structured strict parser plus regressions.",
+      "Review preview exposed runtime policy: always-null ProposedPolicy and distinctly typed runtime-rejected binding preview.",
+      "Local Git lazy network/helper fallback: deny transports, lazy fetch, prompts and credential helpers; promisor fixture marker remains absent.",
+      "Weak quarantine exception: compare entire workflow to immutable template; extra trigger/job regressions."
+    ],
+    "limitations": "Static review and saved offline results do not establish current permissions, hosted runner compatibility or live publication.",
+    "finalReceiptReview": "No inaccurate claims found; independently verified all 14 source/plan hashes, A/B ancestry, exact dormant template substitution and four embedded gate receipts. Clear for local receipt checkpoint."
+  },
+  "packageReuse": {
+    "runtimeSource": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "path": ".cache/goal6/accepted-package/linux-x64/",
+    "manifestSha256": "8295f2508bc95d67c1ce61904cd3a4bba5a7ccac0f8d30af8ef34066eff383c9",
+    "executableSha256": "987c863bc92f29de27ff812ad360cd1be1a8bde0fda6080f465827dbb6eb99db",
+    "credentialDllSha256": "30d5d1268223c806e8c6d26fd138ef2f1db58dd23f067f59ac38387e2d7bad32",
+    "archive": ".cache/goal6/TokenForge-0.48.0-goal6-accepted-linux-x64.tar.gz",
+    "archiveSha256": "f95f8d926c4afd0ca761f3a659378b27706d796c0cb0c61388ddb70e599bfe6b",
+    "newSealerIncludedInHistoricalPackage": false,
+    "nativeSourceChanged": false,
+    "rebuilt": false
+  },
+  "tools": {
+    "PowerShell": "7.6.7",
+    "Pester": "6.2.0",
+    "Git": "2.47.3",
+    "policyParser": "Existing /usr/bin/python3 -I with PyYAML 6.0.2; exact module version enforced.",
+    "dependencyInstallationThisMilestone": false,
+    "attestationVerifier": {
+      "version": "2.103.2",
+      "upstreamSource": "4f2cfe92e3499f8581bf39db77e0a1431fa7b55c",
+      "sha256": "cbfdc94f3a5c0713c0d6df3e0a1d88a59a76b0c52332aad7d21d112f9da2cc0e",
+      "trustRootSha256": "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c",
+      "executedThisMilestone": false
+    },
+    "hostedActionPins": "publication/sealer-dependencies.json"
+  },
+  "boundaries": {
+    "actionsEnabled": false,
+    "hostedJobsExecuted": false,
+    "callerConnected": false,
+    "quarantined": true,
+    "authentication": false,
+    "protectedCredentialsAccessed": false,
+    "tenantPermissionChanges": false,
+    "publication": false,
+    "push": false,
+    "pr": false,
+    "merge": false,
+    "otherOSOrArchitectureBuilds": false
+  },
+  "remainingGates": [
+    {
+      "gate": "Final source and package integration",
+      "required": "Review final release source, include new source tooling where supported, produce matching release package/receipts; no new full package built here."
+    },
+    {
+      "gate": "Trusted policy and caller activation",
+      "required": "Independent real immutable repository/workflow/role IDs, private custody; review current-main source, activate exact guard and connect producer C pinned to B. Review plan is not operational policy."
+    },
+    {
+      "gate": "Actual hosted sealing proof",
+      "approvalNeeded": "Explicit approval to activate/use hosted Actions with bounded run/cost; prove original REST ZIP digest and certified same-repository reusable workflow/run/attempt/source identity."
+    },
+    {
+      "gate": "Actual publication proof",
+      "approvalNeeded": "Separate approval for exact remote writer/permissions/API/CAS race and lost-ack recovery operations; no tenant permission changes."
+    },
+    {
+      "gate": "Fresh human operator release acceptance",
+      "approvalNeeded": "Exact package/source and bounded authentication/account/client/callback/scope/GET plan for four admin workflows and collector recovery; do not reuse old canaries as fresh Goal 6 proof."
+    }
+  ]
+}

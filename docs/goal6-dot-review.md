@@ -1,6 +1,6 @@
 # Dot review handoff: Goal 6 release candidate
 
-Ready for offline architecture and security review after the reusable-sealer receipt passes. This document is a handoff artifact; no message or invitation has been sent to Dot. The source remains local and unmerged, Actions disabled, and no live credentials are needed to review it.
+Ready for offline architecture and security review after the reusable-sealer receipt passes. This document is a handoff artifact; no message or invitation has been sent to Dot. The source is on the shared review branch and remains unmerged, Actions disabled, and no live credentials are needed to review it. See [the shared handoff index](HANDOFF.md) for the copyable review request and pinned checkpoints.
 
 Use [goal6-sealer-validation.json](goal6-sealer-validation.json) for exact code/workflow commits and hashes. Repository: `/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR`, branch `codex/goal6-reusable-sealer`. Preserve roadmap handoff `19470aeba7a949e4204e4ecf5586a6ffb3171c69`. The original checkout is separate and untouched.
 

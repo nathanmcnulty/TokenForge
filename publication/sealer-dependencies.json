@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgeSealerDependencyReviewPins",
+  "actions": [
+    {
+      "repository": "actions/attest-build-provenance",
+      "commit": "9d57eef8c06cd9d6b433effeeb7a6a77b3ff94ad",
+      "actionYmlSha256": "6024bf1006cceba400c0a95e80e76dfeac415a3947bba6b8d7c118db2c90f9eb",
+      "source": "https://raw.githubusercontent.com/actions/attest-build-provenance/9d57eef8c06cd9d6b433effeeb7a6a77b3ff94ad/action.yml"
+    },
+    {
+      "repository": "actions/attest",
+      "commit": "1e69f48acb82d1966a394da916b4c1698aa569d6",
+      "actionYmlSha256": "9e4a1b808433f9ec87120b534e11fc35469a039bdbdc62b019441444c9ad0449",
+      "source": "https://raw.githubusercontent.com/actions/attest/1e69f48acb82d1966a394da916b4c1698aa569d6/action.yml"
+    }
+  ],
+  "checkout": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+  "upload": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+  "hostedExecutionProven": false,
+  "offlinePolicyParser": {
+    "executable": "/usr/bin/python3",
+    "isolationArgument": "-I",
+    "module": "PyYAML",
+    "version": "6.0.2",
+    "installedThisMilestone": false,
+    "usedInHostedJob": false
+  }
+}

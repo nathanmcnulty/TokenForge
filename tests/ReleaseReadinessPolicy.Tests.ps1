@@ -2,7 +2,15 @@ Describe 'Offline release readiness policy' {
  It 'retains only manual hosted entrypoints and quarantines the legacy discovery writer' {
   foreach($file in Get-ChildItem "$PSScriptRoot/../.github/workflows" -Filter '*.yml'){
    $text=Get-Content $file.FullName -Raw
-   $text|Should -Match '(?m)^on:\r?\n  workflow_dispatch:'
+   if($file.Name -ceq 'tokenforge-sealer.yml'){
+    $pin=[regex]::Match($text,'(?m)^  TF_SEALER_CODE_COMMIT: ([a-f0-9]{40})$')
+    $pin.Success|Should -BeTrue
+    $template=Get-Content "$PSScriptRoot/../publication/tokenforge-sealer.template.yml" -Raw
+    $text|Should -BeExactly ($template.Replace('@TOKENFORGE_CODE_COMMIT@',$pin.Groups[1].Value).Replace('@TOKENFORGE_SEAL_GUARD@','${{ false }}'))
+   }else{
+    $text|Should -Match '(?m)^on:\r?\n  workflow_dispatch:'
+    $text|Should -Not -Match '(?m)^  workflow_call:'
+   }
    ($text -split '(?m)^permissions:|^jobs:',2)[0]|Should -Not -Match '(?m)^  (push|pull_request|schedule|workflow_run):'
   }
   $discovery=Get-Content "$PSScriptRoot/../.github/workflows/discovery.yml" -Raw

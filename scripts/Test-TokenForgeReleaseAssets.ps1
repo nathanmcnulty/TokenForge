@@ -12,9 +12,9 @@ $expected=@($runtimes|ForEach-Object { $extension=if($_.StartsWith('win-')){'zip
 $files=@(Get-ChildItem -LiteralPath $root.FullName -Force)
 if($files.Count -ne $expected.Count){if($runtimes.Count -eq 6){throw 'Release must contain exactly six archives and six receipts.'};throw 'Release must contain exactly the selected archives and receipts.'}
 foreach($file in $files){if($file.PSIsContainer -or $file.LinkType -or $file.Name -cnotin $expected){throw 'Unexpected release asset.'}}
-$entries=@(foreach($runtime in $runtimes){
- $extension=if($runtime.StartsWith('win-')){'zip'}else{'tar.gz'}
- $name="TokenForge-$Version-$runtime.$extension"
+$entries=@(foreach($selectedRuntime in $runtimes){
+ $extension=if($selectedRuntime.StartsWith('win-')){'zip'}else{'tar.gz'}
+ $name="TokenForge-$Version-$selectedRuntime.$extension"
  $file=Get-Item -LiteralPath (Join-Path $root.FullName $name)
  if($file.Length -le 0 -or $file.Length -gt 512MB){throw 'Release archive size is outside its bound.'}
  $receipt=Get-Item -LiteralPath "$($file.FullName).json"
@@ -32,7 +32,7 @@ $entries=@(foreach($runtime in $runtimes){
  if($fields.Count -ne 6 -or @('SchemaVersion','Runtime','Version','SourceCommit','Archive','Sha256'|Where-Object {$_ -cnotin $fields}).Count){throw 'Unexpected release receipt schema.'}
  if($record.SchemaVersion -isnot [long] -or @('Runtime','Version','SourceCommit','Archive','Sha256'|Where-Object {$record.$_ -isnot [string]}).Count){throw 'Unexpected release receipt field types.'}
  $hash=(Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
- if($record.SchemaVersion -ne 1 -or $record.Runtime -cne $runtime -or $record.Version -cne $Version -or $record.SourceCommit -cne $SourceCommit -or $record.Archive -cne $name -or $record.Sha256 -cne $hash){throw 'Release receipt does not match its expected source and archive.'}
- [pscustomobject]@{Runtime=$runtime;Archive=$name;Sha256=$hash;Bytes=$file.Length}
+ if($record.SchemaVersion -ne 1 -or $record.Runtime -cne $selectedRuntime -or $record.Version -cne $Version -or $record.SourceCommit -cne $SourceCommit -or $record.Archive -cne $name -or $record.Sha256 -cne $hash){throw 'Release receipt does not match its expected source and archive.'}
+ [pscustomobject]@{Runtime=$selectedRuntime;Archive=$name;Sha256=$hash;Bytes=$file.Length}
 })
 [pscustomobject]@{SchemaVersion=1;Version=$Version;SourceCommit=$SourceCommit;Archives=$entries}

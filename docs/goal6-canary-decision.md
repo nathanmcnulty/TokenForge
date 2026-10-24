@@ -2,6 +2,8 @@
 
 **Current decision: do not run or activate.** The inert candidate has local source/transport/controller evidence, but the full real execution prerequisites cannot be established in this authorization. The accompanying exact-source receipt identifies implementation/template hashes, explicitly absent activation revision/diff, private kit, tests and independent evidence. `runnableCurrentSource=false`; this is not a command or executable approval.
 
+Frozen inert implementation: `441bf8020b11c9770115e896d73134c298dd9c1d`. Exact tested source/template: `eaec9e025e29de31c3d580a58e3e8b4a33a2fea0`. [Validation receipt](goal6-inert-activation-validation.json) records the source/package/test hashes. No activation revision or executable activation diff exists.
+
 ## What exists
 
 The candidate implements real service serialization, explicit one-day retention, complete synthetic C/privacy/business validation, a gated service action/external artifact engine, an anonymous source-bootstrap implementation and a bounded controller/restoration state machine. The service flow is exercised only with dummy loopback TLS. The controller has only a branded recording backend; **its external HTTPS leaf is not implemented**. The manual-only workflow template remains outside active workflows and has a literal-false job. The action, service constructor, bootstrap and controller entrypoints retain unconditional gates; the approval signer is unconfigured. The finite closure and limits are explained in [inert activation readiness](goal6-inert-activation.md).

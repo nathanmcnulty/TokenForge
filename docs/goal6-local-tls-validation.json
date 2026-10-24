@@ -1,0 +1,296 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgeLocalTlsTransportReadinessValidation",
+  "recordedUtc": "2026-10-24T08:30:11.697649+00:00",
+  "outcome": "LocalTlsPackageAccepted_ServiceExecutionAndActivationBlocked",
+  "reviewBranch": "codex/goal6-reusable-sealer",
+  "startingCheckpoint": "46463c00ad61fbcf35447ee087a59bdd40bbd446",
+  "reviewedImplementationCommit": "026ec9d0380eeacae9ecd7787c84996a0307814c",
+  "testedSourceCommit": "733fe2865856fc577eae8ac626f0f2001a531971",
+  "receiptScope": "Containing checkpoint adds sanitized documentation only; exact tested source/package unchanged.",
+  "adoptedReview": {
+    "sourceCommit": "c12befdb760777c0665af00140c372cf44de765b",
+    "adoptionCommit": "86747086760dfb4df773f613927e8873ddb2af49",
+    "path": "docs/goal6-dot-consolidated-review.md",
+    "sha256": "d8e2ed3cb77819704e2861f491c1d372318767a01d28163d8e8109cb66fa93cd",
+    "copiedUnchanged": true
+  },
+  "preservedRoadmapHandoff": "19470aeba7a949e4204e4ecf5586a6ffb3171c69",
+  "implementationScope": [
+    "Branded fixed-loopback actual Node HTTPS adapter; pinned existing Linux executable; normal fixture-only TLS verification.",
+    "Async transaction retains lock through request/socket teardown; durable original-byte charges, fixed exchange/total deadlines and conservative unknown/no-replay semantics.",
+    "Bounded response/header profile, unchanged C, independent server-observed TLS fixtures with dummy role-separated credentials.",
+    "Persisted observed expiry and post-parse/final current-time checks; completed expired evidence remains historical without rewrite.",
+    "Pure future public-context/service-capability/restoration validators; unconditionally blocked service/action/controller entrypoints.",
+    "Unregistered manual-only literal-false template, pinned implementation and checkout; one blocked canary decision packet."
+  ],
+  "fixedArtifactBudgets": {
+    "archiveBytes": 65536,
+    "attempts": 12,
+    "mutations": 4,
+    "reads": 8,
+    "totalMs": 180000,
+    "perExchangeMs": 10000,
+    "aggregateReservedEntityBytes": 2097152,
+    "controlRequestBytes": 8192,
+    "controlResponseBytes": 131072,
+    "downloadResponseBytes": 65536,
+    "headerBytes": 16384,
+    "headerCount": 64,
+    "headerValueCharacters": 4096,
+    "retries": 0,
+    "refunds": false,
+    "allWireBytesBoundedByEntityBudget": false
+  },
+  "journal": {
+    "version": 3,
+    "oldVersionsRefusedWithoutMigration": true,
+    "binding": [
+      "engine/profile SHA256",
+      "selected Node binary SHA256",
+      "fixture CA and literal endpoint/port/SNI SHA256"
+    ],
+    "staleLockTakeover": false,
+    "crossJobRecovery": false,
+    "powerLossDurabilityProven": false
+  },
+  "producerEvidence": {
+    "node": {
+      "tests": 312,
+      "passed": 312,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "exitCode": 0,
+      "suiteCounts": {
+        "ArtifactTransaction": 129,
+        "ArtifactProtocol": 108,
+        "LocalTlsTransport": 36,
+        "CanaryPreflight": 38,
+        "CanaryTemplate": 1
+      },
+      "command": "node --test tests/ArtifactTransaction.test.mjs tests/ArtifactProtocol.test.mjs tests/LocalTlsTransport.test.mjs tests/CanaryPreflight.test.mjs tests/CanaryTemplate.test.mjs",
+      "logSha256": "7081ce8ced6a9c03d1a78073c6efbd402bb209c8575b8dcccdc5bb842e55f9cb",
+      "environment": "cleared; dummy fixture credentials; literal loopback TLS only"
+    },
+    "pester": {
+      "preset": "Sealer",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 224,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": [],
+      "pesterVersion": "6.2.0",
+      "exitCode": 0,
+      "command": "pwsh -NoLogo -NoProfile -File scripts/Invoke-TokenForgeLocalValidation.ps1 -Preset Sealer -NativeExecutable <exact-kit>/tokenforge -ReportPath <private-report>",
+      "reportSha256": "6b7fa00ee0c0d37038feb06c4b55463b5681b502917b837a593f23ce6ca450c6",
+      "logSha256": "6b7fa00ee0c0d37038feb06c4b55463b5681b502917b837a593f23ce6ca450c6",
+      "environment": "fresh process; cleared environment; explicit existing module path"
+    },
+    "earlierFailedExactKit": {
+      "sourceCommit": "8e84e406544769331ca4b2d3b95127f760c8af43",
+      "node": {
+        "passed": 184,
+        "failed": 128,
+        "skipped": 0,
+        "cancelled": 0,
+        "exitCode": 1,
+        "logSha256": "e59d8117fd9971556e13aaf7e0b890aeb6e469428b3b1dfbee1c72e353d6f8f7"
+      },
+      "cause": "Primary-agent cleanup removed still-used isFakeClock import; restored and independently reviewed in 026ec9d0380eeacae9ecd7787c84996a0307814c. Superseded source is not accepted.",
+      "pesterPassed": 224,
+      "archiveSha256": "58464fc6e31b2b6ad03d09ba80d28ee30dc10054e3f55431d02e3edd01b150a1"
+    }
+  },
+  "exactSourceEvidence": {
+    "testedSource": "733fe2865856fc577eae8ac626f0f2001a531971",
+    "literalGitBlobsVerified": 474,
+    "payloadFilesVerified": 476,
+    "nativeModuleBuildInputsVerified": 144,
+    "allNativeInputsUnchanged": true,
+    "adoptedReviewSha256": "d8e2ed3cb77819704e2861f491c1d372318767a01d28163d8e8109cb66fa93cd",
+    "sourceSha256": {
+      ".github/actions/tokenforge-canary/action.yml": "385dedf45df0e302ed1433f459059402c91916933b36980f5c0062672214e65c",
+      ".github/actions/tokenforge-canary/index.mjs": "2550a8961b79b1ffc0835ed863248d4f2f40daae037ef7f2090a3695581e6e84",
+      "publication/canary/workflow.yml": "078c526337d4f631ea872b7e95f74920378694b61da9bc25bd736753ab2b52e2",
+      "scripts/Invoke-TokenForgeCanaryControl.mjs": "940eafd764a32aa737ed62dcf4b069432e7b6daac4a18f8fa379a1d04c12b499",
+      "scripts/offline/TokenForgeArtifactProtocol.mjs": "12d8e732be90a46917d603e32cfd029fff80af71d8d201f7a1456feed58ad86c",
+      "scripts/offline/TokenForgeArtifactTransaction.mjs": "241bb5054a13d7e316297bd52b0f7faf3db781904e42f3a4375add87d9dc6904",
+      "scripts/offline/TokenForgeOfflineClock.mjs": "3baa68f50fb8c1a937e21481e1b9246eb6d84298e802f18222f30a9282e69d27",
+      "scripts/offline/TokenForgeOfflineSchema.mjs": "35f26081b73d56bf52d6d8dc6eb7c028a32246cf0fdce5fc321261ff09a7011a",
+      "scripts/transport/TokenForgeCanaryControl.mjs": "97b6eaa91a613130bb784cb8796c3a30a77d59ae3dc62eb05aa3ca1504c8027b",
+      "scripts/transport/TokenForgeCanaryPreflight.mjs": "3dbb5ee003274fd528619bc709f31d2a3e4f25e9a81acded93868277c129694c",
+      "scripts/transport/TokenForgeLocalTlsTransport.mjs": "12f111fbde54cb8d9923c8bf10c47c11209b0637880210c80a730c7b0d3575ea",
+      "tests/ArtifactProtocol.test.mjs": "d8b3e02c99c4513ba9d764a2b2374d32558df4f773dd4ce46275e32f4725ccf7",
+      "tests/ArtifactTransaction.test.mjs": "403d7de7a07303a8ce087401d4fc5ddabe4b27ab15a321eb7606537302631052",
+      "tests/CanaryPreflight.test.mjs": "595b799bdf0a916e2bd4249c22843eebc71d12670686eea7966c7d4c38be476f",
+      "tests/CanaryTemplate.test.mjs": "7dd8f60a4135b9ad3c3bebc33905884039866d7c1b38d58f0941c0256f974779",
+      "tests/LocalTlsTransport.test.mjs": "395bca70cc0c8bbc4df26172d253847b9570b479d98b7b38e5c88a58204d104d",
+      "tests/fixtures/publication/LocalTlsFixture.mjs": "ad42bf71d5de237bcf3d357c18a83d1c529bb2e03b33977e58a9e72cdca552ad"
+    },
+    "toolchain": {
+      "node": {
+        "version": "v24.18.1",
+        "sha256": "f3432a45b03b2da0d270095fdd8813dc34cbea73f5fc8b18c7a384b7cf9b333a"
+      },
+      "pwsh": {
+        "version": "7.6.7",
+        "sha256": "873de21f04b6a0269c220f9c8396ff5cd639e8deb058a32cc26df54b69bbff8d"
+      },
+      "git": {
+        "version": "git version 2.47.3",
+        "sha256": "356db14e102d68a1a37d8a1ac577dfd678d45d46e92f468bef8b7154e7bfdc60"
+      },
+      "python3": {
+        "version": "Python 3.13.5",
+        "sha256": "889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9"
+      },
+      "openssl": {
+        "version": "OpenSSL 3.5.7 9 Jun 2026 (Library: OpenSSL 3.5.7 9 Jun 2026)",
+        "sha256": "acc10176d038aeb7b2a77d9ec972ac2985857a7191f7aecb7c54ef0e2c7e9549"
+      },
+      "Pester": {
+        "version": "6.2.0",
+        "manifestSha256": "ea8445218d46eeb69dd08827d38222f1d23c592966722ecfd0bdc419bf045543",
+        "files": 18
+      }
+    },
+    "activeWorkflowDiffEmpty": true,
+    "postTestPayloadFilesUnchanged": 476
+  },
+  "privateReviewKit": {
+    "kind": "TokenForgeOfflineSealerReviewKit",
+    "sourceCommit": "733fe2865856fc577eae8ac626f0f2001a531971",
+    "runtimeSource": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "manifestSha256": "33c24007df9b29f7148829c40cd4df97bee9212eb0a66f6ce5d2916e3207fa70",
+    "archiveSha256": "63d562e4ad9dd39e255373d8b82cd07d22db2380e4661928f95852d0da014050",
+    "archiveBytes": 34243042,
+    "files": 476,
+    "nativeRebuilt": false,
+    "privateNotPublished": true,
+    "releasePackage": false,
+    "extractedGitBlobsAndPayloadRehashed": true
+  },
+  "reusedLinuxRuntime": {
+    "sourceCommit": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "packageManifestSha256": "8295f2508bc95d67c1ce61904cd3a4bba5a7ccac0f8d30af8ef34066eff383c9",
+    "nativeExecutableSha256": "987c863bc92f29de27ff812ad360cd1be1a8bde0fda6080f465827dbb6eb99db",
+    "credentialsDllSha256": "30d5d1268223c806e8c6d26fd138ef2f1db58dd23f067f59ac38387e2d7bad32",
+    "nativeModuleBuildInputsMatched": 144,
+    "buildNeeded": false,
+    "dependenciesInstalled": false
+  },
+  "preservedSealer": {
+    "implementationCommit": "326cf8f1bc18a132b0401e994d9ea37ea253818a",
+    "dormantWorkflowCommit": "91e624733ff2e766be276ecb270a18638af5c1a5"
+  },
+  "dormantTemplate": {
+    "path": "publication/canary/workflow.yml",
+    "templateSourceCommit": "733fe2865856fc577eae8ac626f0f2001a531971",
+    "gitBlob": "7969e7399eedf7b252a1309684d26c092f39b708",
+    "sha256": "078c526337d4f631ea872b7e95f74920378694b61da9bc25bd736753ab2b52e2",
+    "checkedOutImplementationCommit": "026ec9d0380eeacae9ecd7787c84996a0307814c",
+    "actionGitBlob": "c99d962a6886e6c42f67a04a2697e550489b523d",
+    "entrypointGitBlob": "d2f7d297adbf8ce57a5c36e97acd6f481c859921",
+    "checkoutCommit": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "registered": false,
+    "literalFalse": true,
+    "manualOnly": true,
+    "existingActiveWorkflowFilesUnchanged": true
+  },
+  "independentReview": {
+    "role": "Independent read-only security/source reviewer",
+    "findingsAddressed": [
+      "Observed expiry must remain valid after parsing/final Run; persisted and rechecked with actual TLS regressions.",
+      "Driver must enforce fixed exchange wall/monotonic deadline at completion; fixed before Complete.",
+      "Import-only exact-kit failure correction independently confirmed."
+    ],
+    "independentlyExecuted": {
+      "Node": "24.18.1 pinned",
+      "CanaryPreflightPassed": 38,
+      "LocalTlsExpiryHistoryPassed": 3,
+      "failed": 0,
+      "environment": "cleared, no external calls/credentials"
+    },
+    "staticReview": [
+      "Actual TLS client/core and dummy credential separation",
+      "Pure preflight/SAS/restoration validators and dormant action/control gates",
+      "Blocked decision packet and template pin closure"
+    ],
+    "independentFullCombinedOrPesterRerun": false,
+    "remainingMaterialFindings": [],
+    "finalKitReceiptAudit": "Verified: read-only source/kit/saved-log/report/hash and docs-only receipt audit; no full-suite/Pester rerun or live approval."
+  },
+  "canaryDecision": {
+    "path": "docs/goal6-canary-decision.md",
+    "runnableCurrentSource": false,
+    "repository": "nathanmcnulty/TokenForge",
+    "repositoryId": "1402673320",
+    "registeredWorkflowId": "373691621",
+    "workflowPath": ".github/workflows/ci.yml",
+    "publicStateObservedDate": "2026-10-24",
+    "publicWorkflowStateObserved": "disabled_manually",
+    "allEightPublicWorkflowStatesObservedDisabled": true,
+    "repositoryActionsSettingsQueried": false,
+    "controller": {
+      "executable": false,
+      "attempts": 30,
+      "assignedSlots": 29,
+      "writes": 6,
+      "totalMs": 480000,
+      "perRequestMs": 10000,
+      "maxBodyBytes": 1048576,
+      "dispatches": 1,
+      "runLookup": 1,
+      "statusReads": 10,
+      "cancelAttempts": 1,
+      "casSupportEstablished": false,
+      "exclusiveCustodyRequired": true
+    },
+    "specificNextDecision": "Separately review activation/source/runtime/retention/controller changes and exclusive settings/ref custody, then explicitly approve exact source, credential scopes, six bounded control writes and one bounded Linux hosted job. Current inert source must not run."
+  },
+  "blocked": {
+    "externalArtifactServiceHttps": true,
+    "liveRuntimeReadOrControllerCredentials": true,
+    "ActionsEnablementOrDispatch": true,
+    "tenantChanges": true,
+    "operationalPolicyEmission": true,
+    "signingOrArtifactPublication": true,
+    "PRorMerge": true
+  },
+  "unresolvedLiveFacts": [
+    "Selected hosted runner/Node distribution provenance, injected Results/backend/token authority and credential scopes are unverified.",
+    "Real service response/header/capability acceptance and original C==R remain unproven.",
+    "Current fixture serializer omits optional retention; future activation must explicitly request/review one day.",
+    "Future controller HTTP/deadline/restoration execution and enforceable exclusive administrative/ref custody are not implemented or granted.",
+    "Artifact-own attempt/workflow ID remain unobserved; content/privacy/operational approval remain false."
+  ],
+  "publicSourceReferences": {
+    "checkout": {
+      "repository": "actions/checkout",
+      "tag": "v7.0.1",
+      "commit": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "action.yml": {
+        "sha256": "d59219cb79590abdb877deaa14e3b65a00c05318bf5a6f3b989b9162b5d08c35"
+      },
+      "package.json": {
+        "sha256": "8b1127cee8fbd48ed687737f631f6e49a767a8e9484a87a7fb8fe913118d52c4"
+      }
+    },
+    "runnerAndNodeDossier": "docs/goal6-offline-provenance.json",
+    "officialControlDocumentation": [
+      "https://docs.github.com/en/rest/actions/permissions?apiVersion=2022-11-28",
+      "https://docs.github.com/en/rest/actions/workflows?apiVersion=2022-11-28",
+      "https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2022-11-28"
+    ]
+  },
+  "authorizationBoundary": "Only sanitized source/test/docs pushed once using existing Git auth/signing. Private archives, keys and logs excluded. No live runtime credential access, external artifact-service traffic, installs, hosted compute or operational activation.",
+  "publicDeltaAudit": {
+    "accountPathsOrCredentialKeyMarkersFound": 0,
+    "privateArchivesOrLogsIncluded": false,
+    "activeWorkflowFilesChanged": false
+  }
+}

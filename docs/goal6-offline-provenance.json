@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgeSourceOnlyRuntimeProtocolDossier",
+  "scope": "Public source inspection and existing local Linux tool identity only; no runner action entrypoint or credential reader.",
+  "reviewedSourceFiles": [
+    {
+      "repository": "actions/runner",
+      "tag": "v2.329.0",
+      "commit": "c76c59996c8fa32e989164a5a695efb12608ae5a",
+      "path": "src/Runner.Worker/Handlers/NodeScriptActionHandler.cs",
+      "url": "https://raw.githubusercontent.com/actions/runner/c76c59996c8fa32e989164a5a695efb12608ae5a/src/Runner.Worker/Handlers/NodeScriptActionHandler.cs",
+      "sha256": "ffb9937d511124b301065b76ffd5a76b40f76077c305a1416ebfe3dc9ed0fd1c"
+    },
+    {
+      "repository": "actions/runner",
+      "tag": "v2.329.0",
+      "commit": "c76c59996c8fa32e989164a5a695efb12608ae5a",
+      "path": "src/Runner.Worker/Handlers/StepHost.cs",
+      "url": "https://raw.githubusercontent.com/actions/runner/c76c59996c8fa32e989164a5a695efb12608ae5a/src/Runner.Worker/Handlers/StepHost.cs",
+      "sha256": "26478bf03c043946a046ead5a8b269f8335d3b508c985e8613a61a282ea82800"
+    },
+    {
+      "repository": "actions/runner",
+      "tag": "v2.329.0",
+      "commit": "c76c59996c8fa32e989164a5a695efb12608ae5a",
+      "path": "src/Runner.Common/Constants.cs",
+      "url": "https://raw.githubusercontent.com/actions/runner/c76c59996c8fa32e989164a5a695efb12608ae5a/src/Runner.Common/Constants.cs",
+      "sha256": "d8e788da4398a6aa5fb05821187407adbbe12d8c89e3e926b4e11e8014be08b8"
+    },
+    {
+      "repository": "nodejs/node",
+      "tag": "v24.18.1",
+      "commit": "9623d9ad85d37d2f0610ec4a82b48182cf2c6061",
+      "path": "doc/api/process.md",
+      "url": "https://raw.githubusercontent.com/nodejs/node/9623d9ad85d37d2f0610ec4a82b48182cf2c6061/doc/api/process.md",
+      "sha256": "12ef21413bb1898dc84ae11f345eacc385eac475d71ac90d7b7df1456aade788"
+    },
+    {
+      "repository": "nodejs/node",
+      "tag": "v24.18.1",
+      "commit": "9623d9ad85d37d2f0610ec4a82b48182cf2c6061",
+      "path": "lib/https.js",
+      "url": "https://raw.githubusercontent.com/nodejs/node/9623d9ad85d37d2f0610ec4a82b48182cf2c6061/lib/https.js",
+      "sha256": "7ae6e70c63d3b9540438ddd4ba599f8b804443cd6231d5a6ca9fc31e1b82994b"
+    }
+  ],
+  "artifactProtocol": {
+    "uploadActionCommit": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+    "package": "@actions/artifact",
+    "version": "2.3.2",
+    "tarballUrl": "https://registry.npmjs.org/@actions/artifact/-/artifact-2.3.2.tgz",
+    "tarballSha256": "498e687ccee76b1a6782838194aa6069034694832419c403e0fd76d9ac590073",
+    "integritySha512": "sha512-uX2Mr5KEPcwnzqa0Og9wOTEKIae6C/yx9P/m8bIglzCS5nZDkcQC/zRWjjoEsyVecL6oQpBx5BuqQj/yuVm0gw==",
+    "generatedFileSha256": {
+      "package/lib/internal/shared/artifact-twirp-client.js": "9f6b8e666388b91e526fd87201e0fe8958f9896c8b50203946606e690b5951a4",
+      "package/lib/generated/results/api/v1/artifact.js": "f0478eeda29ab1b35c68480f499a94fb2c3a68db028147c089e37432c34a6c05",
+      "package/lib/generated/results/api/v1/artifact.twirp-client.js": "8334460ce54ae01c5e2067007604fa5b3262f3d27433558b4c75cb49d50efcef",
+      "package/lib/generated/google/protobuf/wrappers.js": "cbe686aeb3f2a2cab00176c3a2a9aebcd36510f15008e7888fe65ef0fda35826",
+      "package/lib/generated/google/protobuf/timestamp.js": "6a525f870ab3e4b4271d557fdbbef488f66fc08c9948949ff9f6605fb01a3a10"
+    },
+    "packageExecutedOrInstalled": false,
+    "registrySignatureVerified": false,
+    "reproducibleBuildVerified": false,
+    "findings": [
+      "Explicit useProtoFieldName:true yields snake_case requests.",
+      "Create version is numeric4; routing backend IDs are strings distinct from public numeric run/job IDs.",
+      "Finalize size is signed-int64 decimal string; StringValue hash is a scalar string.",
+      "Finalize artifact_id is a signed-int64 decimal string.",
+      "Response alias acceptance is a chosen narrow profile, not observed service behavior."
+    ]
+  },
+  "publicApiReferences": [
+    {
+      "url": "https://docs.github.com/en/rest/actions/artifacts?apiVersion=2022-11-28",
+      "role": "REST artifact metadata/download/list operations; no public raw-upload guarantee.",
+      "profileVersion": "2022-11-28",
+      "limit": "Documentation is mutable and presently illustrates newer REST versions; pinned profile version remains a test choice, not live compatibility proof."
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/rest/api/storageservices/put-block",
+      "role": "PUT comp=block; URL-encoded Base64 block ID; content length."
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/rest/api/storageservices/put-block-list",
+      "role": "PUT comp=blocklist and explicit Uncommitted block selection.",
+      "profileVersion": "2023-11-03",
+      "limit": "Storage version is an offline profile selection; actual signed service URL/API acceptance unproven."
+    }
+  ],
+  "sourceSupportedEnvironmentContract": {
+    "targetContext": "Future reviewed JavaScript Node24 action on Linux x64, direct process; no current action metadata or entrypoint. Containers/composite/shell and other OS/architectures unsupported by this milestone.",
+    "runnerReferenceTag": "v2.329.0",
+    "runnerReferenceCommit": "c76c59996c8fa32e989164a5a695efb12608ae5a",
+    "nodeReferenceTag": "v24.18.1",
+    "nodeReferenceCommit": "9623d9ad85d37d2f0610ec4a82b48182cf2c6061",
+    "sourceFindings": [
+      "NodeScriptActionHandler builds child environment using the SystemVssConnection endpoint; assigns ACTIONS_RUNTIME_TOKEN and conditionally ACTIONS_RESULTS_URL.",
+      "A nonempty ResultsServiceUrl is conditional; package getters alone do not prove availability.",
+      "Handler selects the Node runtime through StepHost and runner externals; Constants includes Node24.",
+      "Node hrtime is independent of time of day. Source inspection does not prove a host clock or selected runner.",
+      "Node HTTPS source has agent/proxy-selection paths; no production no-replay or TLS behavior is inferred or executed."
+    ],
+    "futureFailClosedPrerequisites": [
+      "Verify exact reviewed action/runner/Node binary provenance and direct Linux-x64 context before any live credential access.",
+      "Verify configured Results origin independently before using any injected token; missing/unapproved values stop before mutation.",
+      "Keep runtime artifact token, scoped read token and short-lived URL capabilities separate; no environment-output/argv/file propagation.",
+      "Explicit read-token provision/permissions and backend-ID routing authority remain separate requirements; decoding JWT claims is not proof."
+    ],
+    "localNodeTool": {
+      "version": "v24.18.1",
+      "sha256": "f3432a45b03b2da0d270095fdd8813dc34cbea73f5fc8b18c7a384b7cf9b333a",
+      "binarySourceBuildVerified": false,
+      "hostedRunnerBinaryMatchVerified": false
+    }
+  },
+  "unresolvedLiveFacts": [
+    "No selected hosted runner, runner binary/signature/distribution or environment was inspected.",
+    "No real injected runtime/read credential, scopes, lifetime, origin or backend identity was inspected.",
+    "No actual artifact service response casing/header/schema/route or signed URL was observed.",
+    "No real raw-ZIP preservation, public REST interoperability, TLS/proxy/redirect or wire-replay behavior is proven.",
+    "No runnable action entrypoint, dispatcher, hosted control procedure, source-ref exclusivity or activation permission exists."
+  ],
+  "capabilities": {
+    "realHttpsDispatcher": false,
+    "runtimeCredentialAccess": false,
+    "runnerActionEntrypoint": false,
+    "workflowDispatch": false,
+    "operationalEmission": false,
+    "serviceInteroperabilityProven": false
+  }
+}

@@ -3,6 +3,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash, randomBytes} from 'node:crypto';
+import {object, fail, keys, id, context, strictJson} from './TokenForgeOfflineSchema.mjs';
+import {PROTOCOL, ROLES, requestBody, buildRequest, validateRequest, parseResponse, fixtureCapability} from './TokenForgeArtifactProtocol.mjs';
 
 const PROFILE = 'CanonicalStoredOriginalZipV1';
 const NAMES = ['coverage.json','flows.json','manifest.json','recipe.json','review.md','scopes.json','validation.json'];
@@ -10,8 +12,7 @@ export const LIMITS = Object.freeze({archive:65536, attempts:12, mutations:4, re
   totalBytes:2097152, controlRequest:8192, controlResponse:131072, deadlineMs:180000, requestMs:10000});
 const MUTATIONS = ['Create','Block','Commit','Finalize'];
 const READS = ['Repository','Run','Artifact','Redirect','Download','List'];
-const ROLE = Object.freeze({Create:'Runtime',Block:'Blob',Commit:'Blob',Finalize:'Runtime',
-  Repository:'Read',Run:'Read',Artifact:'Read',Redirect:'Read',Download:'Download',List:'Read'});
+const ROLE=ROLES;
 const INTENT = {Create:'CreateIntent',Block:'BlockIntent',Commit:'CommitIntent',Finalize:'FinalizeIntent'};
 const ACK = {Create:'Created',Block:'BlockAck',Commit:'Committed',Finalize:'Finalized'};
 const UNKNOWN = {Create:'CreateUnknown',Block:'UploadUnknown',Commit:'UploadUnknown',Finalize:'FinalizeUnknown'};
@@ -19,33 +20,6 @@ const STATES = ['Prepared',...Object.values(INTENT),...Object.values(ACK),'Creat
   'FinalizeUnknown','ObserveIntent','ObservationUnknown','Observed','Refused'];
 const transports = new WeakMap(), clocks = new WeakMap();
 const hash = b => createHash('sha256').update(b).digest('hex');
-const fail = code => {throw new Error(code);};
-const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
-function keys(x, names) {if (!object(x) || Object.keys(x).sort().join('|') !== [...names].sort().join('|')) fail('SchemaRefused');}
-function id(x) {if(typeof x !== 'string' || !/^[1-9][0-9]{0,19}$/.test(x) || BigInt(x)>18446744073709551615n) fail('IdentityRefused');return x;}
-function context(x) {
-  keys(x,['repository','repositoryId','workflowId','runId','attempt','source']);
-  if(typeof x.repository !== 'string' || !/^[A-Za-z0-9_-]{1,39}\/[A-Za-z0-9_-]{1,100}$/.test(x.repository) || typeof x.source !== 'string' || !/^[0-9a-f]{40}$/.test(x.source)) fail('IdentityRefused');
-  for(const k of ['repositoryId','workflowId','runId','attempt']) id(x[k]);
-  return Object.fromEntries(['repository','repositoryId','workflowId','runId','attempt','source'].map(k=>[k,x[k]]));
-}
-// JSON.parse alone silently accepts duplicate members. First walk the complete
-// JSON grammar with per-object decoded-key sets (including escaped duplicates).
-function strictJson(bytes) {
-  const text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);let i=0;
-  const ws=()=>{while(/[ \t\r\n]/.test(text[i]??'!')) i++;};
-  const string=()=>{const start=i;if(text[i++]!=='"') fail('JsonRefused');while(i<text.length){const c=text[i++];if(c==='"') return JSON.parse(text.slice(start,i));if(c==='\\') i++;}fail('JsonRefused');};
-  function value(depth=0) {
-    if(depth>32) fail('JsonRefused');ws();const c=text[i];
-    if(c==='{'||c==='[') {
-      i++;ws();const end=c==='{'?'}':']', seen=new Set();if(text[i]===end){i++;return;}
-      for(;;){if(c==='{'){ws();const k=string();if(seen.has(k)) fail('JsonRefused');seen.add(k);ws();if(text[i++]!==':') fail('JsonRefused');}value(depth+1);ws();if(text[i]===end){i++;return;}if(text[i++]!==',') fail('JsonRefused');}
-    }
-    if(c==='"'){string();return;}
-    const match=/^(?:true|false|null|-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)/.exec(text.slice(i));if(!match) fail('JsonRefused');i+=match[0].length;
-  }
-  value();ws();if(i!==text.length) fail('JsonRefused');return JSON.parse(text);
-}
 
 function crc32(bytes) {let c=0xffffffff;for(const b of bytes){c^=b;for(let j=0;j<8;j++) c=(c>>>1)^((c&1)?0xedb88320:0);}return (c^0xffffffff)>>>0;}
 // Read-only structural profile check. No archive formatter/replacement path.
@@ -92,7 +66,7 @@ function clockNow(handle) {
 // The fixed fixture credentials are opaque object identities, never strings/JWTs.
 export function createFakeTransport(options={}, clock) {
   if(clock!==undefined && !clocks.has(clock)) fail('ClockRefused');
-  const allowed=['faults','transform','metadataChange','listMode','credentialFault','delayMs','responseOversize'];
+  const allowed=['faults','transform','metadataChange','listMode','credentialFault','delayMs','responseOversize','serializationFault','responseFault'];
   if(!object(options)||Object.keys(options).some(k=>!allowed.includes(k))) fail('FakeConfigurationRefused');
   let o;try{o=structuredClone(options);}catch{fail('FakeConfigurationRefused');}
   if(o.delayMs!==undefined && (!Number.isSafeInteger(o.delayMs)||o.delayMs<0||!clock)) fail('FakeConfigurationRefused');
@@ -100,40 +74,53 @@ export function createFakeTransport(options={}, clock) {
   for(const [op,v] of Object.entries(faults)) if(!ROLE[op] || !['before','after','interruptBefore','interruptAfter','cancelBefore','cancelAfter'].includes(v)) fail('FakeConfigurationRefused');
   if(o.transform && !['header','trailer','wrapper'].includes(o.transform)) fail('FakeConfigurationRefused');
   if(o.listMode && !['zero','multiple','paginated'].includes(o.listMode)) fail('FakeConfigurationRefused');
+  for(const f of ['serializationFault','responseFault']) if(o[f]) {keys(o[f],['op','kind']);if(!Object.hasOwn(ROLE,o[f].op)||typeof o[f].kind!=='string') fail('FakeConfigurationRefused');}
   const state={options:o,clock,credentials:Object.fromEntries(['Runtime','Blob','Read','Download'].map(r=>[r,Object.freeze({})])),log:[],calls:{},candidate:null,block:null,committed:false,artifact:false};
   const handle=Object.freeze({kind:'NetworkDisabledFakeTransport',
     transcript:()=>structuredClone(state.log), archivedBytes:()=>state.candidate?Buffer.from(state.candidate):null});
   transports.set(handle,state);return handle;
 }
 class Interrupted extends Error {}
-function fakeExchange(state,op,body,credential,transaction) {
-  state.calls[op]=(state.calls[op]??0)+1;
+function fakeExchange(state,request,credential,transaction) {
+  const {op,body}=request;
+  validateRequest(request,transaction,{original:op==='Block'?state.expectedOriginal:undefined,uploadUrl:fixtureCapability('Blob'),downloadUrl:fixtureCapability('Download')});
   const role=Object.keys(state.credentials).find(r=>state.credentials[r]===credential);
-  state.log.push({op,credentialRole:role??'Invalid',requestBytes:body.length,requestSha256:hash(body)});
+  const parsedUrl=new URL(request.url);
+  const entry={op,credentialRole:role??'Invalid',method:request.method,origin:parsedUrl.origin,path:parsedUrl.pathname,requestBytes:body.length,requestSha256:hash(body)};
+  assertWithinDeadline(state.clock,transaction);
+  state.calls[op]=(state.calls[op]??0)+1;state.log.push(entry);
   if(role!==ROLE[op]) fail('CredentialRefused');
   if(state.options.delayMs) state.clock.advance(state.options.delayMs);
   const fault=state.options.faults?.[op];
   if(fault==='interruptBefore') throw new Interrupted();
   if(fault==='before'||fault==='cancelBefore') fail('SYNTHETIC_SECRET_ERROR');
-  const info=()=>({id:'18446744073709551614',name:state.origin.name,context:structuredClone(state.origin.context),
+  const info=()=>({id:PROTOCOL.artifactId,name:state.origin.name,context:structuredClone(state.origin.context),
     size:state.origin.size,digest:`sha256:${state.origin.hash}`,expired:false});
   let response;
   switch(op) {
-    case 'Create':if(state.created) fail('FakeReservationExists');state.origin=structuredClone({name:transaction.name,context:transaction.context,size:transaction.size,hash:transaction.hash});state.created=true;response={reservation:'FixtureBlobCapability'};break;
+    case 'Create': {
+      if(state.created) fail('FakeReservationExists');const data=strictJson(body);
+      keys(data,['workflow_run_backend_id','workflow_job_run_backend_id','name','version']);
+      if(data.workflow_run_backend_id!==PROTOCOL.runBackend||data.workflow_job_run_backend_id!==PROTOCOL.jobBackend||data.name!==transaction.name||data.version!==4) fail('FakeWireRefused');
+      state.origin=structuredClone({name:data.name,context:transaction.context,size:transaction.size,hash:transaction.hash});state.created=true;response={ok:true,signed_upload_url:fixtureCapability('Blob')};break;
+    }
     case 'Block':if(!state.created) fail('FakeSequence');state.block=Buffer.from(body);response={ok:true};break;
     case 'Commit':if(!state.block) fail('FakeSequence');state.committed=true;response={ok:true};break;
     case 'Finalize': {
-      if(!state.committed) fail('FakeSequence');state.candidate=Buffer.from(state.block);
+      if(!state.committed) fail('FakeSequence');const data=strictJson(body);
+      keys(data,['workflow_run_backend_id','workflow_job_run_backend_id','name','size','hash']);
+      if(data.name!==state.origin.name||data.workflow_run_backend_id!==PROTOCOL.runBackend||data.workflow_job_run_backend_id!==PROTOCOL.jobBackend||data.size!==String(state.block.length)||data.hash!==`sha256:${hash(state.block)}`) fail('FakeWireRefused');
+      state.candidate=Buffer.from(state.block);
       if(state.options.transform==='header') state.candidate[10]^=1;
       if(state.options.transform==='trailer') state.candidate=Buffer.concat([state.candidate,Buffer.from('extra')]);
       if(state.options.transform==='wrapper') state.candidate=Buffer.concat([Buffer.from('wrapper'),state.candidate]);
-      state.artifact=true;response={id:info().id};break;
+      state.artifact=true;response={ok:true,artifact_id:info().id};break;
     }
     case 'Repository':response={repository:state.origin.context.repository,id:state.origin.context.repositoryId};break;
     case 'Run':response=structuredClone(state.origin.context);break;
     case 'Artifact':if(!state.artifact) fail('NotFound');response=info();
       if(state.options.metadataChange && state.calls.Artifact>1) response={...response,...state.options.metadataChange};break;
-    case 'Redirect':response={capability:'FixtureDownloadCapability'};break;
+    case 'Redirect':response={capability:fixtureCapability('Download')};break;
     case 'Download':if(!state.artifact) fail('NotFound');response=Buffer.from(state.candidate);break;
     case 'List':response={items:!state.artifact||state.options.listMode==='zero'?[]:[info()],hasMore:state.options.listMode==='paginated'};
       if(state.options.listMode==='multiple') response.items.push(info());break;
@@ -141,8 +128,62 @@ function fakeExchange(state,op,body,credential,transaction) {
   }
   if(fault==='interruptAfter') throw new Interrupted();
   if(fault==='after'||fault==='cancelAfter') fail('SYNTHETIC_SECRET_ERROR');
-  if(state.options.responseOversize===op) return Buffer.alloc(LIMITS.controlResponse+1);
-  return Buffer.isBuffer(response)?response:Buffer.from(JSON.stringify(response));
+  let envelope;
+  if(op==='Block'||op==='Commit') envelope={status:201,headers:{'content-length':'0'},body:Buffer.alloc(0)};
+  else if(op==='Redirect') envelope={status:302,headers:{location:response.capability,'content-length':'0'},body:Buffer.alloc(0)};
+  else if(op==='Download') envelope={status:200,headers:{'content-type':'application/zip','content-length':String(response.length)},body:response};
+  else {
+    const wireArtifact=m=>({id:BigInt(m.id),name:m.name,size_in_bytes:BigInt(m.size),digest:m.digest,expired:m.expired,workflow_run:{id:BigInt(m.context.runId),repository_id:BigInt(m.context.repositoryId),head_sha:m.context.source}});
+    if(op==='Repository') response={id:BigInt(response.id),full_name:response.repository};
+    if(op==='Run') response={id:BigInt(response.runId),run_attempt:BigInt(response.attempt),workflow_id:BigInt(response.workflowId),head_sha:response.source,repository:{id:BigInt(response.repositoryId),full_name:response.repository}};
+    if(op==='Artifact') response=wireArtifact(response);
+    if(op==='List') response={total_count:BigInt(response.items.length+(response.hasMore?1:0)),artifacts:response.items.map(wireArtifact)};
+    const encoded=Buffer.from(wireJson(response));
+    envelope={status:200,headers:{'content-type':'application/json','content-length':String(encoded.length)},body:encoded};
+  }
+  if(state.options.responseOversize===op) envelope.body=Buffer.alloc(131073);
+  if(state.options.responseFault?.op===op&&(!state.options.responseFault.kind.endsWith('After')||state.calls[op]>1)) envelope=corruptResponse(envelope,state.options.responseFault.kind);
+  return envelope;
+}
+function wireJson(x) {
+  if(typeof x==='bigint') return x.toString();
+  if(Array.isArray(x)) return '['+x.map(wireJson).join(',')+']';
+  if(x!==null&&typeof x==='object') return '{'+Object.entries(x).map(([k,v])=>JSON.stringify(k)+':'+wireJson(v)).join(',')+'}';
+  return JSON.stringify(x);
+}
+function corruptResponse(r,kind) {
+  if(kind==='status') r.status=307;
+  else if(kind==='encoding') r.headers['content-encoding']='gzip';
+  else if(kind==='redirectOrigin') r.headers.location='https://unapproved.invalid/file';
+  else if(kind==='badJson') r.body=Buffer.from('{"secret":"SYNTHETIC_ERROR"');
+  else if(kind==='duplicate') r.body=Buffer.from('{"ok":false,"ok":true,"artifact_id":"9007199254740993"}');
+  else if(kind==='unsafeInteger') r.body=Buffer.from('{"ok":true,"artifact_id":9007199254740993}');
+  else if(kind==='runAttemptAfter'||kind==='runWorkflowAfter'){const m=strictJson(r.body,true);if(kind==='runAttemptAfter')m.run_attempt=2n;else m.workflow_id=9n;r.body=Buffer.from(wireJson(m));}
+  else if(kind==='aliasConflict') r.body=Buffer.from('{"ok":true,"artifact_id":"9007199254740993","artifactId":"9007199254740993"}');
+  else fail('FakeConfigurationRefused');
+  r.headers['content-length']=String(r.body.length);return r;
+}
+function corruptRequest(r,kind) {
+  if(kind==='method') r.method='DELETE';
+  else if(kind==='origin') r.url='https://unapproved.invalid/no';
+  else if(kind==='path') r.url+='/extra';
+  else if(kind==='credential') r.credentialRole='Runtime';
+  else if(kind==='json') r.body=Buffer.from('{');
+  else if(kind==='original'){r.body=Buffer.from(r.body);r.body[0]^=1;}
+  else if(kind==='query') r.url+='&sig=changed';
+  else fail('FakeConfigurationRefused');
+  return r;
+}
+
+function assertClockBinding(transport,clock) {
+  if(!transports.has(transport)) fail('FakeTransportRequired');
+  if(transports.get(transport).clock!==clock) fail('ClockBindingRefused');
+}
+
+function assertWithinDeadline(clock,j) {
+  const t=clockNow(clock);
+  if(t.boot!==j.boot||t.wall<j.lastWall||t.wall>=j.deadline||t.mono<j.lastMono||t.mono>=j.deadlineMono) fail('DeadlineRefused');
+  return t;
 }
 
 function safeDirectory(dir) {
@@ -158,14 +199,9 @@ function readPrivate(file,max) {
   finally {fs.closeSync(fd);}
 }
 function writePrivate(file,bytes,mode=0o600) {const fd=fs.openSync(file,fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_NOFOLLOW,mode);try{fs.writeFileSync(fd,bytes);fs.fsyncSync(fd);}finally{fs.closeSync(fd);}}
-function requestBody(op,j) {
-  if(op==='Block') return Buffer.alloc(j.size);
-  if(!MUTATIONS.includes(op)) return Buffer.alloc(0);
-  return Buffer.from(JSON.stringify(op==='Commit'?{block:'OneFixtureBlock',selection:'Uncommitted'}:{name:j.name,size:j.size,hash:j.hash}));
-}
 function validateJournal(j,expected) {
   keys(j,['version','kind','state','context','name','hash','size','created','deadline','lastWall','createdMono','deadlineMono','lastMono','boot','ledger','artifactId','reconciliationUsed','priorUnknown']);
-  if(j.version!==1 || j.kind!=='OfflineFakeArtifactTransaction' || !STATES.includes(j.state)) fail('JournalRefused');
+  if(j.version!==2 || j.kind!=='OfflineSerializedArtifactTransaction' || !STATES.includes(j.state)) fail('JournalRefused');
   context(j.context);if(JSON.stringify(j.context)!==JSON.stringify(context(expected))) fail('ContextChanged');
   if(typeof j.name!=='string'||typeof j.hash!=='string'||!/^tf-offline-[0-9a-f]{32}$/.test(j.name)||!/^[0-9a-f]{64}$/.test(j.hash)||!Number.isSafeInteger(j.size)||j.size<1||j.size>LIMITS.archive) fail('JournalRefused');
   for(const n of [j.created,j.deadline,j.lastWall,j.createdMono,j.deadlineMono,j.lastMono]) if(!Number.isSafeInteger(n)||n<0) fail('JournalRefused');
@@ -206,16 +242,16 @@ function validateJournal(j,expected) {
 }
 
 export class OfflineArtifactTransaction {
-  #dir;#journal;#archive;#transport;#clock;#lock;#closed=false;#blob=false;#busy=false;
+  #dir;#journal;#archive;#transport;#clock;#lock;#closed=false;#blob=false;#download;#busy=false;
   constructor(secret) {if(secret!==transports) fail('UseOfflineFactory');}
   static prepare(options) {
     keys(options, ['parent','original','context','transport',...('clock' in options?['clock']:[])]);
     const {parent,original,context:identity,transport,clock}=options;
-    if(!transports.has(transport)) fail('FakeTransportRequired');
+    assertClockBinding(transport,clock);
     const ctx=context(identity);assertCanonicalOriginal(original);const time=clockNow(clock);
     // mkdtemp's 0700 child is created before resolving any output file paths.
     const dir=fs.mkdtempSync(path.join(parent,'tf-offline-'));fs.chmodSync(dir,0o700);safeDirectory(dir);
-    const j={version:1,kind:'OfflineFakeArtifactTransaction',state:'Prepared',context:ctx,name:`tf-offline-${randomBytes(16).toString('hex')}`,
+    const j={version:2,kind:'OfflineSerializedArtifactTransaction',state:'Prepared',context:ctx,name:`tf-offline-${randomBytes(16).toString('hex')}`,
       hash:hash(original),size:original.length,created:time.wall,deadline:time.wall+LIMITS.deadlineMs,lastWall:time.wall,createdMono:time.mono,deadlineMono:time.mono+LIMITS.deadlineMs,lastMono:time.mono,boot:time.boot,ledger:[],artifactId:null,reconciliationUsed:false,priorUnknown:''};
     writePrivate(path.join(dir,'original.zip'),original,0o400);
     writePrivate(path.join(dir,'journal.json'),Buffer.from(JSON.stringify(j)));syncDirectory(dir);
@@ -224,7 +260,7 @@ export class OfflineArtifactTransaction {
   static open(options) {
     keys(options, ['directory','context','transport',...('clock' in options?['clock']:[])]);
     const {directory,context:identity,transport,clock}=options;
-    if(!transports.has(transport)) fail('FakeTransportRequired');safeDirectory(directory);
+    assertClockBinding(transport,clock);safeDirectory(directory);
     const x=new OfflineArtifactTransaction(transports);x.#dir=directory;x.#transport=transports.get(transport);x.#clock=clock;
     // A killed process leaves this sentinel. Refuse it; automatic stale-lock
     // deletion/recovery is deliberately not implemented or claimed.
@@ -258,11 +294,7 @@ export class OfflineArtifactTransaction {
     if(b.length!==this.#journal.size || hash(b)!==this.#journal.hash || !b.equals(this.#archive)) fail('OriginalChanged');
     assertCanonicalOriginal(b);
   }
-  #checkTime() {
-    const t=clockNow(this.#clock), j=this.#journal;
-    if(t.boot!==j.boot || t.wall<j.lastWall || t.wall>=j.deadline || t.mono<j.lastMono || t.mono>=j.deadlineMono) fail('DeadlineRefused');
-    return t;
-  }
+  #checkTime() {return assertWithinDeadline(this.#clock,this.#journal);}
   #request(op,body=Buffer.alloc(0)) {
     if(this.#closed) fail('Closed');this.#checkArchive();const time=this.#checkTime(),j=this.#journal;
     const mutation=MUTATIONS.includes(op);if(!ROLE[op]||(!mutation&&!READS.includes(op))) fail('OperationRefused');
@@ -275,16 +307,25 @@ export class OfflineArtifactTransaction {
     // is never permission to dispatch after expiration.
     this.#checkTime();
     const role=this.#transport.options.credentialFault===op?(ROLE[op]==='Read'?'Runtime':'Read'):ROLE[op];
-    const before=clockNow(this.#clock);const response=fakeExchange(this.#transport,op,Buffer.from(body),this.#transport.credentials[role],j);
+    const capabilities={original:this.#archive,uploadUrl:this.#blob,downloadUrl:this.#download};
+    let request=buildRequest(op,j,capabilities);
+    if(!request.body.equals(body)) fail('ProtocolChargeRefused');
+    if(this.#transport.options.serializationFault?.op===op) request=corruptRequest(request,this.#transport.options.serializationFault.kind);
+    validateRequest(request,j,capabilities);
+    this.#transport.expectedOriginal=Buffer.from(this.#archive);
+    this.#checkTime();
+    const before=clockNow(this.#clock);const response=fakeExchange(this.#transport,request,this.#transport.credentials[role],j);
     const after=clockNow(this.#clock);this.#checkTime();
-    if(after.wall-before.wall>=LIMITS.requestMs||after.mono-before.mono>=LIMITS.requestMs||response.length>responseMax) fail('ResponseBound');
-    if(op==='Download') return Buffer.from(response);
-    try{return strictJson(response);}catch{fail('ResponseRefused');}
+    if(after.wall-before.wall>=LIMITS.requestMs||after.mono-before.mono>=LIMITS.requestMs||response.body.length>responseMax) fail('ResponseBound');
+    const parsed=parseResponse(op,response,j);
+    const parsedAt=this.#checkTime();
+    if(parsedAt.wall-before.wall>=LIMITS.requestMs||parsedAt.mono-before.mono>=LIMITS.requestMs) fail('ResponseBound');
+    return parsed;
   }
   #result(){return {kind:'OfflineFakeTransactionObservation',state:this.#journal.state,originalSha256:this.#journal.hash,
     originalBytes:this.#journal.size,artifactId:this.#journal.artifactId,attempts:this.#journal.ledger.length,
     priorUnknown:this.#journal.priorUnknown,networkEnabled:false,serviceInteroperabilityProven:false,
-    operationalPolicyEmissionAllowed:false,contentPrivacyApproval:false};}
+    operationalPolicyEmissionAllowed:false,contentPrivacyApproval:false,artifactOwnAttemptObserved:false,artifactOwnWorkflowIdObserved:false};}
   advance() {
     if(this.#busy||this.#closed) fail('TransactionUnavailable');this.#busy=true;
     try {
@@ -296,7 +337,7 @@ export class OfflineArtifactTransaction {
       try {
         const body=op==='Block'?Buffer.from(this.#archive):requestBody(op,this.#journal);
         const r=this.#request(op,body);
-        if(op==='Create'){keys(r,['reservation']);if(r.reservation!=='FixtureBlobCapability') fail('CapabilityRefused');this.#blob=true;}
+        if(op==='Create'){keys(r,['reservation']);this.#blob=r.reservation;}
         else if(op==='Finalize'){keys(r,['id']);this.#journal.artifactId=id(r.id);}
         else {keys(r,['ok']);if(r.ok!==true) fail('ResponseRefused');}
         this.#journal.state=ACK[op];this.#save();
@@ -309,8 +350,8 @@ export class OfflineArtifactTransaction {
     finally {this.#busy=false;}
   }
   #artifact(m) {
-    keys(m,['id','name','context','size','digest','expired']);id(m.id);context(m.context);
-    if(m.id!==this.#journal.artifactId||m.name!==this.#journal.name||JSON.stringify(context(m.context))!==JSON.stringify(this.#journal.context)||m.size!==this.#journal.size||m.digest!==`sha256:${this.#journal.hash}`||m.expired!==false) fail('ArtifactMismatch');
+    keys(m,['id','name','observedContext','size','digest','expired']);id(m.id);keys(m.observedContext,['repositoryId','runId','source']);
+    if(m.id!==this.#journal.artifactId||m.name!==this.#journal.name||m.observedContext.repositoryId!==this.#journal.context.repositoryId||m.observedContext.runId!==this.#journal.context.runId||m.observedContext.source!==this.#journal.context.source||m.size!==this.#journal.size||m.digest!==`sha256:${this.#journal.hash}`||m.expired!==false) fail('ArtifactMismatch');
   }
   observe() {
     if(this.#busy||this.#closed) fail('TransactionUnavailable');this.#busy=true;
@@ -327,7 +368,7 @@ export class OfflineArtifactTransaction {
       const repo=this.#request('Repository');keys(repo,['repository','id']);if(repo.repository!==j.context.repository||repo.id!==j.context.repositoryId) fail('RepositoryMismatch');
       const run=this.#request('Run');context(run);if(JSON.stringify(context(run))!==JSON.stringify(j.context)) fail('RunMismatch');
       const first=this.#request('Artifact');this.#artifact(first);
-      const redirect=this.#request('Redirect');keys(redirect,['capability']);if(redirect.capability!=='FixtureDownloadCapability') fail('CapabilityRefused');
+      const redirect=this.#request('Redirect');keys(redirect,['capability']);this.#download=redirect.capability;
       const raw=this.#request('Download');
       if(raw.length!==j.size||hash(raw)!==j.hash||!raw.equals(this.#archive)) fail('OriginalMismatch');assertCanonicalOriginal(raw);
       this.#artifact(this.#request('Artifact'));

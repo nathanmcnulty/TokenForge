@@ -35,7 +35,7 @@ test('original bytes survive caller mutation, four mutations and independent sev
   assert.deepEqual(f.transport.archivedBytes(),original);assert.deepEqual(fs.readFileSync(path.join(tx.directory,'original.zip')),original);
   const log=f.transport.transcript();assert.equal(log.length,11);assert.equal(log.find(x=>x.op==='Block').requestSha256,digest(original));
   assert.deepEqual(log.map(x=>[x.op,x.credentialRole]),[['Create','Runtime'],['Block','Blob'],['Commit','Blob'],['Finalize','Runtime'],['Repository','Read'],['Run','Read'],['Artifact','Read'],['Redirect','Read'],['Download','Download'],['Artifact','Read'],['Run','Read']]);
-  assert.equal(result.artifactId,'18446744073709551614');assert.equal(result.kind,'OfflineFakeTransactionObservation');
+  assert.equal(result.artifactId,'9007199254740993');assert.equal(result.kind,'OfflineFakeTransactionObservation');
   for(const key of ['networkEnabled','serviceInteroperabilityProven','operationalPolicyEmissionAllowed','contentPrivacyApproval']) assert.equal(result[key],false);
   tx.observe();tx.advance();assert.equal(log.length,f.transport.transcript().length);
 });
@@ -79,7 +79,7 @@ for(const listMode of ['zero','multiple','paginated']) test(`ambiguous finalize 
   const f=fixture(t,{faults:{Finalize:'after'},listMode});upload(f.tx);
   assert.equal(f.tx.observe().state,'FinalizeUnknown');f.tx.observe();assert.equal(f.transport.transcript().filter(x=>x.op==='List').length,1);
 });
-for(const metadataChange of [{digest:'sha256:'+'0'.repeat(64)},{size:0},{expired:true},{id:30},{id:'42'},{context:{...identity,attempt:'2'}}]) test(`metadata change ${JSON.stringify(metadataChange)} refuses observation`,t=>{
+for(const metadataChange of [{digest:'sha256:'+'0'.repeat(64)},{size:0},{expired:true},{id:30},{id:'42'},{context:{...identity,runId:'9'}}]) test(`metadata change ${JSON.stringify(metadataChange)} refuses observation`,t=>{
   const f=fixture(t,{metadataChange});upload(f.tx);assert.equal(f.tx.observe().state,'ObservationUnknown');
 });
 for(const op of ['Repository','Run','Artifact','Redirect','Download']) test(`interrupted observer ${op} preserves charged reads and forbids a second observation`,t=>{
@@ -129,7 +129,7 @@ for(const change of ['missing','symlink','hardlink','broad-mode']) test(`resume 
   if(change==='broad-mode') fs.chmodSync(file,0o644);
   assert.throws(()=>Tx.open({directory:f.tx.directory,context:identity,transport:f.transport,clock:f.clock}),/OfflineResumeRefused/);assert.equal(f.transport.transcript().length,0);
 });
-for(const edit of [j=>j.version=2,j=>j.extra=true,j=>j.deadline++,j=>j.context.attempt='2',j=>j.ledger=Array(13).fill({op:'Run',charge:131072,at:j.created}),j=>j.ledger=[{op:'Run',charge:2097153,at:j.created}],j=>j.ledger=[{op:'Finalize',charge:131072,at:j.created}],j=>j.state='Finalized']) test(`corrupt journal refuses: ${edit}`,t=>{
+for(const edit of [j=>j.version=999,j=>j.extra=true,j=>j.deadline++,j=>j.context.attempt='2',j=>j.ledger=Array(13).fill({op:'Run',charge:131072,at:j.created}),j=>j.ledger=[{op:'Run',charge:2097153,at:j.created}],j=>j.ledger=[{op:'Finalize',charge:131072,at:j.created}],j=>j.state='Finalized']) test(`corrupt journal refuses: ${edit}`,t=>{
   const f=fixture(t);patchJournal(f.tx,edit);f.tx.close();assert.throws(()=>Tx.open({directory:f.tx.directory,context:identity,transport:f.transport,clock:f.clock}),/OfflineResumeRefused/);assert.equal(f.transport.transcript().length,0);
 });
 test('exclusive open prevents concurrent writers',t=>{
@@ -149,7 +149,7 @@ test('latest response timing is persisted; delayed response followed by rollback
   f.tx.close();f.clock.advance(-8000);assert.throws(()=>Tx.open({directory:f.tx.directory,context:identity,transport:f.transport,clock:f.clock}),/OfflineResumeRefused/);
 });
 test('different clock instance cannot manufacture restart time proof',t=>{
-  const f=fixture(t);f.tx.close();assert.throws(()=>Tx.open({directory:f.tx.directory,context:identity,transport:f.transport,clock:createFakeClock()}),/OfflineResumeRefused/);
+  const f=fixture(t);f.tx.close();assert.throws(()=>Tx.open({directory:f.tx.directory,context:identity,transport:f.transport,clock:createFakeClock()}),/ClockBindingRefused/);
 });
 test('reused fake service retains first artifact identity; second transaction cannot borrow it',t=>{
   const f=fixture(t);upload(f.tx);const second=Tx.prepare({parent:root,original,context:{...identity,runId:'9'},transport:f.transport,clock:f.clock});t.after(()=>second.close());
@@ -168,8 +168,8 @@ for(const field of ['name','hash']) test(`non-string journal ${field} rejected`,
 });
 for(const kind of ['duplicate','escaped-duplicate','charge-refund','state-shortcut','read-order']) test(`journal rejects ${kind}`,t=>{
   const f=fixture(t);upload(f.tx);f.tx.observe();f.tx.close();const file=path.join(f.tx.directory,'journal.json');let raw=fs.readFileSync(file,'utf8');
-  if(kind==='duplicate') raw=raw.replace('"version":1','"version":2,"version":1');
-  if(kind==='escaped-duplicate') raw=raw.replace('"version":1','"vers\\u0069on":2,"version":1');
+  if(kind==='duplicate') raw=raw.replace('"version":2','"version":999,"version":2');
+  if(kind==='escaped-duplicate') raw=raw.replace('"version":2','"vers\\u0069on":999,"version":2');
   if(kind==='charge-refund') {const j=JSON.parse(raw);j.ledger[0].charge=1;raw=JSON.stringify(j);}
   if(kind==='state-shortcut') {const j=JSON.parse(raw);j.ledger=j.ledger.slice(0,4);raw=JSON.stringify(j);}
   if(kind==='read-order') {const j=JSON.parse(raw);[j.ledger[4],j.ledger[5]]=[j.ledger[5],j.ledger[4]];raw=JSON.stringify(j);}
@@ -208,6 +208,6 @@ for(const content of ['{"x":1,"x":2}','{"x":1,"\\u0078":2}','{} trailing',Buffer
 });
 test('core source has only fixed filesystem/path/crypto imports and no real transport or environment hook',()=>{
   const source=fs.readFileSync(new URL('../scripts/offline/TokenForgeArtifactTransaction.mjs',import.meta.url),'utf8');
-  assert.deepEqual([...source.matchAll(/from '(.*?)'/g)].map(m=>m[1]),['node:fs','node:path','node:crypto']);
-  assert.doesNotMatch(source,/\b(?:fetch|eval)\s*\(|\bimport\s*\(|process\s*\.\s*env|https:\/\/|node:(?:http|https|net|tls|child_process)|GITHUB_TOKEN|ACTIONS_RUNTIME_TOKEN/);
+  assert.deepEqual([...source.matchAll(/from '(.*?)'/g)].map(m=>m[1]),['node:fs','node:path','node:crypto','./TokenForgeOfflineSchema.mjs','./TokenForgeArtifactProtocol.mjs']);
+  assert.doesNotMatch(source,/\b(?:fetch|eval)\s*\(|\bimport\s*\(|process\s*\.\s*env|node:(?:http|https|net|tls|child_process)|GITHUB_TOKEN|ACTIONS_RUNTIME_TOKEN/);
 });

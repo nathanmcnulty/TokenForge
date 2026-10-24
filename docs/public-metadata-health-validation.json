@@ -1,0 +1,212 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgePublicMetadataWorkstationValidation",
+  "recordedUtc": "2026-10-24T23:13:42.375759+00:00",
+  "outcome": "PublicMetadataWorkstationLoopOfflineReady_CurrentPublicRefreshNotClaimed_HostedTrialBlocked",
+  "offlineReady": true,
+  "completeCurrentPublicRefreshClaimed": false,
+  "hostedTrialRun": false,
+  "startingOwningCheckpoint": "91f858f8b7b70722223f4baa225a6cfc2ac340b6",
+  "adoptedGoal": {
+    "commit": "50bb94bc38531834a73c3b8e46e3bebfde9ee467",
+    "path": "docs/tokenforge-runner-workstation-design.md",
+    "sha256": "95ce7b6b421120434795d5c097dae89baba6df68d5f3eb17c5a82ee1248a9987",
+    "copiedUnchanged": true
+  },
+  "testedExecutableSource": "e93cdcc9764cf43347321b783f23c36526c60030",
+  "packageSource": "e93cdcc9764cf43347321b783f23c36526c60030",
+  "containingCheckpointScope": "Final receipt, handoff text and dormant template package hash only; executable/test bytes unchanged from tested source.",
+  "branch": "codex/goal6-reusable-sealer",
+  "mainObserved": "1be12d75c7e2a63eac8e14c32d54e79cec4a23ef",
+  "roadmapHandoff": "19470aeba7a949e4204e4ecf5586a6ffb3171c69",
+  "platform": {
+    "os": "Linux",
+    "architecture": "x86_64",
+    "powershell": "7.6.7",
+    "pester": "6.2.0",
+    "additionalPlatformsTested": false
+  },
+  "localGate": {
+    "preset": "PublicHealth",
+    "platform": "linux",
+    "version": "0.48.0",
+    "passed": 123,
+    "failed": 0,
+    "skipped": 0,
+    "containersfailed": 0,
+    "code": "Success",
+    "failedTests": []
+  },
+  "localGateReportSha256": "fae88b3f89153fa9f8287ce10fdf671c96e05a915bcad3b431ef8fe353ff63d1",
+  "package": {
+    "reviewedPackagingDriverSha256": "475ce7f727c264b021acdcc00baeca1a459be0e2c687fddc2fceeb22be7c94b5",
+    "sourceRevision": "e93cdcc9764cf43347321b783f23c36526c60030",
+    "nativeSource": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "published": false,
+    "nativeInputsVerified": 100,
+    "bytes": 33625838,
+    "payloadFiles": 167,
+    "reviewedPackagingCopySha256": "ddab6812fb9853c0d057131fb785dad5f2bd14436d66dd67fbb08a621a29a4c8",
+    "unchangedBaselineInputs": 98,
+    "sha256": "c1656f3a20135bc2665506b9678b097b39dbfceee5e36e2a0b6afd3934fd4283"
+  },
+  "payloadVerification": {
+    "files": 167,
+    "currentModuleAndHealthSourceBindings": 93,
+    "archiveExtractedAndAllManifestBytesChecked": true,
+    "nativeRebuilt": false,
+    "dependenciesInstalled": false,
+    "nativeExeSha256": "987c863bc92f29de27ff812ad360cd1be1a8bde0fda6080f465827dbb6eb99db",
+    "credentialsDllSha256": "30d5d1268223c806e8c6d26fd138ef2f1db58dd23f067f59ac38387e2d7bad32",
+    "acceptedBaseManifestSha256": "8295f2508bc95d67c1ce61904cd3a4bba5a7ccac0f8d30af8ef34066eff383c9",
+    "compiledSourcesProjectsDependencyLocksUnchanged": true,
+    "baselineInputsUnchanged": 98,
+    "twoReviewedPackagingOnlyChanges": true
+  },
+  "independentReview": {
+    "scope": "Production source, actual entry-point regressions, helper/package provenance, dormant workflow, documentation and final evidence",
+    "findingsAddressed": [
+      "Catalog and discovery writer-lock compatibility",
+      "Private staging directory permissions and interrupted-stage repair",
+      "Pending recovery and historical complete-date aggregation",
+      "Fixed User-Agent across GitHub REST transport",
+      "Exact approved baseline manifest anchor and source Git-blob binding",
+      "StrictMode-safe tracked-source helper without weakening path rejection",
+      "Published GUID casing/unknown-owner compatibility without repairing malformed IDs",
+      "Case-normalized identity collision refusal"
+    ],
+    "executedSeparately": "13 health cases, then one StrictMode tracked-source regression plus eight existing package-source boundary cases; final 123-case combined gate includes all 14 independent health cases.",
+    "liveServiceInteroperabilityClaimed": false,
+    "finalReceiptAudit": "All 16 source hashes, approved source/package identities, 167 payload-file hashes and sizes, 93 executable source bindings, 123-case saved gate and its log tail, adopted goal and unchanged active workflows/research gates independently verified. Final performance receipt reviewed separately after completion."
+  },
+  "contracts": {
+    "collection": [
+      "Exactly three fixed approved public URLs",
+      "At most six GET requests, two/source, thirty seconds/request, six hundred seconds/collection; template collection four hundred eighty seconds inside ten-minute job",
+      "8 MiB/source; 10000 rows/source; 30000 catalog IDs; metadata 64 MiB, health 64 KiB, manifest 16 KiB",
+      "All-three-source projection; incomplete refresh retains previous complete ledger bytes/dates",
+      "Known zero-ID placeholders excluded; unknown owner remains unknown; malformed IDs and normalized conflicts refused"
+    ],
+    "sync": [
+      "Named expected repository/workflow/run/source/ref verified against GitHub metadata before DB import",
+      "Run attempt one only; manifest attempt does not prove artifact-own attempt",
+      "Four GET requests, no retry, thirty seconds/request, 180-second transfer deadline; native local calls retain separate existing 60-second timeout",
+      "REST run 256 KiB, listing 1 MiB, redirect response 8 KiB; one capability redirect with no bearer forwarding; 67190784-byte archive/expanded cap",
+      "Complete public-only incoming ledger plus schema/hash/source/date/count/privacy validation before transactional import into mixed private SQLite",
+      "Existing discovery/catalog writer locks; immutable source receipts; pending idempotent recovery; out-of-order facts cannot replace newer facts",
+      "Complete empty with history produces explicit absence; unlinked empty cannot erase destination omissions",
+      "Status stale after 48 hours; gap flag for complete observations over 14 days apart; pending deep work explicitly unassessed; old plans preserved"
+    ],
+    "artifactContract": "Payload/member byte and schema validation, not original outer ZIP equality. Goal6 raw-service/sealer experiment remains parked.",
+    "contributions": "Existing normalized SourceClaims/MetadataConflicts in quarantine report only; no import, ownership/consent/issuance/API proof or automatic URL following."
+  },
+  "publicNetworkEvidence": {
+    "anonymousFixedPublicMetadataReadsPerformedLocally": true,
+    "collectedDocumentsHashesCountsAndStatusesCommitted": false,
+    "privateEvidencePreserved": true,
+    "completeFreshThreeSourceSnapshotClaimed": false,
+    "newAuthenticationOrAccountIdentityCalls": false
+  },
+  "developmentFailures": [
+    "First assembly correctly refused the changed packaging-driver input; accepted only its independently reviewed exact copy-list-only hash.",
+    "Existing tracked-source helper failed on empty pipeline Count under StrictMode; fixed explicit array with boundary regressions.",
+    "Public-source compatibility review exposed empty owner hints and GUID casing; these valid cases are now explicit. Malformed published identifiers remain source errors, with no silent repair."
+  ],
+  "sourceSha256": {
+    "scripts/TokenForgePublicHealth.ps1": "fa2d677330d71798b4416b21111beb6461e2f42de90044f63f6490451000d20a",
+    "scripts/Invoke-TokenForgePublicHealth.ps1": "33c6c778e3f186580a89bbd29c3f9fbe45921f4ca00ac8cf7999e75e02da9204",
+    "scripts/TokenForgePublicHealthSync.ps1": "a530cf28aa54eb2431b4fa573c31645dac4e935bc844c2c2e4c0dfbbcf8e6623",
+    "scripts/Sync-TokenForgePublicHealth.ps1": "43ee85bb3843692ad3c4c74c11e750afa1d079c05f869bd253215c715df8661c",
+    "scripts/Test-TokenForgePublicContribution.ps1": "f4b02a617a1b4f4acd0f87e3275aeebfaabbbace845978cc91cf9c1997c214d4",
+    "scripts/tokenforge.ps1": "f3540733158d856daa036e8244b45ed3e4446f077bf7c026701bc697538427ee",
+    "scripts/New-TokenForgePublicHealthPackage.ps1": "3c03f3fe0b80f0aaebb7daaa6c47fbe42583208d8a8c8be825b649d669b4546b",
+    "scripts/Test-TokenForgePublicHealthPerformance.ps1": "e1e35834f64faf85924517f35364eb1c0392b0ae8895a7e0a2d944c9287f6eda",
+    "scripts/Copy-TokenForgePackageSource.ps1": "ddab6812fb9853c0d057131fb785dad5f2bd14436d66dd67fbb08a621a29a4c8",
+    "scripts/Build-TokenForgeNative.ps1": "475ce7f727c264b021acdcc00baeca1a459be0e2c687fddc2fceeb22be7c94b5",
+    "scripts/Build-TokenForgePackage.ps1": "8ded5a82823bb828fc4fbcf3dc147ffc0a14522e0b5c893904e0a2a80db7df8c",
+    "scripts/Invoke-TokenForgeLocalValidation.ps1": "db13694a3177438118331044a4597937d5b5ec43f3358299f6b4b8be489e0663",
+    "publication/health/workflow.yml": "aec016ad106e0b44125554078b8aee637246b48f3dd127eed6b609fc50dc7d8a",
+    "tests/PublicHealth.Tests.ps1": "9f538c1bf41d44212805dd324f5c295c13bf25c208c7b97f763581697eba22bf",
+    "tests/PublicHealthSync.Tests.ps1": "059137e4c3245fd1329b905386dcf211bdd9cb48dd5f587d51ebe60921fa1ce7",
+    "tests/PublicHealthIndependent.Tests.ps1": "d53967ff8b4b09f2facd7146036ddf75df31cbc368d5ed192b5b8a3bab52ff71"
+  },
+  "boundaries": {
+    "activeWorkflowFilesUnchanged": true,
+    "actionsEnabledOrDispatched": false,
+    "liveCredentialsUsed": false,
+    "tenantPermissionsChanged": false,
+    "operationalDataPublished": false,
+    "packageAssetPublished": false,
+    "prsOpenedOrMerged": false,
+    "sourcePushAuthorized": true,
+    "goal6ResearchGatesUnchanged": true
+  },
+  "nextDecisionPacket": {
+    "decision": "No current hosted execution authorization. Review and approve one public-only trial after exact package delivery and workflow registration are concrete.",
+    "reviewedSource": "e93cdcc9764cf43347321b783f23c36526c60030",
+    "packageSha256": "c1656f3a20135bc2665506b9678b097b39dbfceee5e36e2a0b6afd3934fd4283",
+    "packageBytes": 33625838,
+    "proposedPackageAssetUrl": "https://github.com/nathanmcnulty/TokenForge/releases/download/public-health-offline-20261024/TokenForge-public-health-linux-x64.tar.gz",
+    "packageDeliveryCurrentlyExists": false,
+    "workflowTemplate": "publication/health/workflow.yml",
+    "registrationChanges": [
+      "New canary-only manual health workflow at .github/workflows/public-metadata-health.yml must be registered on default branch through separately authorized source/PR/merge procedure. Do not re-enable discovery.yml or alter its account work.",
+      "Record actual workflow ID and reviewed source/ref selection; replace literal pending ID and review exact activation diff. Current template has literal-false job, no automatic trigger.",
+      "Publish/provision only the exact reviewed code package with explicit approval; then one Linux x64 Ubuntu job <=10 minutes with reviewed PowerShell, source/package checks and source GET limits."
+    ],
+    "publicOutputs": [
+      "manifest.json",
+      "health.json",
+      "metadata.json"
+    ],
+    "artifactName": "tokenforge-public-health",
+    "retentionDaysRequested": 14,
+    "jobPermissions": {
+      "contents": "read",
+      "otherExplicitJobPermissions": "none; ordinary platform artifact capability remains present"
+    },
+    "requiredLiveCredentials": "No Entra/account credentials for the job. Code-package release-asset publication requires separately approved GitHub authority (normally repository contents write), or operator-managed provisioning; source-push approval does not cover it. Any later workstation artifact-read token must be explicitly supplied and separately authorized with minimum Actions read scope. None is inferred or acquired.",
+    "settingsControllerOrSignedPlanRequired": false,
+    "schedule": "Daily off-hour scheduling remains a separate approval after successful manual trial.",
+    "stop": "Cancel the named job and disable only this lane under the approved recovery procedure; preserve private downloaded evidence. Do not delete evidence or toggle another workflow."
+  },
+  "performance": {
+    "testedSource": "e93cdcc9764cf43347321b783f23c36526c60030",
+    "importSeconds": 131.83,
+    "catalogCandidates": 5502,
+    "liveProof": false,
+    "passed": true,
+    "maxAllowedSeconds": 300,
+    "sourceRows": {
+      "roadtools": 2000,
+      "microsoftApps": 5000,
+      "resources": 2
+    },
+    "repeatSeconds": 39.704,
+    "powershellParentPeakWorkingSetBytes": 1116651520,
+    "metadataBytes": 22886563,
+    "totalSeconds": 231.85,
+    "kind": "ExactPackagePublicHealthPerformance",
+    "collectionSeconds": 60.165,
+    "statusSeconds": 0.146,
+    "fixtureVersion": 1,
+    "packageSha256": "c1656f3a20135bc2665506b9678b097b39dbfceee5e36e2a0b6afd3934fd4283",
+    "scopeEdges": 100000
+  },
+  "performanceReportSha256": "c2f999f7b7297f2b5c6d83907b8a6a5fd15d50e5afbff9c65fc91d130014865e",
+  "performanceLimits": "Synthetic fixed payloads only. Peak memory is the PowerShell parent process, not the native child or whole system; timings are this VM observation, not a general throughput guarantee.",
+  "frozenPerformanceSourcePayloads": {
+    "microsoftApps.json": {
+      "sha256": "4564e039883b47a61f07639138baf230a27a5b5900b867551abdaaac767c5e92",
+      "bytes": 829502
+    },
+    "resources.json": {
+      "sha256": "852965ce45637bc39fa724b91d0b8fb2ed54149f3da6abf7280630ef56ef2926",
+      "bytes": 176
+    },
+    "roadtools.json": {
+      "sha256": "7f4051048d4a265d51a55c92fedfe6221bf61f4fbc55e22493ea2c775d6cf550",
+      "bytes": 2672995
+    }
+  }
+}

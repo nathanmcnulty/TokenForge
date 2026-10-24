@@ -25,7 +25,7 @@ jobs:
           # Exact delivery URL/hash must be reviewed before enabling this template.
           # No package has been published by this milestone.
           TF_PACKAGE_URL: https://github.com/nathanmcnulty/TokenForge/releases/download/public-health-offline-20261024/TokenForge-public-health-linux-x64.tar.gz
-          TF_PACKAGE_SHA256: 2a37a141cdeb5072d2f11ca6a8bd4b9b4a4699a8b3e3db2535d0303f5349be6a
+          TF_PACKAGE_SHA256: c1656f3a20135bc2665506b9678b097b39dbfceee5e36e2a0b6afd3934fd4283
         run: |
           $ErrorActionPreference='Stop'
           if ($PSVersionTable.PSVersion.ToString() -cne '7.6.7' -or $env:RUNNER_OS -cne 'Linux' -or $env:RUNNER_ARCH -cne 'X64') { throw 'Unreviewed execution environment.' }

@@ -1,0 +1,33 @@
+# Review template only; this path is not a registered GitHub workflow.
+# Activation requires a separately reviewed source change and explicit approval.
+name: TokenForge blocked synthetic canary
+run-name: TokenForge canary ${{ inputs.nonce }}
+on:
+  workflow_dispatch:
+    inputs:
+      nonce:
+        description: Exclusive reviewed canary identifier
+        required: true
+        type: string
+permissions: {}
+concurrency:
+  group: tokenforge-goal6-canary
+  cancel-in-progress: false
+jobs:
+  canary:
+    if: ${{ false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Check out reviewed dormant implementation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: nathanmcnulty/TokenForge
+          ref: 546674afdbc36abcc775651d838d51c53bde5bb4
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Refuse service execution before credential access
+        uses: ./.github/actions/tokenforge-canary

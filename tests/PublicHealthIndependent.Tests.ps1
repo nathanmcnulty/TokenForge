@@ -138,4 +138,18 @@ Describe 'Independent public health trust and recovery cases' {
   {& "$repo/scripts/New-TokenForgePublicHealthPackage.ps1" -BasePackagePath $base -OutputPath $out -SourceRevision ('0'*40)}|Should -Throw '*accepted receipt*'
   Test-Path $out|Should -BeFalse
  }
+ It 'copies only tracked source through the packaging helper under StrictMode Latest' {
+  . "$repo/scripts/Copy-TokenForgePackageSource.ps1"
+  $source=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'));$destination=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
+  $module=Join-Path $source src/TokenForge
+  $null=[IO.Directory]::CreateDirectory($module,[IO.UnixFileMode]448)
+  [IO.File]::WriteAllText((Join-Path $module public.ps1),'# reviewed fixture')
+  [IO.File]::WriteAllText((Join-Path $module private.passkey),'synthetic excluded data')
+  & git -C $source init --quiet
+  & git -C $source add -- src/TokenForge/public.ps1
+  if($LASTEXITCODE){throw 'Fixture Git tracking failed.'}
+  & {Set-StrictMode -Version Latest;Copy-TokenForgePackageSource -SourceRoot $source -DestinationRoot $destination -Prefix src/TokenForge}
+  @(Get-ChildItem $destination -File -Recurse).Count|Should -Be 1
+  [IO.File]::ReadAllText((Join-Path $destination src/TokenForge/public.ps1))|Should -BeExactly '# reviewed fixture'
+ }
 }

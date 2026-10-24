@@ -1,0 +1,43 @@
+# Network-disabled artifact transaction core
+
+This checkpoint implements only the offline transaction core and logical observer proposed in [the producer/service design](goal6-producer-zip-design.md). The implementation is `scripts/offline/TokenForgeArtifactTransaction.mjs`; its Linux test suite is `tests/ArtifactTransaction.test.mjs`. It has no real HTTP transport, action entry point, runner credential reader, dispatch controller, signing or operational policy emitter. The existing sealer policy and dormant workflow are unchanged.
+
+## Implemented boundary
+
+`OfflineArtifactTransaction.prepare` accepts an already-created canonical original ZIP Buffer, an exact source/repository/workflow/run/attempt context, a private fake transport handle and an optional branded fake clock. It does not produce, normalize, wrap or replace ZIPs. It freezes a copy in memory and writes the original bytes to a mode-0400 file in a newly created mode-0700 child, including when the temporary parent is 0755. Every dispatch rechecks saved length/hash, full original bytes and the bounded canonical structural profile.
+
+The only transport factory is `createFakeTransport`. A private WeakMap recognizes its handles; arbitrary callbacks, lookalike objects, URL selectors, real credentials, operational flags and caller budget overrides are refused. The module imports only Node filesystem/path/crypto primitives. It never reads runner environment variables, opens sockets or spawns processes. The test suite uses Python's existing independent fixture encoder and a short-lived Node subprocess for interrupted-store validation; those are test harness operations, not transport capabilities.
+
+Messages are abstract operations, **not production HTTP serialization**. The fake service captures artifact context/name/size/hash at reservation and retains its own bytes; it cannot derive authority from the observer's later request. Internally created opaque capabilities separate Runtime (Create/Finalize), Blob (Block/Commit), Read (metadata/redirect/list) and Download roles. No token, JWT, SAS URL, header or runner credential is accepted or materialized. Tests inspect only role labels and request lengths/hashes. This tests message-level credential separation; it proves nothing about future real credential injection, URL validation, TLS or implicit HTTP retries.
+
+## Bytes and observation
+
+The read-only canonical parser checks the complete bounded archive: fixed seven names/order, exact ZIP32 stored headers, fixed flags/times/attributes, CRCs, sizes, offsets, no comments/extras/descriptors/gaps/prefix/trailer, strict UTF-8 and complete duplicate-free JSON. It does not reconstruct/transmit a replacement. Existing PowerShell sealer content/business schemas and privacy checks remain separate; this core cannot approve their result.
+
+The observer independently requests fake repository/run/artifact metadata, the fake download capability and raw bytes, then repeats artifact/run checks. It requires exact context, nonexpired identity, exact decimal artifact ID, matching reported size/digest, length/hash equality and full byte equality against the original, followed by structural validation. A supplied Finalize hash, equivalent extracted entries or a same-length header rewrite cannot pass. A prior fake artifact cannot be borrowed by another context or transaction name.
+
+The result kind is `OfflineFakeTransactionObservation`. Even state `Observed` always carries `networkEnabled=false`, `serviceInteroperabilityProven=false`, `operationalPolicyEmissionAllowed=false` and `contentPrivacyApproval=false`. This is simulated evidence, never a sealing subject, attestation, publication policy or live compatibility receipt.
+
+## Journal, interruptions and fixed bounds
+
+The strict bounded journal is saved with an exclusive file, fsync, atomic rename and directory fsync. Each mutation intent is durable before a dispatch charge; each charge is durable before dispatch. Parsing rejects duplicate/escaped-duplicate members, unexpected fields, invalid scalar identities, inconsistent lifecycle/operation order and nonexact reservation charges. It recomputes budgets on reopening. File checks reject linked, broadly accessible, oversized or missing originals/journals. The private same-user store is trusted local state, not a cryptographically authenticated ledger against its owner.
+
+Create, Block, Commit and Finalize each have one attempt. Lost acknowledgements/cancellation become conservative unknown outcomes; interrupted intents reopen as unknown and cannot replay a mutation. Reopening after partial upload stops as UploadUnknown because upload capabilities are intentionally not persisted. An unknown Create/Finalize may use at most one one-page read-only reconciliation; zero/multiple/paginated candidates cannot prove success or absence of effects. Only an exact candidate can advance to independent observation. Interrupted observation never restarts its read sequence. Completed original bytes and all prior charges remain preserved.
+
+The fixed caps are 64 KiB original, 12 total fake service attempts (four mutations/eight reads), 180 seconds total, ten seconds per exchange, 8 KiB control requests, 128 KiB control responses and 2 MiB aggregate request/response bodies. Responses reserve their entire maximum allowance before dispatch, including on failure, rather than refunding unused bytes. The raw download reserves 64 KiB. All reads, the redirect exchange and optional reconciliation count. No HEAD, retry loop, parallel upload, delete, overwrite or capability refresh is available. Persistence can consume time: a final deadline check after the durable charge prevents a late dispatch.
+
+The journal retains fixed wall and monotonic deadlines, last observed watermarks and a boot identity. Real local timing uses Linux monotonic hrtime plus boot_id; fake reopening requires the same clock identity. Response/unknown saves persist the latest timing evidence. Rollback, changed boot/clock, missing time proof or expiry refuses reopening; no restart replenishes counts, bytes or time.
+
+The store uses a conservative exclusive lock sentinel. **Actual process termination leaves a stale lock and refuses automatic reopening.** Tests prove evidence preservation and zero replay in that case; they do not claim automatic killed-process or cross-job recovery. No stale-lock deletion, takeover procedure or cleanup utility is implemented. Simulated interrupted requests followed by explicit close can reopen the same surviving workspace and fake service to exercise the durable unknown-state rules. Loss of the fake service or runner is not hidden by reconstructing an archive or starting another transaction.
+
+## Local validation and remaining gates
+
+Run the focused suite with the existing Linux Node 24 runtime:
+
+```sh
+node --test tests/ArtifactTransaction.test.mjs
+```
+
+It uses only synthetic files and fakes, including the independent Python ZIP encoder. Acceptance includes exact bytes, hostile ZIP representations, service transformations/digest echoes, before/after interruption and cancellation at all four mutations, partial-upload reopen, single reconciliation, changed metadata, observer interruption, fixed budgets, expiry/rollback, deadline exhaustion during fsync, credential roles, malformed journals and stale-lock refusal. The checkpoint's receipt records exact source/kit/runtime hashes and final results. The existing Pester 6.2 sealer safety gate is also run from the matching immutable-source review kit using the unchanged pinned native runtime; no native/module rebuild is needed.
+
+Independent source review is required before checkpointing. Operational emission, real HTTPS, runner credential/bootstrap support, actual service interoperability, hosted workflows/dispatch and publication remain blocked. Implementing a real transport requires a separately reviewed change and its deny-by-default URL/credential/wire-level tests. A hosted experiment additionally needs the design's source/ref exclusion, origin/runtime/API pins, bounded controller procedure and separate explicit authorization. This checkpoint supplies none of those authorizations.

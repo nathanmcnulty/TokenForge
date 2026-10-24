@@ -1,6 +1,8 @@
 # Producer/service compatibility design: frozen original ZIP
 
-Design proposal for review only. No producer transport, service mock implementation, canary workflow or activation is introduced by this checkpoint. Operational policy emission stays unconditionally blocked, the reusable sealer stays `if: false`, and Actions stay disabled. Review of this document is not authorization for a hosted test.
+Production integration proposal for review only. The original design checkpoint b058890 introduced no producer transport, service mock, canary workflow or activation. The later fake-only core is described below; it adds no production transport. Operational policy emission stays unconditionally blocked, the reusable sealer stays `if: false`, and Actions stay disabled. Review of this document is not authorization for a hosted test.
+
+Current implementation update: [the network-disabled core and observer](goal6-offline-transaction-core.md) implement only abstract fake messages. The production transport, credential injection and hosted experiment below remain proposals.
 
 ## Decision and invariant
 

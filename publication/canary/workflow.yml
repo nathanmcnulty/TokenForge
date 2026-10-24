@@ -26,7 +26,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: nathanmcnulty/TokenForge
-          ref: 546674afdbc36abcc775651d838d51c53bde5bb4
+          ref: 026ec9d0380eeacae9ecd7787c84996a0307814c
           fetch-depth: 1
           persist-credentials: false
       - name: Refuse service execution before credential access

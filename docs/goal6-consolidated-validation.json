@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgeConsolidatedOfflineProtocolValidation",
+  "recordedUtc": "2026-10-24T06:09:15.920257+00:00",
+  "outcome": "ConsolidatedOfflineMilestoneComplete_NotLiveOrProductionCompletion",
+  "reviewBranch": "codex/goal6-reusable-sealer",
+  "testedSourceCommit": "8dee359f9b1616d229ba802ea253d88afed09f8b",
+  "testedSourceParent": "d120d02c66adeb1704f42ba0ac4ea620ab6b1bc1",
+  "adoptedReview": {
+    "sourceBranch": "codex/dot-goal6-review-handoff-20261024",
+    "sourceCommit": "18a617f79f4968fbab27433a82e3c68ef6d38d62",
+    "adoptionCommit": "d120d02c66adeb1704f42ba0ac4ea620ab6b1bc1",
+    "path": "docs/goal6-dot-offline-transaction-review.md",
+    "sha256": "095ed534c15ae0ef92c758abd57efd03ef7608cc6161668493db0ebbc09d1d36",
+    "copiedUnchanged": true,
+    "M1": "Closed by pre-store/pre-lock clock identity binding and full mismatch/default/deadline matrix."
+  },
+  "preservedRoadmapHandoff": "19470aeba7a949e4204e4ecf5586a6ffb3171c69",
+  "receiptCheckpointScope": "Containing commit adds sanitized receipt/handoff documentation only after testedSourceCommit; no tested code/package substitution.",
+  "implementedScope": [
+    "Identical fake clock or explicit default/default local domain; unequal domains reject before store/lock effects.",
+    "Pure Twirp/Create/Finalize, Block/Uncommitted XML and REST observer request/response serialization using pinned references.",
+    "Fixed reserved .invalid origins/dummy capabilities, raw signed-query preservation, fixed method/path/role placement and bounded strict response schemas.",
+    "Signed-int64 IDs; lossless REST integer tokens; strict response aliases and sanitized native JSON errors.",
+    "Deny-by-default recording fake integrated after durable exact reservations; original C remains the uploaded/downloaded subject.",
+    "Deadline checks after persistence, serialization, final recording validation and response parsing; no refunds/replays or reset.",
+    "Observed artifact provenance is an explicit subset; current Run checks are separate and artifact-own attempt/workflow observation flags remain false.",
+    "Source-only action/runner/Node environment/provenance dossier with exact public refs and unresolved hosted/binary facts."
+  ],
+  "modelLimits": {
+    "journalVersion": 2,
+    "v1MigrationSupported": false,
+    "arbitraryTransportCallbacks": false,
+    "realHttpsDispatcher": false,
+    "runnerCredentialReader": false,
+    "runnerActionEntrypoint": false,
+    "workflowDispatch": false,
+    "operationalEmission": false,
+    "hostedActivation": false,
+    "artifactSigningOrPublication": false,
+    "serviceInteroperabilityProven": false,
+    "contentPrivacyApproval": false,
+    "artifactOwnAttemptObserved": false,
+    "artifactOwnWorkflowIdObserved": false,
+    "automaticStaleLockTakeover": false,
+    "automaticKilledProcessRecovery": false,
+    "crossJobRecovery": false,
+    "powerLossDurabilityProven": false,
+    "realWireReplayOrTlsProven": false
+  },
+  "fixedBudgets": {
+    "archiveMaxBytes": 65536,
+    "attemptsMax": 12,
+    "mutationsMax": 4,
+    "readsMax": 8,
+    "totalMs": 180000,
+    "perExchangeMs": 10000,
+    "aggregateBodyBytesMax": 2097152,
+    "controlRequestMaxBytes": 8192,
+    "controlResponseMaxBytes": 131072,
+    "downloadResponseMaxBytes": 65536,
+    "maximumResponsesReservedBeforeDispatch": true,
+    "refunds": false,
+    "automaticRetries": 0
+  },
+  "exactSourceEvidence": {
+    "literalGitBlobsVerified": 458,
+    "payloadFilesVerified": 460,
+    "nativeModuleBuildInputsVerified": 144,
+    "allNativeInputsUnchanged": true,
+    "sourceSha256": {
+      "scripts/offline/TokenForgeArtifactTransaction.mjs": "1581128873a7dd34eaa813e9536f3fbf754a8e6ba79adf50cb83738549397a87",
+      "scripts/offline/TokenForgeArtifactProtocol.mjs": "c2bdb329f6138ce0123f5d734871108436b92a73463a58891d87a18ad7ed4efd",
+      "scripts/offline/TokenForgeOfflineSchema.mjs": "35f26081b73d56bf52d6d8dc6eb7c028a32246cf0fdce5fc321261ff09a7011a",
+      "tests/ArtifactTransaction.test.mjs": "415895ec0bf2c2935bd3175e47ac33f4c08941d8d565fae41ca50027f78e7fe1",
+      "tests/ArtifactProtocol.test.mjs": "f43b04acf67e79d6debe47a2f938113d1e28ebc80a27e69202ef03f40e77c7ab",
+      "docs/goal6-offline-provenance.json": "2d80867df5e09796e5431719a0348a15b4a8aa74190a2ce29ce9f52504a43ef9",
+      "docs/goal6-consolidated-offline.md": "2dcd3847b23e081424e9f23c74d8a27291e2dfa918d4b66ac5d769a87ac15da2",
+      "docs/goal6-offline-transaction-core.md": "e5b32bd186dd5f40606d1e8e980cc977eb9da82c0c1b4457088c005e1f24afa9"
+    }
+  },
+  "reviewKit": {
+    "kind": "TokenForgeOfflineSealerReviewKit",
+    "sourceCommit": "8dee359f9b1616d229ba802ea253d88afed09f8b",
+    "runtimeSource": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "manifestSha256": "6f34985b8fc083d0d003dd6eccd76540cf7e7436f4500dbe2930eba949c7b91b",
+    "archiveSha256": "76063d76c8ad6183993d2938abae2c6a9ea2c10d42842b43545ca9a5f4bfa90f",
+    "archiveBytes": 34208121,
+    "files": 460,
+    "nativeRebuilt": false,
+    "archive": "private local cache/TokenForge-offline-protocol-review-linux-x64.tar.gz",
+    "manifestName": "review-kit-manifest.json",
+    "releasePackage": false,
+    "published": false,
+    "allPayloadAndManifestHashesVerifiedAfterBothGates": true
+  },
+  "reusedRuntime": {
+    "sourceCommit": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "manifestSha256": "8295f2508bc95d67c1ce61904cd3a4bba5a7ccac0f8d30af8ef34066eff383c9",
+    "executableSha256": "987c863bc92f29de27ff812ad360cd1be1a8bde0fda6080f465827dbb6eb99db",
+    "credentialsDllSha256": "30d5d1268223c806e8c6d26fd138ef2f1db58dd23f067f59ac38387e2d7bad32",
+    "nativeModuleBuildInputsUnchanged": 144,
+    "rebuilt": false
+  },
+  "toolchain": {
+    "node": {
+      "executableName": "node",
+      "sha256": "f3432a45b03b2da0d270095fdd8813dc34cbea73f5fc8b18c7a384b7cf9b333a",
+      "version": "v24.18.1"
+    },
+    "pwsh": {
+      "executableName": "pwsh",
+      "sha256": "873de21f04b6a0269c220f9c8396ff5cd639e8deb058a32cc26df54b69bbff8d",
+      "version": "7.6.7"
+    },
+    "git": {
+      "executableName": "git",
+      "sha256": "356db14e102d68a1a37d8a1ac577dfd678d45d46e92f468bef8b7154e7bfdc60",
+      "version": "git version 2.47.3"
+    },
+    "python3": {
+      "executableName": "python3",
+      "sha256": "889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9",
+      "version": "Python 3.13.5"
+    },
+    "pester": {
+      "version": "6.2.0"
+    }
+  },
+  "producerRunGates": {
+    "node": {
+      "command": "node --test --test-reporter=tap tests/ArtifactTransaction.test.mjs tests/ArtifactProtocol.test.mjs",
+      "runFrom": "extracted immutable exact-source kit",
+      "passed": 237,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "exitCode": 0,
+      "privateLogSha256": "24e44696571707936fa7a6477fc2ef9360ff209d229a0b3b89d312d1ad2bb0b4"
+    },
+    "sealer": {
+      "preset": "Sealer",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 224,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": [],
+      "command": "pwsh -NoProfile -File scripts/Invoke-TokenForgeLocalValidation.ps1 -Preset Sealer -NativeExecutable <exact-kit>/tokenforge -ReportPath <new-private-report>",
+      "runFrom": "extracted immutable exact-source kit",
+      "exitCode": 0,
+      "privateReportSha256": "6b7fa00ee0c0d37038feb06c4b55463b5681b502917b837a593f23ce6ca450c6"
+    },
+    "productionWorkflowSealerNativeAndModuleUnchanged": true,
+    "gitDiffCheck": "Passed"
+  },
+  "independentReview": {
+    "reviewer": "independent_review",
+    "type": "Read-only static source/test/documentation plus separate hash/evidence audit; distinct from producer-run suites.",
+    "sourceAndDocsDisposition": "No outstanding material findings; M1 and follow-up boundary findings addressed.",
+    "reviewerReranSuites": false,
+    "publicReferenceHashAudit": "Five runner/Node source files and five pinned protocol distribution files independently matched dossier.",
+    "receiptAndKitAudit": "Clear: independently matched archive/manifest hashes, 460 payload files, 458 literal Git blobs, 144 unchanged runtime inputs, adopted review bytes, ten source-reference hashes, saved Node237/0/0 and Sealer224/0/0 results/report hashes; new public delta has no detected private account paths or credential material. Reviewer did not rerun suites, write files, authenticate or make network requests."
+  },
+  "executionBoundaries": {
+    "publicReferenceInspection": "Anonymous public source/docs only; no candidate package installed/executed for inspection.",
+    "dependenciesInstalled": false,
+    "nativeRebuilt": false,
+    "realArtifactServiceRequests": 0,
+    "runtimeCredentialsRead": false,
+    "actionsSettingsChanged": false,
+    "hostedExecutions": 0,
+    "tenantOperations": 0,
+    "prOrMergePerformed": false,
+    "sourcePush": "One final sanitized source-only push authorized by adopted milestone, using existing Git authentication only.",
+    "privateEvidenceOrLogsPublished": false
+  },
+  "publicContentReview": {
+    "scope": "New source/test/documentation delta since 8ef7f1a; historical evidence retained without rewriting history.",
+    "privateArchivesAndLogsExcluded": true,
+    "localAccountPathsExcludedFromNewContent": true,
+    "credentialsOrPrivateEvidenceExcludedFromNewContent": true,
+    "reviewKitRemainsPrivate": true
+  },
+  "remainingLivePrerequisites": [
+    "No real dispatcher/action entrypoint/credential reader; separate reviewed implementation and explicit authorization required.",
+    "No actual service response/header/capability/origin acceptance, TLS/proxy/no-wire-replay or byte-preserving download proof.",
+    "No selected hosted runner/binary/context/credential verification; dossier records source-supported contract and unresolved facts only.",
+    "No artifact-own attempt binding through validated content/business schemas/privacy approval.",
+    "No hosted controller/source-ref exclusion/restoration procedure, operational emission, signing or publication authorization."
+  ]
+}

@@ -54,7 +54,7 @@ try{
         @{SchemaVersion=1;Source=$script:HealthSources.roadtools;FetchedAt=$now;Data=$data.roadtools}|ConvertTo-Json -Depth 100|Set-Content -LiteralPath $catalogFile -Encoding utf8NoBOM
         $catalog=Get-TokenForgeCatalog $catalogFile
         $discovery=Get-TokenForgeDiscovery -Catalog $catalog -MicrosoftApps $data.microsoftApps -Resources $data.resources -MicrosoftAppsSource $script:HealthSources.microsoftApps -ResourcesSource $script:HealthSources.resources
-        $expectedIgnored=if($data.roadtools.apps.Contains('00000000-0000-0000-0000-000000000000')){1}else{0}
+        $expectedIgnored=@($data.roadtools.apps.Keys|Where-Object {$_ -eq '00000000-0000-0000-0000-000000000000'}).Count+@($data.microsoftApps|Where-Object {$_.AppId -eq '00000000-0000-0000-0000-000000000000'}).Count
         if($discovery.InvalidSourceRecordCount -ne $expectedIgnored -or $discovery.Applications.Count -gt $script:HealthLimits.CatalogRecords){throw 'Invalid complete source projection.'}
         $discovery.FetchedAt=$now
         $discovery.SourceSnapshots=@($rows|ForEach-Object {[pscustomobject]@{Location=$_.uri;Sha256=$_.sha256;HashKind='RawPublicSource'}})

@@ -50,9 +50,11 @@ Exactly three approved source URLs are supported; submitted metadata cannot add 
 | Microsoft applications | `https://raw.githubusercontent.com/merill/microsoft-info/main/_info/MicrosoftApps.json` |
 | Resource candidates | `https://raw.githubusercontent.com/f-bader/entrascopes.com/main/resources.json` |
 
+The narrow health HTTP helper streams capped bytes for both fixed public sources and the later binary artifact download. The general collector source helper currently buffers up to 128 MiB and returns text, so this lane keeps that account-collector path unchanged. It reuses the existing source projections, complete catalog policies and transactional importer, with the same reserve-before-dispatch/no-redirect budget rules; it adds no generic dispatcher or account collection envelope.
+
 Collection permits at most six HTTP requests, at most two attempts per source, 30 seconds per request and 600 seconds overall. Retries consume that same allowance. There is no recursive URL discovery, redirect following, identity request or automatic extra source. Schema-invalid data does not receive a transient retry.
 
-Each source document is limited to 8 MiB and 10,000 source records; the combined catalog is limited to 30,000 application IDs. The validated public ledger is limited to 64 MiB, health summary to 64 KiB and manifest to 16 KiB. Complete-input validation checks schema, IDs, source references, counts and public evidence structure before import. It rejects unexpected private fields; it does not prove upstream claims true or make arbitrary free text safe to publish.
+Each source document is limited to 8 MiB and 10,000 source records; the combined catalog is limited to 30,000 application IDs. The validated public ledger is limited to 64 MiB, health summary to 64 KiB and manifest to 16 KiB. Complete-input validation checks schema, IDs, source references, counts and public evidence structure before import. Published GUID case is accepted through the existing canonical projection; unknown owner hints remain unknown, and explicit zero-ID placeholders are excluded. Malformed ID suffixes, whitespace repairs and conflicting IDs after canonicalization are refused, not silently corrected or discarded. It rejects unexpected private fields; it does not prove upstream claims true or make arbitrary free text safe to publish.
 
 The exchange contains exactly `manifest.json`, `health.json` and `metadata.json`. Manifest member hashes and byte counts must match. Hosted context includes repository, repository/workflow/run IDs, attempt, event, source SHA and branch; local fixture exchanges cannot claim hosted provenance. Source raw-response hashes remain retrieval evidence. Raw source responses are not retained in the exchange.
 
@@ -62,7 +64,7 @@ A complete empty pass with a previous ledger records explicit absence/tombstones
 
 ## Private state and recovery
 
-The workstation owns `applications.sqlite`, including its private origins/history. Public import validates the entire incoming public ledger before merging; it does not redact or apply the public-only validator to the mixed private destination. Existing frozen inventory, cohort, plan, scope and flow evidence remain in place. Public drift does not resume research or replace a plan.
+The workstation owns `applications.sqlite`, including its private origins/history. Public import validates the entire incoming public ledger before merging; it does not redact or apply the public-only validator to the mixed private destination. Existing frozen inventory, cohort, plan, scope and flow evidence remain in place. Public drift does not resume research or replace a plan. Compare saved cohort context before new deep work; using changed metadata requires explicitly selecting a new plan, while old checkpoints remain available for their original exact-plan resume.
 
 Sync holds the state's `.writer.lock` and the catalog's `applications.sqlite.lock`. A competing writer causes a clean refusal. Native import uses its existing transaction and run-identity deduplication, preserving private namespaces and preventing older facts from replacing newer ones.
 

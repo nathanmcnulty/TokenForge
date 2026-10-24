@@ -104,6 +104,38 @@ Describe 'Public metadata health entry point' {
         Write-HealthFixture $p $data
         (Invoke-FixtureCollection $fixtures).Result.CollectionComplete|Should -BeFalse
     }
+    It 'accepts published GUID casing and absent owner hints without claiming ownership' {
+        $fixtures=New-HealthFixtures
+        Write-HealthFixture (Join-Path $fixtures microsoftApps.json) @(@{AppId='22222222-AAAA-4AAA-8AAA-222222222222';AppDisplayName='Published case fixture';AppOwnerOrganizationId='';Source='Graph'})
+        $r=Invoke-FixtureCollection $fixtures
+        $r.Result.CollectionComplete|Should -BeTrue
+        $r.Exchange.Ledger.Applications.Contains('22222222-aaaa-4aaa-8aaa-222222222222')|Should -BeTrue
+        $r.Exchange.Ledger.Applications['22222222-aaaa-4aaa-8aaa-222222222222'].Records['Discovery///'].Attributes.Ownership|Should -BeExactly Unverified
+    }
+    It 'counts and excludes an explicit zero-ID MicrosoftApps placeholder' {
+        $fixtures=New-HealthFixtures
+        Write-HealthFixture (Join-Path $fixtures microsoftApps.json) @(@{AppId='00000000-0000-0000-0000-000000000000';AppDisplayName='Placeholder';AppOwnerOrganizationId=$null;Source='Graph'})
+        $r=Invoke-FixtureCollection $fixtures
+        $r.Result.CollectionComplete|Should -BeTrue
+        $r.Exchange.Ledger.Applications.Contains('00000000-0000-0000-0000-000000000000')|Should -BeFalse
+    }
+    It 'rejects a malformed published ID suffix instead of trimming or omitting it' {
+        $fixtures=New-HealthFixtures;$first=Invoke-FixtureCollection $fixtures
+        Write-HealthFixture (Join-Path $fixtures microsoftApps.json) @(@{AppId=('11111111-1111-1111-1111-111111111111'+[char]0x00c2+[char]0x00a0);AppDisplayName='Malformed fixture';AppOwnerOrganizationId='';Source='Graph'})
+        $r=Invoke-FixtureCollection $fixtures $first.Path
+        $r.Result.CollectionComplete|Should -BeFalse
+        @($r.Exchange.Health.sources|Where-Object name -EQ microsoftApps)[0].status|Should -BeExactly Invalid
+        (Get-FileHash $r.Exchange.MetadataPath).Hash|Should -BeExactly (Get-FileHash $first.Exchange.MetadataPath).Hash
+    }
+    It 'refuses duplicate scope-resource IDs after GUID case normalization' {
+        $fixtures=New-HealthFixtures;$p=Join-Path $fixtures roadtools.json
+        $data=Read-TokenForgeHealthJson ([IO.File]::ReadAllBytes($p))
+        $data.apps['11111111-1111-1111-1111-111111111111'].scopes.Add('00000003-0000-0000-C000-000000000000',@('Other.Read'))
+        Write-HealthFixture $p $data
+        $r=Invoke-FixtureCollection $fixtures
+        $r.Result.CollectionComplete|Should -BeFalse
+        @($r.Exchange.Health.sources|Where-Object name -EQ roadtools)[0].status|Should -BeExactly Invalid
+    }
     It 'refuses a fixture claiming hosted identity' {
         $fixtures=New-HealthFixtures;$context=Join-Path $TestDrive context.json
         Write-HealthFixture $context @{repository='owner/repo';repositoryId='1';workflowId='2';runId='3';attempt='1';event='workflow_dispatch';headSha=$revision;headBranch='main'}

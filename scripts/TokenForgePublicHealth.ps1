@@ -77,6 +77,13 @@ function Assert-TokenForgeHealthGuid {
     $g=[guid]::Empty
     if($Value -isnot [string] -or -not [guid]::TryParse($Value,[ref]$g) -or (-not $AllowEmpty -and $g -eq [guid]::Empty) -or $g.ToString() -cne $Value){throw 'Invalid public metadata ID.'}
 }
+function Assert-TokenForgeHealthPublishedGuid {
+    param($Value,[switch]$AllowEmpty)
+    # Published GUID case is descriptive spelling, not a new identity. Refuse
+    # whitespace, braces and malformed suffixes instead of repairing them.
+    if($Value -isnot [string] -or $Value -cnotmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'){throw 'Invalid published metadata ID.'}
+    Assert-TokenForgeHealthGuid ($Value.ToLowerInvariant()) -AllowEmpty:$AllowEmpty
+}
 function Assert-TokenForgeHealthCount {
     param($Value,[int]$Maximum)
     if($Value -isnot [long] -and $Value -isnot [int] -or $Value -lt 0 -or $Value -gt $Maximum){throw 'Invalid public health count.'}
@@ -89,8 +96,10 @@ function Assert-TokenForgeHealthSource {
         if($Data.apps -isnot [Collections.IDictionary] -or $Data.resourceidentifiers -isnot [Collections.IDictionary]){throw 'Invalid catalog source.'}
         Assert-TokenForgeHealthCount $Data.apps.Count $script:HealthLimits.SourceRecords
         Assert-TokenForgeHealthCount $Data.resourceidentifiers.Count $script:HealthLimits.SourceRecords
+        $appIds=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
         foreach($id in $Data.apps.Keys){
-            Assert-TokenForgeHealthGuid $id -AllowEmpty;$app=$Data.apps[$id]
+            if(-not $appIds.Add($id)){throw 'Conflicting normalized application IDs.'}
+            Assert-TokenForgeHealthPublishedGuid $id -AllowEmpty;$app=$Data.apps[$id]
             # Two extra ROADtools fields are validated but do not become authority.
             $optional=@('preferred_interactive_redirurl','result')|Where-Object {$app.Contains($_)}
             Assert-TokenForgeHealthKeys $app (@('name','public_client','foci','redirect_uris','preferred_noninteractive_redirurl','scopes')+@($optional))
@@ -100,13 +109,15 @@ function Assert-TokenForgeHealthSource {
             if($app.public_client -isnot [bool] -or $app.foci -isnot [bool] -or $app.redirect_uris -isnot [array] -or $app.redirect_uris.Count -gt 256 -or $app.scopes -isnot [Collections.IDictionary] -or $app.scopes.Count -gt 4096){throw 'Invalid catalog application.'}
             Assert-TokenForgeHealthText $app.preferred_noninteractive_redirurl -Nullable
             foreach($uri in $app.redirect_uris){Assert-TokenForgeHealthText $uri}
+            $resourceIds=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
             foreach($resource in $app.scopes.Keys){
-                Assert-TokenForgeHealthGuid $resource;$scopes=$app.scopes[$resource]
+                if(-not $resourceIds.Add($resource)){throw 'Conflicting normalized resource IDs.'}
+                Assert-TokenForgeHealthPublishedGuid $resource;$scopes=$app.scopes[$resource]
                 if($scopes -isnot [array] -or $scopes.Count -gt 4096){throw 'Invalid catalog scopes.'}
                 foreach($scope in $scopes){if($scope -isnot [string] -or $scope.Length -gt 256 -or $scope -cnotmatch '^[A-Za-z0-9_.-]+$'){throw 'Invalid catalog scope.'}}
             }
         }
-        foreach($uri in $Data.resourceidentifiers.Keys){Assert-TokenForgeHealthText $uri;Assert-TokenForgeHealthGuid $Data.resourceidentifiers[$uri]}
+        foreach($uri in $Data.resourceidentifiers.Keys){Assert-TokenForgeHealthText $uri;Assert-TokenForgeHealthPublishedGuid $Data.resourceidentifiers[$uri]}
         return $Data.apps.Count
     }
     if($Name -cnotin @('microsoftApps','resources') -or $Data -isnot [array] -or $Data.Count -gt $script:HealthLimits.SourceRecords){throw 'Invalid metadata source array.'}
@@ -114,13 +125,14 @@ function Assert-TokenForgeHealthSource {
     foreach($row in $Data){
         if($Name -ceq 'microsoftApps'){
             Assert-TokenForgeHealthKeys $row @('AppId','AppDisplayName','AppOwnerOrganizationId','Source')
-            Assert-TokenForgeHealthGuid $row.AppId;Assert-TokenForgeHealthGuid $row.AppOwnerOrganizationId
+            Assert-TokenForgeHealthPublishedGuid $row.AppId -AllowEmpty
+            if($null -ne $row.AppOwnerOrganizationId){if($row.AppOwnerOrganizationId -isnot [string]){throw 'Invalid public owner hint.'};if($row.AppOwnerOrganizationId.Length -gt 0){Assert-TokenForgeHealthPublishedGuid $row.AppOwnerOrganizationId}}
             Assert-TokenForgeHealthText $row.AppDisplayName;Assert-TokenForgeHealthText $row.Source -Maximum 128
             # Different published source claims for one ID are legitimate conflicts.
-            $key=$row.AppId+'/'+$row.Source
+            $key=$row.AppId.ToLowerInvariant()+'/'+$row.Source
         }else{
             Assert-TokenForgeHealthKeys $row @('resourceId','displayName')
-            Assert-TokenForgeHealthGuid $row.resourceId;Assert-TokenForgeHealthText $row.displayName;$key=$row.resourceId
+            Assert-TokenForgeHealthPublishedGuid $row.resourceId;Assert-TokenForgeHealthText $row.displayName;$key=$row.resourceId.ToLowerInvariant()
         }
         if(-not $seen.Add($key)){throw 'Duplicate public source identity.'}
     }

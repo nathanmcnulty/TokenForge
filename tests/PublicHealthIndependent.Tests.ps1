@@ -123,7 +123,8 @@ Describe 'Independent public health trust and recovery cases' {
  }
  It 'refuses packaging a source label other than the owning checkpoint before creating output' {
   $out=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
-  $base=Split-Path $native -Parent
+  $base=$env:TOKENFORGE_TEST_BASE_PACKAGE
+  if(-not $base){$base=Split-Path $native -Parent}
   {& "$repo/scripts/New-TokenForgePublicHealthPackage.ps1" -BasePackagePath $base -OutputPath $out -SourceRevision ('0'*40)}|Should -Throw '*owning HEAD*'
   Test-Path $out|Should -BeFalse
  }

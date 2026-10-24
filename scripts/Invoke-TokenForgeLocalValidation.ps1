@@ -4,6 +4,7 @@ param(
     [ValidateSet('PublicHealth', 'Weekly', 'Native', 'Discovery', 'Collector', 'Changes', 'Admin', 'Refresh', 'Lab', 'Publication', 'Attestation', 'Sealer', 'ReleaseReadiness', 'ReleaseGuards')]
     [string]$Preset = 'Weekly',
     [string]$NativeExecutable,
+    [string]$BasePackage,
     [string]$AttestationVerifierPath,
     [string]$AttestationReleaseArchive,
     [string]$ReportPath
@@ -27,12 +28,17 @@ $summary = [ordered]@{
     failedTests = @()
 }
 $previousNative = $env:TOKENFORGE_TEST_NATIVE
+$previousBasePackage = $env:TOKENFORGE_TEST_BASE_PACKAGE
 $previousVerifier = $env:TOKENFORGE_TEST_ATTESTATION_VERIFIER
 $previousArchive = $env:TOKENFORGE_TEST_ATTESTATION_ARCHIVE
 $reportTarget = $null
 $testPaths = @()
 
 try {
+    if ($Preset -eq 'PublicHealth') {
+        if (-not $BasePackage -or -not (Test-Path (Join-Path $BasePackage local-package-manifest.json) -PathType Leaf)) { throw 'PublicHealth requires the existing reviewed BasePackage for provenance refusal tests.' }
+        $env:TOKENFORGE_TEST_BASE_PACKAGE=(Resolve-Path $BasePackage).Path
+    }
     if ($Preset -eq 'Attestation') {
         if ([string]::IsNullOrWhiteSpace($AttestationVerifierPath) -or [string]::IsNullOrWhiteSpace($AttestationReleaseArchive)) { throw 'Attestation requires existing verifier and release archive paths; no install/download fallback.' }
         $env:TOKENFORGE_TEST_ATTESTATION_VERIFIER = (Resolve-Path -LiteralPath $AttestationVerifierPath).Path
@@ -143,6 +149,8 @@ try {
     if ($summary.code -ne 'SetupFailed') { $summary.code = 'TestsFailed' }
     if ($summary.failed -eq 0 -and $summary.containersfailed -eq 0) { $summary.failed = 1 }
 } finally {
+    if ($null -eq $previousBasePackage) { Remove-Item Env:TOKENFORGE_TEST_BASE_PACKAGE -ErrorAction SilentlyContinue }
+    else { $env:TOKENFORGE_TEST_BASE_PACKAGE = $previousBasePackage }
     if ($null -eq $previousNative) { Remove-Item Env:TOKENFORGE_TEST_NATIVE -ErrorAction SilentlyContinue }
     else { $env:TOKENFORGE_TEST_NATIVE = $previousNative }
     if ($null -eq $previousVerifier) { Remove-Item Env:TOKENFORGE_TEST_ATTESTATION_VERIFIER -ErrorAction SilentlyContinue }

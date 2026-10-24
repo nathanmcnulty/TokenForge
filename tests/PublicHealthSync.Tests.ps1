@@ -2,7 +2,8 @@ BeforeAll {
  $repo=Split-Path $PSScriptRoot -Parent
  . "$repo/scripts/TokenForgePublicHealth.ps1"
  . "$repo/scripts/TokenForgePublicHealthSync.ps1"
- $native=Join-Path $repo '.cache/goal6/accepted-package/linux-x64/tokenforge'
+ $native=$env:TOKENFORGE_TEST_NATIVE
+ if(-not $native){throw 'Sync tests require the reviewed Linux package.'}
  Initialize-TokenForgeHealthRuntime $native
  $id='11111111-1111-1111-1111-111111111111'
  function New-SyncExchange([string]$Root,[string]$Name='Example',[switch]$Empty,[switch]$Partial,[string]$Previous){

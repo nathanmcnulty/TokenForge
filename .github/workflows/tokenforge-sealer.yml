@@ -9,7 +9,7 @@ on:
 permissions: {}
 env:
   # Implementation and workflow are separate immutable commits; never caller input.
-  TF_SEALER_CODE_COMMIT: 6d4f9fb6e0d9be371997585df6bcfbcbccb03188
+  TF_SEALER_CODE_COMMIT: eaea345873364d5caf4f4e6cab1762edd774d1e8
 concurrency:
   group: tokenforge-sealer-${{ github.run_id }}-${{ github.run_attempt }}
   cancel-in-progress: false

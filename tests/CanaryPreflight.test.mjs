@@ -16,7 +16,7 @@ test('service/action/controller gates do not inspect supplied context or credent
  let reads=0;const trapped=new Proxy({},{get(){reads++;throw Error('SecretRead');},ownKeys(){reads++;throw Error('SecretRead');}});
  assert.throws(()=>serviceModeGate(trapped),/ServiceModeDisabled/);assert.throws(()=>executeCanaryControl(trapped),/ServiceModeDisabled/);await assert.rejects(runDormantCanaryAction(trapped),/ServiceModeDisabled/);assert.equal(reads,0);
  for(const script of ['scripts/Invoke-TokenForgeCanaryControl.mjs','.github/actions/tokenforge-canary/index.mjs']){
-  const r=spawnSync(process.execPath,[script],{cwd:new URL('..',import.meta.url),env:{PATH:'/usr/bin:/bin',ACTIONS_RUNTIME_TOKEN:'SYNTHETIC_NO_USE',GITHUB_TOKEN:'SYNTHETIC_NO_USE'},encoding:'utf8',timeout:3000});assert.equal(r.status,1);assert.equal(r.stdout,'');assert.equal(r.stderr,'TokenForgeServiceModeDisabled\n');
+  const r=spawnSync(process.execPath,[script],{cwd:new URL('..',import.meta.url),env:{PATH:'/usr/bin:/bin',ACTIONS_RUNTIME_TOKEN:'SYNTHETIC_NO_USE',GITHUB_TOKEN:'SYNTHETIC_NO_USE',TF_CANARY_READ_TOKEN:'SYNTHETIC_NO_USE'},encoding:'utf8',timeout:3000});assert.equal(r.status,1);assert.equal(r.stdout,'');assert.equal(r.stderr,'TokenForgeServiceModeDisabled\n');
  }
 });
 const now=Date.parse('2026-10-24T00:00:00Z');
@@ -35,8 +35,8 @@ test('restoration requires exclusive custody and unchanged last-applied state',(
  const options={original:state,lastApplied:applied,current:applied,exclusiveCustody:true};const p=planRestoration(options);assert.equal(p.executable,false);assert.equal(p.casSupportEstablished,false);assert.deepEqual(p.operations.map(x=>x.body),[null,{enabled:false}]);
  for(const change of [{exclusiveCustody:false},{current:{...applied,allowedActions:'all'}},{current:{...applied,enabled:false}},{original:{...state,repositoryId:'1'}},{original:{...state,workflowId:'2'}}])assert.throws(()=>planRestoration({...options,...change}));
 });
-test('controller procedure has fixed caps, no redispatch slot, no executable implementation',()=>{const p=controlProcedure();assert.equal(p.reduce((n,x)=>n+x.maxUses,0),29);assert.ok(29<=CONTROL_LIMITS.attempts);assert.equal(p.find(x=>x.phase==='DispatchOnce').maxUses,1);assert.equal(CONTROL_LIMITS.mutations,6);assert.equal(CONTROL_LIMITS.totalMs,480000);});
-test('dormant action and controller contain no credential/environment or network reader',()=>{
- for(const file of ['.github/actions/tokenforge-canary/index.mjs','scripts/Invoke-TokenForgeCanaryControl.mjs','scripts/transport/TokenForgeCanaryControl.mjs','scripts/transport/TokenForgeCanaryPreflight.mjs'])assert.doesNotMatch(fs.readFileSync(new URL('../'+file,import.meta.url),'utf8'),/process\.env|fetch\(|https\.request|execFile|readFile/);
+test('controller procedure has fixed caps, no redispatch slot and no live execution',()=>{const p=controlProcedure();assert.equal(p.reduce((n,x)=>n+x.maxUses,0),29);assert.ok(29<=CONTROL_LIMITS.attempts);assert.equal(p.find(x=>x.phase==='DispatchOnce').maxUses,1);assert.equal(CONTROL_LIMITS.mutations,6);assert.equal(CONTROL_LIMITS.totalMs,480000);});
+test('public entrypoint and controller sources contain no credential environment or network reader',()=>{
+ for(const file of ['.github/actions/tokenforge-canary/index.mjs','scripts/Invoke-TokenForgeCanaryControl.mjs','scripts/transport/TokenForgeCanaryControl.mjs','scripts/transport/TokenForgeCanaryPreflight.mjs'])assert.doesNotMatch(fs.readFileSync(new URL('../'+file,import.meta.url),'utf8'),/process\.env|fetch\(|https\.request|execFile/);
  const action=fs.readFileSync(new URL('../.github/actions/tokenforge-canary/action.yml',import.meta.url),'utf8');assert.match(action,/using: node24/);assert.doesNotMatch(action,/inputs:|outputs:/);
 });

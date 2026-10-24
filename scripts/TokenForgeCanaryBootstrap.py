@@ -1,0 +1,252 @@
+#!/usr/bin/python3
+"""Inert public-source bootstrap. Run with Python -I -S -B; no activation flag exists.
+
+The external-fetch implementation is deliberately unreachable. Only the internal
+local-object fixture helper is exercised now. The Git pin identifies an existing
+local tool; it establishes no hosted runner, helper, library or Python provenance.
+"""
+import hashlib
+import os
+from pathlib import Path
+import re
+import selectors
+import shutil
+import signal
+import stat
+import subprocess
+import sys
+import tempfile
+import time
+
+PUBLIC_SOURCE = "https://github.com/nathanmcnulty/TokenForge.git"
+GIT_EXECUTABLE = "/usr/bin/git"
+LOCAL_GIT_SHA256 = "356db14e102d68a1a37d8a1ac577dfd678d45d46e92f468bef8b7154e7bfdc60"
+MAX_FILES = 4096
+# Exported literal blob bytes, not a claim about fetch pack/disk traffic.
+MAX_SOURCE_BYTES = 32 * 1024 * 1024
+MAX_PATH_BYTES = 240
+BOOTSTRAP_SECONDS = 30
+_OID = re.compile(r"[0-9a-f]{40}\Z")
+_COMPONENT = re.compile(r"[A-Za-z0-9_.-]{1,80}\Z")
+
+
+class BootstrapRefused(Exception):
+    pass
+
+
+def service_mode_gate():
+    raise BootstrapRefused("TokenForgeServiceModeDisabled")
+
+
+def _check_git_executable():
+    # Deliberately reject a different tool, rather than adopting a runner's hash.
+    descriptor = os.open(GIT_EXECUTABLE, os.O_RDONLY | os.O_NOFOLLOW)
+    with os.fdopen(descriptor, "rb") as source:
+        metadata = os.fstat(source.fileno())
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > 16 * 1024 * 1024:
+            raise BootstrapRefused("TokenForgeBootstrapGitUnapproved")
+        data = source.read(16 * 1024 * 1024 + 1)
+        if len(data) != metadata.st_size:
+            raise BootstrapRefused("TokenForgeBootstrapGitUnapproved")
+        digest = hashlib.sha256(data).hexdigest()
+    if digest != LOCAL_GIT_SHA256:
+        raise BootstrapRefused("TokenForgeBootstrapGitUnapproved")
+
+
+def _child_environment(home):
+    # Git's libcurl can consult .netrc. An absent HOME can fall back to passwd;
+    # use an actual empty private directory, never the parent's HOME or configs.
+    home.mkdir(mode=0o700)
+    (home / "xdg").mkdir(mode=0o700)
+    return {
+        "PATH": "/usr/bin:/bin", "HOME": str(home),
+        "XDG_CONFIG_HOME": str(home / "xdg"), "LC_ALL": "C", "TZ": "UTC",
+        "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_SYSTEM": "/dev/null",
+        "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_COUNT": "0",
+        "GIT_ATTR_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0",
+        "GIT_ASKPASS": "/bin/false", "SSH_ASKPASS": "/bin/false",
+        "GIT_PROTOCOL_FROM_USER": "0", "GIT_NO_REPLACE_OBJECTS": "1",
+        "GIT_NO_LAZY_FETCH": "1", "GIT_OPTIONAL_LOCKS": "0",
+    }
+
+
+_GIT_CONFIG = (
+    "core.hooksPath=/dev/null", "core.attributesFile=/dev/null",
+    "credential.helper=", "credential.interactive=false", "core.askPass=/bin/false",
+    "http.extraHeader=", "http.followRedirects=false", "http.proxy=",
+    "http.sslVerify=true", "http.emptyAuth=false", "http.delegation=none",
+    "http.cookieFile=", "http.saveCookies=false", "http.version=HTTP/1.1",
+    "http.maxRequests=1", "protocol.allow=never", "protocol.https.allow=always",
+    "protocol.version=2", "fetch.recurseSubmodules=false", "submodule.recurse=false",
+    "gc.auto=0", "maintenance.auto=false", "fetch.writeCommitGraph=false",
+    "transfer.fsckObjects=true", "fetch.fsckObjects=true",
+)
+
+
+def _git(repository, arguments, environment, deadline, output_cap):
+    command = [GIT_EXECUTABLE, "--no-replace-objects", "--no-lazy-fetch"]
+    for value in _GIT_CONFIG:
+        command.extend(("-c", value))
+    command.extend(("--git-dir=" + str(repository), *arguments))
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise BootstrapRefused("TokenForgeBootstrapExpired")
+    try:
+        process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                   stderr=subprocess.DEVNULL, env=environment, cwd=environment["HOME"],
+                                   close_fds=True, start_new_session=True)
+    except OSError:
+        raise BootstrapRefused("TokenForgeBootstrapGitRefused") from None
+    output = bytearray()
+    try:
+        os.set_blocking(process.stdout.fileno(), False)
+        with selectors.DefaultSelector() as selector:
+            selector.register(process.stdout, selectors.EVENT_READ)
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0 or not selector.select(remaining):
+                    raise BootstrapRefused("TokenForgeBootstrapExpired")
+                chunk = os.read(process.stdout.fileno(), min(65536, output_cap - len(output) + 1))
+                if not chunk:
+                    break
+                output.extend(chunk)
+                if len(output) > output_cap:
+                    raise BootstrapRefused("TokenForgeBootstrapOutputExceeded")
+        remaining = deadline - time.monotonic()
+        if remaining <= 0 or process.wait(timeout=remaining) != 0:
+            raise BootstrapRefused("TokenForgeBootstrapGitRefused")
+        return bytes(output)
+    except (OSError, subprocess.TimeoutExpired):
+        raise BootstrapRefused("TokenForgeBootstrapGitRefused") from None
+    finally:
+        # Also terminate any helper inheriting the pipe; never retry the command.
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.wait()
+        process.stdout.close()
+
+
+def _source_entries(raw):
+    if not raw or not raw.endswith(b"\0"):
+        raise BootstrapRefused("TokenForgeBootstrapTreeRefused")
+    records = raw[:-1].split(b"\0")
+    if len(records) > MAX_FILES:
+        raise BootstrapRefused("TokenForgeBootstrapFileLimit")
+    entries, seen, total = [], set(), 0
+    for record in records:
+        try:
+            metadata, path_bytes = record.split(b"\t", 1)
+            mode, kind, oid_bytes, size_bytes = metadata.split()
+            path = path_bytes.decode("ascii")
+            oid = oid_bytes.decode("ascii")
+        except (ValueError, UnicodeError):
+            raise BootstrapRefused("TokenForgeBootstrapTreeRefused") from None
+        parts = path.split("/")
+        if (mode not in (b"100644", b"100755") or kind != b"blob" or not _OID.fullmatch(oid)
+                or not re.fullmatch(rb"(?:0|[1-9][0-9]{0,8})", size_bytes)
+                or len(path_bytes) > MAX_PATH_BYTES or len(parts) > 12
+                or any(not _COMPONENT.fullmatch(part) or part in (".", "..")
+                       or part.lower() == ".git" or part.endswith(".") for part in parts)
+                or path in seen):
+            raise BootstrapRefused("TokenForgeBootstrapTreeRefused")
+        size = int(size_bytes)
+        total += size
+        if total > MAX_SOURCE_BYTES:
+            raise BootstrapRefused("TokenForgeBootstrapSizeLimit")
+        seen.add(path)
+        entries.append((path, oid, size, 0o755 if mode == b"100755" else 0o644))
+    if any("/".join(path.split("/")[:index]) in seen
+           for path in seen for index in range(1, len(path.split("/")))):
+        raise BootstrapRefused("TokenForgeBootstrapTreeRefused")
+    return entries
+
+
+def _export_objects(repository, commit, destination, environment, deadline):
+    if not isinstance(commit, str) or not _OID.fullmatch(commit):
+        raise BootstrapRefused("TokenForgeBootstrapCommitRefused")
+    destination = Path(destination)
+    if (not destination.is_absolute() or destination.name in ("", ".", "..")
+            or destination.parent.resolve(strict=True) != destination.parent):
+        raise BootstrapRefused("TokenForgeBootstrapDestinationRefused")
+    if _git(repository, ["cat-file", "-t", commit], environment, deadline, 16) != b"commit\n":
+        raise BootstrapRefused("TokenForgeBootstrapCommitRefused")
+    entries = _source_entries(_git(repository, ["ls-tree", "-rlz", "--full-tree", commit],
+                                  environment, deadline, MAX_FILES * 400))
+    # No checkout, archive, attributes, filters, hooks, submodules or source code
+    # runs. Validate the complete tree before creating any exported source path.
+    destination.mkdir(mode=0o700)
+    try:
+        for path, oid, size, mode in entries:
+            data = _git(repository, ["cat-file", "blob", oid], environment, deadline, size)
+            if (len(data) != size
+                    or hashlib.sha1(b"blob " + str(size).encode("ascii") + b"\0" + data).hexdigest() != oid):
+                raise BootstrapRefused("TokenForgeBootstrapBlobRefused")
+            output = destination / path
+            directory = destination
+            for component in path.split("/")[:-1]:
+                directory = directory / component
+                directory.mkdir(mode=0o700, exist_ok=True)
+            descriptor = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+            with os.fdopen(descriptor, "wb") as target:
+                target.write(data)
+                os.fchmod(target.fileno(), mode)
+        return {"source": commit, "files": len(entries), "bytes": sum(entry[2] for entry in entries),
+                "externalFetchExecuted": False, "selectedHostedToolApproved": False}
+    except BaseException:
+        shutil.rmtree(destination)
+        raise
+
+
+def _export_local_git_objects_for_fixture(repository, commit, destination):
+    """Internal tests only: an existing synthetic local object DB, never a URL."""
+    _check_git_executable()
+    repository = Path(repository)
+    if (not repository.is_absolute() or repository.resolve(strict=True) != repository
+            or not repository.is_dir() or (repository / "objects/info/alternates").exists()
+            or (repository / "objects/info/http-alternates").exists()):
+        raise BootstrapRefused("TokenForgeBootstrapFixtureRefused")
+    with tempfile.TemporaryDirectory(prefix="tf-canary-bootstrap-", dir="/tmp") as temporary:
+        environment = _child_environment(Path(temporary) / "home")
+        return _export_objects(repository, commit, destination, environment,
+                               time.monotonic() + BOOTSTRAP_SECONDS)
+
+
+def _future_bootstrap(source_commit, destination):
+    # This complete external-fetch path has NEVER been executed in this package.
+    # Deleting this gate requires a separate exact-source/tool/custody approval.
+    service_mode_gate()
+    if not isinstance(source_commit, str) or not _OID.fullmatch(source_commit):
+        raise BootstrapRefused("TokenForgeBootstrapCommitRefused")
+    _check_git_executable()
+    deadline = time.monotonic() + BOOTSTRAP_SECONDS
+    with tempfile.TemporaryDirectory(prefix="tf-canary-bootstrap-", dir="/tmp") as temporary:
+        root = Path(temporary)
+        environment = _child_environment(root / "home")
+        repository, template = root / "objects.git", root / "empty-template"
+        template.mkdir(mode=0o700)
+        _git(repository, ["init", "--bare", "--object-format=sha1", "--template=" + str(template)],
+             environment, deadline, 1024)
+        # One fixed public HTTPS fetch invocation, no redirects or retry loop.
+        _git(repository, ["fetch", "--depth=1", "--no-tags", "--no-recurse-submodules",
+                          "--no-auto-maintenance", "--no-write-fetch-head", PUBLIC_SOURCE, source_commit],
+             environment, deadline, 1024)
+        result = _export_objects(repository, source_commit, destination, environment, deadline)
+        return {**result, "externalFetchExecuted": True}
+
+
+def main():
+    # FIRST: do not inspect argv, environment, network, files or temp directories.
+    service_mode_gate()
+    if len(sys.argv) != 3:
+        raise BootstrapRefused("TokenForgeBootstrapArgumentsRefused")
+    return _future_bootstrap(sys.argv[1], sys.argv[2])
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except BootstrapRefused as error:
+        sys.stderr.write(str(error) + "\n")
+        sys.exit(1)

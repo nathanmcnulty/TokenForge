@@ -10,11 +10,12 @@ import {promisify} from 'node:util';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {OfflineArtifactTransaction as Tx,createFakeClock,createFakeTransport} from '../scripts/offline/TokenForgeArtifactTransaction.mjs';
-import {createLocalTlsTransport,createServiceTransport,localRuntimeIdentity} from '../scripts/transport/TokenForgeLocalTlsTransport.mjs';
-import {tlsMaterial,startTlsFixture,CONTEXT} from './fixtures/publication/LocalTlsFixture.mjs';
+import {createLocalTlsTransport,createServiceTransport,localRuntimeIdentity,assertApprovedLocalRuntime} from '../scripts/transport/TokenForgeLocalTlsTransport.mjs';
+import {tlsMaterial,startTlsFixture,CONTEXT,expectedFixtureRoutes} from './fixtures/publication/LocalTlsFixture.mjs';
 let root,material,other,wrongName,original;
 const hash=b=>createHash('sha256').update(b).digest('hex');
 before(()=>{
+ assertApprovedLocalRuntime();
  root=fs.mkdtempSync(path.join(os.tmpdir(),'tf-local-tls-'));fs.chmodSync(root,0o700);material=tlsMaterial(root);other=tlsMaterial(root);wrongName=tlsMaterial(root,'wrong.fixture.invalid');
  const dir=path.join(root,'files');fs.mkdirSync(dir,{mode:0o700});for(const n of ['coverage.json','flows.json','manifest.json','recipe.json','review.md','scopes.json','validation.json'])fs.writeFileSync(path.join(dir,n),n.endsWith('.json')?'{}':'Synthetic');
  const file=path.join(root,'original.zip');execFileSync('/usr/bin/python3',['-I',path.join(path.dirname(fileURLToPath(import.meta.url)),'fixtures/publication/MutateSealerZip.py'),dir,file,'canonical-from-directory']);original=fs.readFileSync(file);
@@ -42,7 +43,7 @@ for(const [op,unknown] of [['Create','CreateUnknown'],['Block','UploadUnknown'],
  const count=f.server.state.requests;await f.tx.advance();assert.equal(f.server.state.requests,count);assert.equal(f.server.state.records.filter(x=>x.op===op).length,1);assert.deepEqual(fs.readFileSync(path.join(f.tx.directory,'original.zip')),original);
  if(op==='Finalize'&&mode==='dropAck'){assert.equal((await f.tx.observe()).state,'Observed');assert.equal(f.server.state.requests,12);assert.equal(f.tx.snapshot().priorUnknown,'FinalizeUnknown');}
 });
-for(const mode of ['headerOverflow','duplicateLength','ambiguousLength','oversizeDeclared','oversizeChunked','partial','encoding','badJson'])test(`actual ${mode} response is bounded/sanitized and remains unknown`,async t=>{
+for(const mode of ['protoHeader','duplicateProtoHeader','headerOverflow','duplicateLength','ambiguousLength','oversizeDeclared','oversizeChunked','partial','encoding','badJson'])test(`actual ${mode} response is bounded/sanitized and remains unknown`,async t=>{
  const f=await fixture(t,{fault:{op:'Create',mode}});const r=await f.tx.advance();assert.equal(r.state,'CreateUnknown');assert.equal(f.tx.snapshot().ledger.length,1);assert.equal(f.server.state.requests,1);
  assert.doesNotMatch(JSON.stringify(r)+JSON.stringify(f.tx.snapshot())+JSON.stringify(f.transport.transcript()),/TF_FIXTURE_|SYNTHETIC_RESPONSE_SECRET|fixture%2B/);await f.tx.advance();assert.equal(f.server.state.requests,1);
 });
@@ -96,4 +97,13 @@ for(const op of ['Artifact','Run'])test(`expiry during ${op} response cannot bec
 });
 test('completed evidence remains historical when its known expiry passes',async t=>{
  const f=await fixture(t,{expiryDelayOp:'Never'});await upload(f.tx);assert.equal((await f.tx.observe()).state,'Observed');const before=fs.readFileSync(path.join(f.tx.directory,'journal.json'));await new Promise(r=>setTimeout(r,Math.max(0,f.server.state.expiry-Date.now()+50)));assert.equal((await f.tx.observe()).state,'SavedObservationExpired');assert.deepEqual(fs.readFileSync(path.join(f.tx.directory,'journal.json')),before);assert.equal(f.server.state.requests,11);
+});
+
+test('independent complete wire oracle rejects method, Host and raw target changes for every operation',async t=>{
+ const f=await fixture(t);await upload(f.tx);const routes=expectedFixtureRoutes(f.server.state),effects=[...f.server.state.effects];
+ for(const [op,r] of Object.entries(routes))for(const change of [{method:r.method==='GET'?'POST':'DELETE'},{host:'wrong.fixture.invalid'},{target:r.target+'/trailing'},{target:r.target+(r.target.includes('?')?'&':'?')+'extra=1'}]){
+  const request={...r,...change};await new Promise((resolve,reject)=>{const q=https.request({hostname:'127.0.0.1',port:f.server.port,servername:'tokenforge.fixture.invalid',ca:material.cert,method:request.method,path:request.target,headers:{host:request.host,'content-length':'0'},agent:false},res=>{res.resume();res.on('end',resolve);});q.on('error',()=>resolve());q.end();});
+ }
+ assert.deepEqual(f.server.state.effects,effects);assert.equal(f.server.state.violations.filter(x=>x==='UnknownRoute').length,40);
+ assert.equal((await f.tx.observe()).state,'Observed');for(const r of f.server.state.records.filter(x=>x.op)){const expected=routes[r.op];assert.equal(r.host,expected.host);assert.equal(r.method,expected.method);assert.equal(r.rawTarget,expected.target);}
 });

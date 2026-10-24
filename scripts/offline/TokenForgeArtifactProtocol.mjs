@@ -1,6 +1,7 @@
 // Pure OFFLINE request/response profile. Reserved .invalid origins and opaque
 // credential slots only. No dispatcher, environment, action or network imports.
 import {createHash} from 'node:crypto';
+import {SERVICE_PROFILE,validateServiceCapability} from '../transport/TokenForgeCanaryPreflight.mjs';
 import {fail, keys, id, context, strictJson} from './TokenForgeOfflineSchema.mjs';
 export const PROTOCOL = Object.freeze({
   results:'https://results.fixture.invalid',api:'https://api.fixture.invalid',
@@ -18,6 +19,17 @@ const restInteger=x=>{if(typeof x!=='bigint'||x<0n||x>9223372036854775807n) fail
 const restId=x=>signedId(restInteger(x));
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const decimal=x=>{if(typeof x!=='string'||!/^(?:0|[1-9][0-9]*)$/.test(x)||BigInt(x)>9223372036854775807n) fail('ProtocolIntegerRefused');return x;};
+export function protocolFor(t) {
+  const s=t.binding?.service;
+  if(s===undefined)return PROTOCOL;
+  keys(s,['runBackend','jobBackend']);
+  for(const k of ['runBackend','jobBackend'])if(typeof s[k]!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(s[k]))fail('ServiceBackendRefused');
+  return {...PROTOCOL,results:SERVICE_PROFILE.resultsOrigin,api:SERVICE_PROFILE.apiOrigin,...s};
+}
+function capability(raw,role,t) {
+  if(t.binding?.service){validateServiceCapability(raw,role,t.lastWall);return raw;}
+  return signedCapability(raw,role);
+}
 function tx(t) {
   context(t.context);
   if(typeof t.name!=='string'||!/^tf-offline-[0-9a-f]{32}$/.test(t.name)||typeof t.hash!=='string'||!/^[a-f0-9]{64}$/.test(t.hash)||!Number.isSafeInteger(t.size)||t.size<1||t.size>65536) fail('ProtocolContextRefused');
@@ -52,8 +64,11 @@ export function requestBody(op,t,original) {
     return Buffer.from(original);
   }
   if(op==='Commit') return Buffer.from(`<?xml version="1.0" encoding="utf-8"?><BlockList><Uncommitted>${blockId(t)}</Uncommitted></BlockList>`);
-  const routing={workflow_run_backend_id:PROTOCOL.runBackend,workflow_job_run_backend_id:PROTOCOL.jobBackend,name:t.name};
-  if(op==='Create') return json({...routing,version:4}); // omit optional retention timestamp
+  const profile=protocolFor(t),routing={workflow_run_backend_id:profile.runBackend,workflow_job_run_backend_id:profile.jobBackend,name:t.name};
+  if(op==='Create') {
+    if(t.binding?.service&&(!Number.isSafeInteger(t.created)||t.created<0||!Number.isSafeInteger(t.created+86400000)))fail('ServiceRetentionRefused');
+    return json({...routing,version:4,...(t.binding?.service?{expires_at:new Date(t.created+86400000).toISOString()}:{})});
+  }
   if(op==='Finalize') return json({...routing,size:String(t.size),hash:`sha256:${t.hash}`});
   if(!Object.hasOwn(ROLES,op)) fail('ProtocolOperationRefused');
   return Buffer.alloc(0);
@@ -62,17 +77,17 @@ export function buildRequest(op,t,options={}) {
   if(!options||typeof options!=='object'||Object.keys(options).some(k=>!['original','uploadUrl','downloadUrl'].includes(k))) fail('ProtocolOptionsRefused');
   const {original,uploadUrl,downloadUrl}=options;
   if(op==='Block'&&!Buffer.isBuffer(original)) fail('ProtocolOriginalRefused');
-  tx(t);if(!Object.hasOwn(ROLES,op)) fail('ProtocolOperationRefused');
+  tx(t);const profile=protocolFor(t);if(!Object.hasOwn(ROLES,op)) fail('ProtocolOperationRefused');
   let method='GET',url,headers={};const body=requestBody(op,t,original);
   if(op==='Create'||op==='Finalize') {
-    method='POST';url=PROTOCOL.results+service+op+'Artifact';headers={'content-type':'application/json'};
+    method='POST';url=profile.results+service+op+'Artifact';headers={'content-type':'application/json'};
   } else if(op==='Block'||op==='Commit') {
-    method='PUT';url=signedCapability(uploadUrl,'Blob')+(op==='Block'?`&comp=block&blockid=${encodeURIComponent(blockId(t))}`:'&comp=blocklist');
+    method='PUT';url=capability(uploadUrl,'Blob',t)+(op==='Block'?`&comp=block&blockid=${encodeURIComponent(blockId(t))}`:'&comp=blocklist');
     headers={'content-type':op==='Block'?'application/octet-stream':'application/xml','x-ms-version':PROTOCOL.storageVersion};
-  } else if(op==='Download') url=signedCapability(downloadUrl,'Download');
+  } else if(op==='Download') url=capability(downloadUrl,'Download',t);
   else {
     headers={accept:'application/vnd.github+json','x-github-api-version':PROTOCOL.restVersion};
-    const base=PROTOCOL.api+'/repos/'+t.context.repository;
+    const base=profile.api+'/repos/'+t.context.repository;
     const routes={Repository:'',Run:'/actions/runs/'+t.context.runId,List:'/actions/runs/'+t.context.runId+'/artifacts?name='+t.name+'&per_page=100&page=1'};
     if(op==='Artifact'||op==='Redirect') url=base+'/actions/artifacts/'+signedId(t.artifactId)+(op==='Redirect'?'/zip':'');
     else url=base+routes[op];
@@ -119,7 +134,7 @@ export function parseResponse(op,r,t) {
   if(r.status!==expected) fail('ProtocolStatusRefused');
   if(op==='Redirect') {
     keys(r.headers,['location','content-length']);if(r.body.length) fail('ProtocolResponseRefused');
-    return {capability:signedCapability(r.headers.location,'Download')};
+    return {capability:capability(r.headers.location,'Download',t)};
   }
   if(op==='Download') {
     keys(r.headers,['content-type','content-length']);if(!['application/zip','application/octet-stream'].includes(r.headers['content-type'])) fail('ProtocolResponseRefused');return Buffer.from(r.body);
@@ -133,7 +148,7 @@ export function parseResponse(op,r,t) {
   switch(op) {
     case 'Create': {
       const url=alias(m,'signed_upload_url','signedUploadUrl');keys(m,['ok',Object.hasOwn(m,'signed_upload_url')?'signed_upload_url':'signedUploadUrl']);
-      if(m.ok!==true) fail('ProtocolResponseRefused');return {reservation:signedCapability(url,'Blob')};
+      if(m.ok!==true) fail('ProtocolResponseRefused');return {reservation:capability(url,'Blob',t)};
     }
     case 'Finalize': {
       const value=alias(m,'artifact_id','artifactId');keys(m,['ok',Object.hasOwn(m,'artifact_id')?'artifact_id':'artifactId']);if(m.ok!==true) fail('ProtocolResponseRefused');return {id:signedId(value)};

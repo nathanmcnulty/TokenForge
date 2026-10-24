@@ -6,7 +6,7 @@ import {createHash, randomBytes} from 'node:crypto';
 import {object, fail, keys, id, context, strictJson} from './TokenForgeOfflineSchema.mjs';
 import {createFakeClock, clockNow, isFakeClock, assertWithinDeadline} from './TokenForgeOfflineClock.mjs';
 export {createFakeClock};
-import {localTlsBinding,localRuntimeIdentity,exchangeLocalTls} from '../transport/TokenForgeLocalTlsTransport.mjs';
+import {localTlsBinding,localRuntimeIdentity,exchangeLocalTls,assertTransportContext,assertTransportAuthorization} from '../transport/TokenForgeLocalTlsTransport.mjs';
 import {PROTOCOL, ROLES, requestBody, buildRequest, validateRequest, parseResponse, fixtureCapability} from './TokenForgeArtifactProtocol.mjs';
 
 const PROFILE = 'CanonicalStoredOriginalZipV1';
@@ -245,7 +245,7 @@ export class OfflineArtifactTransaction {
     keys(options, ['parent','original','context','transport',...('clock' in options?['clock']:[])]);
     const {parent,original,context:identity,transport,clock}=options;
     assertClockBinding(transport,clock);
-    const ctx=context(identity);assertCanonicalOriginal(original);const time=clockNow(clock);
+    const ctx=context(identity);assertTransportContext(transport,ctx);assertCanonicalOriginal(original);const time=clockNow(clock);
     // mkdtemp's 0700 child is created before resolving any output file paths.
     const dir=fs.mkdtempSync(path.join(parent,'tf-offline-'));fs.chmodSync(dir,0o700);safeDirectory(dir);
     const j={version:3,kind:'OfflineTlsCapableArtifactTransaction',binding:transportBinding(transport),state:'Prepared',context:ctx,name:`tf-offline-${randomBytes(16).toString('hex')}`,
@@ -257,7 +257,7 @@ export class OfflineArtifactTransaction {
   static open(options) {
     keys(options, ['directory','context','transport',...('clock' in options?['clock']:[])]);
     const {directory,context:identity,transport,clock}=options;
-    assertClockBinding(transport,clock);safeDirectory(directory);
+    assertClockBinding(transport,clock);assertTransportContext(transport,identity);safeDirectory(directory);
     const x=new OfflineArtifactTransaction(transports);x.#dir=directory;x.#local=!!localTlsBinding(transport);x.#transport=x.#local?transport:transports.get(transport);x.#clock=clock;
     // A killed process leaves this sentinel. Refuse it; automatic stale-lock
     // deletion/recovery is deliberately not implemented or claimed.
@@ -291,7 +291,7 @@ export class OfflineArtifactTransaction {
     if(b.length!==this.#journal.size || hash(b)!==this.#journal.hash || !b.equals(this.#archive)) fail('OriginalChanged');
     assertCanonicalOriginal(b);
   }
-  #checkTime() {return assertWithinDeadline(this.#clock,this.#journal);}
+  #checkTime() {assertTransportAuthorization(this.#transport);return assertWithinDeadline(this.#clock,this.#journal);}
   async #request(op,body=Buffer.alloc(0)) {
     if(this.#closed) fail('Closed');this.#checkArchive();const time=this.#checkTime(),j=this.#journal;
     const mutation=MUTATIONS.includes(op);if(!ROLE[op]||(!mutation&&!READS.includes(op))) fail('OperationRefused');
@@ -315,15 +315,15 @@ export class OfflineArtifactTransaction {
     const response=this.#local?await exchangeLocalTls(this.#transport,request,j,capabilities):fakeExchange(this.#transport,request,this.#transport.credentials[role],j);
     const after=clockNow(this.#clock);this.#checkTime();
     if(after.wall-before.wall>=LIMITS.requestMs||after.mono-before.mono>=LIMITS.requestMs||response.body.length>responseMax) fail('ResponseBound');
-    const parsed=parseResponse(op,response,j);
+    const parsed=parseResponse(op,response,{...j,lastWall:after.wall});
     const parsedAt=this.#checkTime();
     if(parsedAt.wall-before.wall>=LIMITS.requestMs||parsedAt.mono-before.mono>=LIMITS.requestMs) fail('ResponseBound');
     return parsed;
   }
   #expiryCurrent(){const e=this.#journal.metadataExpiry;return e===null||e==='Unobserved'||clockNow(this.#clock).wall<e;}
-  #result(){return {kind:this.#local?'LocalTlsTransactionObservation':'OfflineFakeTransactionObservation',state:this.#journal.state==='Observed'&&!this.#expiryCurrent()?'SavedObservationExpired':this.#journal.state,originalSha256:this.#journal.hash,
+  #result(){return {kind:this.#journal.binding.kind==='ExternalService'?'ServiceTransactionObservation':this.#local?'LocalTlsTransactionObservation':'OfflineFakeTransactionObservation',state:this.#journal.state==='Observed'&&!this.#expiryCurrent()?'SavedObservationExpired':this.#journal.state,originalSha256:this.#journal.hash,
     originalBytes:this.#journal.size,artifactId:this.#journal.artifactId,attempts:this.#journal.ledger.length,
-    priorUnknown:this.#journal.priorUnknown,networkEnabled:this.#local,externalHttpsEnabled:false,localTlsOnly:this.#local,serviceInteroperabilityProven:false,
+    priorUnknown:this.#journal.priorUnknown,networkEnabled:this.#local,externalHttpsEnabled:this.#journal.binding.kind==='ExternalService',localTlsOnly:this.#local&&this.#journal.binding.kind!=='ExternalService',serviceInteroperabilityProven:false,
     operationalPolicyEmissionAllowed:false,contentPrivacyApproval:false,artifactOwnAttemptObserved:false,artifactOwnWorkflowIdObserved:false};}
   async advance() {
     if(this.#busy||this.#closed) fail('TransactionUnavailable');this.#busy=true;

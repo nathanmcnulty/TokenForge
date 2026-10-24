@@ -4,8 +4,9 @@ import https from 'node:https';
 import tls from 'node:tls';
 import fs from 'node:fs';
 import {createHash,X509Certificate} from 'node:crypto';
-import {fail,keys} from '../offline/TokenForgeOfflineSchema.mjs';
-import {assertWithinDeadline} from '../offline/TokenForgeOfflineClock.mjs';
+import {fail,keys,context} from '../offline/TokenForgeOfflineSchema.mjs';
+import {assertWithinDeadline,clockNow} from '../offline/TokenForgeOfflineClock.mjs';
+import {serviceModeGate,validatePublicContext} from './TokenForgeCanaryPreflight.mjs';
 import {validateRequest} from '../offline/TokenForgeArtifactProtocol.mjs';
 const states=new WeakMap();
 const hash=b=>createHash('sha256').update(b).digest('hex');
@@ -15,11 +16,28 @@ const profileHash=hash(Buffer.concat([
   fs.readFileSync(new URL(import.meta.url)),
   fs.readFileSync(new URL('../offline/TokenForgeArtifactProtocol.mjs',import.meta.url)),
   fs.readFileSync(new URL('../offline/TokenForgeOfflineSchema.mjs',import.meta.url)),
+  fs.readFileSync(new URL('./TokenForgeCanaryPreflight.mjs',import.meta.url)),
 ]));
 export const WIRE_LIMITS=Object.freeze({headerBytes:16384,headerCount:64,headerValue:4096,requestMs:10000});
 export function localRuntimeIdentity(){return {...runtime};}
-export function createServiceTransport(){fail('ServiceModeDisabled');}
+export function assertApprovedLocalRuntime(){if(process.platform!=='linux'||process.arch!=='x64'||runtime.version!==APPROVED_LOCAL_RUNTIME.version||runtime.sha256!==APPROVED_LOCAL_RUNTIME.sha256)fail('LocalTlsContextRefused');}
+export function createServiceTransport(options){
+  serviceModeGate(); // No option, context or credential read before this gate.
+  assertApprovedLocalRuntime();keys(options,['publicContext','approved','backendIds','credentials','authorization']);
+  validatePublicContext(options.publicContext,options.approved);
+  const backend=validatedBackend(options.backendIds);assertAuthorization(options.authorization);
+  // This is the actual inert external engine constructor, not authority proof.
+  // A later reviewed activation also needs the independently approved plan.
+  keys(options.credentials,['Runtime','Read']);
+  const credentials={};for(const role of ['Runtime','Read']){const value=options.credentials[role];if(typeof value!=='string'||value.length<16||value.length>16384||/[\x00-\x20\x7f]/.test(value))fail('ServiceCredentialRefused');credentials[role]=value;}
+  const handle=Object.freeze({kind:'InertServiceTransport',cancel(){const s=states.get(handle);s.cancelled=true;s.abort?.();}});
+  states.set(handle,{external:true,authorization:Object.freeze({...options.authorization}),credentials,log:[],used:new Set(),name:null,busy:false,cancelled:false,abort:null,binding:Object.freeze({kind:'ExternalService',authorization:Object.freeze({...options.authorization}),authoritySha256:hash(Buffer.from(JSON.stringify(options.approved))),profileSha256:profileHash,runtimeSha256:runtime.sha256,service:backend,context:serviceContext(options.publicContext),publicContextSha256:hash(Buffer.from(JSON.stringify(options.publicContext)))})});return handle;
+}
+function serviceContext(actual){return Object.freeze(context(Object.fromEntries(['repository','repositoryId','workflowId','source','runId','attempt'].map(k=>[k,actual[k]]))));}
+export function assertTransportContext(handle,actual){const bound=states.get(handle)?.binding.context;if(bound&&JSON.stringify(bound)!==JSON.stringify(context(actual)))fail('ServiceContextRefused');}
+function validatedBackend(value){keys(value,['runBackend','jobBackend']);for(const v of Object.values(value))if(typeof v!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(v))fail('ServiceBackendRefused');return Object.freeze({...value});}
 export function createLocalTlsTransport(options) {
+  assertApprovedLocalRuntime();
   keys(options,['port','ca']);
   if(process.platform!=='linux'||process.arch!=='x64'||runtime.version!==APPROVED_LOCAL_RUNTIME.version||runtime.sha256!==APPROVED_LOCAL_RUNTIME.sha256||!Number.isInteger(options.port)||options.port<1||options.port>65535||!Buffer.isBuffer(options.ca)||!options.ca.length||options.ca.length>16384) fail('LocalTlsContextRefused');
   try{new X509Certificate(options.ca);}catch{fail('LocalTlsContextRefused');}
@@ -29,13 +47,30 @@ export function createLocalTlsTransport(options) {
   const handle=Object.freeze({kind:'LocalTlsFixtureTransport',transcript:()=>structuredClone(state.log),cancel(){state.cancelled=true;state.abort?.();}});
   states.set(handle,state);return handle;
 }
+// This uses the actual service serializer and HTTPS engine but physical routing
+// and every credential are still fixed dummy-only loopback fixture values.
+export function createLocalServiceFixtureTransport(options) {
+  assertApprovedLocalRuntime();keys(options,['port','ca','publicContext','approved','backendIds',...('authorization' in options?['authorization']:[])]);
+  validatePublicContext(options.publicContext,options.approved);
+  const backend=validatedBackend(options.backendIds);
+  const handle=createLocalTlsTransport({port:options.port,ca:options.ca}),state=states.get(handle);
+  if(options.authorization){assertAuthorization(options.authorization);state.authorization=Object.freeze({...options.authorization});}
+  state.binding=Object.freeze({...state.binding,...(state.authorization?{authorization:state.authorization}:{}),service:backend,context:serviceContext(options.publicContext),publicContextSha256:hash(Buffer.from(JSON.stringify(options.publicContext)))});
+  return handle;
+}
+export function assertServiceFixtureContext(handle,actual){const s=states.get(handle);if(!s?.binding.service||s.external||s.binding.kind!=='LocalTls'||s.binding.publicContextSha256!==hash(Buffer.from(JSON.stringify(actual))))fail('ServiceFixtureContextRefused');}
+export function assertAuthorization(value){
+  keys(value,['expires','monotonicDeadline']);const now=clockNow();
+  if(!Number.isSafeInteger(value.expires)||!Number.isSafeInteger(value.monotonicDeadline)||now.wall>=value.expires||now.mono>=value.monotonicDeadline||value.expires>now.wall+480000||value.monotonicDeadline>now.mono+480000)fail('ActionAuthorizationExpired');
+}
+export function assertTransportAuthorization(handle){const s=states.get(handle);if(s?.authorization)assertAuthorization(s.authorization);}
 export function localTlsBinding(handle){return states.get(handle)?.binding;}
 const DIAGNOSTIC_HEADERS=new Set(['date','connection','server','etag','last-modified','cache-control','vary','strict-transport-security','content-security-policy','referrer-policy','content-md5','x-content-type-options','x-frame-options']);
 // Reject ambiguity before projecting explicitly non-authoritative diagnostics.
 function selectedHeaders(response,op,cap) {
   const raw=response.rawHeaders;
   if(raw.length>WIRE_LIMITS.headerCount*2) fail('LocalTlsHeadersRefused');
-  let bytes=0;const headers={};
+  let bytes=0;const headers=Object.create(null);
   for(let i=0;i<raw.length;i+=2) {
     const name=raw[i].toLowerCase(),value=raw[i+1];bytes+=Buffer.byteLength(raw[i])+Buffer.byteLength(value)+4;
     if(Object.hasOwn(headers,name)||value.length>WIRE_LIMITS.headerValue||/[\r\n\x00]/.test(value)) fail('LocalTlsHeadersRefused');
@@ -56,16 +91,16 @@ function selectedHeaders(response,op,cap) {
 export async function exchangeLocalTls(handle,request,j,capabilities) {
   const state=states.get(handle);if(!state) fail('LocalTlsContextRefused');
   if(state.busy||state.cancelled) fail('LocalTlsCancelled');
-  validateRequest(request,j,capabilities);
-  const time=assertWithinDeadline(undefined,j),entry=j.ledger.at(-1),ordinal=j.ledger.length;
+  assertTransportContext(handle,j.context);assertTransportAuthorization(handle);validateRequest(request,j,capabilities);
+  const time=assertWithinDeadline(undefined,j);validateRequest(request,{...j,lastWall:time.wall},capabilities);const entry=j.ledger.at(-1),ordinal=j.ledger.length;
   const cap=request.op==='Download'?65536:131072;
   if(!entry||entry.op!==request.op||entry.charge!==request.body.length+cap||ordinal>12||state.used.has(ordinal)||state.name!==null&&state.name!==j.name) fail('LocalTlsChargeRefused');
   state.name=j.name;state.used.add(ordinal);state.busy=true;
-  const exchangeWall=Math.min(time.wall+WIRE_LIMITS.requestMs,j.deadline),exchangeMono=Math.min(time.mono+WIRE_LIMITS.requestMs,j.deadlineMono);
+  const exchangeWall=Math.min(time.wall+WIRE_LIMITS.requestMs,j.deadline,state.authorization?.expires??Infinity),exchangeMono=Math.min(time.mono+WIRE_LIMITS.requestMs,j.deadlineMono,state.authorization?.monotonicDeadline??Infinity);
   function remainingTime(){const now=assertWithinDeadline(undefined,j),left=Math.min(exchangeWall-now.wall,exchangeMono-now.mono);if(left<=0)fail('LocalTlsExchangeExpired');return left;}
   const u=new URL(request.url),headers={...request.headers,host:u.hostname,connection:'close','accept-encoding':'identity'};
-  if(request.credentialRole==='Runtime')headers.authorization='Bearer TF_FIXTURE_RUNTIME_ONLY';
-  else if(request.credentialRole==='Read')headers.authorization='Bearer TF_FIXTURE_READ_ONLY';
+  if(request.credentialRole==='Runtime')headers.authorization='Bearer '+(state.external?state.credentials.Runtime:'TF_FIXTURE_RUNTIME_ONLY');
+  else if(request.credentialRole==='Read')headers.authorization='Bearer '+(state.external?state.credentials.Read:'TF_FIXTURE_READ_ONLY');
   // Every call owns a fresh agent and one request. Never use globalAgent,
   // inherited proxy configuration, URL redirects, or any retry/resend path.
   const agent=new https.Agent({keepAlive:false,maxSockets:1,maxTotalSockets:1});
@@ -86,9 +121,9 @@ export async function exchangeLocalTls(handle,request,j,capabilities) {
       state.abort=rejectStatic;
       try {
         timer=setTimeout(rejectStatic,remainingTime());
-        req=https.request({hostname:'127.0.0.1',port:state.port,servername:'tokenforge.fixture.invalid',method:request.method,path:u.pathname+u.search,
+        req=https.request({hostname:state.external?u.hostname:'127.0.0.1',port:state.external?443:state.port,servername:state.external?u.hostname:'tokenforge.fixture.invalid',method:request.method,path:u.pathname+u.search,
           headers,agent,ca:state.ca,rejectUnauthorized:true,checkServerIdentity:tls.checkServerIdentity,minVersion:'TLSv1.3',maxVersion:'TLSv1.3',
-          maxHeaderSize:WIRE_LIMITS.headerBytes,insecureHTTPParser:false,lookup(){throw new Error('LocalTlsDnsRefused');}},res=>{
+          maxHeaderSize:WIRE_LIMITS.headerBytes,insecureHTTPParser:false,...(state.external?{}:{lookup(){throw new Error('LocalTlsDnsRefused');}})},res=>{
           response=res;
           try{selected=selectedHeaders(res,request.op,cap);}catch{rejectStatic();return;}
           res.on('data',chunk=>{length+=chunk.length;log.responseEntityBytesObserved=length;if(length>cap){rejectStatic();return;}chunks.push(Buffer.from(chunk));});

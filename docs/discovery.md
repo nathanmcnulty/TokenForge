@@ -1,3 +1,5 @@
+For credential-free public metadata, start with [public health and workstation sync](public-metadata-health.md). The account-bound collection and exact-plan resume commands below remain private workstation operations; public health never starts them automatically. The old discovery workflow remains disabled.
+
 # Run discovery locally
 
 Discovery runs in PowerShell on your machine. It does not require Codex, an LLM API, or GitHub Actions. Authentication still requires an authorized account and an existing supported session or software passkey.

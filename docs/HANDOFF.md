@@ -1,3 +1,17 @@
+# Current public metadata / workstation handoff
+
+Use owning branch `codex/goal6-reusable-sealer`. This milestone starts from **91f858f8b7b70722223f4baa225a6cfc2ac340b6** and adopts [the practical runner/workstation goal](tokenforge-runner-workstation-design.md) unchanged from **50bb94bc38531834a73c3b8e46e3bebfde9ee467**. The documentation branch's implementation was not adopted.
+
+Start with the [operator guide](public-metadata-health.md) and [validation/canary packet](public-metadata-health-validation.json). The new product path collects only the three fixed public metadata sources, exchanges three validated public files, and imports them transactionally into private SQLite. `tokenforge.ps1 health status` reads saved status; existing discovery and deep exact-plan resume commands remain intact. The frozen realistic fixture and independent review cover local use; no hosted or live-service completion is claimed.
+
+The user adopted the simpler sole-trusted-administrator model for this separate lane. It does not require Goal 6's signed-plan, raw-service transport or competing-trusted-admin exclusion proof. That strict original-byte experiment remains parked with all refusal gates and historical receipts preserved. The two research defects in Dot's earlier review remain unfixed in that unused code; the new GitHub REST transport supplies its own required fixed User-Agent.
+
+The dormant proposal is `publication/health/workflow.yml`, outside active `.github/workflows`, manual-only with a literal-false job. Its final registration ID and public package delivery must be explicitly reviewed/approved before activation. Actions, live credentials, operational publication, tenant changes, PRs and merges remain blocked. The authorized sanitized Git source push is distinct from publishing an operational artifact or package asset.
+
+The earlier handoff below is historical and applies to its exact source/receipts only.
+
+---
+
 # TokenForge consolidated offline handoff
 
 Use branch `codex/goal6-reusable-sealer`. Nathan adopted [Dot's review and consolidated milestone](goal6-dot-offline-transaction-review.md), authorizing one final sanitized source/test/documentation push on this branch. That authorization does not enable real HTTPS, runner credentials, an action entry point, workflow dispatch, hosted compute, operational emission, signing or publication. Actions have not been enabled or dispatched.

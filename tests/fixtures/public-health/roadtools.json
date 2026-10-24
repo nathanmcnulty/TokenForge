@@ -1,0 +1,16 @@
+{
+  "apps": {
+    "11111111-1111-1111-1111-111111111111": {
+      "name": "Fixture public client", "public_client": true, "foci": true,
+      "redirect_uris": ["https://example.test/callback", "native-test://callback"],
+      "preferred_noninteractive_redirurl": "https://example.test/callback",
+      "scopes": {"00000003-0000-0000-c000-000000000000": ["User.Read", "Mail.Read", "openid"]}
+    },
+    "22222222-2222-2222-2222-222222222222": {
+      "name": "Fixture second client", "public_client": false, "foci": false,
+      "redirect_uris": ["https://second.test/callback"], "preferred_noninteractive_redirurl": null,
+      "scopes": {"00000003-0000-0000-c000-000000000000": ["User.Read"]}
+    }
+  },
+  "resourceidentifiers": {"https://graph.microsoft.com": "00000003-0000-0000-c000-000000000000"}
+}

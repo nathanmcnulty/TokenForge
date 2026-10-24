@@ -1,7 +1,7 @@
 #Requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Weekly', 'Native', 'Discovery', 'Collector', 'Changes', 'Admin', 'Refresh', 'Lab', 'Publication', 'Attestation', 'Sealer', 'ReleaseReadiness', 'ReleaseGuards')]
+    [ValidateSet('PublicHealth', 'Weekly', 'Native', 'Discovery', 'Collector', 'Changes', 'Admin', 'Refresh', 'Lab', 'Publication', 'Attestation', 'Sealer', 'ReleaseReadiness', 'ReleaseGuards')]
     [string]$Preset = 'Weekly',
     [string]$NativeExecutable,
     [string]$AttestationVerifierPath,
@@ -70,6 +70,7 @@ try {
         Remove-Module TokenForge -ErrorAction SilentlyContinue
     }
     $testPaths = switch ($Preset) {
+        'PublicHealth' { @('./tests/PublicHealth.Tests.ps1', './tests/PublicHealthSync.Tests.ps1', './tests/PublicHealthIndependent.Tests.ps1', './tests/DiscoveryClaims.Tests.ps1', './tests/ApplicationMetadata.Tests.ps1', './tests/SqliteCatalog.Tests.ps1', './tests/CatalogDownload.Tests.ps1', './tests/WeeklyCli.Tests.ps1') }
         'Weekly' {
             @('./tests/WeeklyCli.Tests.ps1', './tests/NativeWeekly.Tests.ps1', './tests/CiWeekly.Tests.ps1', './tests/CredentialBootstrap.Tests.ps1')
         }

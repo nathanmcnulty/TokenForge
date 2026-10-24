@@ -13,7 +13,7 @@ $null=New-Item -ItemType Directory (Join-Path $destination src),(Join-Path $dest
 Copy-TokenForgePackageSource -SourceRoot $repo -DestinationRoot $destination -Prefix src/TokenForge
 $null=& (Join-Path $PSScriptRoot 'Build-TokenForgeCredentials.ps1') -OutputPath (Join-Path $destination 'src/TokenForge/lib/net8.0') -Dotnet $Dotnet
 # Explicit offline operator entry points and their local dependencies; no CI worker or workflow scripts.
-foreach($name in @('tokenforge.ps1','TokenForgeCiState.ps1','Export-TokenForgeMaintenanceBackup.ps1','Get-TokenForgeCollectorStatus.ps1','Invoke-TokenForgeDiscoveryRun.ps1','Invoke-TokenForgeInventory.ps1','TokenForgeDiscoveryCandidate.ps1','Test-TokenForgeOfflinePackage.ps1')){Copy-Item (Join-Path $PSScriptRoot $name) (Join-Path $destination scripts)}
+foreach($name in @('Invoke-TokenForgePublicHealth.ps1','Sync-TokenForgePublicHealth.ps1','Test-TokenForgePublicContribution.ps1','TokenForgePublicHealth.ps1','TokenForgePublicHealthSync.ps1','tokenforge.ps1','TokenForgeCiState.ps1','Export-TokenForgeMaintenanceBackup.ps1','Get-TokenForgeCollectorStatus.ps1','Invoke-TokenForgeDiscoveryRun.ps1','Invoke-TokenForgeInventory.ps1','TokenForgeDiscoveryCandidate.ps1','Test-TokenForgeOfflinePackage.ps1')){Copy-Item (Join-Path $PSScriptRoot $name) (Join-Path $destination scripts)}
 Copy-Item (Join-Path $repo THIRD-PARTY-NOTICES.md) $destination
 Copy-Item (Join-Path $repo docs/native-cli.md) (Join-Path $destination README.md)
 $null=New-Item -ItemType Directory (Join-Path $destination examples) -Force

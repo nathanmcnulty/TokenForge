@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {createHash, randomBytes} from 'node:crypto';
 import {object, fail, keys, id, context, strictJson} from './TokenForgeOfflineSchema.mjs';
-import {createFakeClock, clockNow, assertWithinDeadline} from './TokenForgeOfflineClock.mjs';
+import {createFakeClock, clockNow, isFakeClock, assertWithinDeadline} from './TokenForgeOfflineClock.mjs';
 export {createFakeClock};
 import {localTlsBinding,localRuntimeIdentity,exchangeLocalTls} from '../transport/TokenForgeLocalTlsTransport.mjs';
 import {PROTOCOL, ROLES, requestBody, buildRequest, validateRequest, parseResponse, fixtureCapability} from './TokenForgeArtifactProtocol.mjs';

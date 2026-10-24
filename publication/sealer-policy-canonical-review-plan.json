@@ -1,0 +1,49 @@
+{
+  "SchemaVersion": 1,
+  "Kind": "TokenForgeSealerPolicyReviewPlan",
+  "Operational": false,
+  "AuthorizationEstablished": false,
+  "CurrentMainVerified": false,
+  "RolePermissionsVerified": false,
+  "HostedSealingProven": false,
+  "CompleteOriginalZipPrivacyValidated": false,
+  "RequiredArchiveProfile": "CanonicalStoredOriginalZipV1",
+  "OfflineArchiveProfileImplemented": true,
+  "HostedProducerInteroperabilityProven": false,
+  "BlockingReasons": [
+    "IndependentReviewAndHostedProducerInteroperabilityRequired"
+  ],
+  "SealerCommit": "91e624733ff2e766be276ecb270a18638af5c1a5",
+  "ProducerCommit": "5efaa24accf53598aadbc1911d68de60a64ca625",
+  "ImplementationCommit": "326cf8f1bc18a132b0401e994d9ea37ea253818a",
+  "ImplementationSha256": "37bf9ab1d5417e79ec880b37f9053b4a35f96565f76d6ddba7a8218dac848b8c",
+  "PinnedInputs": {
+    "TrustRootSha256": "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c",
+    "VerifierSha256": "cbfdc94f3a5c0713c0d6df3e0a1d88a59a76b0c52332aad7d21d112f9da2cc0e",
+    "SealerWorkflowSha256": "0d991852ec99058dbaa73ed6a978e7e16cfcb8b78ef7b9c47ab37b81d49ecc33",
+    "ZipProfileDeclarationSha256": "5baa3c2a6e8ef3f9e4ac532a3d0d62adf42af0d6e8e47479d347f6cd2411ded3",
+    "ProducerWorkflowSha256": "3c9e91b0fe27d69b9516f62320950ff931b97aaa72597e8a737f8779d8179fb6",
+    "ZipHelperSha256": "9f121b793c056312dad75d3042293d26a2c854a798b10cee0bd1cb082b25b70c"
+  },
+  "Quarantined": true,
+  "CallerPinsSealer": false,
+  "MissingBindings": [
+    "RepositoryId",
+    "WorkflowId",
+    "ProducerIds",
+    "ReviewerIds",
+    "MaintainerIds",
+    "ReaderIds"
+  ],
+  "ProposedPolicy": null,
+  "BindingPreview": null,
+  "RequiredGates": [
+    "CanonicalOriginalZipProfileReview",
+    "HostedCanonicalOriginalZipProducerInteroperability",
+    "SeparateActivationApproval",
+    "ImmutableSameRepositoryCallerPin",
+    "TrustedOperatorIdentityBindings",
+    "HostedOriginalZipAndCertificateProof",
+    "SeparatePublicationPermissionAndRecoveryProof"
+  ]
+}

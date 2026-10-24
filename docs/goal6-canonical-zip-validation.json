@@ -1,0 +1,265 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgeCanonicalOriginalZipOfflineAcceptance",
+  "recordedUtc": "2026-10-24T00:59:43.472141+00:00",
+  "disposition": "CanonicalOriginalZipContainerProfilePassed_OperationalAndHostedRemainBlocked",
+  "profile": "CanonicalStoredOriginalZipV1",
+  "completeContainerContractPassedForProfile": true,
+  "universalDlpClaim": false,
+  "ordinaryGitHubZipInteroperabilityProven": false,
+  "goal6Complete": false,
+  "publicationReady": false,
+  "hostedActivationAllowed": false,
+  "operationalPolicyEmissionAllowed": false,
+  "source": {
+    "implementationCommit": "326cf8f1bc18a132b0401e994d9ea37ea253818a",
+    "workflowCommit": "91e624733ff2e766be276ecb270a18638af5c1a5",
+    "reviewKitSourceCommit": "5efaa24accf53598aadbc1911d68de60a64ca625",
+    "parent": "d62f1fee7ba9493a1893be9be2c9647a7a627589",
+    "branch": "codex/goal6-reusable-sealer",
+    "preservedHandoff": "19470aeba7a949e4204e4ecf5586a6ffb3171c69",
+    "unmerged": true,
+    "filesSha256": {
+      "docs/goal6-canonical-zip.md": "d042fb4bef2741986c86920533bed5aa2b1e92230b8a4a4a484985891f78dd54",
+      "docs/goal6-dot-review.md": "adef77a5e4d103f9f24d6634bb5a1c841bebf41e19e0a5c05f7df8c677d261f4",
+      "docs/goal6-sealer-followup.md": "0619f7d674f73f14747d44541b6489268e950cf80e34c34c425a6083e45e480c",
+      "docs/goal6-sealer.md": "45ded60cecb0cc54ce53d2ac5e7ceb6ce0b953cfe6a3d1e18e5b4e341ae35d66",
+      "docs/local-validation.md": "76ca7db37b0ebda5942e6de30a79a1000cbdb1e24b97da2ed1197b57dd349101",
+      "publication/zip-profile.json": "5baa3c2a6e8ef3f9e4ac532a3d0d62adf42af0d6e8e47479d347f6cd2411ded3",
+      "scripts/Invoke-TokenForgeSealer.ps1": "5f698205b4c4a3a026c732a79a2518fb4ff57c97a358b640137845960a7b1a78",
+      "scripts/New-TokenForgeSealerReviewKit.py": "2533732662b47cefdcc7051ff5b452e79dab020bd533be384d98b9f2e882fd1f",
+      "scripts/TokenForgeSealer.ps1": "37bf9ab1d5417e79ec880b37f9053b4a35f96565f76d6ddba7a8218dac848b8c",
+      "scripts/TokenForgeSealerPolicy.ps1": "2e577de4190cda3ed2efaaebfedd9758394dd51b37d623ed18f05e42341ef318",
+      "scripts/TokenForgeSealerZip.ps1": "9f121b793c056312dad75d3042293d26a2c854a798b10cee0bd1cb082b25b70c",
+      "tests/Sealer.Tests.ps1": "20cb907120158f6049318b1c5914a412c2a699e44ac4f32203bf0684fc5afb4a",
+      "tests/SealerPolicy.Tests.ps1": "b855b535a3e38f254418f297ad0d455f5a3a3277f94cb2e8fc12eff57beb51f1",
+      "tests/fixtures/publication/MutateSealerZip.py": "86bd52db1f16db8d2b92c553d6ededb6d4ff87f6810d235c19db04a9e89c4589",
+      ".github/workflows/tokenforge-sealer.yml": "0d991852ec99058dbaa73ed6a978e7e16cfcb8b78ef7b9c47ab37b81d49ecc33",
+      "docs/HANDOFF.md": "26ebe5e579da8203a2a4dbd89f232b5e765a7c468acc6c5c18cc2ca978fcca4c",
+      "publication/sealer-policy-canonical-review-plan.json": "2995b81fc95afd407822f3c720a5f852ec8cd67fa9f385137dd39ca7f965fa2d"
+    }
+  },
+  "contract": {
+    "identity": "Exact original service ZIP, artifact ID/digest/size unchanged; reconstruction is only an acceptance oracle.",
+    "acceptance": "Existing seven-file content/hash/schema/review validation AND strict UTF8/full JSON parse AND exact byte/length equality with manually emitted fixed stored-ZIP profile.",
+    "profileDeclaration": {
+      "SchemaVersion": 1,
+      "Profile": "CanonicalStoredOriginalZipV1",
+      "SealerSha256": "37bf9ab1d5417e79ec880b37f9053b4a35f96565f76d6ddba7a8218dac848b8c",
+      "ZipHelperSha256": "9f121b793c056312dad75d3042293d26a2c854a798b10cee0bd1cb082b25b70c"
+    },
+    "metadata": "Fixed names/order, method0, flags2048, DOS time0/date33, versions20/788, attributes0, counts7, disks0, derivedCRC32/sizes/offsets; no comments/extras/descriptors/ZIP64/encryption/prefix/trailer/gaps.",
+    "bounds": "At most8MiB total payload and8MiB original/canonical archive; existing60-second shared validation budget,7metadataGETs+2downloadGETs,16MiB network aggregate.",
+    "privateStaging": "Existing0755root -> new0700tokenforge-sealer-private parent -> private sealed directory; original readonly on success.",
+    "limits": "Complete ZIP-container representation plus existing content policy; not universal DLP, covert-channel elimination in permitted payload fields, semantic approval, live origin proof or producer compatibility."
+  },
+  "validation": {
+    "primaryGate": {
+      "preset": "Sealer",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 224,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": []
+    },
+    "executionSource": "Extracted review kit OWN scripts/tests, not working-checkout test paths.",
+    "command": "unshare -Urn pwsh -NoProfile -File ./scripts/Invoke-TokenForgeLocalValidation.ps1 -Preset Sealer -NativeExecutable <extracted-kit>/tokenforge -ReportPath <new-external-report>",
+    "workingDirectory": ".cache/goal6-zip-contract/extracted-final",
+    "networkIsolation": "unshare -Urn",
+    "all224AreSafetyOrPolicyChecks": true,
+    "knownUnsafeAcceptancesRemainingInGate": 0,
+    "formerUnsafeCasesNowRejected": [
+      "archive-comment",
+      "entry-comment",
+      "local-and-central-extra",
+      "appended-bytes",
+      "prepended-adjusted",
+      "gap-before-central-directory",
+      "gap-before-end-record"
+    ],
+    "malformedPrefixRejected": true,
+    "independentPositiveOracle": "Python reference encoder manually emits fixed ZIP records using zlibCRC32; does not call production formatter.",
+    "otherNegativeCoverage": [
+      "local/centralCRC",
+      "local/central size/name",
+      "offset",
+      "timestamp",
+      "attributes",
+      "encryption",
+      "descriptor",
+      "ZIP64extra",
+      "unsupportedmethod",
+      "deflate",
+      "reorderedentries",
+      "duplicaterecords",
+      "invalidUTF8",
+      "ordinary.NETcompressedZIP"
+    ],
+    "positiveCoverage": [
+      "nonempty7-file original canonicalZIP accepted",
+      "original subject digest/bytes retained",
+      "filesystemtimestamp changes do not change canonical bytes",
+      "private0755->0700 ingress retained"
+    ],
+    "pinnedPolicyCheck": {
+      "PinnedImplementationAndHelperVerified": true,
+      "OfflineProfileImplemented": true,
+      "ArtifactEvaluated": false,
+      "HostedProducerInteroperabilityProven": false,
+      "OperationalEmissionRefused": true,
+      "Quarantined": true,
+      "CallerConnected": false,
+      "MissingBindings": 6
+    },
+    "reviewKitBuilderRefusals": {
+      "passed": 5,
+      "failed": 0,
+      "cases": [
+        {
+          "case": "existing target/archive preserves completed kit",
+          "refused": true
+        },
+        {
+          "case": "runtime manifest pin mismatch",
+          "refused": true
+        },
+        {
+          "case": "native input content drift",
+          "refused": true
+        },
+        {
+          "case": "module source content drift",
+          "refused": true
+        },
+        {
+          "case": "native input file-set drift",
+          "refused": true
+        }
+      ],
+      "completedArchiveUnchanged": true
+    },
+    "postTestPackageFilesUnchanged": true,
+    "preliminarySourceGate": {
+      "preset": "Sealer",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 221,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": []
+    },
+    "subsequentAffectedPolicyTests": {
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "includesThreeNewScalarArrayNegatives": true
+    },
+    "syntaxAndWhitespace": "PythonAST and gitdiffcheck passed.",
+    "historicalBroadGates": "Unchanged full native/package/attestation gates not rerun; do not aggregate their historical counts as new executions."
+  },
+  "reviewKit": {
+    "kind": "TokenForgeOfflineSealerReviewKit",
+    "releasePackage": false,
+    "archive": ".cache/goal6-zip-contract/TokenForge-canonical-sealer-review-final-linux-x64.tar.gz",
+    "extractedPath": ".cache/goal6-zip-contract/extracted-final",
+    "sourceCommit": "5efaa24accf53598aadbc1911d68de60a64ca625",
+    "archiveSha256": "c1b65aa47cdfd4cbab31b31567f4f2debcf825fccbc1b617a87a94721689952d",
+    "archiveBytes": 34150717,
+    "manifestSha256": "abc60148377c1048019d808e6f3b0cd75d1e37e8d2dde6b6fe376c90e38902e5",
+    "verification": {
+      "archiveSha256": "c1b65aa47cdfd4cbab31b31567f4f2debcf825fccbc1b617a87a94721689952d",
+      "manifestSha256": "abc60148377c1048019d808e6f3b0cd75d1e37e8d2dde6b6fe376c90e38902e5",
+      "filesVerified": 446,
+      "literalSourceBlobsVerified": 444,
+      "runtimeNativeModuleBuildInputsVerified": 144,
+      "profileDeclarationVerified": true,
+      "extraFiles": false,
+      "nativeRebuilt": false
+    },
+    "runtimeSource": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "runtimePins": {
+      "local-package-manifest.json": "8295f2508bc95d67c1ce61904cd3a4bba5a7ccac0f8d30af8ef34066eff383c9",
+      "tokenforge": "987c863bc92f29de27ff812ad360cd1be1a8bde0fda6080f465827dbb6eb99db",
+      "src/TokenForge/lib/net8.0/TokenForge.Credentials.dll": "30d5d1268223c806e8c6d26fd138ef2f1db58dd23f067f59ac38387e2d7bad32"
+    },
+    "nativeRebuilt": false,
+    "nativeAndModuleInputsBoundToPinnedManifest": true,
+    "buildInputsMatched": 144,
+    "sourceBlobsMatched": 444,
+    "filesVerified": 446,
+    "builder": "scripts/New-TokenForgeSealerReviewKit.py",
+    "builderCommand": "unshare -Urn /usr/bin/python3 -I scripts/New-TokenForgeSealerReviewKit.py --repo <local-repository> --commit 5efaa24accf53598aadbc1911d68de60a64ca625 --runtime <exact-accepted-runtime> --target <new-absolute-directory> --archive <new-absolute-archive>",
+    "archivePublished": false,
+    "sourceExports": "Literal Git blobs, no filters/attributes substitution; SHA1object identity andSHA256manifest verification.",
+    "reasonNoNativeBuild": "All144module/native/build input paths and bytes match the hash-pinned runtime baseline; new canonical logic is source-only PowerShell tooling."
+  },
+  "runtimeBaseline": {
+    "path": ".cache/goal6/accepted-package/linux-x64",
+    "source": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "manifestSha256": "8295f2508bc95d67c1ce61904cd3a4bba5a7ccac0f8d30af8ef34066eff383c9",
+    "executableSha256": "987c863bc92f29de27ff812ad360cd1be1a8bde0fda6080f465827dbb6eb99db",
+    "credentialDllSha256": "30d5d1268223c806e8c6d26fd138ef2f1db58dd23f067f59ac38387e2d7bad32"
+  },
+  "independentReview": {
+    "agent": "independent_review",
+    "readOnly": true,
+    "preCheckpointDisposition": "No outstanding material static findings; clear for A/B source checkpoint.",
+    "findingsAddressed": [
+      "Bind profile support to pinned sealer/helper declaration and include helper/declaration hashes.",
+      "Require scalar strings in declaration; reject array comparisons.",
+      "Bind review-kit native/module/build file sets and content to pinned baseline manifest, not mutable files.",
+      "Clearly label superseded status paragraphs as historical."
+    ],
+    "finalEvidenceAudit": "Clear for receipt checkpoint. Independently verified archive/manifest hashes, all446payload files plusmanifest,444literalGitblobs,144pinnedruntimeinputs,A-to-B-to-S ancestry,exactdormanttemplate,saved224/0/0 gate,fivebuilderrefusalsandblockedpolicy. No outstanding material evidence or claim finding."
+  },
+  "tools": {
+    "PowerShell": "7.6.7",
+    "Pester": "6.2.0",
+    "Git": "2.47.3",
+    "python": "Python 3.13.5",
+    "policyParser": "Existing PyYAML6.0.2",
+    "dependenciesInstalled": false,
+    "nativeSdkInvoked": false,
+    "supportedPlatformTested": "Linuxx64 only"
+  },
+  "diagnostics": [
+    {
+      "phase": "First canonical fixture run",
+      "cause": "Production private-file reader correctly refused test fixture JSON files with0644permissions; fixture now makes them0600 before formatting.",
+      "finalState": "All224extracted-kit checks pass."
+    },
+    {
+      "phase": "Initial package sourceB",
+      "archiveSha256": "64eae5e8bab5904188da2c840122582ff6e4de1f91fb76bf042f49b9ddb02080",
+      "disposition": "Superseded by sourceS review kit after updating stale HANDOFF.md; runtime/code unchanged; this earlier archive is not the accepted final package."
+    }
+  ],
+  "boundaries": {
+    "operationalPolicyAlwaysRefused": true,
+    "workflowLiteralFalse": true,
+    "callerConnected": false,
+    "actionsEnabledOrDispatched": false,
+    "newAuthentication": false,
+    "tenantOrCredentialOperations": false,
+    "tenantPermissionChanges": false,
+    "dataPublicationOrEvidenceUpload": false,
+    "hostedValidation": false,
+    "pr": false,
+    "merge": false,
+    "sourceReviewBranchPushPreviouslyAuthorized": true,
+    "originalCheckoutChanged": false
+  },
+  "remainingGates": [
+    "Independent checkpoint review and reviewed original-ZIP producer interoperability route.",
+    "Separate authorization before any hosted Actions activation/proof; ordinary compressedGitHub artifacts currently unsupported.",
+    "Genuine same-repository reusable-workflow certificate/original-digest/run/attempt proof.",
+    "Final production source/package integration and trusted operator identity/custody/current permissions.",
+    "Separately approved publication permission/CAS/race/lost-ack recovery proof.",
+    "Fresh human operator administrator workflows and collector recovery on exact approved release package."
+  ]
+}

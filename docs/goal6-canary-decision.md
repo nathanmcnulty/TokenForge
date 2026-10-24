@@ -1,5 +1,7 @@
 # One canary decision packet: NO-GO
 
+The [deployment/trust feasibility decision](goal6-deployment-trust-decision.md), based on Dot's `bc4b60e` review of owning checkpoint `9bc717b`, retains the strict model and parks live integration. It evaluates the isolated-runner proposal without approving it and carries M1 (missing REST User-Agent) and L1 (producer termination limits) into any future plan. The frozen experiment below remains a historical proposal, not an implementation instruction.
+
 **Current decision: do not run or activate.** The inert candidate has local source/transport/controller evidence, but the full real execution prerequisites cannot be established in this authorization. The accompanying exact-source receipt identifies implementation/template hashes, explicitly absent activation revision/diff, private kit, tests and independent evidence. `runnableCurrentSource=false`; this is not a command or executable approval.
 
 Frozen inert implementation: `441bf8020b11c9770115e896d73134c298dd9c1d`. Exact tested source/template: `eaec9e025e29de31c3d580a58e3e8b4a33a2fea0`. [Validation receipt](goal6-inert-activation-validation.json) records the source/package/test hashes. No activation revision or executable activation diff exists.

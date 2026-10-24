@@ -99,12 +99,15 @@ function alias(x,a,b) {
   if(Object.hasOwn(x,a)===Object.hasOwn(x,b)) fail('ProtocolAliasRefused');
   return Object.hasOwn(x,a)?x[a]:x[b];
 }
+function required(m,names){if(!m||typeof m!=='object'||Array.isArray(m)||Object.keys(m).length>128||names.some(k=>!Object.hasOwn(m,k)))fail('ProtocolSchemaRefused');}
 function artifact(m,t) {
-  keys(m,['id','name','size_in_bytes','digest','expired','workflow_run']);
-  keys(m.workflow_run,['id','repository_id','head_sha']);
+  required(m,['id','name','size_in_bytes','digest','expired','workflow_run']);
+  required(m.workflow_run,['id','repository_id','head_sha']);
+  const expiresAt=m.expires_at===undefined?null:typeof m.expires_at==='string'?Date.parse(m.expires_at):NaN;
+  if(expiresAt!==null&&(!Number.isSafeInteger(expiresAt)||expiresAt<0))fail('ProtocolArtifactRefused');
   const artifactId=restId(m.id),size=restInteger(m.size_in_bytes),runId=restId(m.workflow_run.id),repositoryId=restId(m.workflow_run.repository_id);
   if(typeof m.name!=='string'||typeof m.digest!=='string'||!/^sha256:[0-9a-f]{64}$/.test(m.digest)||typeof m.expired!=='boolean'||typeof m.workflow_run.head_sha!=='string'||!/^[a-f0-9]{40}$/.test(m.workflow_run.head_sha)||BigInt(size)>65536n) fail('ProtocolArtifactRefused');
-  return {id:artifactId,name:m.name,size:Number(size),digest:m.digest,expired:m.expired,
+  return {id:artifactId,name:m.name,size:Number(size),digest:m.digest,expired:m.expired,expiresAt,
     observedContext:{repositoryId,runId,source:m.workflow_run.head_sha}};
 }
 // Returns the core's normalized objects only after bounded wire validation.
@@ -119,7 +122,7 @@ export function parseResponse(op,r,t) {
     return {capability:signedCapability(r.headers.location,'Download')};
   }
   if(op==='Download') {
-    keys(r.headers,['content-type','content-length']);if(r.headers['content-type']!=='application/zip') fail('ProtocolResponseRefused');return Buffer.from(r.body);
+    keys(r.headers,['content-type','content-length']);if(!['application/zip','application/octet-stream'].includes(r.headers['content-type'])) fail('ProtocolResponseRefused');return Buffer.from(r.body);
   }
   if(op==='Block'||op==='Commit') {
     keys(r.headers,['content-length']);if(r.body.length) fail('ProtocolResponseRefused');return {ok:true};
@@ -135,11 +138,11 @@ export function parseResponse(op,r,t) {
     case 'Finalize': {
       const value=alias(m,'artifact_id','artifactId');keys(m,['ok',Object.hasOwn(m,'artifact_id')?'artifact_id':'artifactId']);if(m.ok!==true) fail('ProtocolResponseRefused');return {id:signedId(value)};
     }
-    case 'Repository':keys(m,['id','full_name']);const repoId=restId(m.id);if(typeof m.full_name!=='string') fail('ProtocolResponseRefused');return {repository:m.full_name,id:repoId};
-    case 'Run':keys(m,['id','run_attempt','workflow_id','head_sha','repository']);keys(m.repository,['id','full_name']);return context({repository:m.repository.full_name,repositoryId:restId(m.repository.id),workflowId:restId(m.workflow_id),runId:restId(m.id),attempt:restId(m.run_attempt),source:m.head_sha});
+    case 'Repository':required(m,['id','full_name']);const repoId=restId(m.id);if(typeof m.full_name!=='string') fail('ProtocolResponseRefused');return {repository:m.full_name,id:repoId};
+    case 'Run':required(m,['id','run_attempt','workflow_id','head_sha','repository']);required(m.repository,['id','full_name']);return context({repository:m.repository.full_name,repositoryId:restId(m.repository.id),workflowId:restId(m.workflow_id),runId:restId(m.id),attempt:restId(m.run_attempt),source:m.head_sha});
     case 'Artifact':return artifact(m,t);
     case 'List': {
-      keys(m,['total_count','artifacts']);const total=restInteger(m.total_count);
+      required(m,['total_count','artifacts']);const total=restInteger(m.total_count);
       if(!Array.isArray(m.artifacts)||m.artifacts.length>100||BigInt(total)<BigInt(m.artifacts.length)) fail('ProtocolResponseRefused');
       // No arbitrary Link URL is followed. Any Link header is conservative paging.
       return {items:m.artifacts.map(x=>artifact(x,t)),hasMore:!!r.headers.link||BigInt(total)>BigInt(m.artifacts.length)};

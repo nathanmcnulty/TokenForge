@@ -1,0 +1,59 @@
+# Synthetic artifact canary decision packet — blocked
+
+**Decision offered: accept the local-TLS readiness checkpoint for review; do not activate it.** `runnableCurrentSource=false`. The current service factory, action and controller always refuse. No live invocation is supplied. Exact implementation/template/tested-kit revisions and hashes are in [the validation receipt](goal6-local-tls-validation.json). This packet grants no credential, hosted compute, settings-write, signing or publication authority.
+
+## Exact destination and source custody
+
+The only proposed repository is `nathanmcnulty/TokenForge`, repository ID **1402673320**. The already registered manual workflow is **373691621**, `.github/workflows/ci.yml` (PowerShell validation). Anonymous public metadata observed on 2026-10-24 listed it and all seven other workflows as `disabled_manually`. Repository-level Actions enablement and permissions were not queried. These are historical source-only observations; reverify exact IDs, registration, default-branch dispatch behavior, current state and settings before proposing activation. No setting changed in this milestone.
+
+Do not dispatch the existing validation workflow. A later separately reviewed change must place the canary-only template from `publication/canary/workflow.yml` at the registered path on one new exclusive `codex/goal6-canary-<nonce>` branch, with exact reviewed activation/action/checkout source pins. Do not merge to main. No movement, additional commit, push, competing run or other writer is permitted while that ref is selected. Establish enforceable exclusive administrative custody over both this ref and relevant repository/workflow settings; a promise by this controller alone is insufficient. Without that custody, do not enable Actions. Snapshot the exact ref SHA, workflow blob, original repository settings and workflow state before any write. Preserve all non-enable policy fields. Recheck source/settings immediately before the one dispatch and after selection.
+
+The template outside active workflows is deliberately inert: manual-only trigger, literal-false Linux job, five-minute job limit, checkout pinned to `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1` with persisted credentials disabled, exact implementation checkout and a blocked local Node24 action. Checkout source inspection covered its `action.yml` and `package.json`, not its full distribution or executable provenance. Metadata SHA-256: action `d59219cb79590abdb877deaa14e3b65a00c05318bf5a6f3b989b9162b5d08c35`; package `8b1127cee8fbd48ed687737f631f6e49a767a8e9484a87a7fb8fe913118d52c4`. A future activation review must audit the complete executing checkout/action/controller closure. An accepted current receipt is not authorization to remove a gate.
+
+## One synthetic transaction
+
+Proposed subject: exactly one bounded canonical seven-file synthetic ZIP C, no production/tenant/session/account evidence. The existing sealer's structural/privacy/business checks must independently accept the complete C before any credential is accessed. Save C once; do not normalize, re-encode, substitute or sign a service-created archive. Require C == uploaded Block body == downloaded R by length, SHA-256 and full bytes, with complete structural validation and repeated artifact/run metadata. A transformation is a failed interoperability result, never permission to change C.
+
+Request **one-day retention** explicitly in the future activation's Create body and bind it to the frozen transaction start; current fixture serialization omits optional retention and makes no retention promise. Implement/test/review that service-mode addition before approval. No delete/overwrite/reupload fallback. Record service-observed expiry separately and recheck it at completion; requested retention is not proof of service retention.
+
+Fixed artifact bounds: **one transaction, 64 KiB C, 12 exchanges total, four mutations (Create, Block, Commit, Finalize), eight reads including any reconciliation/redirect, 180 seconds total and ten seconds per exchange**. Reserve complete maximum response entity allowances before dispatch; 8 KiB control request, 128 KiB control response, 64 KiB download, 2 MiB aggregate reserved entity bodies; no refund. Headers <=16 KiB/64 fields/4096 chars per value. No parallelism, implicit retry, proxy, automatic redirect, HEAD, refresh or extra route. An overflowing received chunk and TLS/TCP overhead are not bounded by the entity reservation itself; abort immediately and preserve counts/unknown state.
+
+Create/Finalize use runtime credential only. Block/Commit use returned short-lived upload capability only. Repository/Run/Artifact/List/Redirect use the separately scoped read credential only. Download uses its capability only. Never forward a Read bearer to blob/download hosts. Do not persist or print tokens, signed queries, headers, response bodies, environment, assertions or raw errors. Unknown mutation outcomes retain evidence and charges without replay. A same-store CreateUnknown/FinalizeUnknown may spend at most one one-page reconciliation slot; zero/multiple/paginated matches remain unknown. Partial upload and interrupted observation do not restart. No automatic stale-lock takeover or cross-job reconstruction.
+
+## Service and runtime allowlist
+
+Candidate Results origin: `https://results-receiver.actions.githubusercontent.com`; GitHub REST: `https://api.github.com`, API `2022-11-28`; Azure blob: canonical HTTPS account host `[a-z0-9]{3,24}.blob.core.windows.net`, API/SAS version `2023-11-03`. Results supports only the pinned CreateArtifact/FinalizeArtifact Twirp paths. REST is limited to the exact selected repository/run/artifact/redirect/list paths. Azure path/capability identity must come from an independently authenticated approved response; shape validation alone gives no issuer authority. No wildcard Results host, port, username, fragment, path normalization, encoded/duplicate/unknown query key or operation smuggling. Upload permits `cw`/`w` blob capability; download permits `r`; expire within 24 hours, no future start beyond five minutes, complete coherent user-delegation fields if present. Preserve raw signed query octets.
+
+These are reviewed candidate profile restrictions, not verified live endpoint/capability facts. The selected runner may supply another Results origin/version or unsupported fields. Stop for a new review instead of broadening policy. Local TLS routes only reserved fixture hosts physically to loopback; it cannot use these service hosts.
+
+Selected hosted Linux X64 runner source/distribution, exact Node binary hash/version, workflow/action hashes, backend IDs, run/attempt/source/ref and Node flags must independently match a future approved manifest **before credential materialization or mutation**. Source references currently inspected: runner v2.329.0 `c76c59996c8fa32e989164a5a695efb12608ae5a`, Node v24.18.1 `9623d9ad85d37d2f0610ec4a82b48182cf2c6061` (see the source-only dossier). No selected runner was inspected. The locally pinned Node executable does not establish hosted binary provenance. A future runtime pin cannot be selected opportunistically after a credential-bearing run starts.
+
+Proposed job scopes: `contents:read` for pinned checkout and `actions:read` for this repository's metadata/downloads; no id-token, contents-write, attestation or tenant credentials. The platform-injected artifact runtime token/capabilities require separately verified backend/run/scope/lifetime authority. Controller settings-enable/disable/dispatch/cancel credentials are separate from both runtime and Read slots and need explicit approval for this repository only. Current code reads none of them. No account authentication or tenant permission change belongs in this experiment.
+
+## Controller bounds and restoration
+
+The nonexecutable controller plan fixes **30 total attempts, six writes, 480 seconds total, ten seconds per request, 1 MiB maximum per control body**. Twenty-nine operation slots are assigned; the spare is unallocated, not a retry pool:
+
+| Phase | Maximum exchanges |
+| --- | ---: |
+| Snapshot repository, workflow, exclusive ref and settings | 4 |
+| Enable repository and selected workflow only if needed | 2 |
+| Verify workflow and exclusive ref | 2 |
+| Dispatch once | 1 |
+| Discover run once, source/ref/nonce/actor constrained | 1 |
+| Observe selected run | 10 |
+| Cancel known run at deadline | 1 |
+| Observe cancellation | 2 |
+| Read settings/workflow before restoration | 2 |
+| Restore original enablement bits | 2 |
+| Verify original settings/workflow state | 2 |
+
+Writes are at most two enables + one dispatch + one cancellation + two restores. Short-circuiting consumes fewer slots; it does not reassign them. Dispatch acknowledgement loss never permits redispatch. The one bounded discovery response must match exact workflow/ref/source, unique nonce in run name, workflow_dispatch event and approved actor. Zero/multiple/paginated/missing matches mean unknown. Cancel only a uniquely established run ID; do not guess or cancel another run. One Linux job has a five-minute hosted limit; client transaction stops after 180 seconds. A controller wall/monotonic deadline must reserve restoration time rather than let polling consume it. The current controller has no execution engine; these limits are not claimed to be runtime-enforced until that separately reviewed engine exists.
+
+Restore even after success/failure/cancellation/unknown if exclusive custody remains proven. Before restoring, re-read both states and require equality with the controller's last applied state, same exact IDs and unchanged allowed-actions/SHA-pinning policy. Restore only original workflow enablement and repository `enabled` bit, then verify both. Never write broad permission-policy payloads. GitHub compare-and-swap/ETag support for these mutations is not established; no CAS claim is made. If another writer, lost custody, a mismatching state or restoration failure occurs, stop without overwriting it, retain an explicit unresolved restoration incident and request operator recovery. The future approval must name the operator holding exclusive custody and the manual recovery owner. Do not grant settings writes until this condition is enforceable.
+
+## Next approval boundary
+
+A matching Run record does not establish artifact-own attempt or workflow ID. Those remain unobserved until independently trusted content supplies them. Exact C == R, metadata and transport acceptance do not authorize privacy/business approval, operational policy emission, signing, publication or production use.
+
+This checkpoint is **ready for Dot's offline review, not for a live run**. Next decision: approve a separately scoped activation implementation and source/runtime/custody review, then consider one explicit authorization naming its exact revised source, credentials/scopes, up-to-six settings/control writes, one Linux hosted job, retention and bounds above. No live canary authorization is requested for current inert source. Unverified selected-runner/runtime/token authority, real response compatibility, exclusive custody/restoration execution and explicit retention remain bundled prerequisites. Actions, real HTTPS, credentials and operational activation stay blocked meanwhile.

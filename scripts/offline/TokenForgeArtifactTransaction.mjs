@@ -1,9 +1,12 @@
-// Linux-only OFFLINE model. No network, runner environment, action entry point,
-// signing or policy emission. Fake capabilities cannot be supplied by callers.
+// Linux-only bounded core: recording fake or branded dummy-only loopback TLS.
+// No runner credentials, external service, signing or policy emission.
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash, randomBytes} from 'node:crypto';
 import {object, fail, keys, id, context, strictJson} from './TokenForgeOfflineSchema.mjs';
+import {createFakeClock, clockNow, assertWithinDeadline} from './TokenForgeOfflineClock.mjs';
+export {createFakeClock};
+import {localTlsBinding,localRuntimeIdentity,exchangeLocalTls} from '../transport/TokenForgeLocalTlsTransport.mjs';
 import {PROTOCOL, ROLES, requestBody, buildRequest, validateRequest, parseResponse, fixtureCapability} from './TokenForgeArtifactProtocol.mjs';
 
 const PROFILE = 'CanonicalStoredOriginalZipV1';
@@ -18,8 +21,9 @@ const ACK = {Create:'Created',Block:'BlockAck',Commit:'Committed',Finalize:'Fina
 const UNKNOWN = {Create:'CreateUnknown',Block:'UploadUnknown',Commit:'UploadUnknown',Finalize:'FinalizeUnknown'};
 const STATES = ['Prepared',...Object.values(INTENT),...Object.values(ACK),'CreateUnknown','UploadUnknown',
   'FinalizeUnknown','ObserveIntent','ObservationUnknown','Observed','Refused'];
-const transports = new WeakMap(), clocks = new WeakMap();
+const transports = new WeakMap();
 const hash = b => createHash('sha256').update(b).digest('hex');
+const engineSha256=hash(Buffer.concat([fs.readFileSync(new URL(import.meta.url)),fs.readFileSync(new URL('./TokenForgeOfflineClock.mjs',import.meta.url)),fs.readFileSync(new URL('./TokenForgeArtifactProtocol.mjs',import.meta.url)),fs.readFileSync(new URL('./TokenForgeOfflineSchema.mjs',import.meta.url))]));
 
 function crc32(bytes) {let c=0xffffffff;for(const b of bytes){c^=b;for(let j=0;j<8;j++) c=(c>>>1)^((c&1)?0xedb88320:0);}return (c^0xffffffff)>>>0;}
 // Read-only structural profile check. No archive formatter/replacement path.
@@ -52,20 +56,10 @@ export function assertCanonicalOriginal(input) {
   return PROFILE;
 }
 
-export function createFakeClock(wall=1000000) {
-  if(!Number.isSafeInteger(wall) || wall<0) fail('ClockRefused');
-  const state={wall,mono:0,boot:randomBytes(16).toString('hex')};const handle=Object.freeze({advance(ms){if(!Number.isSafeInteger(ms)) fail('ClockRefused');state.wall+=ms;state.mono+=Math.max(0,ms);}});
-  clocks.set(handle,state);return handle;
-}
-function clockNow(handle) {
-  if(handle===undefined) return {wall:Date.now(),mono:Number(process.hrtime.bigint()/1000000n),boot:fs.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim()};
-  const c=clocks.get(handle);if(!c) fail('ClockRefused');return {...c};
-}
-
 // Deliberately abstract messages, not production HTTP/protocol serialization.
 // The fixed fixture credentials are opaque object identities, never strings/JWTs.
 export function createFakeTransport(options={}, clock) {
-  if(clock!==undefined && !clocks.has(clock)) fail('ClockRefused');
+  if(clock!==undefined && !isFakeClock(clock)) fail('ClockRefused');
   const allowed=['faults','transform','metadataChange','listMode','credentialFault','delayMs','responseOversize','serializationFault','responseFault'];
   if(!object(options)||Object.keys(options).some(k=>!allowed.includes(k))) fail('FakeConfigurationRefused');
   let o;try{o=structuredClone(options);}catch{fail('FakeConfigurationRefused');}
@@ -175,15 +169,15 @@ function corruptRequest(r,kind) {
   return r;
 }
 
-function assertClockBinding(transport,clock) {
-  if(!transports.has(transport)) fail('FakeTransportRequired');
-  if(transports.get(transport).clock!==clock) fail('ClockBindingRefused');
+function transportBinding(handle) {
+  const local=localTlsBinding(handle);
+  if(local) return {...local,engineSha256};
+  if(transports.has(handle))return {kind:'RecordingFake',authoritySha256:'None',profileSha256:engineSha256,runtimeSha256:localRuntimeIdentity().sha256,engineSha256};
+  fail('FixtureTransportRequired');
 }
-
-function assertWithinDeadline(clock,j) {
-  const t=clockNow(clock);
-  if(t.boot!==j.boot||t.wall<j.lastWall||t.wall>=j.deadline||t.mono<j.lastMono||t.mono>=j.deadlineMono) fail('DeadlineRefused');
-  return t;
+function assertClockBinding(transport,clock) {
+  transportBinding(transport);
+  if(transports.has(transport)?transports.get(transport).clock!==clock:clock!==undefined)fail('ClockBindingRefused');
 }
 
 function safeDirectory(dir) {
@@ -199,13 +193,16 @@ function readPrivate(file,max) {
   finally {fs.closeSync(fd);}
 }
 function writePrivate(file,bytes,mode=0o600) {const fd=fs.openSync(file,fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_NOFOLLOW,mode);try{fs.writeFileSync(fd,bytes);fs.fsyncSync(fd);}finally{fs.closeSync(fd);}}
-function validateJournal(j,expected) {
-  keys(j,['version','kind','state','context','name','hash','size','created','deadline','lastWall','createdMono','deadlineMono','lastMono','boot','ledger','artifactId','reconciliationUsed','priorUnknown']);
-  if(j.version!==2 || j.kind!=='OfflineSerializedArtifactTransaction' || !STATES.includes(j.state)) fail('JournalRefused');
+function validateJournal(j,expected,binding) {
+  keys(j,['version','kind','binding','state','context','name','hash','size','created','deadline','lastWall','createdMono','deadlineMono','lastMono','boot','ledger','artifactId','metadataExpiry','reconciliationUsed','priorUnknown']);
+  if(j.version!==3 || j.kind!=='OfflineTlsCapableArtifactTransaction' || !STATES.includes(j.state)) fail('JournalRefused');
+  keys(j.binding,Object.keys(binding));if(JSON.stringify(j.binding)!==JSON.stringify(binding))fail('TransportBindingRefused');
   context(j.context);if(JSON.stringify(j.context)!==JSON.stringify(context(expected))) fail('ContextChanged');
   if(typeof j.name!=='string'||typeof j.hash!=='string'||!/^tf-offline-[0-9a-f]{32}$/.test(j.name)||!/^[0-9a-f]{64}$/.test(j.hash)||!Number.isSafeInteger(j.size)||j.size<1||j.size>LIMITS.archive) fail('JournalRefused');
   for(const n of [j.created,j.deadline,j.lastWall,j.createdMono,j.deadlineMono,j.lastMono]) if(!Number.isSafeInteger(n)||n<0) fail('JournalRefused');
   if(typeof j.boot!=='string'||!/^[-0-9a-f]{32,36}$/.test(j.boot)||j.deadlineMono!==j.createdMono+LIMITS.deadlineMs||j.lastMono<j.createdMono||j.deadline!==j.created+LIMITS.deadlineMs||j.lastWall<j.created||typeof j.reconciliationUsed!=='boolean'||!['','CreateUnknown','UploadUnknown','FinalizeUnknown'].includes(j.priorUnknown)) fail('JournalRefused');
+  if(j.metadataExpiry!=='Unobserved'&&j.metadataExpiry!==null&&(!Number.isSafeInteger(j.metadataExpiry)||j.metadataExpiry<0))fail('JournalRefused');
+  if(j.state==='Observed'&&j.metadataExpiry==='Unobserved')fail('JournalRefused');
   if(j.artifactId!==null) id(j.artifactId);
   if(['Finalized','Observed','ObserveIntent'].includes(j.state)&&j.artifactId===null) fail('JournalRefused');
   if(!Array.isArray(j.ledger)||j.ledger.length>LIMITS.attempts) fail('JournalRefused');
@@ -242,7 +239,7 @@ function validateJournal(j,expected) {
 }
 
 export class OfflineArtifactTransaction {
-  #dir;#journal;#archive;#transport;#clock;#lock;#closed=false;#blob=false;#download;#busy=false;
+  #dir;#journal;#archive;#transport;#clock;#local=false;#lock;#closed=false;#blob=false;#download;#busy=false;
   constructor(secret) {if(secret!==transports) fail('UseOfflineFactory');}
   static prepare(options) {
     keys(options, ['parent','original','context','transport',...('clock' in options?['clock']:[])]);
@@ -251,8 +248,8 @@ export class OfflineArtifactTransaction {
     const ctx=context(identity);assertCanonicalOriginal(original);const time=clockNow(clock);
     // mkdtemp's 0700 child is created before resolving any output file paths.
     const dir=fs.mkdtempSync(path.join(parent,'tf-offline-'));fs.chmodSync(dir,0o700);safeDirectory(dir);
-    const j={version:2,kind:'OfflineSerializedArtifactTransaction',state:'Prepared',context:ctx,name:`tf-offline-${randomBytes(16).toString('hex')}`,
-      hash:hash(original),size:original.length,created:time.wall,deadline:time.wall+LIMITS.deadlineMs,lastWall:time.wall,createdMono:time.mono,deadlineMono:time.mono+LIMITS.deadlineMs,lastMono:time.mono,boot:time.boot,ledger:[],artifactId:null,reconciliationUsed:false,priorUnknown:''};
+    const j={version:3,kind:'OfflineTlsCapableArtifactTransaction',binding:transportBinding(transport),state:'Prepared',context:ctx,name:`tf-offline-${randomBytes(16).toString('hex')}`,
+      hash:hash(original),size:original.length,created:time.wall,deadline:time.wall+LIMITS.deadlineMs,lastWall:time.wall,createdMono:time.mono,deadlineMono:time.mono+LIMITS.deadlineMs,lastMono:time.mono,boot:time.boot,ledger:[],artifactId:null,metadataExpiry:'Unobserved',reconciliationUsed:false,priorUnknown:''};
     writePrivate(path.join(dir,'original.zip'),original,0o400);
     writePrivate(path.join(dir,'journal.json'),Buffer.from(JSON.stringify(j)));syncDirectory(dir);
     return OfflineArtifactTransaction.open({directory:dir,context:ctx,transport,clock});
@@ -261,12 +258,12 @@ export class OfflineArtifactTransaction {
     keys(options, ['directory','context','transport',...('clock' in options?['clock']:[])]);
     const {directory,context:identity,transport,clock}=options;
     assertClockBinding(transport,clock);safeDirectory(directory);
-    const x=new OfflineArtifactTransaction(transports);x.#dir=directory;x.#transport=transports.get(transport);x.#clock=clock;
+    const x=new OfflineArtifactTransaction(transports);x.#dir=directory;x.#local=!!localTlsBinding(transport);x.#transport=x.#local?transport:transports.get(transport);x.#clock=clock;
     // A killed process leaves this sentinel. Refuse it; automatic stale-lock
     // deletion/recovery is deliberately not implemented or claimed.
     x.#lock=fs.openSync(path.join(directory,'lock'),fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_NOFOLLOW,0o600);
     try {
-      x.#journal=strictJson(readPrivate(path.join(directory,'journal.json'),16384));validateJournal(x.#journal,identity);
+      x.#journal=strictJson(readPrivate(path.join(directory,'journal.json'),16384));validateJournal(x.#journal,identity,transportBinding(transport));
       x.#archive=readPrivate(path.join(directory,'original.zip'),LIMITS.archive);x.#checkArchive();x.#checkTime();
       const s=x.#journal.state;
       if(Object.values(INTENT).includes(s)){const op=Object.keys(INTENT).find(k=>INTENT[k]===s);x.#journal.state=UNKNOWN[op];x.#journal.priorUnknown=UNKNOWN[op];x.#save();}
@@ -277,7 +274,7 @@ export class OfflineArtifactTransaction {
   }
   get directory(){return this.#dir;}
   snapshot(){return structuredClone(this.#journal);}
-  close(){if(!this.#closed){this.#closed=true;if(this.#lock!==undefined){fs.closeSync(this.#lock);fs.unlinkSync(path.join(this.#dir,'lock'));syncDirectory(this.#dir);}}}
+  close(){if(this.#busy)fail('TransactionBusy');if(!this.#closed){this.#closed=true;if(this.#lock!==undefined){fs.closeSync(this.#lock);fs.unlinkSync(path.join(this.#dir,'lock'));syncDirectory(this.#dir);}}}
   #save() {
     const t=clockNow(this.#clock), j=this.#journal;
     // Never overwrite a previously observed timing watermark with a rollback.
@@ -295,7 +292,7 @@ export class OfflineArtifactTransaction {
     assertCanonicalOriginal(b);
   }
   #checkTime() {return assertWithinDeadline(this.#clock,this.#journal);}
-  #request(op,body=Buffer.alloc(0)) {
+  async #request(op,body=Buffer.alloc(0)) {
     if(this.#closed) fail('Closed');this.#checkArchive();const time=this.#checkTime(),j=this.#journal;
     const mutation=MUTATIONS.includes(op);if(!ROLE[op]||(!mutation&&!READS.includes(op))) fail('OperationRefused');
     const responseMax=op==='Download'?LIMITS.archive:LIMITS.controlResponse;
@@ -306,15 +303,16 @@ export class OfflineArtifactTransaction {
     // Persistence itself can consume the remaining deadline. A charged intent
     // is never permission to dispatch after expiration.
     this.#checkTime();
-    const role=this.#transport.options.credentialFault===op?(ROLE[op]==='Read'?'Runtime':'Read'):ROLE[op];
+    const role=this.#transport.options?.credentialFault===op?(ROLE[op]==='Read'?'Runtime':'Read'):ROLE[op];
     const capabilities={original:this.#archive,uploadUrl:this.#blob,downloadUrl:this.#download};
     let request=buildRequest(op,j,capabilities);
     if(!request.body.equals(body)) fail('ProtocolChargeRefused');
-    if(this.#transport.options.serializationFault?.op===op) request=corruptRequest(request,this.#transport.options.serializationFault.kind);
+    if(this.#transport.options?.serializationFault?.op===op) request=corruptRequest(request,this.#transport.options.serializationFault.kind);
     validateRequest(request,j,capabilities);
-    this.#transport.expectedOriginal=Buffer.from(this.#archive);
+    if(!this.#local)this.#transport.expectedOriginal=Buffer.from(this.#archive);
     this.#checkTime();
-    const before=clockNow(this.#clock);const response=fakeExchange(this.#transport,request,this.#transport.credentials[role],j);
+    const before=clockNow(this.#clock);
+    const response=this.#local?await exchangeLocalTls(this.#transport,request,j,capabilities):fakeExchange(this.#transport,request,this.#transport.credentials[role],j);
     const after=clockNow(this.#clock);this.#checkTime();
     if(after.wall-before.wall>=LIMITS.requestMs||after.mono-before.mono>=LIMITS.requestMs||response.body.length>responseMax) fail('ResponseBound');
     const parsed=parseResponse(op,response,j);
@@ -322,11 +320,12 @@ export class OfflineArtifactTransaction {
     if(parsedAt.wall-before.wall>=LIMITS.requestMs||parsedAt.mono-before.mono>=LIMITS.requestMs) fail('ResponseBound');
     return parsed;
   }
-  #result(){return {kind:'OfflineFakeTransactionObservation',state:this.#journal.state,originalSha256:this.#journal.hash,
+  #expiryCurrent(){const e=this.#journal.metadataExpiry;return e===null||e==='Unobserved'||clockNow(this.#clock).wall<e;}
+  #result(){return {kind:this.#local?'LocalTlsTransactionObservation':'OfflineFakeTransactionObservation',state:this.#journal.state==='Observed'&&!this.#expiryCurrent()?'SavedObservationExpired':this.#journal.state,originalSha256:this.#journal.hash,
     originalBytes:this.#journal.size,artifactId:this.#journal.artifactId,attempts:this.#journal.ledger.length,
-    priorUnknown:this.#journal.priorUnknown,networkEnabled:false,serviceInteroperabilityProven:false,
+    priorUnknown:this.#journal.priorUnknown,networkEnabled:this.#local,externalHttpsEnabled:false,localTlsOnly:this.#local,serviceInteroperabilityProven:false,
     operationalPolicyEmissionAllowed:false,contentPrivacyApproval:false,artifactOwnAttemptObserved:false,artifactOwnWorkflowIdObserved:false};}
-  advance() {
+  async advance() {
     if(this.#busy||this.#closed) fail('TransactionUnavailable');this.#busy=true;
     try {
       const op={Prepared:'Create',Created:'Block',BlockAck:'Commit',Committed:'Finalize'}[this.#journal.state];
@@ -336,7 +335,7 @@ export class OfflineArtifactTransaction {
       this.#journal.state=INTENT[op];this.#save();
       try {
         const body=op==='Block'?Buffer.from(this.#archive):requestBody(op,this.#journal);
-        const r=this.#request(op,body);
+        const r=await this.#request(op,body);
         if(op==='Create'){keys(r,['reservation']);this.#blob=r.reservation;}
         else if(op==='Finalize'){keys(r,['id']);this.#journal.artifactId=id(r.id);}
         else {keys(r,['ok']);if(r.ok!==true) fail('ResponseRefused');}
@@ -350,30 +349,32 @@ export class OfflineArtifactTransaction {
     finally {this.#busy=false;}
   }
   #artifact(m) {
-    keys(m,['id','name','observedContext','size','digest','expired']);id(m.id);keys(m.observedContext,['repositoryId','runId','source']);
+    keys(m,['id','name','observedContext','size','digest','expired','expiresAt']);id(m.id);keys(m.observedContext,['repositoryId','runId','source']);
     if(m.id!==this.#journal.artifactId||m.name!==this.#journal.name||m.observedContext.repositoryId!==this.#journal.context.repositoryId||m.observedContext.runId!==this.#journal.context.runId||m.observedContext.source!==this.#journal.context.source||m.size!==this.#journal.size||m.digest!==`sha256:${this.#journal.hash}`||m.expired!==false) fail('ArtifactMismatch');
+    const j=this.#journal;if(j.metadataExpiry==='Unobserved'){j.metadataExpiry=m.expiresAt;this.#save();}
+    if(j.metadataExpiry!==m.expiresAt||!this.#expiryCurrent())fail('ArtifactExpiredOrChanged');
   }
-  observe() {
+  async observe() {
     if(this.#busy||this.#closed) fail('TransactionUnavailable');this.#busy=true;
     try {
       const j=this.#journal;
       if(['CreateUnknown','FinalizeUnknown'].includes(j.state)&&!j.reconciliationUsed) {
         j.reconciliationUsed=true;this.#save();
-        const r=this.#request('List');keys(r,['items','hasMore']);
+        const r=await this.#request('List');keys(r,['items','hasMore']);
         if(r.hasMore!==false||!Array.isArray(r.items)||r.items.length!==1) return this.#result();
         j.artifactId=id(r.items[0].id);this.#artifact(r.items[0]);j.state='Finalized';this.#save();
       }
       if(j.state!=='Finalized') return this.#result();
       j.state='ObserveIntent';this.#save();
-      const repo=this.#request('Repository');keys(repo,['repository','id']);if(repo.repository!==j.context.repository||repo.id!==j.context.repositoryId) fail('RepositoryMismatch');
-      const run=this.#request('Run');context(run);if(JSON.stringify(context(run))!==JSON.stringify(j.context)) fail('RunMismatch');
-      const first=this.#request('Artifact');this.#artifact(first);
-      const redirect=this.#request('Redirect');keys(redirect,['capability']);this.#download=redirect.capability;
-      const raw=this.#request('Download');
+      const repo=await this.#request('Repository');keys(repo,['repository','id']);if(repo.repository!==j.context.repository||repo.id!==j.context.repositoryId) fail('RepositoryMismatch');
+      const run=await this.#request('Run');context(run);if(JSON.stringify(context(run))!==JSON.stringify(j.context)) fail('RunMismatch');
+      const first=await this.#request('Artifact');this.#artifact(first);
+      const redirect=await this.#request('Redirect');keys(redirect,['capability']);this.#download=redirect.capability;
+      const raw=await this.#request('Download');
       if(raw.length!==j.size||hash(raw)!==j.hash||!raw.equals(this.#archive)) fail('OriginalMismatch');assertCanonicalOriginal(raw);
-      this.#artifact(this.#request('Artifact'));
-      const runAfter=this.#request('Run');context(runAfter);if(JSON.stringify(context(runAfter))!==JSON.stringify(j.context)) fail('RunMismatch');
-      this.#checkArchive();this.#checkTime();j.state='Observed';this.#save();return this.#result();
+      this.#artifact(await this.#request('Artifact'));
+      const runAfter=await this.#request('Run');context(runAfter);if(JSON.stringify(context(runAfter))!==JSON.stringify(j.context)) fail('RunMismatch');
+      this.#checkArchive();this.#checkTime();if(!this.#expiryCurrent())fail('ArtifactExpiredOrChanged');j.state='Observed';this.#save();return this.#result();
     } catch(e) {if(!(e instanceof Interrupted)){this.#journal.state='ObservationUnknown';this.#save();}return {...this.#result(),...(e instanceof Interrupted?{interrupted:true}:{})};}
     finally {this.#busy=false;}
   }

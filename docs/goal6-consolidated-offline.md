@@ -1,5 +1,7 @@
 # Consolidated offline protocol-boundary milestone
 
+Historical milestone description: current asynchronous loopback-TLS behavior and journal v3 are documented in [local TLS readiness](goal6-local-tls-readiness.md). This document describes the earlier accepted network-disabled checkpoint.
+
 Nathan adopted [Dot's review and milestone](goal6-dot-offline-transaction-review.md) from `codex/dot-goal6-review-handoff-20261024`, exact source `18a617f`. The review was copied unchanged into this branch; its closing unpublished statement describes its preparation state, not the adopted branch's current status. This milestone completes the adopted **offline** scope only. It adds no real HTTPS dispatcher, credential reader, runner action entry point, hosted operation, signing or operational authority.
 
 ## Shared clock correction (M1)

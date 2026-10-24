@@ -1,5 +1,7 @@
 # Network-disabled artifact transaction core
 
+Historical milestone description: current asynchronous loopback-TLS behavior and journal v3 are documented in [local TLS readiness](goal6-local-tls-readiness.md). This document describes the earlier accepted network-disabled checkpoint.
+
 This component implements the network-disabled transaction core and logical observer proposed in [the producer/service design](goal6-producer-zip-design.md). The [consolidated milestone](goal6-consolidated-offline.md) adds the reviewed serialization profile and closes Dot's shared-clock finding. The implementation is `scripts/offline/TokenForgeArtifactTransaction.mjs`; its Linux test suite is `tests/ArtifactTransaction.test.mjs`. It has no real HTTP transport, action entry point, runner credential reader, dispatch controller, signing or operational policy emitter. The existing sealer policy and dormant workflow are unchanged.
 
 ## Implemented boundary

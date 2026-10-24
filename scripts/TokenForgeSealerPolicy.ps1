@@ -39,11 +39,12 @@ function Test-TfSealerCaller([string]$Yaml,[string]$Commit) {
 
 function Get-TokenForgeSealerPolicyPlan {
  <# .SYNOPSIS
- Derive a review-only binding plan, or explicitly emit a fully bound policy.
+ Derive a review-only binding plan. Operational output is currently blocked.
  .DESCRIPTION
  No network, authentication or publication. Exact local Git objects are the reviewed
  source input, not proof of current main, permissions or hosted execution. Operational
- emission refuses quarantined/unconnected sources and missing independent role IDs.
+ emission is blocked pending complete original-ZIP privacy validation; source,
+ caller and independent identity binding checks remain necessary.
  #>
  [CmdletBinding()]
  param(
@@ -95,10 +96,11 @@ function Get-TokenForgeSealerPolicyPlan {
    $actors=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
    foreach($role in @('ProducerIds','ReviewerIds','MaintainerIds','ReaderIds')){foreach($id in $policy[$role]){if(-not $actors.Add($id)){throw 'Independent disjoint role bindings required.'}}}
   }
+  # Confirmed original-ZIP metadata/extra-byte privacy gap: do not issue a
+  # runtime policy until a reviewed complete-archive contract closes it.
   if($Operational){
-   if($quarantined -or -not $connected -or $missing.Count){throw 'Operational policy requires activation, exact pinned caller and complete operator bindings.'}
-   return $policy
+   throw 'Complete original ZIP privacy validation remains an unresolved activation blocker.'
   }
-  [pscustomobject]@{SchemaVersion=1;Kind='TokenForgeSealerPolicyReviewPlan';Operational=$false;AuthorizationEstablished=$false;CurrentMainVerified=$false;RolePermissionsVerified=$false;HostedSealingProven=$false;SealerCommit=$SealerCommit;ProducerCommit=$ProducerCommit;ImplementationCommit=$codeCommit;ImplementationSha256=([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($code)).ToLowerInvariant());PinnedInputs=@{SealerWorkflowSha256=([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($workflowBytes)).ToLowerInvariant());ProducerWorkflowSha256=([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($producerBytes)).ToLowerInvariant());VerifierSha256=$pin.executable.sha256;TrustRootSha256=$rootHash};Quarantined=$quarantined;CallerPinsSealer=$connected;MissingBindings=@($missing.ToArray());ProposedPolicy=$null;BindingPreview=$(if($policy){@{Kind='TokenForgeSealerBindingPreview';Operational=$false;Bindings=$bindings}}else{$null});RequiredGates=@('SeparateActivationApproval','ImmutableSameRepositoryCallerPin','TrustedOperatorIdentityBindings','HostedOriginalZipAndCertificateProof','SeparatePublicationPermissionAndRecoveryProof')}
+  [pscustomobject]@{SchemaVersion=1;Kind='TokenForgeSealerPolicyReviewPlan';Operational=$false;AuthorizationEstablished=$false;CurrentMainVerified=$false;RolePermissionsVerified=$false;HostedSealingProven=$false;CompleteOriginalZipPrivacyValidated=$false;BlockingReasons=@('CompleteOriginalZipPrivacyValidationUnresolved');SealerCommit=$SealerCommit;ProducerCommit=$ProducerCommit;ImplementationCommit=$codeCommit;ImplementationSha256=([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($code)).ToLowerInvariant());PinnedInputs=@{SealerWorkflowSha256=([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($workflowBytes)).ToLowerInvariant());ProducerWorkflowSha256=([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($producerBytes)).ToLowerInvariant());VerifierSha256=$pin.executable.sha256;TrustRootSha256=$rootHash};Quarantined=$quarantined;CallerPinsSealer=$connected;MissingBindings=@($missing.ToArray());ProposedPolicy=$null;BindingPreview=$(if($policy){@{Kind='TokenForgeSealerBindingPreview';Operational=$false;Bindings=$bindings}}else{$null});RequiredGates=@('CompleteOriginalZipPrivacyValidation','SeparateActivationApproval','ImmutableSameRepositoryCallerPin','TrustedOperatorIdentityBindings','HostedOriginalZipAndCertificateProof','SeparatePublicationPermissionAndRecoveryProof')}
  }catch{throw 'Sealer policy planning failed; no operational policy emitted.'}
 }

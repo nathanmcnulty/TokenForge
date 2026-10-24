@@ -1,5 +1,7 @@
 # Goal 6 reusable sealer and policy
 
+Current review status: [follow-up to Dot](goal6-sealer-followup.md) corrects temporary-directory ingress and confirms an unresolved complete-original-ZIP privacy blocker. Operational policy emission is now refused unconditionally. The earlier acceptance below covers structural checks, not every archive byte.
+
 This milestone implements an offline-tested trusted sealer and policy planner. It does not complete Goal 6 or establish hosted provenance, publication authority or release readiness. Exact commits, package reuse and checks are recorded in [the validation receipt](goal6-sealer-validation.json). [Dot's review handoff](goal6-dot-review.md) describes the current review scope and remaining release gates.
 
 ## Trust boundary

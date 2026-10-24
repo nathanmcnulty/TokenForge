@@ -119,10 +119,13 @@ Describe 'Immutable local sealer policy planning' {
  }
 }
 Describe 'Synthetic activation boundary' {
- It 'emits the runtime schema only for explicitly requested fully bound active fixtures' {
+ It 'refuses operational output even for otherwise active fully bound fixtures while ZIP privacy is unresolved' {
   $f=New-PolicyFixture $TestDrive -Active;$o=$f.Options
-  $p=Get-TokenForgeSealerPolicyPlan @o -Operational
-  {Assert-TfPublicationPolicy $p}|Should -Not -Throw
+  $p=Get-TokenForgeSealerPolicyPlan @o
+  $p.CompleteOriginalZipPrivacyValidated|Should -BeFalse
+  $p.RequiredGates|Should -Contain 'CompleteOriginalZipPrivacyValidation'
+  $p.BlockingReasons|Should -Contain 'CompleteOriginalZipPrivacyValidationUnresolved'
+  {Get-TokenForgeSealerPolicyPlan @o -Operational}|Should -Throw
  }
  It 'refuses an active workflow with a block-scalar fake caller' {
   $f=New-PolicyFixture $TestDrive -Active;$o=$f.Options

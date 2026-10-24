@@ -7,5 +7,6 @@ $invocation=@{Repository=$env:TF_REPOSITORY;RepositoryId=$env:TF_REPOSITORY_ID;S
 if([string]::IsNullOrWhiteSpace($env:TF_READ_TOKEN)){throw 'Explicit hosted read token required.'}
 $readToken=ConvertTo-SecureString $env:TF_READ_TOKEN -AsPlainText -Force
 Remove-Item Env:TF_READ_TOKEN
-$result=Get-TokenForgeSealingSubject -Invocation $invocation -ArtifactId $ArtifactId -OutputDirectory (Join-Path $env:RUNNER_TEMP tokenforge-sealed) -AccessToken $readToken
+$outputPath=New-TfSealerOutputPath $env:RUNNER_TEMP
+$result=Get-TokenForgeSealingSubject -Invocation $invocation -ArtifactId $ArtifactId -OutputDirectory $outputPath -AccessToken $readToken
 $result|Select-Object Kind,SubjectSha256,CandidateHash,SubjectCount,StructuralValidation,SemanticApproval,SigningPerformed

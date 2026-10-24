@@ -2,6 +2,21 @@
 # Trusted data-only validation. Import performs no network request or signing.
 . (Join-Path $PSScriptRoot TokenForgePublicationAdapter.ps1)
 
+function New-TfSealerOutputPath([string]$TemporaryRoot) {
+ # The runner's temporary root may be 0755. Create our own private immediate
+ # parent before PrivateFiles.Resolve enforces the output's parent permissions.
+ if(-not $IsLinux -or -not [IO.Path]::IsPathFullyQualified($TemporaryRoot)){throw 'Explicit Linux temporary root required.'}
+ $root=[IO.Path]::GetFullPath($TemporaryRoot)
+ if(-not [IO.Directory]::Exists($root)){throw 'Temporary root must already exist.'}
+ for($part=$root;$part;$part=[IO.Path]::GetDirectoryName($part)){if([IO.File]::GetAttributes($part) -band [IO.FileAttributes]::ReparsePoint){throw 'Linked temporary roots are forbidden.'}}
+ $parent=Join-Path $root tokenforge-sealer-private
+ if(Test-Path -LiteralPath $parent){throw 'Private sealing parent must be new; preserve existing evidence.'}
+ $null=[IO.Directory]::CreateDirectory($parent,[IO.UnixFileMode]448)
+ if([IO.File]::GetAttributes($parent) -band [IO.FileAttributes]::ReparsePoint){throw 'Linked sealing parents are forbidden.'}
+ if([int][IO.File]::GetUnixFileMode($parent) -ne 448){throw 'Private sealing parent must have mode 0700.'}
+ [TokenForge.Core.V0220.PrivateFiles]::Resolve((Join-Path $parent sealed),$false)
+}
+
 function Assert-TfSealerInvocation($Invocation) {
  Assert-TokenForgePermissionFields $Invocation @('Repository','RepositoryId','SourceCommit','RunId','RunAttempt','Ref','EventName','WorkflowRef')
  foreach($key in $Invocation.Keys){if($Invocation[$key] -isnot [string]){throw 'Invocation scalar.'}}
@@ -108,7 +123,7 @@ function Get-TokenForgeSealingSubject {
   Test-TfPublicationBudget $context
   Remove-Item -LiteralPath $extracted -Recurse -Force
   [IO.File]::SetUnixFileMode($archive,[IO.UnixFileMode]256)
-  $result=[ordered]@{SchemaVersion=1;Kind='TokenForgeSealingSubject';Synthetic=$isSynthetic;RepositoryId=$Invocation.RepositoryId;SourceCommit=$Invocation.SourceCommit;ProducerRunId=$Invocation.RunId;ProducerAttempt=$Invocation.RunAttempt;WorkflowId=$workflowId;ArtifactId=$ArtifactId;SubjectPath=$archive;SubjectSha256=$archiveHash;CandidateHash=$candidateHash;SubjectCount=1;StructuralValidation=$true;SemanticApproval=$false;SigningPerformed=$false;MetadataRequests=$context.Requests;DownloadRequests=$context.DownloadRequests}
+  $result=[ordered]@{SchemaVersion=1;Kind='TokenForgeSealingSubject';Synthetic=$isSynthetic;RepositoryId=$Invocation.RepositoryId;SourceCommit=$Invocation.SourceCommit;ProducerRunId=$Invocation.RunId;ProducerAttempt=$Invocation.RunAttempt;WorkflowId=$workflowId;ArtifactId=$ArtifactId;SubjectPath=$archive;SubjectSha256=$archiveHash;CandidateHash=$candidateHash;SubjectCount=1;StructuralValidation=$true;CompleteOriginalZipPrivacyValidated=$false;SemanticApproval=$false;SigningPerformed=$false;MetadataRequests=$context.Requests;DownloadRequests=$context.DownloadRequests}
   $receipt=[TokenForge.Core.V0220.PrivateFiles]::Open((Join-Path $OutputDirectory subject.json),$true)
   try{$bytes=[Text.Encoding]::UTF8.GetBytes(($result|ConvertTo-Json -Compress));$receipt.Write($bytes,0,$bytes.Length);$receipt.Flush($true)}finally{$receipt.Dispose()}
   [pscustomobject]$result

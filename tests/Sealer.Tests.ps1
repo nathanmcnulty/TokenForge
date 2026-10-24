@@ -135,3 +135,83 @@ Describe 'Sealing download budgets' {
   $calls.Count|Should -Be 0
  }
 }
+
+Describe 'Hosted temporary-root ingress' {
+ BeforeEach {
+  $f=New-SealerFixture $TestDrive;$options=$f.SealerOptions
+  $root=Join-Path $f.Root runner-temp;$null=[IO.Directory]::CreateDirectory($root)
+  [IO.File]::SetUnixFileMode($root,[IO.UnixFileMode]493)
+ }
+ It 'creates a dedicated 0700 parent before resolving an output under a 0755 temporary root' {
+  $options.OutputDirectory=New-TfSealerOutputPath $root
+  [int][IO.File]::GetUnixFileMode((Split-Path $options.OutputDirectory))|Should -Be 448
+  [int][IO.File]::GetUnixFileMode($root)|Should -Be 493
+  $r=Get-TokenForgeSealingSubject @options
+  $r.SubjectPath|Should -BeExactly (Join-Path $root tokenforge-sealer-private/sealed/candidate.zip)
+  [int][IO.File]::GetUnixFileMode((Split-Path $r.SubjectPath))|Should -Be 448
+  [int][IO.File]::GetUnixFileMode($r.SubjectPath)|Should -Be 256
+ }
+ It 'preserves an existing private parent and completed output' {
+  $path=New-TfSealerOutputPath $root;$parent=Split-Path $path
+  $saved=Join-Path $parent completed;[IO.File]::WriteAllText($saved,'completed evidence')
+  {New-TfSealerOutputPath $root}|Should -Throw
+  [IO.File]::ReadAllText($saved)|Should -BeExactly 'completed evidence'
+ }
+ It 'refuses an existing nonprivate parent without chmod or deletion' {
+  $parent=Join-Path $root tokenforge-sealer-private;$null=[IO.Directory]::CreateDirectory($parent)
+  [IO.File]::SetUnixFileMode($parent,[IO.UnixFileMode]493)
+  {New-TfSealerOutputPath $root}|Should -Throw
+  [int][IO.File]::GetUnixFileMode($parent)|Should -Be 493
+ }
+ It 'refuses a linked temporary root before creating anything' {
+  $link=Join-Path $f.Root linked-root;$null=New-Item -ItemType SymbolicLink -Path $link -Target $root
+  {New-TfSealerOutputPath $link}|Should -Throw
+  Test-Path (Join-Path $root tokenforge-sealer-private)|Should -BeFalse
+ }
+ It 'keeps validator, signing and retained subject paths consistent' {
+  $entry=Get-Content "$PSScriptRoot/../scripts/Invoke-TokenForgeSealer.ps1" -Raw
+  $entry|Should -Match '\$outputPath=New-TfSealerOutputPath \$env:RUNNER_TEMP'
+  $entry|Should -Match '-OutputDirectory \$outputPath'
+  $workflow=Get-Content "$PSScriptRoot/../.github/workflows/tokenforge-sealer.yml" -Raw
+  $workflow|Should -Match 'subject-path: \$\{\{ runner.temp \}\}/tokenforge-sealer-private/sealed/candidate.zip'
+  $workflow|Should -Match '(?m)^            \$\{\{ runner.temp \}\}/tokenforge-sealer-private/sealed/candidate.zip$'
+  $workflow|Should -Match '(?m)^            \$\{\{ runner.temp \}\}/tokenforge-sealer-private/sealed/subject.json$'
+  $workflow|Should -Not -Match '/tokenforge-sealed/'
+ }
+}
+
+# These fixtures deliberately reproduce a CONFIRMED OPEN BLOCKER. Passing these
+# characterization assertions does not mean privacy validation passed: the marker
+# MUST NOT be signable/uploadable after a future complete-archive remediation.
+Describe 'Known original-ZIP privacy gap characterization (not a safety gate)' -Tag KnownPrivacyGap {
+ BeforeEach {$f=New-SealerFixture $TestDrive;$options=$f.SealerOptions}
+ It 'records current behavior for <Case>' -ForEach @(
+  @{Case='baseline-dotnet';Accept=$true;Marker=$false},
+  @{Case='archive-comment';Accept=$true;Marker=$true},
+  @{Case='entry-comment';Accept=$true;Marker=$true},
+  @{Case='local-and-central-extra';Accept=$true;Marker=$true},
+  @{Case='appended-bytes';Accept=$true;Marker=$true},
+  @{Case='prepended-unadjusted';Accept=$false;Marker=$false},
+  @{Case='prepended-adjusted';Accept=$true;Marker=$true},
+  @{Case='gap-before-central-directory';Accept=$true;Marker=$true},
+  @{Case='gap-before-end-record';Accept=$true;Marker=$true}
+ ) {
+  $mutated=Join-Path $f.Root mutated.zip
+  & /usr/bin/python3 -I "$PSScriptRoot/fixtures/publication/MutateSealerZip.py" $f.Zip $mutated $Case
+  if($LASTEXITCODE){throw 'Synthetic ZIP mutator failed.'}
+  [IO.File]::Copy($mutated,$f.Zip,$true)
+  $f.Server[($f.Api+'/actions/artifacts/30')].digest='sha256:'+(Get-TfCandidateFileHash $f.Zip)
+  $f.Server[($f.Api+'/actions/artifacts/30')].size_in_bytes=(Get-Item $f.Zip).Length
+  if(-not $Accept){
+   {Get-TokenForgeSealingSubject @options}|Should -Throw '*Candidate*'
+   Test-Path $options.OutputDirectory|Should -BeFalse
+  }else{
+   $r=Get-TokenForgeSealingSubject @options
+   (Get-TfCandidateFileHash $r.SubjectPath)|Should -BeExactly (Get-TfCandidateFileHash $f.Zip)
+   [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($r.SubjectPath)).Contains('SYNTHETIC_METADATA_MARKER')|Should -Be $Marker
+   $r.StructuralValidation|Should -BeTrue
+   $r.CompleteOriginalZipPrivacyValidated|Should -BeFalse
+   $r.SigningPerformed|Should -BeFalse
+  }
+ }
+}

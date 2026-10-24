@@ -52,7 +52,7 @@ jobs:
         id: attest
         uses: actions/attest-build-provenance@9d57eef8c06cd9d6b433effeeb7a6a77b3ff94ad
         with:
-          subject-path: ${{ runner.temp }}/tokenforge-sealed/candidate.zip
+          subject-path: ${{ runner.temp }}/tokenforge-sealer-private/sealed/candidate.zip
           push-to-registry: false
           create-storage-record: false
           show-summary: false
@@ -61,8 +61,8 @@ jobs:
         with:
           name: tokenforge-sealed-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            ${{ runner.temp }}/tokenforge-sealed/candidate.zip
-            ${{ runner.temp }}/tokenforge-sealed/subject.json
+            ${{ runner.temp }}/tokenforge-sealer-private/sealed/candidate.zip
+            ${{ runner.temp }}/tokenforge-sealer-private/sealed/subject.json
             ${{ steps.attest.outputs.bundle-path }}
           if-no-files-found: error
           retention-days: 7

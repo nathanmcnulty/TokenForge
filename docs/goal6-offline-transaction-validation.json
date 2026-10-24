@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgeNetworkDisabledTransactionValidation",
+  "recordedUtc": "2026-10-24T04:41:02.123471+00:00",
+  "status": "OfflineFakeCoreValidated_NotServiceInteroperabilityOrActivation",
+  "testedSourceCommit": "f5a4da91f90d9281c1118e09ac24b3e4a62fc06a",
+  "sourceParent": "b0588906b82f814c9cd9b7d50a3658dab13f8605",
+  "reviewBranch": "codex/goal6-reusable-sealer",
+  "preservedRoadmapHandoff": "19470aeba7a949e4204e4ecf5586a6ffb3171c69",
+  "receiptCommitScope": "Containing checkpoint adds only receipt/handoff documentation after testedSourceCommit; no code or package replacement.",
+  "capabilities": {
+    "realHttpsImplemented": false,
+    "arbitraryTransportCallbacksAllowed": false,
+    "runnerCredentialsRead": false,
+    "workflowDispatchImplemented": false,
+    "operationalPolicyEmissionAllowed": false,
+    "hostedActivationAllowed": false,
+    "serviceInteroperabilityProven": false,
+    "contentPrivacyApproval": false,
+    "publicationPerformed": false,
+    "tenantOperationsPerformed": false,
+    "hostedExecutionPerformed": false,
+    "actionsSettingsChanged": false,
+    "interactiveAuthenticationPerformed": false,
+    "dependenciesInstalled": false,
+    "nativeRebuilt": false
+  },
+  "implemented": {
+    "original": "Caller-supplied canonical original frozen once; full saved/in-memory/download byte equality; no formatter or substitution path.",
+    "credentials": "Module-private synthetic opaque Runtime/Blob/Read/Download capabilities and fixed operation-role mapping; no real credential/URL input.",
+    "journal": "Private 0700 child; 0400 original, 0600 fsynced atomic journal; durable intent and exact nonrefundable reservations; strict duplicate-key/schema/sequence validation.",
+    "time": "Fixed wall and monotonic deadlines plus observed watermarks/boot identity; no restart reset, clock rollback or post-persistence expired dispatch.",
+    "recovery": "No mutation replay; one bounded read-only reconciliation; partial-upload and interrupted-observation barriers. Clean-close same-store reopen only.",
+    "processTermination": "Original/journal preserved; stale exclusive lock refuses automatic reopening. No stale-lock takeover/cleanup or killed-process/cross-job recovery implementation.",
+    "observer": "Independent logical fake REST-like read sequence; fixed identity + metadata before/after + original full-byte match; result kind OfflineFakeTransactionObservation with authority flags false.",
+    "protocolLimit": "Abstract messages only, not actual HTTP/Twirp/Azure serialization; no real URL/TLS/credential injection/wire-retry proof.",
+    "profileLimit": "Complete structural canonical ZIP, CRC, strict UTF8/duplicate-free JSON; existing business/privacy approval remains separate and unavailable from core."
+  },
+  "fixedBudgets": {
+    "archiveMaxBytes": 65536,
+    "attemptsMax": 12,
+    "mutationAttemptsMax": 4,
+    "readAttemptsMax": 8,
+    "totalDeadlineMs": 180000,
+    "perExchangeMs": 10000,
+    "aggregateBodyBytesMax": 2097152,
+    "controlRequestBytesMax": 8192,
+    "controlResponseBytesMax": 131072,
+    "downloadResponseBytesMax": 65536,
+    "automaticRetries": 0,
+    "responsesReserveFullMaximumBeforeDispatch": true
+  },
+  "reviewKit": {
+    "kind": "TokenForgeOfflineSealerReviewKit",
+    "sourceCommit": "f5a4da91f90d9281c1118e09ac24b3e4a62fc06a",
+    "runtimeSource": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "manifestSha256": "b5d2857d3588ac635afca90ff618354b4088e666d75bbe8703b0c6bd3319e0b5",
+    "archiveSha256": "7a393dba90842f21c12672c83679b83ffeee0815d33dc5fddc033d075a9d754a",
+    "archiveBytes": 34185530,
+    "files": 453,
+    "nativeRebuilt": false,
+    "archive": ".cache/goal6-offline-core/TokenForge-offline-transaction-linux-x64.tar.gz",
+    "extractedPath": ".cache/goal6-offline-core/extracted",
+    "releasePackage": false,
+    "published": false
+  },
+  "exactSourceAudit": {
+    "literalGitBlobsVerified": 451,
+    "payloadFilesVerified": 453,
+    "unchangedAfterNodeGate": true,
+    "baselineGuardsAndNativeUnchanged": true,
+    "sourceHashes": {
+      "scripts/offline/TokenForgeArtifactTransaction.mjs": "d76a748637b26980b95a538a9e7488ec719e242717cdbbf3b21d7c166d3b53a1",
+      "tests/ArtifactTransaction.test.mjs": "8c8f8314ee7476d5d9627aefad5ab9ccd9a94e46e0a21257af18a6139dffabe8",
+      "docs/goal6-offline-transaction-core.md": "10dbb38021138915821f9e66a175747466eadbe1fad5ebffc4845a9a8252ccf7"
+    }
+  },
+  "toolchain": {
+    "node": {
+      "path": "/home/nathan/.local/node-24/bin/node",
+      "sha256": "f3432a45b03b2da0d270095fdd8813dc34cbea73f5fc8b18c7a384b7cf9b333a",
+      "version": "v24.18.1"
+    },
+    "pwsh": {
+      "path": "/home/nathan/.local/opt/powershell/7.6.7/pwsh",
+      "sha256": "873de21f04b6a0269c220f9c8396ff5cd639e8deb058a32cc26df54b69bbff8d",
+      "version": "7.6.7"
+    },
+    "git": {
+      "path": "/usr/bin/git",
+      "sha256": "356db14e102d68a1a37d8a1ac577dfd678d45d46e92f468bef8b7154e7bfdc60",
+      "version": "git version 2.47.3"
+    },
+    "python3": {
+      "path": "/usr/bin/python3.13",
+      "sha256": "889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9",
+      "version": "Python 3.13.5"
+    },
+    "pester": {
+      "version": "6.2.0"
+    }
+  },
+  "runtime": {
+    "sourceCommit": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "nativeModuleBuildInputsUnchanged": 144,
+    "nativeRebuilt": false,
+    "manifestSha256": "8295f2508bc95d67c1ce61904cd3a4bba5a7ccac0f8d30af8ef34066eff383c9",
+    "executableSha256": "987c863bc92f29de27ff812ad360cd1be1a8bde0fda6080f465827dbb6eb99db",
+    "credentialsDllSha256": "30d5d1268223c806e8c6d26fd138ef2f1db58dd23f067f59ac38387e2d7bad32"
+  },
+  "gates": {
+    "transactionCore": {
+      "command": "node --test --test-reporter=tap tests/ArtifactTransaction.test.mjs",
+      "workingDirectory": ".cache/goal6-offline-core/extracted",
+      "passed": 129,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "log": ".cache/goal6-offline-core/node-kit.tap",
+      "logSha256": "a2734a4fd9ce864a7f4fa378241bed0a922e815d03241e5eea4fa48cd4deda1f",
+      "exitCode": 0
+    },
+    "sealer": {
+      "preset": "Sealer",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 224,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": [],
+      "command": "pwsh -NoProfile -File scripts/Invoke-TokenForgeLocalValidation.ps1 -Preset Sealer -NativeExecutable <exact-kit>/tokenforge -ReportPath <new-local-report>",
+      "workingDirectory": ".cache/goal6-offline-core/extracted",
+      "report": ".cache/goal6-offline-core/sealer-kit.json",
+      "reportSha256": "6b7fa00ee0c0d37038feb06c4b55463b5681b502917b837a593f23ce6ca450c6",
+      "exitCode": 0
+    },
+    "postGatePackageFilesUnchanged": true,
+    "existingWorkflowAndOperationalGuardsUnchanged": true,
+    "gitDiffCheck": "Passed"
+  },
+  "review": {
+    "reviewer": "independent_review",
+    "scope": "Read-only static source/test/design review; no network or real credentials.",
+    "sourceDisposition": "No outstanding material static findings; clear for local source checkpoint.",
+    "addressed": [
+      "Fake-service immutable origin and cross-transaction substitution",
+      "Duplicate/escaped duplicate JSON keys, exact reservations and lifecycle/unknown barriers",
+      "Response timing watermark, wall/monotonic boot binding and post-fsync deadline check",
+      "Strict scalar and bounded repository identities",
+      "Stale-lock refusal documented and actual child exit tested"
+    ],
+    "receiptAudit": "Clear. Independently verified archive/manifest hashes, 453 payload files plus manifest, 451 literal Git blobs, 144 unchanged runtime inputs, tool hashes and saved Node129/0/0 + Sealer224/0/0 results. No material receipt finding; no suites rerun or network/authentication performed by reviewer."
+  },
+  "remainingBlocked": [
+    "Real transport/protocol serialization and wire-level no-replay/origin/credential tests are unimplemented.",
+    "Runner-to-action credential injection, action/runner/Node provenance, origin and API pins remain unbound.",
+    "No hosted canary or live interoperability proof; source-ref exclusion, controller limits and separate explicit authorization remain required.",
+    "No automatic stale-lock/process-loss recovery, production content/privacy approval, signing, operational emission or publication."
+  ]
+}

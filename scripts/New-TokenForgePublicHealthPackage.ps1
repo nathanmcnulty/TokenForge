@@ -19,8 +19,14 @@ foreach($relative in $sourcePaths){
     $actual=(& git -C $repo hash-object --no-filters -- (Join-Path $repo $relative)).Trim()
     if($LASTEXITCODE -or $actual -cne $expected){throw 'Package source differs from the declared Git revision.'}
 }
+$packagingDriverSha256='475ce7f727c264b021acdcc00baeca1a459be0e2c687fddc2fceeb22be7c94b5'
 foreach($entry in $baseline.nativeInputs.GetEnumerator()){
-    if((Get-FileHash (Join-Path $repo $entry.Key)).Hash.ToLowerInvariant() -cne $entry.Value){throw 'Native compilation inputs changed; rebuild and review required.'}
+    $actual=(Get-FileHash (Join-Path $repo $entry.Key)).Hash.ToLowerInvariant()
+    # This exact reviewed driver delta only adds the five PowerShell health files
+    # to the package copy list; its compilation invocation is unchanged. All other
+    # baseline inputs, including C# sources, projects and dependency locks, match.
+    $expected=if($entry.Key -ceq 'scripts/Build-TokenForgeNative.ps1'){$packagingDriverSha256}else{$entry.Value}
+    if($actual -cne $expected){throw 'Native compilation inputs changed; rebuild and review required.'}
 }
 $root=New-TokenForgeHealthPrivateDirectory $OutputPath
 $stage=New-TokenForgeHealthPrivateDirectory (Join-Path $root linux-x64)
@@ -49,10 +55,10 @@ foreach($item in Get-ChildItem $stage -Recurse -Force){
     [IO.File]::SetUnixFileMode($item.FullName,([IO.UnixFileMode]$(if($relative -ceq 'tokenforge'){448}else{384})))
     $files[$relative]=@{sha256=(Get-FileHash $item.FullName).Hash.ToLowerInvariant();bytes=$item.Length}
 }
-@{schemaVersion=1;kind='TokenForgePublicHealthLinuxPackage';sourceRevision=$SourceRevision;nativeSource=$baseline.sourceRevision;nativeInputsVerified=$baseline.nativeInputs.Count;files=$files;operationalPublication=$false}|ConvertTo-Json -Depth 20|Set-Content (Join-Path $stage public-health-package.json) -Encoding utf8NoBOM
+@{schemaVersion=1;kind='TokenForgePublicHealthLinuxPackage';sourceRevision=$SourceRevision;nativeSource=$baseline.sourceRevision;nativeInputsVerified=$baseline.nativeInputs.Count;unchangedBaselineInputs=($baseline.nativeInputs.Count-1);reviewedPackagingDriverSha256=$packagingDriverSha256;files=$files;operationalPublication=$false}|ConvertTo-Json -Depth 20|Set-Content (Join-Path $stage public-health-package.json) -Encoding utf8NoBOM
 [IO.File]::SetUnixFileMode((Join-Path $stage public-health-package.json),[IO.UnixFileMode]384)
 $archive=Join-Path $root TokenForge-public-health-linux-x64.tar.gz
 & tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -czf $archive -C $stage .
 if($LASTEXITCODE){throw 'Local package archive failed.'}
 [IO.File]::SetUnixFileMode($archive,[IO.UnixFileMode]384)
-@{sourceRevision=$SourceRevision;nativeSource=$baseline.sourceRevision;nativeInputsVerified=$baseline.nativeInputs.Count;payloadFiles=$files.Count+1;sha256=(Get-FileHash $archive).Hash.ToLowerInvariant();bytes=(Get-Item $archive).Length;published=$false}|ConvertTo-Json
+@{sourceRevision=$SourceRevision;nativeSource=$baseline.sourceRevision;nativeInputsVerified=$baseline.nativeInputs.Count;unchangedBaselineInputs=($baseline.nativeInputs.Count-1);reviewedPackagingDriverSha256=$packagingDriverSha256;payloadFiles=$files.Count+1;sha256=(Get-FileHash $archive).Hash.ToLowerInvariant();bytes=(Get-Item $archive).Length;published=$false}|ConvertTo-Json

@@ -9,4 +9,4 @@ $readToken=ConvertTo-SecureString $env:TF_READ_TOKEN -AsPlainText -Force
 Remove-Item Env:TF_READ_TOKEN
 $outputPath=New-TfSealerOutputPath $env:RUNNER_TEMP
 $result=Get-TokenForgeSealingSubject -Invocation $invocation -ArtifactId $ArtifactId -OutputDirectory $outputPath -AccessToken $readToken
-$result|Select-Object Kind,SubjectSha256,CandidateHash,SubjectCount,StructuralValidation,SemanticApproval,SigningPerformed
+$result|Select-Object Kind,SubjectSha256,CandidateHash,SubjectCount,StructuralValidation,CompleteOriginalZipPrivacyValidated,ArchiveProfile,SemanticApproval,SigningPerformed

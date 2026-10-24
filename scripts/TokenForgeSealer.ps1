@@ -1,6 +1,7 @@
 #Requires -Version 7.4
 # Trusted data-only validation. Import performs no network request or signing.
 . (Join-Path $PSScriptRoot TokenForgePublicationAdapter.ps1)
+. (Join-Path $PSScriptRoot TokenForgeSealerZip.ps1)
 
 function New-TfSealerOutputPath([string]$TemporaryRoot) {
  # The runner's temporary root may be 0755. Create our own private immediate
@@ -112,6 +113,9 @@ function Get-TokenForgeSealingSubject {
   $candidateHash=Get-TfCandidateFileHash (Join-Path $extracted manifest.json)
   $manifest=Assert-TfDiscoveryCandidate $extracted $candidateHash
   if($manifest.SourceCommit -cne $Invocation.SourceCommit -or $manifest.ProducerRunId -cne $Invocation.RunId -or $manifest.ProducerAttempt -cne $Invocation.RunAttempt){throw 'Candidate caller binding mismatch.'}
+  $stage='ArchivePrivacy'
+  $archiveProfile=Assert-TfSealerCompleteOriginalZip $archive $extracted
+  Test-TfPublicationBudget $context
   $stage='FinalOrigin'
   $finalArtifact=Invoke-TfPublicationHttp $context ($context.Api+'/actions/artifacts/'+$ArtifactId)
   $finalRun=Invoke-TfPublicationHttp $context ($context.Api+'/actions/runs/'+$Invocation.RunId)
@@ -123,7 +127,7 @@ function Get-TokenForgeSealingSubject {
   Test-TfPublicationBudget $context
   Remove-Item -LiteralPath $extracted -Recurse -Force
   [IO.File]::SetUnixFileMode($archive,[IO.UnixFileMode]256)
-  $result=[ordered]@{SchemaVersion=1;Kind='TokenForgeSealingSubject';Synthetic=$isSynthetic;RepositoryId=$Invocation.RepositoryId;SourceCommit=$Invocation.SourceCommit;ProducerRunId=$Invocation.RunId;ProducerAttempt=$Invocation.RunAttempt;WorkflowId=$workflowId;ArtifactId=$ArtifactId;SubjectPath=$archive;SubjectSha256=$archiveHash;CandidateHash=$candidateHash;SubjectCount=1;StructuralValidation=$true;CompleteOriginalZipPrivacyValidated=$false;SemanticApproval=$false;SigningPerformed=$false;MetadataRequests=$context.Requests;DownloadRequests=$context.DownloadRequests}
+  $result=[ordered]@{SchemaVersion=1;Kind='TokenForgeSealingSubject';Synthetic=$isSynthetic;RepositoryId=$Invocation.RepositoryId;SourceCommit=$Invocation.SourceCommit;ProducerRunId=$Invocation.RunId;ProducerAttempt=$Invocation.RunAttempt;WorkflowId=$workflowId;ArtifactId=$ArtifactId;SubjectPath=$archive;SubjectSha256=$archiveHash;CandidateHash=$candidateHash;SubjectCount=1;StructuralValidation=$true;CompleteOriginalZipPrivacyValidated=$true;ArchiveProfile=$archiveProfile;SemanticApproval=$false;SigningPerformed=$false;MetadataRequests=$context.Requests;DownloadRequests=$context.DownloadRequests}
   $receipt=[TokenForge.Core.V0220.PrivateFiles]::Open((Join-Path $OutputDirectory subject.json),$true)
   try{$bytes=[Text.Encoding]::UTF8.GetBytes(($result|ConvertTo-Json -Compress));$receipt.Write($bytes,0,$bytes.Length);$receipt.Flush($true)}finally{$receipt.Dispose()}
   [pscustomobject]$result

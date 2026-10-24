@@ -25,3 +25,7 @@ The `Admin` preset runs the Goal 3 strict-policy, synthetic acquisition, evidenc
 ### Offline release readiness
 
 `-Preset ReleaseReadiness -NativeExecutable /absolute/matching/linux-x64/tokenforge` checks release-source mocks, exact archive receipts, offline publication recovery planning, manual-only workflow/quarantined-writer policy and native SQLite snapshot boundaries. It requires Pester 6.2.0 and an existing matching package; it does not build, install, authenticate or run Actions. `scripts/Test-TokenForgeOfflinePackage.ps1` is the separate Pester-free extracted-package synthetic operator walkthrough; run it in a fresh PowerShell process with a new private workspace. Neither proves live or hosted readiness.
+
+### Canonical original-ZIP review
+
+The `Sealer` preset requires Linux PowerShell 7.6 (tested 7.6.7), Pester 6.2.0 and existing PyYAML 6.0.2. It includes the canonical-container safety regressions and never enables operational output or hosted execution. `scripts/New-TokenForgeSealerReviewKit.py` creates an immutable-source review/test kit using the exact previously accepted Linux CLI/DLL; it refuses module-source drift, installs/builds nothing, and is not a release-package builder. See [the profile and package evidence](goal6-canonical-zip.md).

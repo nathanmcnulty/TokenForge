@@ -1,6 +1,8 @@
 # Dot review handoff: Goal 6 release candidate
 
-Start with [the fb6d260 follow-up](goal6-sealer-followup.md) and [its receipt](goal6-sealer-followup-validation.json): the temporary-parent fix is implemented, and complete-original-ZIP privacy is a confirmed open blocker. Operational policy emission remains blocked.
+Current checkpoint: [the canonical original-ZIP contract](goal6-canonical-zip.md) implements fail-closed container coverage and converts the prior unsafe characterizations into rejection regressions. Historical findings/receipts below remain unchanged; operational emission and hosted activation are still blocked.
+
+Previous checkpoint: [the fb6d260 follow-up](goal6-sealer-followup.md) and [its receipt](goal6-sealer-followup-validation.json): the temporary-parent fix is implemented, and complete-original-ZIP privacy is a confirmed open blocker. Operational policy emission remains blocked.
 
 Ready for offline architecture and security review after the reusable-sealer receipt passes. This document is a handoff artifact; no message or invitation has been sent to Dot. The source is on the shared review branch and remains unmerged, Actions disabled, and no live credentials are needed to review it. See [the shared handoff index](HANDOFF.md) for the copyable review request and pinned checkpoints.
 

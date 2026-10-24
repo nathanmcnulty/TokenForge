@@ -43,7 +43,8 @@ function Get-TokenForgeSealerPolicyPlan {
  .DESCRIPTION
  No network, authentication or publication. Exact local Git objects are the reviewed
  source input, not proof of current main, permissions or hosted execution. Operational
- emission is blocked pending complete original-ZIP privacy validation; source,
+ emission remains blocked pending canonical-original producer interoperability and
+ independent review; source,
  caller and independent identity binding checks remain necessary.
  #>
  [CmdletBinding()]
@@ -79,6 +80,20 @@ function Get-TokenForgeSealerPolicyPlan {
   $rootBytes=Read-TfSealerGitFile $RepositoryPath $codeCommit 'tests/fixtures/attestation/provisioned-root.jsonl'
   $rootHash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($rootBytes)).ToLowerInvariant()
   if($rootHash -cne $pin.files['provisioned-root.jsonl'].sha256){throw 'Pinned trust root mismatch.'}
+  $profileImplemented=$false;$helperHash=$null;$declarationHash=$null
+  try{
+   $declarationBytes=Read-TfSealerGitFile $RepositoryPath $codeCommit 'publication/zip-profile.json'
+   $helperBytes=Read-TfSealerGitFile $RepositoryPath $codeCommit 'scripts/TokenForgeSealerZip.ps1'
+   $declaration=Read-TfPublicationJson $declarationBytes
+   Assert-TokenForgePermissionFields $declaration @('SchemaVersion','Profile','SealerSha256','ZipHelperSha256')
+   $helperHash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($helperBytes)).ToLowerInvariant()
+   $declarationHash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($declarationBytes)).ToLowerInvariant()
+   $codeHash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($code)).ToLowerInvariant()
+   $profileImplemented=($declaration.SchemaVersion -is [long] -and $declaration.SchemaVersion -eq 1 -and $declaration.Profile -is [string] -and $declaration.SealerSha256 -is [string] -and $declaration.ZipHelperSha256 -is [string] -and $declaration.Profile -ceq 'CanonicalStoredOriginalZipV1' -and $declaration.SealerSha256 -ceq $codeHash -and $declaration.ZipHelperSha256 -ceq $helperHash)
+  }catch{
+   # Old/missing/mismatched declarations establish no implementation claim.
+   $profileImplemented=$false
+  }
   $quarantined=$workflow -ceq $quarantineText
   $connected=Test-TfSealerCaller $producer $SealerCommit
   $bindings=$null;$missing=[Collections.Generic.List[string]]::new()
@@ -96,11 +111,11 @@ function Get-TokenForgeSealerPolicyPlan {
    $actors=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
    foreach($role in @('ProducerIds','ReviewerIds','MaintainerIds','ReaderIds')){foreach($id in $policy[$role]){if(-not $actors.Add($id)){throw 'Independent disjoint role bindings required.'}}}
   }
-  # Confirmed original-ZIP metadata/extra-byte privacy gap: do not issue a
-  # runtime policy until a reviewed complete-archive contract closes it.
+  # Offline canonical-container coverage does not prove hosted producer
+  # interoperability or authorize activation. Keep runtime output blocked.
   if($Operational){
-   throw 'Complete original ZIP privacy validation remains an unresolved activation blocker.'
+   throw 'Operational policy emission remains blocked pending independent review and hosted producer interoperability.'
   }
-  [pscustomobject]@{SchemaVersion=1;Kind='TokenForgeSealerPolicyReviewPlan';Operational=$false;AuthorizationEstablished=$false;CurrentMainVerified=$false;RolePermissionsVerified=$false;HostedSealingProven=$false;CompleteOriginalZipPrivacyValidated=$false;BlockingReasons=@('CompleteOriginalZipPrivacyValidationUnresolved');SealerCommit=$SealerCommit;ProducerCommit=$ProducerCommit;ImplementationCommit=$codeCommit;ImplementationSha256=([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($code)).ToLowerInvariant());PinnedInputs=@{SealerWorkflowSha256=([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($workflowBytes)).ToLowerInvariant());ProducerWorkflowSha256=([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($producerBytes)).ToLowerInvariant());VerifierSha256=$pin.executable.sha256;TrustRootSha256=$rootHash};Quarantined=$quarantined;CallerPinsSealer=$connected;MissingBindings=@($missing.ToArray());ProposedPolicy=$null;BindingPreview=$(if($policy){@{Kind='TokenForgeSealerBindingPreview';Operational=$false;Bindings=$bindings}}else{$null});RequiredGates=@('CompleteOriginalZipPrivacyValidation','SeparateActivationApproval','ImmutableSameRepositoryCallerPin','TrustedOperatorIdentityBindings','HostedOriginalZipAndCertificateProof','SeparatePublicationPermissionAndRecoveryProof')}
+  [pscustomobject]@{SchemaVersion=1;Kind='TokenForgeSealerPolicyReviewPlan';Operational=$false;AuthorizationEstablished=$false;CurrentMainVerified=$false;RolePermissionsVerified=$false;HostedSealingProven=$false;CompleteOriginalZipPrivacyValidated=$false;RequiredArchiveProfile='CanonicalStoredOriginalZipV1';OfflineArchiveProfileImplemented=$profileImplemented;HostedProducerInteroperabilityProven=$false;BlockingReasons=@('IndependentReviewAndHostedProducerInteroperabilityRequired';if(-not $profileImplemented){'PinnedCanonicalProfileNotEstablished'});SealerCommit=$SealerCommit;ProducerCommit=$ProducerCommit;ImplementationCommit=$codeCommit;ImplementationSha256=([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($code)).ToLowerInvariant());PinnedInputs=@{ZipHelperSha256=$helperHash;ZipProfileDeclarationSha256=$declarationHash;SealerWorkflowSha256=([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($workflowBytes)).ToLowerInvariant());ProducerWorkflowSha256=([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($producerBytes)).ToLowerInvariant());VerifierSha256=$pin.executable.sha256;TrustRootSha256=$rootHash};Quarantined=$quarantined;CallerPinsSealer=$connected;MissingBindings=@($missing.ToArray());ProposedPolicy=$null;BindingPreview=$(if($policy){@{Kind='TokenForgeSealerBindingPreview';Operational=$false;Bindings=$bindings}}else{$null});RequiredGates=@('CanonicalOriginalZipProfileReview','HostedCanonicalOriginalZipProducerInteroperability','SeparateActivationApproval','ImmutableSameRepositoryCallerPin','TrustedOperatorIdentityBindings','HostedOriginalZipAndCertificateProof','SeparatePublicationPermissionAndRecoveryProof')}
  }catch{throw 'Sealer policy planning failed; no operational policy emitted.'}
 }

@@ -34,13 +34,20 @@ jobs:
       artifact-id: ${{ needs.produce.outputs.candidate-artifact-id }}
 '@.Replace('COMMIT',$Commit)+"`n"
  }
- function New-PolicyFixture([string]$Parent,[switch]$Active) {
+ function New-PolicyFixture([string]$Parent,[switch]$Active,[ValidateSet('Current','Missing','Mismatch','ArrayProfile','ArraySealerHash','ArrayHelperHash')][string]$ProfileState='Current') {
   [IO.File]::SetUnixFileMode($Parent,[IO.UnixFileMode]448)
   $root=Join-Path $Parent ([guid]::NewGuid().ToString('N'));$null=New-Item $root -ItemType Directory
   $null=Invoke-FixtureGit $root @('init','--quiet','--template=')
-  foreach($path in @('scripts/TokenForgeSealer.ps1','publication/tokenforge-sealer.template.yml','tests/fixtures/attestation/manifest.json','tests/fixtures/attestation/provisioned-root.jsonl')){
+  foreach($path in @('scripts/TokenForgeSealer.ps1','scripts/TokenForgeSealerZip.ps1','publication/zip-profile.json','publication/tokenforge-sealer.template.yml','tests/fixtures/attestation/manifest.json','tests/fixtures/attestation/provisioned-root.jsonl')){
+   if($ProfileState -ceq 'Missing' -and $path -cin @('scripts/TokenForgeSealerZip.ps1','publication/zip-profile.json')){continue}
    $dest=Join-Path $root $path;$null=New-Item (Split-Path $dest) -ItemType Directory -Force;[IO.File]::Copy((Join-Path $repoRoot $path),$dest)
   }
+  if($ProfileState.StartsWith('Array',[StringComparison]::Ordinal)){
+   $path=Join-Path $root publication/zip-profile.json;$d=Get-Content $path -Raw|ConvertFrom-Json -AsHashtable
+   $field=switch($ProfileState){ArrayProfile {'Profile'} ArraySealerHash {'SealerSha256'} ArrayHelperHash {'ZipHelperSha256'}}
+   $d[$field]=@($d[$field],'synthetic-other');[IO.File]::WriteAllText($path,($d|ConvertTo-Json))
+  }
+  if($ProfileState -ceq 'Mismatch'){[IO.File]::AppendAllText((Join-Path $root scripts/TokenForgeSealerZip.ps1),"`n# synthetic pinned mismatch")}
   $a=Save-FixtureCommit $root
   $template=[IO.File]::ReadAllText((Join-Path $root publication/tokenforge-sealer.template.yml))
   $guard=if($Active){"`${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'nathanmcnulty/TokenForge' }}"}else{'${{ false }}'}
@@ -119,12 +126,15 @@ Describe 'Immutable local sealer policy planning' {
  }
 }
 Describe 'Synthetic activation boundary' {
- It 'refuses operational output even for otherwise active fully bound fixtures while ZIP privacy is unresolved' {
+ It 'refuses operational output even for otherwise active fully bound fixtures pending independent review and hosted producer interoperability' {
   $f=New-PolicyFixture $TestDrive -Active;$o=$f.Options
   $p=Get-TokenForgeSealerPolicyPlan @o
   $p.CompleteOriginalZipPrivacyValidated|Should -BeFalse
-  $p.RequiredGates|Should -Contain 'CompleteOriginalZipPrivacyValidation'
-  $p.BlockingReasons|Should -Contain 'CompleteOriginalZipPrivacyValidationUnresolved'
+  $p.OfflineArchiveProfileImplemented|Should -BeTrue
+  $p.HostedProducerInteroperabilityProven|Should -BeFalse
+  $p.RequiredArchiveProfile|Should -BeExactly 'CanonicalStoredOriginalZipV1'
+  $p.RequiredGates|Should -Contain 'HostedCanonicalOriginalZipProducerInteroperability'
+  $p.BlockingReasons|Should -Contain 'IndependentReviewAndHostedProducerInteroperabilityRequired'
   {Get-TokenForgeSealerPolicyPlan @o -Operational}|Should -Throw
  }
  It 'refuses an active workflow with a block-scalar fake caller' {
@@ -133,5 +143,28 @@ Describe 'Synthetic activation boundary' {
   $o.ProducerCommit=Save-FixtureCommit $f.Root
   (Get-TokenForgeSealerPolicyPlan @o).CallerPinsSealer|Should -BeFalse
   {Get-TokenForgeSealerPolicyPlan @o -Operational}|Should -Throw
+ }
+}
+
+Describe 'Pinned archive profile provenance' {
+ It 'does not report canonical support when the pinned helper disagrees with its declaration' {
+  $f=New-PolicyFixture $TestDrive -ProfileState Mismatch;$o=$f.Options
+  $p=Get-TokenForgeSealerPolicyPlan @o
+  $p.OfflineArchiveProfileImplemented|Should -BeFalse
+  $p.BlockingReasons|Should -Contain PinnedCanonicalProfileNotEstablished
+ }
+ It 'does not report canonical support for missing pinned profile sources' {
+  $f=New-PolicyFixture $TestDrive -ProfileState Missing
+  $o=$f.Options;$p=Get-TokenForgeSealerPolicyPlan @o
+  $p.OfflineArchiveProfileImplemented|Should -BeFalse
+  $p.BlockingReasons|Should -Contain PinnedCanonicalProfileNotEstablished
+  $p.PinnedInputs.ZipHelperSha256|Should -BeNullOrEmpty
+ }
+}
+
+Describe 'Strict profile declaration scalars' {
+ It 'rejects array-shaped <Field> declarations' -ForEach @(@{Field='ArrayProfile'},@{Field='ArraySealerHash'},@{Field='ArrayHelperHash'}) {
+  $f=New-PolicyFixture $TestDrive -ProfileState $Field;$o=$f.Options
+  (Get-TokenForgeSealerPolicyPlan @o).OfflineArchiveProfileImplemented|Should -BeFalse
  }
 }

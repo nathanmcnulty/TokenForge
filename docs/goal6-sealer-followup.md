@@ -1,6 +1,8 @@
 # Sealer follow-up to Dot review of fb6d260
 
-The temporary-directory defect is corrected. The complete-original-ZIP privacy concern is **confirmed and remains an unresolved activation blocker**. This checkpoint is ready for further offline review, not signing, publication or hosted acceptance. Exact source/workflow/package hashes and results are in [the follow-up receipt](goal6-sealer-followup-validation.json). The earlier receipt remains historical.
+Current checkpoint: [the canonical original-ZIP contract](goal6-canonical-zip.md) implements fail-closed container coverage and converts the prior unsafe characterizations into rejection regressions. Historical findings/receipts below remain unchanged; operational emission and hosted activation are still blocked.
+
+At the previous checkpoint, the temporary-directory defect was corrected and complete-original-ZIP privacy was confirmed as an unresolved activation blocker. This checkpoint is ready for further offline review, not signing, publication or hosted acceptance. Exact source/workflow/package hashes and results are in [the follow-up receipt](goal6-sealer-followup-validation.json). The earlier receipt remains historical.
 
 ## Temporary-directory correction
 

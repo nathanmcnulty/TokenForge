@@ -3,6 +3,13 @@ BeforeAll {
  . "$PSScriptRoot/fixtures/publication/AdapterFixture.ps1"
  function New-SealerFixture([string]$Parent) {
   $f=New-PublicationAdapterFixture $Parent
+  foreach($file in Get-ChildItem $f.Candidate -File){[IO.File]::SetUnixFileMode($file.FullName,[IO.UnixFileMode]384)}
+  $canonical=Join-Path $f.Root reference.zip
+  & /usr/bin/python3 -I "$PSScriptRoot/fixtures/publication/MutateSealerZip.py" $f.Candidate $canonical canonical-from-directory
+  if($LASTEXITCODE){throw 'Independent canonical fixture encoder failed.'}
+  [IO.File]::Copy($canonical,$f.Zip,$true)
+  $f.Server[($f.Api+'/actions/artifacts/30')].digest='sha256:'+(Get-TfCandidateFileHash $f.Zip)
+  $f.Server[($f.Api+'/actions/artifacts/30')].size_in_bytes=(Get-Item $f.Zip).Length
   $f.Invocation=@{Repository='example/TokenForge';RepositoryId='100';SourceCommit=$f.Source;RunId='10';RunAttempt='1';Ref='refs/heads/main';EventName='workflow_dispatch';WorkflowRef='example/TokenForge/.github/workflows/discovery.yml@refs/heads/main'}
   $f.Server[($f.Api+'/actions/runs/10')].path='.github/workflows/discovery.yml'
   $f.Server[($f.Api+'/actions/runs/10')].status='in_progress';$f.Server[($f.Api+'/actions/runs/10')].conclusion=$null
@@ -180,21 +187,20 @@ Describe 'Hosted temporary-root ingress' {
  }
 }
 
-# These fixtures deliberately reproduce a CONFIRMED OPEN BLOCKER. Passing these
-# characterization assertions does not mean privacy validation passed: the marker
-# MUST NOT be signable/uploadable after a future complete-archive remediation.
-Describe 'Known original-ZIP privacy gap characterization (not a safety gate)' -Tag KnownPrivacyGap {
+# Former unsafe acceptances are now fail-closed safety regressions. The exact
+# original digest remains the subject identity; no canonical replacement is used.
+Describe 'Complete original-ZIP privacy safety regressions' {
  BeforeEach {$f=New-SealerFixture $TestDrive;$options=$f.SealerOptions}
- It 'records current behavior for <Case>' -ForEach @(
-  @{Case='baseline-dotnet';Accept=$true;Marker=$false},
-  @{Case='archive-comment';Accept=$true;Marker=$true},
-  @{Case='entry-comment';Accept=$true;Marker=$true},
-  @{Case='local-and-central-extra';Accept=$true;Marker=$true},
-  @{Case='appended-bytes';Accept=$true;Marker=$true},
+ It 'enforces the complete original representation for <Case>' -ForEach @(
+  @{Case='baseline-canonical';Accept=$true;Marker=$false},
+  @{Case='archive-comment';Accept=$false;Marker=$true},
+  @{Case='entry-comment';Accept=$false;Marker=$true},
+  @{Case='local-and-central-extra';Accept=$false;Marker=$true},
+  @{Case='appended-bytes';Accept=$false;Marker=$true},
   @{Case='prepended-unadjusted';Accept=$false;Marker=$false},
-  @{Case='prepended-adjusted';Accept=$true;Marker=$true},
-  @{Case='gap-before-central-directory';Accept=$true;Marker=$true},
-  @{Case='gap-before-end-record';Accept=$true;Marker=$true}
+  @{Case='prepended-adjusted';Accept=$false;Marker=$true},
+  @{Case='gap-before-central-directory';Accept=$false;Marker=$true},
+  @{Case='gap-before-end-record';Accept=$false;Marker=$true}
  ) {
   $mutated=Join-Path $f.Root mutated.zip
   & /usr/bin/python3 -I "$PSScriptRoot/fixtures/publication/MutateSealerZip.py" $f.Zip $mutated $Case
@@ -203,15 +209,53 @@ Describe 'Known original-ZIP privacy gap characterization (not a safety gate)' -
   $f.Server[($f.Api+'/actions/artifacts/30')].digest='sha256:'+(Get-TfCandidateFileHash $f.Zip)
   $f.Server[($f.Api+'/actions/artifacts/30')].size_in_bytes=(Get-Item $f.Zip).Length
   if(-not $Accept){
-   {Get-TokenForgeSealingSubject @options}|Should -Throw '*Candidate*'
+   {Get-TokenForgeSealingSubject @options}|Should -Throw '*no signing performed*'
    Test-Path $options.OutputDirectory|Should -BeFalse
   }else{
    $r=Get-TokenForgeSealingSubject @options
    (Get-TfCandidateFileHash $r.SubjectPath)|Should -BeExactly (Get-TfCandidateFileHash $f.Zip)
    [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($r.SubjectPath)).Contains('SYNTHETIC_METADATA_MARKER')|Should -Be $Marker
    $r.StructuralValidation|Should -BeTrue
-   $r.CompleteOriginalZipPrivacyValidated|Should -BeFalse
+   $r.CompleteOriginalZipPrivacyValidated|Should -BeTrue
    $r.SigningPerformed|Should -BeFalse
   }
+ }
+}
+
+Describe 'Canonical stored original profile boundaries' {
+ BeforeEach {$f=New-SealerFixture $TestDrive;$options=$f.SealerOptions}
+ It 'rejects <Case> despite matching service digest and size' -ForEach @(
+  @{Case='local-crc'},@{Case='central-crc'},@{Case='local-size'},@{Case='central-size'},
+  @{Case='local-name'},@{Case='central-name'},@{Case='offset'},@{Case='timestamp'},@{Case='attributes'},
+  @{Case='encryption'},@{Case='descriptor'},@{Case='unsupported-method'},@{Case='zip64-extra'},
+  @{Case='deflate'},@{Case='reordered'},@{Case='duplicate-record'}
+ ) {
+  $mutated=Join-Path $f.Root altered.zip
+  & /usr/bin/python3 -I "$PSScriptRoot/fixtures/publication/MutateSealerZip.py" $f.Zip $mutated $Case
+  if($LASTEXITCODE){throw 'ZIP mutation failed.'}
+  [IO.File]::Copy($mutated,$f.Zip,$true)
+  $f.Server[($f.Api+'/actions/artifacts/30')].digest='sha256:'+(Get-TfCandidateFileHash $f.Zip)
+  $f.Server[($f.Api+'/actions/artifacts/30')].size_in_bytes=(Get-Item $f.Zip).Length
+  {Get-TokenForgeSealingSubject @options}|Should -Throw '*no signing performed*'
+  Test-Path $options.OutputDirectory|Should -BeFalse
+ }
+ It 'explicitly refuses an ordinary .NET compressed archive as unsupported' {
+  Update-SealerFixtureArchive $f
+  {Get-TokenForgeSealingSubject @options}|Should -Throw '*ArchivePrivacy*'
+ }
+ It 'derives a deterministic archive without filesystem timestamps or mode metadata' {
+  $before=Get-TfSealerCanonicalZipBytes $f.Candidate
+  foreach($file in Get-ChildItem $f.Candidate -File){[IO.File]::SetLastWriteTimeUtc($file.FullName,[datetime]'2020-01-01T00:00:00Z')}
+  $after=Get-TfSealerCanonicalZipBytes $f.Candidate
+  [Linq.Enumerable]::SequenceEqual[byte]($before,$after)|Should -BeTrue
+  $r=Get-TokenForgeSealingSubject @options
+  $r.ArchiveProfile|Should -BeExactly CanonicalStoredOriginalZipV1
+  $r.CompleteOriginalZipPrivacyValidated|Should -BeTrue
+  $r.SubjectSha256|Should -BeExactly (Get-TfCandidateFileHash $f.Zip)
+ }
+ It 'refuses invalid UTF-8 rather than allowing a replacing decoder' {
+  $path=Join-Path $f.Candidate review.md
+  [IO.File]::WriteAllBytes($path,([IO.File]::ReadAllBytes($path)+[byte]255))
+  {Get-TfSealerCanonicalZipBytes $f.Candidate}|Should -Throw
  }
 }

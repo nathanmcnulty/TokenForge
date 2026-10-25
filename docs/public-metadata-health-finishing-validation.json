@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgePublicHealthFinishingValidation",
+  "recordedAt": "2026-10-25T01:15:00.445301+00:00",
+  "owningBranch": "codex/goal6-reusable-sealer",
+  "startingCheckpoint": "bee9ad1f0240965840b8aa93a6e5acae1dba82f2",
+  "adoptedReview": "cc52dde2f020656e559acd70907b3344e7bc6863",
+  "testedSource": "c7d0b255612280e05605eca2e9ccfb44d5d68e18",
+  "checkpointConvention": "Containing checkpoint adds sanitized receipt/handoff/proposal and dormant workflow only; executable/test inputs remain testedSource.",
+  "outcome": "OfflineFinishingAccepted",
+  "goal6OperationalCompletion": false,
+  "findings": {
+    "M1": "Older distinct imported current payload is retained as deduplicated historical version; B remains current under B/A/A. Native and actual fixture sync regressions cover linked/equal-date reconciliation, normal order and private-origin preservation.",
+    "M2": "Raw scopes capped at 1000; each source and combined input passes actual projection before accepted collection. Narrow typed contract failures emit incomplete exchange with exact previous bytes/dates, or empty incomplete initial contract. Storage/programmer errors remain fatal. Boundary1000/1001, malformed shape, userinfo and combined257claim tests pass."
+  },
+  "package": {
+    "sourceRevision": "c7d0b255612280e05605eca2e9ccfb44d5d68e18",
+    "payloadFiles": 167,
+    "sha256": "2b92b0d0662809f3aeaf4992935cc38323c78d8223430b5f58eb9216156ef3e8",
+    "bytes": 33630055,
+    "published": false,
+    "nativeSource": "c7d0b255612280e05605eca2e9ccfb44d5d68e18",
+    "nativeInputsVerified": 100,
+    "buildReceiptSha256": "3e971a01425f6e0fa9a62e4fcd4193d79fbb8398446418ddd0891c063c1a9bc7",
+    "nativeBuild": "RebuiltExactSource",
+    "sdk": "10.0.401"
+  },
+  "runtime": {
+    "version": "7.6.7",
+    "platform": "linux-x64",
+    "archive": "PowerShell-7.6.7-reviewed-linux-x64.tar.gz",
+    "sha256": "3da36d92808db25aa2466422b1b765da792adc159d890512fbae852e2b495d3b",
+    "bytes": 75877688,
+    "source": "Already approved local installed runtime tree, repackaged and extracted locally; no install/download",
+    "extractedRuntimeUsedForGate": true,
+    "published": false,
+    "host": "Parrot Security 7.4",
+    "ubuntuHostedCompatibilityProven": false,
+    "notices": {
+      "LICENSE.txt": "7c77a44a8acd9b41fdc209864a8016b3d430b5d0e09309818d5b7444336df744",
+      "ThirdPartyNotices.txt": "275443457d6f9eac61ef2367da89b1420b94f68c1cc94ed305d2591514ea88d1"
+    }
+  },
+  "build": {
+    "sdk": "10.0.401",
+    "hostSha256": "01d89e0a0191052bfea616cd4ce624c8faf13b05bbddf7f64499c23e2a9d9269",
+    "runtime": "linux-x64",
+    "network": "unshare -Urn namespace; no external interfaces",
+    "command": "scripts/Build-TokenForgeNative.ps1 -Runtime linux-x64 -OutputPath <new private output> -Dotnet <existing approved SDK>",
+    "exitCode": 0,
+    "nativeSha256": "48f51ba4a7ce275f0d2235437620a04aff8141bf692fbfbb741d3ce157a668a0",
+    "credentialsDllSha256": "461eaec7702d1850207cdab50423f78db4c47b59b5c211a8b8124df43af83af6",
+    "nativeInputCount": 100,
+    "nativeInputBytesMatchOwningGitBlobs": true,
+    "nativeBuildReceiptSha256": "3e971a01425f6e0fa9a62e4fcd4193d79fbb8398446418ddd0891c063c1a9bc7",
+    "unchangedNativeBaselineReused": false,
+    "copiedScriptsRefreshedAfterBuild": "Only tracked copied PowerShell scripts refreshed to testedSource before receipt/assembly; all 100 captured native inputs remained identical.",
+    "dependencyCache": {
+      "packages": 8,
+      "method": "SDK NuGet.Packaging lock-content hash and signed archive content integrity; exact extracted files including normalized nuspec; no signer trust assertion",
+      "evidenceSha256": "4935ccda623a74f06c3bc1e1af0bd854063f786d0d4c4a290844ee076560e17c",
+      "packagesAndVersions": [
+        "Microsoft.NET.ILLink.Tasks/10.0.12",
+        "Microsoft.Data.Sqlite/10.0.12",
+        "Microsoft.Data.Sqlite.Core/10.0.12",
+        "SQLitePCLRaw.bundle_e_sqlite3/2.1.12",
+        "SQLitePCLRaw.core/2.1.12",
+        "SQLitePCLRaw.lib.e_sqlite3/2.1.12",
+        "SQLitePCLRaw.provider.e_sqlite3/2.1.12",
+        "System.Memory/4.5.3"
+      ],
+      "onlineSignerOrRevocationTrustVerified": false,
+      "onlineVulnerabilityAuditPerformed": false,
+      "warnings": "NU1900: vulnerability endpoint unavailable inside network-disabled build; no online audit claimed."
+    }
+  },
+  "tests": {
+    "pester": {
+      "version": "6.2.0",
+      "preset": "PublicHealth",
+      "result": {
+        "preset": "PublicHealth",
+        "platform": "linux",
+        "version": "0.48.0",
+        "passed": 141,
+        "failed": 0,
+        "skipped": 0,
+        "containersfailed": 0,
+        "code": "Success",
+        "failedTests": []
+      },
+      "reportSha256": "6e59c2157903dc39df7aa79e632bf3a6b125cb998fbcbe73f953d1f3cf00aa5c",
+      "networkDisabled": true,
+      "package": "extracted exact archive",
+      "coverage": "catalog, claims, metadata, SQLite, download, CLI, health, sync, independent boundary and package provenance"
+    },
+    "native": {
+      "checksPassed": 1157,
+      "exitCode": 0,
+      "command": "dotnet run --project native/TokenForge.Core.Tests -c Release --no-restore",
+      "sdk": "10.0.401",
+      "evidence": "Implementer tool transcript session12947, final chunk eadfcb; no persisted raw log. Reused successful check: native inputs unchanged.",
+      "stdout": "1157 native checks passed, including flow and application catalog transactions."
+    }
+  },
+  "performance": {
+    "powershellParentPeakWorkingSetBytes": 1114198016,
+    "scopeEdges": 100000,
+    "collectionSeconds": 92.136,
+    "liveProof": false,
+    "statusSeconds": 0.145,
+    "testedSource": "c7d0b255612280e05605eca2e9ccfb44d5d68e18",
+    "packageSha256": "2b92b0d0662809f3aeaf4992935cc38323c78d8223430b5f58eb9216156ef3e8",
+    "maxAllowedSeconds": 300,
+    "passed": true,
+    "sourceRows": {
+      "roadtools": 2000,
+      "microsoftApps": 5000,
+      "resources": 2
+    },
+    "totalSeconds": 274.479,
+    "kind": "ExactPackagePublicHealthPerformance",
+    "repeatSeconds": 38.298,
+    "fixtureVersion": 1,
+    "catalogCandidates": 5502,
+    "importSeconds": 143.894,
+    "metadataBytes": 22886563
+  },
+  "performanceEvidence": {
+    "sha256": "a36c20f00c38c1bce37c86b30a0d374d30fba494a32cb99a68a6241afbb221e7",
+    "networkDisabled": true,
+    "frozenFixtureHashes": {
+      "roadtools.json": "7f4051048d4a265d51a55c92fedfe6221bf61f4fbc55e22493ea2c775d6cf550",
+      "microsoftApps.json": "4564e039883b47a61f07639138baf230a27a5b5900b867551abdaaac767c5e92",
+      "resources.json": "852965ce45637bc39fa724b91d0b8fb2ed54149f3da6abf7280630ef56ef2926"
+    },
+    "memoryScope": "Parent PowerShell process only, not total process tree",
+    "concurrentLoad": "PublicHealth acceptance suite ran concurrently with the beginning of this performance run; no threshold increased.",
+    "acceptanceBudgetSeconds": 300,
+    "timingIsSyntheticNotHosted": true
+  },
+  "independentReview": {
+    "method": "Separate reviewer source review, one independently executed combined-claims regression and independent exact-kit hash/inventory audit; full141testgate read, not independently rerun.",
+    "findingsAddressed": [
+      "Explicit ROADtools null/scalar app shape guard and regressions",
+      "Corrected sync regression health.collectedAt reference",
+      "Download proposal disables curlrc; included runtime notice inventory"
+    ],
+    "nativeInputsVerified": 100,
+    "payloadFilesVerified": 167,
+    "archiveEntriesRegularAndBoundedPaths": true,
+    "outstandingMaterialFindings": 0
+  },
+  "limitations": [
+    "Standalone unlinked snapshots are additive, not destination-wide absence reconciliation.",
+    "Collection/transfer acceptance budgets are cooperative between synchronous steps; network cancellation and native call limits are separate.",
+    "No new external source collection/transfer; current upstream completeness unverified.",
+    "Ubuntu runtime compatibility, real hosted artifacts and actual platform workflow/settings state are unverified.",
+    "Normal artifact member contract does not establish original outer-ZIP bytes; strict Goal6 research deferred.",
+    "Packages are local/unpublished; workflow is outside active directory, literal false, pending real registration ID."
+  ],
+  "manualTrialProposal": "docs/public-metadata-health-manual-trial.md",
+  "requiredSeparateApproval": "Publish exact two code/runtime assets; register reviewed workflow-only default-branch changes and any explicitly reviewed Actions setting change; one public-only ten-minute manual trial with three outputs. Separate minimum artifact-read authorization/transfer if required. No automatic schedule.",
+  "boundaries": {
+    "activeWorkflowsUnchangedFromStartingCheckpoint": true,
+    "externalCollectionOrTransferPerformed": false,
+    "liveCredentialsUsed": false,
+    "tenantPermissionsChanged": false,
+    "packagePublished": false,
+    "actionsEnabledOrDispatched": false,
+    "operationalEmissionOrActivation": false,
+    "prsOrMerges": false,
+    "sanitizedSourcePushAuthorized": true,
+    "networkException": "Authorized Git source fetch/push only; no candidate/public-source/artifact transfer. Build namespace blocked vulnerability endpoint."
+  },
+  "sourceSha256": {
+    "docs/goal-public-health-review.md": "b00f05c0fa546b7ef1d4dbe3025ad15085ad957b915a84ed96acb8b7c516663a",
+    "docs/public-metadata-health.md": "a43b60f209ca25e6185c819d5577cd1b2dc0c98b88382df6da9c700a9708c3be",
+    "native/TokenForge.Core.Tests/ApplicationCatalogTests.cs": "b19b75508970e744ba062be9091fd79bf4cb5f56c53aa457f31c872dbb1ae03b",
+    "native/TokenForge.Core/ApplicationCatalogStore.cs": "75d5307de9f06d39252941bc839e4824513e73e926e71aac407246f4e5a22cbf",
+    "scripts/Invoke-TokenForgeLocalValidation.ps1": "8729cba6ef927b5f314cd60f00d780d7c007f2c0bc58ee5c5f6ba35ca5d14dab",
+    "scripts/Invoke-TokenForgePublicHealth.ps1": "1106af4e8f628e40864d714e0a76c6009f6ab5a0e5efe336adb5500c86dbc2de",
+    "scripts/New-TokenForgePublicHealthPackage.ps1": "c23c769ad69a0f2c4ce46906d1710c5dcdcee9b64f801bbc950b14924e2a1410",
+    "scripts/TokenForgePublicHealth.ps1": "699bf534291781b25239ae971415a10384fb50fe046125751aab9543732a9679",
+    "tests/PublicHealth.Tests.ps1": "1948099e35907cf5748c3f5d2bc03171ef132b2f6414fd1baf6739e0b264aaa6",
+    "tests/PublicHealthFinishingReview.Tests.ps1": "7f5c9f5b453f28c88caca81ed1c42dfd5bce2c196f4c8fa96c06980ac9b5e42b",
+    "tests/PublicHealthPackage.Tests.ps1": "f6bb9bb766881eaa58871d501a8af5972118a90d289fb27da510b62e585cb71f",
+    "tests/PublicHealthSync.Tests.ps1": "6af8dc2064ee0cd658cf543f6be327b5a5c50ad6a4f84bd3aba71bfba9a47a8c"
+  },
+  "privateEvidenceRoot": ".cache/public-health-finishing/"
+}

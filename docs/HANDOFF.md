@@ -1,3 +1,21 @@
+# Current finishing checkpoint for public metadata health
+
+Start with [the finishing validation receipt](public-metadata-health-finishing-validation.json) and [the manual-trial decision packet](public-metadata-health-manual-trial.md). This checkpoint adopts Dot's goal at **cc52dde2f020656e559acd70907b3344e7bc6863** from owning **bee9ad1f0240965840b8aa93a6e5acae1dba82f2**, on `codex/goal6-reusable-sealer`. Tested source and rebuilt native source are **c7d0b255612280e05605eca2e9ccfb44d5d68e18**. The containing checkpoint adds receipt/handoff/proposal and dormant-template changes only.
+
+Both findings are fixed: older distinct independent imports retain deduplicated SQLite history without regressing the current record, and source/projector contract failures emit an incomplete exchange preserving previous metadata bytes/dates. Unexpected storage/programmer failures still fail visibly. The new package verifies all 100 tracked native inputs against owning source; the old unchanged-native assertion is not reused.
+
+Local Linux acceptance: **141 Pester 6.2.0 tests passed**, zero failures/skips, using the exact extracted rebuilt package and separately extracted approved PowerShell 7.6.7 runtime. Native synthetic harness: **1,157 checks passed**. Independent source, boundary, package/hash/inventory and decision-packet review found no outstanding material findings. The reviewer independently ran the combined-claims regression; the broader suite remains producer-run evidence. See the receipt for the frozen exact-package performance result and its memory/timing limits.
+
+Package SHA256: `2b92b0d0662809f3aeaf4992935cc38323c78d8223430b5f58eb9216156ef3e8`. Runtime archive SHA256: `3da36d92808db25aa2466422b1b765da792adc159d890512fbae852e2b495d3b`. Both remain local and unpublished. Private receipts, raw responses and synthetic state remain outside Git. There was no external collection/transfer or credential access in this finishing task; only the expressly authorized sanitized Git source exchange is permitted.
+
+The practical offline loop is review-ready. Standalone snapshots are additive, cooperative acceptance timers do not preempt synchronous steps, current upstream completeness and Ubuntu/hosted artifact interoperability remain unverified. The original Goal 6 custody/ZIP experiment and operational activation remain deferred. Active `.github/workflows` bytes are unchanged from `bee9ad1`; the dormant proposal remains outside that directory, literal false and pending a real workflow ID. Live work, package publication, Actions, PRs and merges remain blocked pending the separately reviewed bundled manual-trial authorization.
+
+For Dot: review the containing checkpoint on `codex/goal6-reusable-sealer`, the finishing receipt, manual-trial proposal, M1/M2 implementation and new regressions. Source/package hashes and producer/independent evidence are separated in the receipt. Return focused findings or a decision on the concrete manual-trial proposal; do not infer approval to execute it.
+
+The earlier handoffs below are historical and apply only to their stated exact revisions.
+
+---
+
 # Current public metadata / workstation handoff
 
 Use owning branch `codex/goal6-reusable-sealer`. This milestone starts from **91f858f8b7b70722223f4baa225a6cfc2ac340b6** and adopts [the practical runner/workstation goal](tokenforge-runner-workstation-design.md) unchanged from **50bb94bc38531834a73c3b8e46e3bebfde9ee467**. The documentation branch's implementation was not adopted.

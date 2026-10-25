@@ -19,18 +19,32 @@ jobs:
           fetch-depth: 1
           submodules: false
           lfs: false
+      - name: Prepare exact reviewed PowerShell runtime
+        shell: bash
+        env:
+          TF_RUNTIME_URL: https://github.com/nathanmcnulty/TokenForge/releases/download/public-health-offline-20261024/PowerShell-7.6.7-reviewed-linux-x64.tar.gz
+          TF_RUNTIME_SHA256: 3da36d92808db25aa2466422b1b765da792adc159d890512fbae852e2b495d3b
+        run: |
+          set -euo pipefail
+          umask 077
+          test "$RUNNER_OS" = Linux && test "$RUNNER_ARCH" = X64
+          curl --disable --noproxy '*' --fail --location --proto '=https' --proto-redir '=https' --max-redirs 3 --max-time 60 --max-filesize 100663296 --output "$RUNNER_TEMP/health-runtime.tar.gz" "$TF_RUNTIME_URL"
+          printf '%s  %s\n' "$TF_RUNTIME_SHA256" "$RUNNER_TEMP/health-runtime.tar.gz" | sha256sum --check --status
+          mkdir "$RUNNER_TEMP/health-runtime"
+          tar -xzf "$RUNNER_TEMP/health-runtime.tar.gz" -C "$RUNNER_TEMP/health-runtime"
+          "$RUNNER_TEMP/health-runtime/pwsh" -NoLogo -NoProfile -Command 'if ($PSVersionTable.PSVersion.ToString() -cne "7.6.7" -or -not $IsLinux -or [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -ne "X64") { throw "Unreviewed runtime" }; $null=[Globalization.CultureInfo]::GetCultureInfo("en-US"); $null=[Security.Cryptography.SHA256]::HashData([byte[]]@(1)); $h=[Net.Http.HttpClientHandler]::new(); $h.Dispose()'
       - name: Verify reviewed public package and collect metadata
-        shell: pwsh
+        shell: ${{ runner.temp }}/health-runtime/pwsh -NoLogo -NoProfile -File {0}
         env:
           # Exact delivery URL/hash must be reviewed before enabling this template.
           # No package has been published by this milestone.
           TF_PACKAGE_URL: https://github.com/nathanmcnulty/TokenForge/releases/download/public-health-offline-20261024/TokenForge-public-health-linux-x64.tar.gz
-          TF_PACKAGE_SHA256: c1656f3a20135bc2665506b9678b097b39dbfceee5e36e2a0b6afd3934fd4283
+          TF_PACKAGE_SHA256: 2b92b0d0662809f3aeaf4992935cc38323c78d8223430b5f58eb9216156ef3e8
         run: |
           $ErrorActionPreference='Stop'
           if ($PSVersionTable.PSVersion.ToString() -cne '7.6.7' -or $env:RUNNER_OS -cne 'Linux' -or $env:RUNNER_ARCH -cne 'X64') { throw 'Unreviewed execution environment.' }
           # Anonymous delivery of an exact reviewed code package; never account auth.
-          & curl --fail --location --proto '=https' --proto-redir '=https' --max-redirs 3 --max-time 60 --max-filesize 100663296 --output "$env:RUNNER_TEMP/health-package.tar.gz" $env:TF_PACKAGE_URL
+          & curl --disable --noproxy '*' --fail --location --proto '=https' --proto-redir '=https' --max-redirs 3 --max-time 60 --max-filesize 100663296 --output "$env:RUNNER_TEMP/health-package.tar.gz" $env:TF_PACKAGE_URL
           if ($LASTEXITCODE -or (Get-FileHash "$env:RUNNER_TEMP/health-package.tar.gz").Hash.ToLowerInvariant() -cne $env:TF_PACKAGE_SHA256) { throw 'Package delivery verification failed.' }
           $package=Join-Path $env:RUNNER_TEMP reviewed-health
           $null=New-Item -ItemType Directory $package

@@ -101,7 +101,7 @@
   "outcome": "HostedIncompleteCollectionExchangeAndUploadObserved",
   "limitations": [
     "Collection is incomplete; no complete fresh catalog or successful three-source refresh claimed.",
-    "Specific source failure statuses/reasons are in uninspected artifact content, not the aggregate log; no attribution inferred.",
+    "At this checkpoint artifact bytes were uninspected. Dot's later handoff at ebdaa42 independently localized MicrosoftApps Invalid; the artifact has source statuses/counts but no detailed refusal reason or failed-source raw bytes/hash.",
     "Artifact listing/upload success does not establish download/sync interoperability or member bytes.",
     "No saved-evidence reuse, tenant token issuance or Goal6 operational/custody/outer-ZIP completion claimed."
   ],

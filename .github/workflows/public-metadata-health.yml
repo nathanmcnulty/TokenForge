@@ -1,0 +1,77 @@
+# Proposal only, outside .github/workflows. No scheduler or active job.
+name: Public metadata health
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: tokenforge-public-health
+  cancel-in-progress: false
+jobs:
+  health:
+    if: ${{ true }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          submodules: false
+          lfs: false
+      - name: Prepare exact reviewed PowerShell runtime
+        shell: bash
+        env:
+          TF_RUNTIME_URL: https://github.com/nathanmcnulty/TokenForge/releases/download/public-health-offline-20261024/PowerShell-7.6.7-reviewed-linux-x64.tar.gz
+          TF_RUNTIME_SHA256: 3da36d92808db25aa2466422b1b765da792adc159d890512fbae852e2b495d3b
+        run: |
+          set -euo pipefail
+          umask 077
+          test "$RUNNER_OS" = Linux && test "$RUNNER_ARCH" = X64
+          curl --disable --noproxy '*' --fail --location --proto '=https' --proto-redir '=https' --max-redirs 3 --max-time 60 --max-filesize 100663296 --output "$RUNNER_TEMP/health-runtime.tar.gz" "$TF_RUNTIME_URL"
+          printf '%s  %s\n' "$TF_RUNTIME_SHA256" "$RUNNER_TEMP/health-runtime.tar.gz" | sha256sum --check --status
+          mkdir "$RUNNER_TEMP/health-runtime"
+          tar -xzf "$RUNNER_TEMP/health-runtime.tar.gz" -C "$RUNNER_TEMP/health-runtime"
+          "$RUNNER_TEMP/health-runtime/pwsh" -NoLogo -NoProfile -Command 'if ($PSVersionTable.PSVersion.ToString() -cne "7.6.7" -or -not $IsLinux -or [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -ne "X64") { throw "Unreviewed runtime" }; $null=[Globalization.CultureInfo]::GetCultureInfo("en-US"); $null=[Security.Cryptography.SHA256]::HashData([byte[]]@(1)); $h=[Net.Http.HttpClientHandler]::new(); $h.Dispose()'
+      - name: Verify reviewed public package and collect metadata
+        shell: ${{ runner.temp }}/health-runtime/pwsh -NoLogo -NoProfile -File {0}
+        env:
+          # Exact delivery URL/hash must be reviewed before enabling this template.
+          # No package has been published by this milestone.
+          TF_PACKAGE_URL: https://github.com/nathanmcnulty/TokenForge/releases/download/public-health-offline-20261024/TokenForge-public-health-linux-x64.tar.gz
+          TF_PACKAGE_SHA256: 2b92b0d0662809f3aeaf4992935cc38323c78d8223430b5f58eb9216156ef3e8
+        run: |
+          $ErrorActionPreference='Stop'
+          if ($PSVersionTable.PSVersion.ToString() -cne '7.6.7' -or $env:RUNNER_OS -cne 'Linux' -or $env:RUNNER_ARCH -cne 'X64') { throw 'Unreviewed execution environment.' }
+          # Anonymous delivery of an exact reviewed code package; never account auth.
+          & curl --disable --noproxy '*' --fail --location --proto '=https' --proto-redir '=https' --max-redirs 3 --max-time 60 --max-filesize 100663296 --output "$env:RUNNER_TEMP/health-package.tar.gz" $env:TF_PACKAGE_URL
+          if ($LASTEXITCODE -or (Get-FileHash "$env:RUNNER_TEMP/health-package.tar.gz").Hash.ToLowerInvariant() -cne $env:TF_PACKAGE_SHA256) { throw 'Package delivery verification failed.' }
+          $package=Join-Path $env:RUNNER_TEMP reviewed-health
+          $null=New-Item -ItemType Directory $package
+          & tar -xzf "$env:RUNNER_TEMP/health-package.tar.gz" -C $package
+          if ($LASTEXITCODE) { throw 'Reviewed package extraction failed.' }
+          $packageManifest=Get-Content "$package/public-health-package.json" -Raw|ConvertFrom-Json -AsHashtable
+          # The archive hash covers this manifest. Bind all current module source and
+          # health entry points to checkout bytes, while compiled payload pins are
+          # enforced independently by Initialize-TokenForgeHealthRuntime.
+          $sourcePaths=@(& git ls-files -- src/TokenForge)+@('scripts/tokenforge.ps1','scripts/Invoke-TokenForgePublicHealth.ps1','scripts/Sync-TokenForgePublicHealth.ps1','scripts/Test-TokenForgePublicContribution.ps1','scripts/TokenForgePublicHealth.ps1','scripts/TokenForgePublicHealthSync.ps1')
+          if ($LASTEXITCODE) { throw 'Source inventory unavailable.' }
+          foreach ($path in $sourcePaths) {
+            if (-not $packageManifest.files.ContainsKey($path) -or (Get-FileHash $path).Hash.ToLowerInvariant() -cne $packageManifest.files[$path].sha256) { throw 'Package/source mismatch.' }
+          }
+          # Public runner context, not a secret or an independently signed claim.
+          $context=@{repository=$env:GITHUB_REPOSITORY;repositoryId=$env:GITHUB_REPOSITORY_ID;workflowId='395612174';runId=$env:GITHUB_RUN_ID;attempt=$env:GITHUB_RUN_ATTEMPT;event=$env:GITHUB_EVENT_NAME;headSha=$env:GITHUB_SHA;headBranch=$env:GITHUB_REF_NAME}
+          $context|ConvertTo-Json|Set-Content "$env:RUNNER_TEMP/health-context.json"
+          @{image=$env:ImageVersion;os=$env:RUNNER_OS;arch=$env:RUNNER_ARCH;pwsh=$PSVersionTable.PSVersion.ToString();package=$env:TF_PACKAGE_SHA256;source=$env:GITHUB_SHA}|ConvertTo-Json -Compress
+          & "$package/scripts/Invoke-TokenForgePublicHealth.ps1" -OutputPath "$env:RUNNER_TEMP/public-health" -NativeExecutablePath "$package/tokenforge" -SourceRevision $env:GITHUB_SHA -ContextPath "$env:RUNNER_TEMP/health-context.json" -MaxSeconds 480
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # inspected v7 reference
+        with:
+          name: tokenforge-public-health
+          path: |
+            ${{ runner.temp }}/public-health/manifest.json
+            ${{ runner.temp }}/public-health/health.json
+            ${{ runner.temp }}/public-health/metadata.json
+          if-no-files-found: error
+          include-hidden-files: false
+          overwrite: false
+          retention-days: 14

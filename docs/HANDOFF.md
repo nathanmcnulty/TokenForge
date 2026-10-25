@@ -1,4 +1,24 @@
-# Current manual trial result — incomplete exchange uploaded successfully
+# Current MicrosoftApps diagnostic milestone — precise strict rejection
+
+Read [the diagnostic guide](public-health-microsoftapps-diagnostic.md) and [exact-source receipt](public-health-microsoftapps-validation.json). This adopts the MicrosoftApps goal at `ebdaa42fd7021456071b4bd61dfffb785b449740`, with coordinated dependency guardrails at `b7831a35680b5dd917b4d07eaee25f947c2a2f59` through index `61b0536e4090b58fe610e04dcfe3aa6b83fc5b30`. Start from owning `4b95c76f3a7eccf4fafc67d9e76d7563a12e5c74`; exact reviewed/tested source is **03ec0774e2475a710c6b87dda4fae824f604e414** on `codex/goal6-reusable-sealer`. The containing checkpoint adds handoff/receipt only.
+
+One anonymous, no-redirect/no-retry MicrosoftApps GET returned HTTP 200, 840,156 bytes, raw SHA256 `741ce7aa8c960e47fda87ca93bcf1b84c7681bef559571fea185f2a68abeda4c`. Raw bytes and acquisition facts remain private and immutable. Offline diagnostics identify **ApplicationIdentity** at zero-based record **2227** of **4449**, before projection. Independent PowerShell/.NET inspection confirmed the AppId has a valid 36-character nonzero GUID prefix followed by two extra characters; the suffix contains non-ASCII characters and whitespace. No raw identifier, name or arbitrary upstream string is published.
+
+This is current-input reproduction of a strict published-ID refusal, **not proof of the historical trial response**. Dot's earlier artifact inspection localized MicrosoftApps Invalid but could not identify a detailed reason: the artifact contains no failed-source raw bytes/hash or detailed refusal code. The earlier receipt's implication that detailed reasons already existed there is corrected.
+
+The malformed-ID rejection is intentionally preserved: no trimming, identifier repair, record dropping or source broadening. New fixed-code diagnostics are offline/private and repository-only; the public exchange schema and existing validator/projector remain unchanged. They produce no exchange, network request or import. Unexpected storage/programmer failures stay fatal. Synthetic cases preserve successful ROADtools/resources observations, one-attempt invalid status, the initial empty incomplete ledger, and exact previous bytes/dates and retained source facts.
+
+Source review completed **before candidate execution**. Producer local results using the exact approved PowerShell 7.6.7/Linux x64 kit: **20 focused Pester 6.2.0 tests passed**, then **161 PublicHealth tests passed**, zero failures/skips, inside network-disabled namespaces. A separate reviewer inspected source and independently checked the bounded current-input facts; the entire suite was not independently rerun.
+
+No production/build/test dependency was introduced or removed. No Python/Node/package-manager/parser package, runtime upgrade, native rebuild or replacement asset was added. All 100 native build inputs and 164 source-backed package files still match the existing kit under its documented layout. Native/package source remains `c7d0b255612280e05605eca2e9ccfb44d5d68e18`, archive SHA256 `2b92b0d0662809f3aeaf4992935cc38323c78d8223430b5f58eb9216156ef3e8`; the new diagnostic is not silently bundled into that release. The guide records pin/patching obligations and verified older-helper consumers; their retirement and original Goal 6 work remain deferred.
+
+No additional hosted run, artifact download/sync/import, saved-evidence reuse, Entra authentication, tenant change, dependency installation, workflow/settings change, release asset, PR, merge or operational activation occurred. A complete fresh catalog and historical-byte cause are not claimed. The bounded milestone is complete; any new hosted or artifact-import work requires its own applicable authorization.
+
+Earlier handoffs below are historical and apply to their stated exact revisions.
+
+---
+
+# Historical manual trial result — incomplete exchange uploaded successfully
 
 The approved recovery dispatch completed successfully: [run 40161542664](https://github.com/nathanmcnulty/TokenForge/actions/runs/40161542664), workflow ID `395612174`, exact trial head `04e89350b74e1a600c233aa43572a80a6f3ea642`, branch `codex/public-health-manual-trial-20261025`, attempt 1. See [the sanitized result receipt](public-health-manual-trial-result.json).
 

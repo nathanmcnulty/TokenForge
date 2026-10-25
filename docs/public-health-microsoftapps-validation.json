@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgeMicrosoftAppsDiagnosticMilestone",
+  "recordedAt": "2026-10-25T08:00:25.5796664+00:00",
+  "userFacingTimezone": "America/Anchorage",
+  "outcome": "BoundedDiagnosticMilestoneAccepted",
+  "owningBranch": "codex/goal6-reusable-sealer",
+  "startingCheckpoint": "4b95c76f3a7eccf4fafc67d9e76d7563a12e5c74",
+  "adoptedPublicHandoff": "ebdaa42fd7021456071b4bd61dfffb785b449740",
+  "coordinationIndex": "61b0536e4090b58fe610e04dcfe3aa6b83fc5b30",
+  "pinnedDependencyHandoff": "b7831a35680b5dd917b4d07eaee25f947c2a2f59",
+  "pinnedTaskFileSha256": {
+    "README": "c2237cab1315f9cfff9edb188f49a8c6d1096230ffccae03a7711ef3e382833c",
+    "Goal": "89a6cc747a6d008b6885cdfa8965a785eaa63205f5d93e28a784e185ba2d18d0",
+    "Manifest": "ed1db80c302aac2819602a0f8bf319d1f8040b3c4c5d919f41741c36e3d707dc"
+  },
+  "testedSource": "03ec0774e2475a710c6b87dda4fae824f604e414",
+  "testedParent": "4b95c76f3a7eccf4fafc67d9e76d7563a12e5c74",
+  "containingCheckpoint": "Adds sanitized handoff/receipt only after tested source; executable and test bytes unchanged.",
+  "acquisition": {
+    "kind": "MicrosoftAppsCurrentInputAcquisition",
+    "uri": "https://raw.githubusercontent.com/merill/microsoft-info/main/_info/MicrosoftApps.json",
+    "startedAt": "2026-10-24T23:50:03.2925147-08:00",
+    "completedAt": "2026-10-24T23:50:04.1435894-08:00",
+    "requests": 1,
+    "maximumRequests": 1,
+    "maximumBytes": 8388608,
+    "requestSeconds": 30,
+    "redirects": false,
+    "credentials": false,
+    "status": "Retrieved",
+    "reasonCode": "Retrieved",
+    "httpStatus": 200,
+    "bytes": 840156,
+    "sha256": "741ce7aa8c960e47fda87ca93bcf1b84c7681bef559571fea185f2a68abeda4c",
+    "historicalTrialBytes": false
+  },
+  "diagnostic": {
+    "schemaVersion": 1,
+    "kind": "TokenForgeMicrosoftAppsInputDiagnostic",
+    "source": "https://raw.githubusercontent.com/merill/microsoft-info/main/_info/MicrosoftApps.json",
+    "inputSha256": "741ce7aa8c960e47fda87ca93bcf1b84c7681bef559571fea185f2a68abeda4c",
+    "inputBytes": 840156,
+    "diagnosedAt": "2026-10-24T23:57:10.4546863-08:00",
+    "status": "Invalid",
+    "reasonCode": "ApplicationIdentity",
+    "recordIndex": 2227,
+    "sourceRecordCount": 4449,
+    "projectionAttempted": false,
+    "historicalTrialBytes": false,
+    "networkRequests": 0,
+    "exchangeEmitted": false,
+    "importPerformed": false
+  },
+  "independentlyCheckedCurrentInput": {
+    "valueKind": "String",
+    "method": "Existing PowerShell and built-in System.Text.Json/Guid/regex; expected raw-byte hash checked first; no candidate module or network",
+    "historicalByteCauseEstablished": false,
+    "length": 38,
+    "field": "AppId",
+    "suffixContainsWhitespace": true,
+    "rawValuesPublished": false,
+    "records": 4449,
+    "suffixLength": 2,
+    "jsonKind": "Array",
+    "strict36CharacterFormat": false,
+    "zeroBasedRecordIndex": 2227,
+    "suffixContainsNonAscii": true,
+    "first36CharactersValidNonzeroGuid": true
+  },
+  "decision": "Preserve strict rejection: current AppId has trailing characters outside the published-ID contract. No identifier repair, record dropping, source expansion or acceptance relaxation. First refusal localized; not an exhaustive count of invalid rows.",
+  "reasonCodes": {
+    "offline": [
+      "Accepted",
+      "Utf8",
+      "JsonSyntax",
+      "JsonStructure",
+      "SourceShape",
+      "ApplicationIdentity",
+      "OwnerIdentity",
+      "PublicText",
+      "DuplicateIdentity",
+      "SourceContract",
+      "SourceProjection"
+    ],
+    "unexpectedIoOrRuntime": "Fatal, never converted into input status",
+    "acquisition": [
+      "Retrieved",
+      "Transport",
+      "HttpStatus"
+    ]
+  },
+  "independentReview": {
+    "currentInputFactsIndependentlyChecked": true,
+    "findingsResolved": [
+      "Verify trusted archive and all executed module files before acquisition",
+      "Reject unlisted/linked package members before import",
+      "Use a viable staging-I/O fault test instead of a shadowed mock",
+      "Assert complete initial-empty and retained-source/previous-state behavior"
+    ],
+    "candidateSourceHashes": {
+      "scripts/Test-TokenForgeMicrosoftAppsInput.ps1": "4ef8f4f66fd4b87ca77c7d3bb83f8b1fb264f609eb5edea539802a0efce327ad",
+      "tests/MicrosoftAppsDiagnostic.Tests.ps1": "7e7624624a088d44e8701980890aabf610fe5bb2c022202a9ec9cd0bb9c8bbb0",
+      "scripts/Invoke-TokenForgeLocalValidation.ps1": "41b26d85380408a0b54f366e022d5294f0c46cb8c25d7abeff0476f6b173fb0b",
+      "docs/public-health-microsoftapps-diagnostic.md": "c22aa95a20b3a2729ba5f8d43caac4329ae7a944b5f9c973f97c5e3674a7c2c5",
+      "docs/public-health-manual-trial-result.json": "cc88115af3830982e646738fa2d62f6479bfdc8291818e6bdadf6f5907405c67"
+    },
+    "beforeCandidateExecution": true,
+    "acquisitionScriptSha256": "e29ba65e8bbd253051a40ef5c243e94e9843bb097921a4c2f5477ca0e806267c",
+    "outstandingMaterialFindings": 0,
+    "broaderSuiteIndependentlyRerun": false
+  },
+  "validation": {
+    "producerAcceptance": {
+      "result": {
+        "preset": "PublicHealth",
+        "platform": "linux",
+        "version": "0.48.0",
+        "passed": 161,
+        "failed": 0,
+        "skipped": 0,
+        "containersfailed": 0,
+        "code": "Success",
+        "failedTests": []
+      },
+      "reportSha256": "474e24d809494cbb9737f9d757f4aa205168c34b7900d32defd3cc3385b98347",
+      "networkDisabled": true,
+      "preset": "PublicHealth"
+    },
+    "producerFocused": {
+      "passed": 20,
+      "seconds": 10.05,
+      "skipped": 0,
+      "networkDisabled": true,
+      "logSha256": "3ea563253b15d8e838da5621065c0a96263569ca7ad8b210a2eac6947f236d80",
+      "framework": "Pester 6.2.0",
+      "failed": 0
+    },
+    "syntaxOrArchiveAcceptanceRelaxed": false,
+    "coverage": [
+      "Demonstrated offline rejection categories and Accepted; defensive SourceContract fallback source-reviewed only",
+      "Private output and input-value redaction",
+      "Strict ID spellings/case/owners/zero placeholders",
+      "Source projection refusal",
+      "Oversized/linked/immutable path refusal",
+      "Unexpected storage/programmer failure boundaries",
+      "ROADtools/resources observations preserved",
+      "Invalid input attempted once",
+      "Initial empty incomplete ledger",
+      "Exact previous metadata bytes/date and source observations"
+    ],
+    "notRerun": [
+      "Native synthetic harness: compiled inputs unchanged",
+      "Frozen collector performance: production collector unchanged",
+      "Hosted trial: outside milestone authority"
+    ],
+    "notExercised": [
+      "Defensive SourceContract fallback: independently source-reviewed only",
+      "Acquisition Transport/HttpStatus failure outcomes: reviewed, not induced; the single real GET returned 200"
+    ]
+  },
+  "package": {
+    "packageSource": "c7d0b255612280e05605eca2e9ccfb44d5d68e18",
+    "sourceAndPackageBinding": "Exact adjunct source above executed with unchanged pinned package; no relabeling of compiled-source provenance.",
+    "archiveBytes": 33630055,
+    "unchangedNativeInputCount": 100,
+    "credentialsDllSha256": "461eaec7702d1850207cdab50423f78db4c47b59b5c211a8b8124df43af83af6",
+    "nativeBuildPerformed": false,
+    "unchangedMappedSourceBackedPackageFiles": 164,
+    "runtimeArchiveSha256": "3da36d92808db25aa2466422b1b765da792adc159d890512fbae852e2b495d3b",
+    "nativeSha256": "48f51ba4a7ce275f0d2235437620a04aff8141bf692fbfbb741d3ce157a668a0",
+    "newPackageOrAssetCreated": false,
+    "diagnosticIncludedInExistingRelease": false,
+    "inventoryEvidence": "Producer hash checks against existing build receipt and package layout; README maps to docs/native-cli.md. Independent reviewer inspected source implications separately.",
+    "archiveSha256": "2b92b0d0662809f3aeaf4992935cc38323c78d8223430b5f58eb9216156ef3e8",
+    "powerShell": "7.6.7 Linux x64",
+    "diagnosticRepositoryOnly": true
+  },
+  "dependencies": {
+    "installationPerformed": false,
+    "packageManagerOrParserPackageIntroduced": false,
+    "projectReferencesAndLocksUnchanged": true,
+    "maintenance": "Both archive pins, runtime/native/DLL versions, source/build inventories, locks when affected, notices and bootstrap hashes must be revalidated together for future updates; no latest fallback.",
+    "nativeArchitecture": "Existing self-contained CLI and transactional SQLite retained",
+    "preexistingHelpers": {
+      "verifiedExecutableConsumers": [
+        "TokenForgeSealerPolicy.ps1 -> Test-TokenForgeSealerCaller.py (source requires PyYAML6.0.2)",
+        "Sealer.Tests.ps1 -> MutateSealerZip.py",
+        "ArtifactProtocol/ArtifactTransaction/LocalTlsTransport tests -> independent Python ZIP fixture"
+      ],
+      "unresolved": "PyYAML installed availability/provisioning not tested. Future removal needs separate consumer and parity review.",
+      "decision": "Retain for deferred Goal6 lane; no retirement or port performed"
+    },
+    "buildOrBootstrapAdded": 0,
+    "pythonOrNodeIntroduced": false,
+    "productionAdded": 0,
+    "testAdded": 0,
+    "removed": 0
+  },
+  "historicalEvidence": {
+    "authority": "Dot public handoff ebdaa42; not a fresh artifact download here",
+    "resources": "Success",
+    "incorrectEarlierReceiptImplicationCorrected": true,
+    "preciseHistoricalFailure": "Unknown: artifact has no detailed reason or failed-source raw bytes/hash",
+    "roadtools": "Success",
+    "microsoftApps": "Invalid after one attempt"
+  },
+  "boundaries": {
+    "otherSourceGets": 0,
+    "operationalActivation": false,
+    "protectedCredentialsAccessed": false,
+    "tenantPermissionChange": false,
+    "importOrSavedEvidenceReuse": false,
+    "runtimeInstall": false,
+    "releaseAssetPublication": false,
+    "sanitizedSourceCheckpointOnly": true,
+    "actionsSettingsChange": false,
+    "prOrMerge": false,
+    "publicSourceGetsThisMilestone": 1,
+    "entraAuthentication": false,
+    "artifactDownloadOrSync": false,
+    "hostedDispatchOrRerun": false
+  },
+  "remaining": [
+    "Current-input rejection is intentionally preserved; no complete public refresh claimed.",
+    "Historical trial bytes/cause remain unproved.",
+    "Repository-only diagnostic is not silently added to existing release.",
+    "Artifact sync/import, new hosted trial, Goal6 custody/ZIP/helper cleanup and equal-timestamp history corner remain deferred."
+  ],
+  "privateEvidence": "Raw response, acquisition facts, diagnostic result and detailed logs remain outside Git under .cache."
+}

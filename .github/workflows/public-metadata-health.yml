@@ -34,13 +34,16 @@ jobs:
           tar -xzf "$RUNNER_TEMP/health-runtime.tar.gz" -C "$RUNNER_TEMP/health-runtime"
           "$RUNNER_TEMP/health-runtime/pwsh" -NoLogo -NoProfile -Command 'if ($PSVersionTable.PSVersion.ToString() -cne "7.6.7" -or -not $IsLinux -or [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -ne "X64") { throw "Unreviewed runtime" }; $null=[Globalization.CultureInfo]::GetCultureInfo("en-US"); $null=[Security.Cryptography.SHA256]::HashData([byte[]]@(1)); $h=[Net.Http.HttpClientHandler]::new(); $h.Dispose()'
       - name: Verify reviewed public package and collect metadata
-        shell: ${{ runner.temp }}/health-runtime/pwsh -NoLogo -NoProfile -File {0}
+        shell: bash
         env:
           # Exact delivery URL/hash must be reviewed before enabling this template.
           # No package has been published by this milestone.
           TF_PACKAGE_URL: https://github.com/nathanmcnulty/TokenForge/releases/download/public-health-offline-20261024/TokenForge-public-health-linux-x64.tar.gz
           TF_PACKAGE_SHA256: 2b92b0d0662809f3aeaf4992935cc38323c78d8223430b5f58eb9216156ef3e8
         run: |
+          set -euo pipefail
+          umask 077
+          cat > "$RUNNER_TEMP/collect-health.ps1" <<'TOKENFORGE_POWERSHELL'
           $ErrorActionPreference='Stop'
           if ($PSVersionTable.PSVersion.ToString() -cne '7.6.7' -or $env:RUNNER_OS -cne 'Linux' -or $env:RUNNER_ARCH -cne 'X64') { throw 'Unreviewed execution environment.' }
           # Anonymous delivery of an exact reviewed code package; never account auth.
@@ -64,6 +67,8 @@ jobs:
           $context|ConvertTo-Json|Set-Content "$env:RUNNER_TEMP/health-context.json"
           @{image=$env:ImageVersion;os=$env:RUNNER_OS;arch=$env:RUNNER_ARCH;pwsh=$PSVersionTable.PSVersion.ToString();package=$env:TF_PACKAGE_SHA256;source=$env:GITHUB_SHA}|ConvertTo-Json -Compress
           & "$package/scripts/Invoke-TokenForgePublicHealth.ps1" -OutputPath "$env:RUNNER_TEMP/public-health" -NativeExecutablePath "$package/tokenforge" -SourceRevision $env:GITHUB_SHA -ContextPath "$env:RUNNER_TEMP/health-context.json" -MaxSeconds 480
+          TOKENFORGE_POWERSHELL
+          "$RUNNER_TEMP/health-runtime/pwsh" -NoLogo -NoProfile -NonInteractive -File "$RUNNER_TEMP/collect-health.ps1"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # inspected v7 reference
         with:
           name: tokenforge-public-health

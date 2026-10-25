@@ -1,3 +1,19 @@
+# Current manual trial handoff — dispatch rejected before a run
+
+See [the approved trial receipt](public-health-manual-trial-receipt-20261025.json). Dot's branch correction at `401b247cd2ce7bac7c4097c4b78e09ed80c1a1fc` supersedes the historical default-branch dispatch proposal below. The exact two archives are published under `public-health-offline-20261024`, with matching remote SHA256 digests. Repository-wide Actions was enabled after separate explicit approval; all eight legacy workflows remain individually disabled.
+
+Main registration is `4c9865185977033e110e8eaaf71fb8f649ec18f2`, adding only the new workflow with its job false. Trial branch `codex/public-health-manual-trial-20261025` is pinned to `589357448104ca6f5d0239138d0094dff57057db`, based directly on reviewed checkpoint `3c1e274af04c22c8ef6db651dd025c2ad6739217`; only its workflow was added with numeric ID `395612174` and job true. Product code was not promoted to main.
+
+The single dispatch request received HTTP 422: GitHub rejects `runner.temp` in `steps.shell`. It created zero runs, executed no hosted collection and produced no new artifact. There was no retry. Artifact download/sync remains blocked; no Entra credentials, tenant changes, PR or merge occurred.
+
+[The proposed shell correction](../publication/health/public-health-shell-fix.patch) is local/source-only and applies to the exact trial head above. It replaces the invalid shell expression with Bash, a quoted heredoc and the exact reviewed PowerShell invocation. The PowerShell body, hashes, action pins, permissions, budgets and output allowlist are unchanged. YAML/Bash/PowerShell syntax and independent diff/body review passed without executing the collector. No active workflow was changed by this correction.
+
+**Next approval needed:** apply this exact patch to the trial branch, record/verify its resulting commit, and make one new dispatch under the same approved limits. Stop for any PR/merge/additional setting change. Artifact download/sync stays blocked. Main's job remains false. This is a concrete recovery proposal, not evidence of successful hosted collection or upload.
+
+Earlier handoffs below are historical and apply to their stated exact revisions.
+
+---
+
 # Current finishing checkpoint for public metadata health
 
 Start with [the finishing validation receipt](public-metadata-health-finishing-validation.json) and [the manual-trial decision packet](public-metadata-health-manual-trial.md). This checkpoint adopts Dot's goal at **cc52dde2f020656e559acd70907b3344e7bc6863** from owning **bee9ad1f0240965840b8aa93a6e5acae1dba82f2**, on `codex/goal6-reusable-sealer`. Tested source and rebuilt native source are **c7d0b255612280e05605eca2e9ccfb44d5d68e18**. The containing checkpoint adds receipt/handoff/proposal and dormant-template changes only.

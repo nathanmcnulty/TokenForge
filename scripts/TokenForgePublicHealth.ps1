@@ -12,7 +12,7 @@ function Initialize-TokenForgeHealthRuntime {
     if($PSVersionTable.PSVersion.ToString() -cne '7.6.7' -or -not $IsLinux -or [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -ne 'X64'){throw 'Public health currently requires reviewed PowerShell 7.6.7 on Linux x64.'}
     $exe=[IO.Path]::GetFullPath($NativeExecutablePath)
     $dll=Join-Path (Split-Path $exe -Parent) 'src/TokenForge/lib/net8.0/TokenForge.Credentials.dll'
-    foreach($entry in @(@($exe,'987c863bc92f29de27ff812ad360cd1be1a8bde0fda6080f465827dbb6eb99db'),@($dll,'30d5d1268223c806e8c6d26fd138ef2f1db58dd23f067f59ac38387e2d7bad32'))){
+    foreach($entry in @(@($exe,'48f51ba4a7ce275f0d2235437620a04aff8141bf692fbfbb741d3ce157a668a0'),@($dll,'461eaec7702d1850207cdab50423f78db4c47b59b5c211a8b8124df43af83af6'))){
         Assert-TokenForgeHealthPath $entry[0]
         if((Get-FileHash -LiteralPath $entry[0] -Algorithm SHA256).Hash.ToLowerInvariant() -cne $entry[1]){throw 'Public health requires the reviewed matching Linux package.'}
     }
@@ -58,75 +58,76 @@ function Read-TokenForgeHealthJson {
 }
 function Assert-TokenForgeHealthKeys {
     param($Value,[string[]]$Keys)
-    if($Value -isnot [Collections.IDictionary] -or @($Value.Keys).Count -ne $Keys.Count){throw 'Unexpected public health schema.'}
-    foreach($key in $Value.Keys){if($key -cnotin $Keys){throw 'Unexpected public health schema field.'}}
+    if($Value -isnot [Collections.IDictionary] -or @($Value.Keys).Count -ne $Keys.Count){throw [IO.InvalidDataException]::new('Unexpected public health schema.')}
+    foreach($key in $Value.Keys){if($key -cnotin $Keys){throw [IO.InvalidDataException]::new('Unexpected public health schema field.')}}
 }
 function Assert-TokenForgeHealthDate {
     param($Value,[switch]$Nullable)
     if($Nullable -and $null -eq $Value){return}
     $date=[DateTimeOffset]::MinValue
-    if($Value -isnot [string] -or $Value -cnotmatch '^\d{4}-\d\d-\d\dT.*(?:Z|\+00:00)$' -or -not [DateTimeOffset]::TryParse($Value,[ref]$date) -or $date -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw 'Invalid public health date.'}
+    if($Value -isnot [string] -or $Value -cnotmatch '^\d{4}-\d\d-\d\dT.*(?:Z|\+00:00)$' -or -not [DateTimeOffset]::TryParse($Value,[ref]$date) -or $date -gt [DateTimeOffset]::UtcNow.AddMinutes(5)){throw [IO.InvalidDataException]::new('Invalid public health date.')}
 }
 function Assert-TokenForgeHealthText {
     param($Value,[int]$Maximum=4096,[switch]$Nullable)
     if($Nullable -and $null -eq $Value){return}
-    if($Value -isnot [string] -or $Value.Length -gt $Maximum -or $Value -match '[\x00-\x1f\x7f]' -or $Value -match '(?i)(?:bearer\s|eyJ[A-Za-z0-9_-]{16}|-----BEGIN .*PRIVATE KEY|access_token|refresh_token|client_secret|ESTSAUTH|[?&](?:code|token|assertion|sig|key|password)=|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})'){throw 'Unsafe public metadata text.'}
+    if($Value -isnot [string] -or $Value.Length -gt $Maximum -or $Value -match '[\x00-\x1f\x7f]' -or $Value -match '(?i)(?:bearer\s|eyJ[A-Za-z0-9_-]{16}|-----BEGIN .*PRIVATE KEY|access_token|refresh_token|client_secret|ESTSAUTH|[?&](?:code|token|assertion|sig|key|password)=|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})'){throw [IO.InvalidDataException]::new('Unsafe public metadata text.')}
 }
 function Assert-TokenForgeHealthGuid {
     param($Value,[switch]$AllowEmpty)
     $g=[guid]::Empty
-    if($Value -isnot [string] -or -not [guid]::TryParse($Value,[ref]$g) -or (-not $AllowEmpty -and $g -eq [guid]::Empty) -or $g.ToString() -cne $Value){throw 'Invalid public metadata ID.'}
+    if($Value -isnot [string] -or -not [guid]::TryParse($Value,[ref]$g) -or (-not $AllowEmpty -and $g -eq [guid]::Empty) -or $g.ToString() -cne $Value){throw [IO.InvalidDataException]::new('Invalid public metadata ID.')}
 }
 function Assert-TokenForgeHealthPublishedGuid {
     param($Value,[switch]$AllowEmpty)
     # Published GUID case is descriptive spelling, not a new identity. Refuse
     # whitespace, braces and malformed suffixes instead of repairing them.
-    if($Value -isnot [string] -or $Value -cnotmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'){throw 'Invalid published metadata ID.'}
+    if($Value -isnot [string] -or $Value -cnotmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'){throw [IO.InvalidDataException]::new('Invalid published metadata ID.')}
     Assert-TokenForgeHealthGuid ($Value.ToLowerInvariant()) -AllowEmpty:$AllowEmpty
 }
 function Assert-TokenForgeHealthCount {
     param($Value,[int]$Maximum)
-    if($Value -isnot [long] -and $Value -isnot [int] -or $Value -lt 0 -or $Value -gt $Maximum){throw 'Invalid public health count.'}
+    if($Value -isnot [long] -and $Value -isnot [int] -or $Value -lt 0 -or $Value -gt $Maximum){throw [IO.InvalidDataException]::new('Invalid public health count.')}
 }
 
 function Assert-TokenForgeHealthSource {
     param([string]$Name,$Data)
     if($Name -ceq 'roadtools'){
         Assert-TokenForgeHealthKeys $Data @('apps','resourceidentifiers')
-        if($Data.apps -isnot [Collections.IDictionary] -or $Data.resourceidentifiers -isnot [Collections.IDictionary]){throw 'Invalid catalog source.'}
+        if($Data.apps -isnot [Collections.IDictionary] -or $Data.resourceidentifiers -isnot [Collections.IDictionary]){throw [IO.InvalidDataException]::new('Invalid catalog source.')}
         Assert-TokenForgeHealthCount $Data.apps.Count $script:HealthLimits.SourceRecords
         Assert-TokenForgeHealthCount $Data.resourceidentifiers.Count $script:HealthLimits.SourceRecords
         $appIds=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
         foreach($id in $Data.apps.Keys){
-            if(-not $appIds.Add($id)){throw 'Conflicting normalized application IDs.'}
+            if(-not $appIds.Add($id)){throw [IO.InvalidDataException]::new('Conflicting normalized application IDs.')}
             Assert-TokenForgeHealthPublishedGuid $id -AllowEmpty;$app=$Data.apps[$id]
+            if($app -isnot [Collections.IDictionary]){throw [IO.InvalidDataException]::new('Invalid catalog application shape.')}
             # Two extra ROADtools fields are validated but do not become authority.
             $optional=@('preferred_interactive_redirurl','result')|Where-Object {$app.Contains($_)}
             Assert-TokenForgeHealthKeys $app (@('name','public_client','foci','redirect_uris','preferred_noninteractive_redirurl','scopes')+@($optional))
             if($app.Contains('preferred_interactive_redirurl')){Assert-TokenForgeHealthText $app.preferred_interactive_redirurl -Nullable}
             if($app.Contains('result')){Assert-TokenForgeHealthText $app.result -Maximum 128}
             Assert-TokenForgeHealthText $app.name
-            if($app.public_client -isnot [bool] -or $app.foci -isnot [bool] -or $app.redirect_uris -isnot [array] -or $app.redirect_uris.Count -gt 256 -or $app.scopes -isnot [Collections.IDictionary] -or $app.scopes.Count -gt 4096){throw 'Invalid catalog application.'}
+            if($app.public_client -isnot [bool] -or $app.foci -isnot [bool] -or $app.redirect_uris -isnot [array] -or $app.redirect_uris.Count -gt 256 -or $app.scopes -isnot [Collections.IDictionary] -or $app.scopes.Count -gt 4096){throw [IO.InvalidDataException]::new('Invalid catalog application.')}
             Assert-TokenForgeHealthText $app.preferred_noninteractive_redirurl -Nullable
             foreach($uri in $app.redirect_uris){Assert-TokenForgeHealthText $uri}
             $resourceIds=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
             foreach($resource in $app.scopes.Keys){
-                if(-not $resourceIds.Add($resource)){throw 'Conflicting normalized resource IDs.'}
+                if(-not $resourceIds.Add($resource)){throw [IO.InvalidDataException]::new('Conflicting normalized resource IDs.')}
                 Assert-TokenForgeHealthPublishedGuid $resource;$scopes=$app.scopes[$resource]
-                if($scopes -isnot [array] -or $scopes.Count -gt 4096){throw 'Invalid catalog scopes.'}
-                foreach($scope in $scopes){if($scope -isnot [string] -or $scope.Length -gt 256 -or $scope -cnotmatch '^[A-Za-z0-9_.-]+$'){throw 'Invalid catalog scope.'}}
+                if($scopes -isnot [array] -or $scopes.Count -gt 1000){throw [IO.InvalidDataException]::new('Invalid catalog scopes.')}
+                foreach($scope in $scopes){if($scope -isnot [string] -or $scope.Length -gt 256 -or $scope -cnotmatch '^[A-Za-z0-9_.-]+$'){throw [IO.InvalidDataException]::new('Invalid catalog scope.')}}
             }
         }
         foreach($uri in $Data.resourceidentifiers.Keys){Assert-TokenForgeHealthText $uri;Assert-TokenForgeHealthPublishedGuid $Data.resourceidentifiers[$uri]}
         return $Data.apps.Count
     }
-    if($Name -cnotin @('microsoftApps','resources') -or $Data -isnot [array] -or $Data.Count -gt $script:HealthLimits.SourceRecords){throw 'Invalid metadata source array.'}
+    if($Name -cnotin @('microsoftApps','resources') -or $Data -isnot [array] -or $Data.Count -gt $script:HealthLimits.SourceRecords){throw [IO.InvalidDataException]::new('Invalid metadata source array.')}
     $seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
     foreach($row in $Data){
         if($Name -ceq 'microsoftApps'){
             Assert-TokenForgeHealthKeys $row @('AppId','AppDisplayName','AppOwnerOrganizationId','Source')
             Assert-TokenForgeHealthPublishedGuid $row.AppId -AllowEmpty
-            if($null -ne $row.AppOwnerOrganizationId){if($row.AppOwnerOrganizationId -isnot [string]){throw 'Invalid public owner hint.'};if($row.AppOwnerOrganizationId.Length -gt 0){Assert-TokenForgeHealthPublishedGuid $row.AppOwnerOrganizationId}}
+            if($null -ne $row.AppOwnerOrganizationId){if($row.AppOwnerOrganizationId -isnot [string]){throw [IO.InvalidDataException]::new('Invalid public owner hint.')};if($row.AppOwnerOrganizationId.Length -gt 0){Assert-TokenForgeHealthPublishedGuid $row.AppOwnerOrganizationId}}
             Assert-TokenForgeHealthText $row.AppDisplayName;Assert-TokenForgeHealthText $row.Source -Maximum 128
             # Different published source claims for one ID are legitimate conflicts.
             $key=$row.AppId.ToLowerInvariant()+'/'+$row.Source
@@ -134,7 +135,7 @@ function Assert-TokenForgeHealthSource {
             Assert-TokenForgeHealthKeys $row @('resourceId','displayName')
             Assert-TokenForgeHealthPublishedGuid $row.resourceId;Assert-TokenForgeHealthText $row.displayName;$key=$row.resourceId.ToLowerInvariant()
         }
-        if(-not $seen.Add($key)){throw 'Duplicate public source identity.'}
+        if(-not $seen.Add($key)){throw [IO.InvalidDataException]::new('Duplicate public source identity.')}
     }
     return $Data.Count
 }
@@ -245,4 +246,34 @@ function Read-TokenForgeHealthExchange {
     $walk={param($v) if($v -is [Collections.IDictionary]){foreach($key in $v.Keys){& $walk $v[$key]}}elseif($v -is [array]){foreach($item in $v){& $walk $item}}elseif($v -is [string]){Assert-TokenForgeHealthText $v}}
     & $walk $ledger
     [pscustomobject]@{Manifest=$manifest;Health=$health;MetadataPath=$metadataPath;Ledger=$ledger}
+}
+
+# Only contract failures from public input may become an incomplete exchange.
+# I/O, programmer and runtime failures remain fatal and never masquerade as health.
+function Test-TokenForgeHealthInputFailure {
+    param([Exception]$Exception)
+    $cause=$Exception
+    while($cause -is [Management.Automation.MethodInvocationException] -and $cause.InnerException){$cause=$cause.InnerException}
+    return ($cause -is [IO.InvalidDataException] -or $cause -is [Text.Json.JsonException] -or $cause -is [Text.DecoderFallbackException] -or
+        ($cause.GetType() -eq [InvalidOperationException] -and $cause.Message -ceq 'Discovery source claims are invalid.'))
+}
+
+function Invoke-TokenForgeHealthProjection {
+    param($Data,[string]$CatalogPath,[string]$Now)
+    $roadtools=if($Data.ContainsKey('roadtools')){$Data.roadtools}else{@{apps=@{};resourceidentifiers=@{}}}
+    # Storage operations are deliberately outside the recognized-input catch.
+    @{SchemaVersion=1;Source=$script:HealthSources.roadtools;FetchedAt=$Now;Data=$roadtools}|ConvertTo-Json -Depth 100|Set-Content -LiteralPath $CatalogPath -Encoding utf8NoBOM
+    try{
+        $catalog=Get-TokenForgeCatalog $CatalogPath
+        try{
+            $options=@{Catalog=$catalog;MicrosoftAppsSource=$script:HealthSources.microsoftApps;ResourcesSource=$script:HealthSources.resources}
+            if($Data.ContainsKey('microsoftApps')){$options.MicrosoftApps=$Data.microsoftApps}
+            if($Data.ContainsKey('resources')){$options.Resources=$Data.resources}
+            $discovery=Get-TokenForgeDiscovery @options
+            $ignored=@($roadtools.apps.Keys|Where-Object {$_ -eq '00000000-0000-0000-0000-000000000000'}).Count
+            if($Data.ContainsKey('microsoftApps')){$ignored+=@($Data.microsoftApps|Where-Object {$_.AppId -eq '00000000-0000-0000-0000-000000000000'}).Count}
+            if($discovery.InvalidSourceRecordCount -ne $ignored -or $discovery.Applications.Count -gt $script:HealthLimits.CatalogRecords){throw [IO.InvalidDataException]::new('Invalid complete source projection.')}
+            return [pscustomobject]@{Valid=$true;Discovery=$discovery}
+        }catch{if(-not (Test-TokenForgeHealthInputFailure $_.Exception)){throw};return [pscustomobject]@{Valid=$false;Discovery=$null}}
+    }finally{Remove-Item -LiteralPath $CatalogPath}
 }

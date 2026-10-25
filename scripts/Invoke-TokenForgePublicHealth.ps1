@@ -36,12 +36,29 @@ try{
                 $count=Assert-TokenForgeHealthSource $name $parsed
                 $sha=Get-TokenForgeHealthHash $bytes
                 $row.status='Success';$row.lastSuccessAt=$now;$row.sha256=$sha;$row.candidateCount=$count;$row.changed=(-not $old -or $old.sha256 -cne $sha);$data[$name]=$parsed
-            }catch{$row.status='Invalid'}
+            }catch{if(-not (Test-TokenForgeHealthInputFailure $_.Exception)){throw};$row.status='Invalid'}
             break # Schema errors are not transient; never retry malicious data.
+        }
+        if($row.status -ceq 'Success'){
+            $projection=Invoke-TokenForgeHealthProjection -Data @{$name=$data[$name]} -CatalogPath (Join-Path $stage catalog.tmp) -Now $now
+            if(-not $projection.Valid){$row.status='Invalid';$row.lastSuccessAt=if($old){$old.lastSuccessAt}else{$null};$row.sha256=if($old){$old.sha256}else{$null};$row.candidateCount=if($old){$old.candidateCount}else{0};$row.changed=$false;$data.Remove($name)}
         }
         $rows.Add($row)
     }
     $complete=@($rows|Where-Object status -CNE Success).Count -eq 0
+    $discovery=$null
+    if($complete){
+        $projection=Invoke-TokenForgeHealthProjection -Data $data -CatalogPath (Join-Path $stage catalog.tmp) -Now $now
+        if($projection.Valid){$discovery=$projection.Discovery}else{
+            $complete=$false
+            # The combination exceeded the claim contract. No source can claim
+            # acceptance for this attempted complete snapshot.
+            foreach($row in $rows){
+                $old=if($previous){@($previous.Health.sources|Where-Object name -CEQ $row.name)[0]}else{$null}
+                $row.status='Invalid';$row.lastSuccessAt=if($old){$old.lastSuccessAt}else{$null};$row.sha256=if($old){$old.sha256}else{$null};$row.candidateCount=if($old){$old.candidateCount}else{0};$row.changed=$false
+            }
+        }
+    }
     $metadata=Join-Path $stage metadata.json
     if($previous){[IO.File]::WriteAllBytes($metadata,(Read-TokenForgeHealthBytes $previous.MetadataPath $script:HealthLimits.MetadataBytes))}
     else{
@@ -50,16 +67,9 @@ try{
     }
     $candidateCount=if($previous){$previous.Health.candidateCount}else{0};$conflictCount=if($previous){$previous.Health.conflictCount}else{0}
     if($complete){
-        $catalogFile=Join-Path $stage catalog.tmp
-        @{SchemaVersion=1;Source=$script:HealthSources.roadtools;FetchedAt=$now;Data=$data.roadtools}|ConvertTo-Json -Depth 100|Set-Content -LiteralPath $catalogFile -Encoding utf8NoBOM
-        $catalog=Get-TokenForgeCatalog $catalogFile
-        $discovery=Get-TokenForgeDiscovery -Catalog $catalog -MicrosoftApps $data.microsoftApps -Resources $data.resources -MicrosoftAppsSource $script:HealthSources.microsoftApps -ResourcesSource $script:HealthSources.resources
-        $expectedIgnored=@($data.roadtools.apps.Keys|Where-Object {$_ -eq '00000000-0000-0000-0000-000000000000'}).Count+@($data.microsoftApps|Where-Object {$_.AppId -eq '00000000-0000-0000-0000-000000000000'}).Count
-        if($discovery.InvalidSourceRecordCount -ne $expectedIgnored -or $discovery.Applications.Count -gt $script:HealthLimits.CatalogRecords){throw 'Invalid complete source projection.'}
         $discovery.FetchedAt=$now
         $discovery.SourceSnapshots=@($rows|ForEach-Object {[pscustomobject]@{Location=$_.uri;Sha256=$_.sha256;HashKind='RawPublicSource'}})
         $null=Update-TokenForgeApplicationMetadata -Path $metadata -Document $discovery -Kind Discovery
-        Remove-Item -LiteralPath $catalogFile
         # JSON writer lock belongs only to this private, completed staging write.
         if(Test-Path -LiteralPath ($metadata+'.lock')){Remove-Item -LiteralPath ($metadata+'.lock')}
         $candidateCount=$discovery.Applications.Count;$conflictCount=@($discovery.Applications|Where-Object {$_.MetadataConflicts.Count -gt 0}).Count

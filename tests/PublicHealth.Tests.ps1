@@ -136,6 +136,50 @@ Describe 'Public metadata health entry point' {
         $r.Result.CollectionComplete|Should -BeFalse
         @($r.Exchange.Health.sources|Where-Object name -EQ roadtools)[0].status|Should -BeExactly Invalid
     }
+    It 'reports a null or nonobject ROADtools application as invalid source data' -ForEach @(@{Value=$null},@{Value=42}) {
+        $fixtures=New-HealthFixtures;$p=Join-Path $fixtures roadtools.json
+        $data=Read-TokenForgeHealthJson ([IO.File]::ReadAllBytes($p));$data.apps['11111111-1111-1111-1111-111111111111']=$Value
+        Write-HealthFixture $p $data
+        $r=Invoke-FixtureCollection $fixtures
+        $r.Result.CollectionComplete|Should -BeFalse
+        @($r.Exchange.Health.sources|Where-Object name -CEQ roadtools)[0].status|Should -BeExactly Invalid
+    }
+    It 'accepts 1000 scopes through the actual fixture entry point' {
+        $fixtures=New-HealthFixtures;$p=Join-Path $fixtures roadtools.json
+        $data=Read-TokenForgeHealthJson ([IO.File]::ReadAllBytes($p))
+        $data.apps['11111111-1111-1111-1111-111111111111'].scopes['00000003-0000-0000-c000-000000000000']=@(1..1000|ForEach-Object {'Scope{0:D4}' -f $_})
+        Write-HealthFixture $p $data
+        (Invoke-FixtureCollection $fixtures).Result.CollectionComplete|Should -BeTrue
+    }
+    It 'emits incomplete 1001-scope output retaining exact previous metadata or the empty contract' -ForEach @(@{WithPrevious=$false},@{WithPrevious=$true}) {
+        $fixtures=New-HealthFixtures;$first=if($WithPrevious){Invoke-FixtureCollection $fixtures}else{$null}
+        $p=Join-Path $fixtures roadtools.json;$data=Read-TokenForgeHealthJson ([IO.File]::ReadAllBytes($p))
+        $data.apps['11111111-1111-1111-1111-111111111111'].scopes['00000003-0000-0000-c000-000000000000']=@(1..1001|ForEach-Object {'Scope{0:D4}' -f $_})
+        Write-HealthFixture $p $data
+        $r=Invoke-FixtureCollection $fixtures $(if($first){$first.Path})
+        $r.Result.CollectionComplete|Should -BeFalse
+        @($r.Exchange.Health.sources|Where-Object name -CEQ roadtools)[0].status|Should -BeExactly Invalid
+        if($first){
+            (Get-FileHash $r.Exchange.MetadataPath).Hash|Should -BeExactly (Get-FileHash $first.Exchange.MetadataPath).Hash
+            $r.Exchange.Health.lastCompleteAt|Should -BeExactly $first.Exchange.Health.lastCompleteAt
+        }else{$r.Exchange.Ledger.Origins.Count|Should -Be 0;$r.Exchange.Health.lastCompleteAt|Should -BeNullOrEmpty}
+    }
+    It 'handles source projection rejection beyond the source schema without losing previous dates' {
+        $fixtures=New-HealthFixtures;$first=Invoke-FixtureCollection $fixtures
+        $p=Join-Path $fixtures roadtools.json;$data=Read-TokenForgeHealthJson ([IO.File]::ReadAllBytes($p))
+        $data.apps['11111111-1111-1111-1111-111111111111'].redirect_uris=@('https://user:password@example.test/callback')
+        Write-HealthFixture $p $data
+        $r=Invoke-FixtureCollection $fixtures $first.Path
+        $r.Result.CollectionComplete|Should -BeFalse
+        @($r.Exchange.Health.sources|Where-Object name -CEQ roadtools)[0].lastSuccessAt|Should -BeExactly $first.Exchange.Health.collectedAt
+        (Get-FileHash $r.Exchange.MetadataPath).Hash|Should -BeExactly (Get-FileHash $first.Exchange.MetadataPath).Hash
+    }
+    It 'does not convert a storage failure or programmer failure into an incomplete projection' {
+        $data=@{roadtools=@{apps=@{};resourceidentifiers=@{}}}
+        {Invoke-TokenForgeHealthProjection -Data $data -CatalogPath (Join-Path $TestDrive 'missing-parent/catalog.tmp') -Now ([DateTimeOffset]::UtcNow.ToString('o'))}|Should -Throw
+        Mock Get-TokenForgeDiscovery {throw [NullReferenceException]::new('synthetic programmer failure')}
+        {Invoke-TokenForgeHealthProjection -Data $data -CatalogPath (Join-Path $TestDrive 'programmer.tmp') -Now ([DateTimeOffset]::UtcNow.ToString('o'))}|Should -Throw '*synthetic programmer*'
+    }
     It 'refuses a fixture claiming hosted identity' {
         $fixtures=New-HealthFixtures;$context=Join-Path $TestDrive context.json
         Write-HealthFixture $context @{repository='owner/repo';repositoryId='1';workflowId='2';runId='3';attempt='1';event='workflow_dispatch';headSha=$revision;headBranch='main'}

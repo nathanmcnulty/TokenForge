@@ -103,6 +103,29 @@ Describe 'Workstation public health sync actual entry points' {
   $status.lastCollectedAt|Should -BeExactly $newest
   $status.lastCompleteAt|Should -BeExactly (Read-TokenForgeHealthExchange $older).Health.lastCompleteAt
  }
+ It 'retains standalone older distinct payload once when importing B then A then A' {
+  $older=New-SyncExchange $root -Name A
+  $newer=New-SyncExchange $root -Name B
+  $a=Read-TokenForgeHealthExchange $older;$b=Read-TokenForgeHealthExchange $newer
+  ([DateTimeOffset]::Parse($b.Health.collectedAt) -gt [DateTimeOffset]::Parse($a.Health.collectedAt))|Should -BeTrue
+  $null=Import-TokenForgePublicHealthExchange $newer $state $native
+  $fresh=Get-TokenForgePublicHealthStatus $state
+  $null=Import-TokenForgePublicHealthExchange $older $state $native
+  $once=Get-TokenForgeApplicationMetadata (Join-Path $state applications.sqlite) -NativeExecutablePath $native
+  $record=$once.Applications[$id].Records['Discovery///']
+  $record.Attributes.Name|Should -BeExactly B
+  $record.PresentInLatestRun|Should -BeTrue
+  @($record.PreviousVersions).Count|Should -Be 1
+  $record.PreviousVersions[0].Attributes.Name|Should -BeExactly A
+  $record.LastSeenAt|Should -BeExactly $b.Ledger.Applications[$id].Records['Discovery///'].LastSeenAt
+  $once.Origins['Discovery///'].LastObservedAt|Should -BeExactly $b.Ledger.Origins['Discovery///'].LastObservedAt
+  $null=Import-TokenForgePublicHealthExchange $older $state $native
+  $again=Get-TokenForgeApplicationMetadata (Join-Path $state applications.sqlite) -NativeExecutablePath $native
+  ($again|ConvertTo-Json -Depth 100 -Compress)|Should -BeExactly ($once|ConvertTo-Json -Depth 100 -Compress)
+  $status=Get-TokenForgePublicHealthStatus $state
+  $status.lastCollectedAt|Should -BeExactly $fresh.lastCollectedAt
+  $status.lastCompleteAt|Should -BeExactly $fresh.lastCompleteAt
+ }
  It 'reports retention history gap after a later complete receipt without inventing observations' {
   $first=New-SyncExchange $root;$null=Import-TokenForgePublicHealthExchange $first $state $native
   $saved=Get-TokenForgePublicHealthStatus $state

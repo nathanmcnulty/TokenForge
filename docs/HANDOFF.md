@@ -1,3 +1,19 @@
+# Current manual trial result — incomplete exchange uploaded successfully
+
+The approved recovery dispatch completed successfully: [run 40161542664](https://github.com/nathanmcnulty/TokenForge/actions/runs/40161542664), workflow ID `395612174`, exact trial head `04e89350b74e1a600c233aa43572a80a6f3ea642`, branch `codex/public-health-manual-trial-20261025`, attempt 1. See [the sanitized result receipt](public-health-manual-trial-result.json).
+
+Only the reviewed shell patch was applied above trial head `5893574`; product code/package bytes are unchanged. The one Linux x64 Ubuntu 24.04 job passed the pinned PowerShell 7.6.7/runtime, package/source checks and artifact upload. The collector made **3 requests in 33.429 seconds**, reporting **CollectionComplete=false, ExchangeComplete=true, CandidateCount=0**. This is useful proof of the hosted incomplete-result and upload path, not a complete fresh catalog. No second run or automatic retry followed.
+
+Upload logs reported exactly three files. Artifact `tokenforge-public-health`, ID `12586302492`, is 1,472 bytes; platform digest is `944b5ac4d1632f72b423c7abde37c7d86e07e2855b8be01b5a06474774129618`, with requested 14-day retention and recorded expiry in the receipt. Only run/job/log/artifact metadata was read. **Artifact download, member inspection, sync/import and saved-evidence reuse remain blocked and unperformed.** Aggregate logs do not identify which source failed; no cause is inferred without the artifact evidence.
+
+Main remains at registration `4c9865185977033e110e8eaaf71fb8f649ec18f2` with its job false. Repository Actions remains enabled under explicit approval; all eight legacy workflows remain individually disabled. No PR, merge, additional Actions setting change, Entra authentication, tenant permission change, schedule or Goal 6 operational activation occurred. The trial is Linux-only; no repository-wide macOS restriction was added.
+
+No further hosted execution is authorized. A possible next bounded decision is download/local inspection of only artifact `12586302492` from this exact run; sync would still need separate approval. The two exact code/runtime assets remain published under `public-health-offline-20261024` with their approved hashes. Original strict Goal 6 custody/ZIP research remains deferred.
+
+Earlier handoffs below are historical and apply to their stated exact revisions.
+
+---
+
 # Current manual trial handoff — dispatch rejected before a run
 
 See [the approved trial receipt](public-health-manual-trial-receipt-20261025.json). Dot's branch correction at `401b247cd2ce7bac7c4097c4b78e09ed80c1a1fc` supersedes the historical default-branch dispatch proposal below. The exact two archives are published under `public-health-offline-20261024`, with matching remote SHA256 digests. Repository-wide Actions was enabled after separate explicit approval; all eight legacy workflows remain individually disabled.

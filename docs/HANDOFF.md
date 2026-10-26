@@ -1,4 +1,10 @@
-# Current MicrosoftApps diagnostic milestone — precise strict rejection
+# Current runtime integration candidate — issue #98 / PR #106
+
+Exact independently reviewed and full-suite tested candidate: **58203ecdcee47c4bdaaef0801d0b496d22daa35f**. Read [runtime baseline acceptance](runtime-baseline-validation.md), its [exact-source/package receipt](runtime-baseline-validation.json), and [supported baseline/exceptions](runtime-baseline.md). This checkpoint adds documentation only above that candidate; it retains current main `4c986518`, prior runtime draft `b35461a6`, and owning checkpoint `9f6b4f2` without discarding newer functionality.
+
+Full Linux offline gate: **1663 Pester passes, zero failures, four platform skips**, on PowerShell 7.6.7 / Pester 6.2.0. Native core:1157 checks; repaired Sealer gate:224/0/0; extracted Linux package:33 checks. Packages remain local and unpublished; archive hashes, distinct native compilation/overlay identities, all100 matching compiled inputs and independent review limits are in the receipt. No Actions, live work or original Goal6 deployment was reopened. PR106 stays draft/unmerged; the original MicrosoftApps malformed-ID blocker remains unrelated and unchanged.
+
+# Earlier MicrosoftApps diagnostic milestone — precise strict rejection
 
 Read [the diagnostic guide](public-health-microsoftapps-diagnostic.md) and [exact-source receipt](public-health-microsoftapps-validation.json). This adopts the MicrosoftApps goal at `ebdaa42fd7021456071b4bd61dfffb785b449740`, with coordinated dependency guardrails at `b7831a35680b5dd917b4d07eaee25f947c2a2f59` through index `61b0536e4090b58fe610e04dcfe3aa6b83fc5b30`. Start from owning `4b95c76f3a7eccf4fafc67d9e76d7563a12e5c74`; exact reviewed/tested source is **03ec0774e2475a710c6b87dda4fae824f604e414** on `codex/goal6-reusable-sealer`. The containing checkpoint adds handoff/receipt only.
 

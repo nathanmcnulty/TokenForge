@@ -42,6 +42,8 @@ if($rebuilt){
     # Require the complete tracked compilation/build inventory, never a caller-selected subset.
     $nativePaths=@(& git -C $repo ls-files -- global.json native src/TokenForge/Core scripts/Build-TokenForgeNative.ps1 scripts/Build-TokenForgeCredentials.ps1 scripts/Copy-TokenForgePackageSource.ps1)
     if($LASTEXITCODE -or $nativePaths.Count -lt 100 -or $baseline.nativeInputs -isnot [Collections.IDictionary] -or $baseline.nativeInputs.Count -ne $nativePaths.Count){throw 'Rebuilt native input inventory is incomplete.'}
+    $builtPaths=@(& git -C $repo ls-tree -r --name-only $baseline.sourceRevision -- global.json native src/TokenForge/Core scripts/Build-TokenForgeNative.ps1 scripts/Build-TokenForgeCredentials.ps1 scripts/Copy-TokenForgePackageSource.ps1)
+    if($LASTEXITCODE -or @(Compare-Object $nativePaths $builtPaths).Count){throw 'Rebuilt native input inventory differs from the build revision.'}
     foreach($relative in $nativePaths){
         if(-not $baseline.nativeInputs.Contains($relative)){throw 'Rebuilt native input inventory is incomplete.'}
         $path=Join-Path $repo $relative;Assert-TokenForgeHealthPath $path

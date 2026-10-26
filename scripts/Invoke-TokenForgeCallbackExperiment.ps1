@@ -35,7 +35,7 @@ function Invoke-TokenForgeCallbackExperiment {
  $package=Split-Path -Parent (Resolve-Path -LiteralPath $NativeExecutable).Path
  $manifestPath=Join-Path $package local-package-manifest.json
  $fileHash={param($path)(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()}
- if((& $fileHash $manifestPath) -cne '1cee964b74fe63c8ffffecec8d2ed4075963d217c28d9554e3da5196f3caceea'){throw 'The experiment requires its exact reviewed package.'}
+ if((& $fileHash $manifestPath) -cne '7f5bf66466aae9ef68c81d7403ff055f4de650a04fd6ce5eaa2b490441245a66'){throw 'The experiment requires its exact reviewed package.'}
  $manifest=Get-Content -LiteralPath $manifestPath -Raw|ConvertFrom-Json -AsHashtable
  $members=@(Get-ChildItem -LiteralPath $package -Recurse -Force)
  if(@($members|Where-Object LinkTarget).Count){throw 'Linked package members are refused.'}
@@ -44,7 +44,7 @@ function Invoke-TokenForgeCallbackExperiment {
  if(($actual -join '|') -cne ($expected -join '|')){throw 'Package membership differs.'}
  foreach($p in $manifest.files.Keys){if((& $fileHash (Join-Path $package $p)) -cne $manifest.files[$p]){throw 'Package content differs.'}}
  if(-not ('TokenForge.Core.ProfileScopeAcquisition' -as [type])){Import-Module (Join-Path $package 'src/TokenForge/TokenForge.psd1') -Force}
- if((& $fileHash ([TokenForge.Core.ProfileScopeAcquisition].Assembly.Location)) -cne $manifest.files['src/TokenForge/lib/net8.0/TokenForge.Credentials.dll']){throw 'Loaded runtime differs.'}
+ if((& $fileHash ([TokenForge.Core.ProfileScopeAcquisition].Assembly.Location)) -cne $manifest.files['src/TokenForge/lib/net10.0/TokenForge.Credentials.dll']){throw 'Loaded runtime differs.'}
  $casePath=Join-Path $repo 'tests/fixtures/lab/callback-cap-v1.json'
  $cohortHash=& $fileHash $casePath
  if($cohortHash -cne '36a2b88ae045959f41637f82ce000cfa9e64f2b5a8a5f07fa16ca3a7e3a25547'){throw 'Frozen study cases changed.'}

@@ -12,7 +12,7 @@ function Initialize-TokenForgeHealthRuntime {
     if($PSVersionTable.PSVersion.ToString() -cne '7.6.7' -or -not $IsLinux -or [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -ne 'X64'){throw 'Public health currently requires reviewed PowerShell 7.6.7 on Linux x64.'}
     $exe=[IO.Path]::GetFullPath($NativeExecutablePath)
     $dll=Join-Path (Split-Path $exe -Parent) 'src/TokenForge/lib/net10.0/TokenForge.Credentials.dll'
-    foreach($entry in @(@($exe,'45e144c33fdba3c11298d75d074fcacdb9fb0b65b08e645a34baa74f1f6cea7d'),@($dll,'8754e8c48a9f8d64c32591e4f3a0f0d20eb749257be0d405d86b12d0bf2d0222'))){
+    foreach($entry in @(@($exe,'42773ca3e048d5d29dd3edf488ca33ace5116d47afdd4513fa8df95b24a3047e'),@($dll,'a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52'))){
         Assert-TokenForgeHealthPath $entry[0]
         if((Get-FileHash -LiteralPath $entry[0] -Algorithm SHA256).Hash.ToLowerInvariant() -cne $entry[1]){throw 'Public health requires the reviewed matching Linux package.'}
     }

@@ -1,6 +1,104 @@
 BeforeAll {
  Import-Module "$PSScriptRoot/../src/TokenForge/TokenForge.psd1" -Force
 }
+Describe 'Inventory wrapper budget for <Action>' -Tag InventoryBudget -ForEach @(@{Action='Probe'},@{Action='ProbeChunk'}) {
+ BeforeEach {
+  $stage="$PSScriptRoot/../scripts/Invoke-TokenForgeInventory.ps1"
+  $state=Join-Path $TestDrive ([guid]::NewGuid().ToString())
+  $null=[TokenForge.Core.V0220.PrivateFiles]::Resolve((Join-Path $state 'fixture'),$true)
+  $secret=ConvertTo-SecureString synthetic -AsPlainText -Force
+  $graph='00000003-0000-0000-c000-000000000000';$cohortId='d'*64
+  $apps=@(1..3|ForEach-Object {
+   [pscustomobject]@{AppId=('{0:x8}-0000-0000-0000-{0:x12}' -f $_);Registration='Present';Ownership='VerifiedMicrosoftOwner';AccountEnabled=$true;RedirectUris=@('https://login.microsoftonline.com/common/oauth2/nativeclient');PreferredRedirectUri='https://login.microsoftonline.com/common/oauth2/nativeclient';IdentifierUris=@()}
+  })
+  $inventory=[pscustomobject]@{CapturedAt=[DateTimeOffset]::UtcNow.ToString('o');TenantFingerprint=('a'*64);PrincipalFingerprint=('b'*64);DiscoveryCatalogHash=('c'*64);Applications=$apps}
+  $inventory|ConvertTo-Json -Depth 32|Set-Content (Join-Path $state inventory.json)
+  $pairs=@($apps|ForEach-Object {@{ClientId=$_.AppId;ResourceId=$graph}})
+  $inventoryHash=& (Get-Module TokenForge) {param($apps) Get-TokenForgeFingerprint (ConvertTo-Json -InputObject @($apps|Sort-Object {[string]$_.AppId}) -Depth 32 -Compress)} $apps
+  $cohort=[pscustomobject]@{PlanId=$cohortId;BatchSize=3;ChunkCount=1;ClientCount=3;Pending=@($apps|ForEach-Object {@{ClientId=$_.AppId;Chunk=0}});Cohort=@{Authority='organizations';Protocols=@('OAuth2V2Pkce');MaxRedirects=1;ExploreAllFlows=$false;TenantFingerprint=('a'*64);PrincipalFingerprint=('b'*64);CatalogHash=('c'*64);InventoryHash=$inventoryHash;Pairs=$pairs}}
+  $opts=@{Action=$Action;StatePath=$state;EstsAuth=$secret;DatabasePath=(Join-Path $state $(if($Action -eq 'ProbeChunk'){'scopes.sqlite'}else{'scopes.json'}));FlowPath=(Join-Path $state flows.json);CohortId=$cohortId}
+  $budget=& (Get-Module TokenForge) {$script:OperationBudget=$null;New-TokenForgeOperationBudget -MaxIssuanceAttempts 10}
+  $dispatch=@{Count=0}
+  # Keep the real wrapper, chunk, probe, JSON checkpoints and budget helpers.
+  # Replace acquisition and native persistence; no token or HTTP request leaves this test.
+  Mock Import-Module {}
+  Mock Get-TokenForgeProbePlan {$pairs}
+  Mock Get-TokenForgeResearchCohort -ModuleName TokenForge {$cohort}
+  Mock Invoke-TokenForgeNativeEvidence -ModuleName TokenForge {}
+  Mock Update-TokenForgeApplicationMetadata {}
+  Mock Update-TokenForgeApplicationMetadata -ModuleName TokenForge {}
+  Mock Start-Sleep -ModuleName TokenForge {}
+  Mock Get-TokenForgeToken -ModuleName TokenForge {
+   param($Request,$OperationBudget)
+   # Mirror Get-TokenForgeToken's existing module-budget default at this boundary.
+   if(-not $OperationBudget){$OperationBudget=& (Get-Module TokenForge) {$script:OperationBudget}}
+   & (Get-Module TokenForge) {param($b) Start-TokenForgeBudgetRequest -Budget $b -Category Identity} $OperationBudget
+   $dispatch.Count++
+   & (Get-Module TokenForge) {param($b) Complete-TokenForgeBudgetRequest -Budget $b} $OperationBudget
+   [pscustomobject]@{AccessToken=ConvertTo-SecureString synthetic -AsPlainText -Force;RefreshToken=$null;GrantedScopes=@('User.Read');TokenClaims=[pscustomobject]@{Readable=$true;HasDelegatedScopeClaim=$true;Scopes=@('User.Read');TenantFingerprint=('a'*64);PrincipalFingerprint=('b'*64);ClientId=$Request.ClientId;Audience=$Request.ResourceId}}
+  }
+ }
+ AfterEach {$secret.Dispose();& (Get-Module TokenForge) {$script:OperationBudget=$null}}
+ It 'refuses zero issuance before acquisition even with HTTP allowance remaining' {
+  $budget.Limits.IssuanceAttempts=0
+  {& $stage @opts -OperationBudget $budget}|Should -Throw '*IssuanceAttempts*'
+  $budget.Counts.IssuanceAttempts|Should -Be 0;$budget.Counts.TotalRequests|Should -Be 0
+  $dispatch.Count|Should -Be 0
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 0 -Exactly
+ }
+ It 'exhausts a finite issuance allowance before the next acquisition' {
+  $budget.Limits.IssuanceAttempts=2
+  {& $stage @opts -OperationBudget $budget}|Should -Throw '*IssuanceAttempts*'
+  $budget.Counts.IssuanceAttempts|Should -Be 2;$budget.Counts.TotalRequests|Should -Be 2
+  $dispatch.Count|Should -Be 2
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 2 -Exactly
+  @((Get-TokenForgeFlowEvidence $opts.FlowPath).Attempts|Where-Object Outcome -eq Succeeded).Count|Should -Be 2
+ }
+ It 'retains the HTTP request ceiling independently of the issuance ceiling' {
+  $budget.Limits.TotalRequests=1
+  {& $stage @opts -OperationBudget $budget}|Should -Throw '*TotalRequests*'
+  $budget.Counts.TotalRequests|Should -Be 1;$budget.Counts.IdentityRequests|Should -Be 1
+  $dispatch.Count|Should -Be 1;$budget.PendingRequest|Should -BeFalse
+ }
+ It 'refuses an elapsed deadline before acquisition' {
+  $budget.Timer=[pscustomobject]@{Elapsed=[TimeSpan]::FromSeconds($budget.MaxSeconds+1)}
+  {& $stage @opts -OperationBudget $budget}|Should -Throw '*DeadlineReached*'
+  $budget.Counts.TotalRequests|Should -Be 0;$dispatch.Count|Should -Be 0
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 0 -Exactly
+ }
+ It 'retains bounded evidence and does not reissue completed work on resume' {
+  $null=& $stage @opts -OperationBudget $budget
+  $rows=(Get-TokenForgeFlowEvidence $opts.FlowPath).Attempts
+  $before=ConvertTo-Json -InputObject $rows -Depth 32 -Compress
+  $rows.Count|Should -Be 3
+  @($rows|Where-Object {$_.Contains('ComparisonContext')}).Count|Should -Be 3
+  $null=& $stage @opts -OperationBudget $budget
+  (ConvertTo-Json -InputObject (Get-TokenForgeFlowEvidence $opts.FlowPath).Attempts -Depth 32 -Compress)|Should -BeExactly $before
+  $budget.Counts.IssuanceAttempts|Should -Be 3;$budget.Counts.TotalRequests|Should -Be 3
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 3 -Exactly
+ }
+ It 'preserves bounded refresh refusal for Probe and frozen resume for ProbeChunk' {
+  $null=& $stage @opts -OperationBudget $budget
+  $before=ConvertTo-Json -InputObject (Get-TokenForgeFlowEvidence $opts.FlowPath).Attempts -Depth 32 -Compress
+  if($Action -eq 'Probe'){
+   {& $stage @opts -OperationBudget $budget -Refresh}|Should -Throw '*refresh is refused*'
+  }else{
+   # ProbeChunk has no refresh option: the frozen recipe still resumes its completed cells.
+   $null=& $stage @opts -OperationBudget $budget -Refresh
+  }
+  (ConvertTo-Json -InputObject (Get-TokenForgeFlowEvidence $opts.FlowPath).Attempts -Depth 32 -Compress)|Should -BeExactly $before
+  $budget.Counts.IssuanceAttempts|Should -Be 3;$dispatch.Count|Should -Be 3
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 3 -Exactly
+ }
+ It 'preserves no-budget acquisition and the existing action-specific refresh behavior' {
+  $null=& $stage @opts
+  $dispatch.Count|Should -Be 3
+  $null=& $stage @opts -Refresh
+  $expected=if($Action -eq 'Probe'){6}else{3}
+  $dispatch.Count|Should -Be $expected
+  Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times $expected -Exactly
+ }
+}
 Describe 'Bounded collector safe session and durable resume' {
  BeforeEach {
   $root=Join-Path $TestDrive ([guid]::NewGuid().ToString())

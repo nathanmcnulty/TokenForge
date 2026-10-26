@@ -1,0 +1,56 @@
+{
+  "Format": "TokenForgeChangeSnapshot",
+  "SchemaVersion": 1,
+  "Collections": [
+    {
+      "EvidenceType": "IssuedScopes",
+      "Privacy": "Private",
+      "Status": "Complete",
+      "Context": {
+        "ContextVersion": 1,
+        "QueryFingerprint": "54d3b23655d819a20bfebebabe51fbb44ba14037c75c288c82bf210a2684328a",
+        "TenantFingerprint": "4242a3bcf13673bba791a95451c6edd9463f3d678a6dba4953a59d2d8112feae",
+        "PrincipalFingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "ClientId": "11111111-1111-1111-1111-111111111111",
+        "ResourceId": "00000003-0000-0000-c000-000000000000",
+        "AuthorityFingerprint": "4242a3bcf13673bba791a95451c6edd9463f3d678a6dba4953a59d2d8112feae",
+        "RequestedScopes": [
+          "00000003-0000-0000-c000-000000000000/User.Read"
+        ],
+        "Protocol": "OAuth2V2Pkce",
+        "CallbackFingerprint": "b2b34fe9e067e974b771e2c6a3500f07cddf424128e4d6e18aaadbb9ffb5e570",
+        "CallbackClass": "Native",
+        "Spa": false,
+        "RecipeFingerprint": "343dd907181d27f4618601d7f709a9fa2855a10c6e4768d1f8d2dbad4f32361b",
+        "ExecutionPolicyFingerprint": "db626a8e94b321357f447e17684aaaa7d4ab0a95a4bdd465281767f1b03c0c73"
+      },
+      "Source": {
+        "Id": "synthetic-offline-admin",
+        "Location": "urn:sha256:e0899f7bac10630b7177a5bc1bc1dffaaf308c725a552c80132857eedbf18f01",
+        "ContentSha256": "e0899f7bac10630b7177a5bc1bc1dffaaf308c725a552c80132857eedbf18f01",
+        "HashKind": "NormalizedDocument",
+        "SourceObservedAt": null,
+        "CollectedAt": "2026-10-24T11:50:00Z"
+      },
+      "Records": [
+        {
+          "RecordId": "0c180412304da7313531815fa4ad3c6c2effd3b5603fb45b12a10ff1101ae4f8",
+          "ObservedAt": "2026-10-24T11:50:00Z",
+          "Outcome": "RequestBlocked",
+          "Identity": {
+            "ClientId": "11111111-1111-1111-1111-111111111111",
+            "ResourceId": "00000003-0000-0000-c000-000000000000"
+          },
+          "Value": {
+            "Scopes": [],
+            "NamespaceVerification": "Matched",
+            "RequestVerification": "Matched",
+            "ClaimsReadable": true,
+            "HasScpClaim": true,
+            "SignatureValidated": false
+          }
+        }
+      ]
+    }
+  ]
+}

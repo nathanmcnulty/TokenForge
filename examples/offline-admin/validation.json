@@ -1,0 +1,211 @@
+{
+  "Status": "PassedForPinnedLocalCandidate",
+  "ValidatedDate": "2026-10-25",
+  "SourceRevision": "cbea33eca2dfde24f0c92b0385784876510e4ece",
+  "CandidateParent": "cbea33eca2dfde24f0c92b0385784876510e4ece",
+  "NativeBuildSourceRevision": "c32cd7b27e98fdeac9f376807999205d99133a38",
+  "PackageDirectory": "/home/nathan/.codex/worktrees/issue98-runtime-integration/TokenForge/.cache/issue98/final-extracted",
+  "PackageManifest": "public-health-package.json",
+  "PackageManifestSha256": "aa8bfaf14135cc6c5d63b0f9e2fb4b9b05b88cad08d0878735d6c46e0c135dee",
+  "NativeBuildReceiptPath": "/home/nathan/.codex/worktrees/issue98-runtime-integration/TokenForge/.cache/issue98/verified-build-receipt.json",
+  "NativeBuildReceiptSha256": "7f5bf66466aae9ef68c81d7403ff055f4de650a04fd6ce5eaa2b490441245a66",
+  "NativeInputsMatched": 100,
+  "PackagedModuleSourceFilesMatched": 86,
+  "PayloadFilesVerified": 166,
+  "ExecutableSha256": "42773ca3e048d5d29dd3edf488ca33ace5116d47afdd4513fa8df95b24a3047e",
+  "CredentialDllSha256": "a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52",
+  "Runtime": "Linux x64; TokenForge 0.48.0; self-contained .NET 10 package",
+  "PythonVersion": "3.13.5",
+  "NewBuild": false,
+  "Installs": false,
+  "Authentication": false,
+  "LiveDiscovery": false,
+  "HostedWorkflows": false,
+  "Publication": false,
+  "NetworkClaim": "Source review confirms selected commands have no acquisition/transport dispatch; no OS network sandbox or packet-capture proof claimed.",
+  "ActualRunDirectory": "/tmp/tokenforge-offline-admin-reviewed-20261025",
+  "ActualRunSummarySha256": "47bcc018e90ff0a47414889736591d37883f474798f97ccc610b312d06afb231",
+  "CommandsPassed": 21,
+  "ActualResults": [
+    {
+      "Case": "success",
+      "Command": "explain",
+      "ExitCode": 0,
+      "Status": "VerifiedWorking",
+      "PacketEvents": null
+    },
+    {
+      "Case": "success",
+      "Command": "check",
+      "ExitCode": 0,
+      "Status": "VerifiedWorking",
+      "PacketEvents": null
+    },
+    {
+      "Case": "success",
+      "Command": "packet",
+      "ExitCode": 0,
+      "Status": "PreparedForHumanReview",
+      "PacketEvents": []
+    },
+    {
+      "Case": "missing",
+      "Command": "explain",
+      "ExitCode": 3,
+      "Status": "NeedsObservation",
+      "PacketEvents": null
+    },
+    {
+      "Case": "missing",
+      "Command": "check",
+      "ExitCode": 3,
+      "Status": "NeedsObservation",
+      "PacketEvents": null
+    },
+    {
+      "Case": "missing",
+      "Command": "packet",
+      "ExitCode": 0,
+      "Status": "PreparedForHumanReview",
+      "PacketEvents": [
+        "LostVisibility"
+      ]
+    },
+    {
+      "Case": "stale",
+      "Command": "explain",
+      "ExitCode": 2,
+      "Status": "AtRisk",
+      "PacketEvents": null
+    },
+    {
+      "Case": "stale",
+      "Command": "check",
+      "ExitCode": 2,
+      "Status": "AtRisk",
+      "PacketEvents": null
+    },
+    {
+      "Case": "stale",
+      "Command": "packet",
+      "ExitCode": 0,
+      "Status": "PreparedForHumanReview",
+      "PacketEvents": [
+        "Stale"
+      ]
+    },
+    {
+      "Case": "incomplete",
+      "Command": "explain",
+      "ExitCode": 2,
+      "Status": "AtRisk",
+      "PacketEvents": null
+    },
+    {
+      "Case": "incomplete",
+      "Command": "check",
+      "ExitCode": 2,
+      "Status": "AtRisk",
+      "PacketEvents": null
+    },
+    {
+      "Case": "incomplete",
+      "Command": "packet",
+      "ExitCode": 0,
+      "Status": "PreparedForHumanReview",
+      "PacketEvents": [
+        "LostVisibility"
+      ]
+    },
+    {
+      "Case": "incomparable",
+      "Command": "explain",
+      "ExitCode": 3,
+      "Status": "NeedsObservation",
+      "PacketEvents": null
+    },
+    {
+      "Case": "incomparable",
+      "Command": "check",
+      "ExitCode": 3,
+      "Status": "NeedsObservation",
+      "PacketEvents": null
+    },
+    {
+      "Case": "incomparable",
+      "Command": "packet",
+      "ExitCode": 0,
+      "Status": "PreparedForHumanReview",
+      "PacketEvents": [
+        "Incomparable"
+      ]
+    },
+    {
+      "Case": "excess-scopes",
+      "Command": "explain",
+      "ExitCode": 4,
+      "Status": "Blocked",
+      "PacketEvents": null
+    },
+    {
+      "Case": "excess-scopes",
+      "Command": "check",
+      "ExitCode": 4,
+      "Status": "Blocked",
+      "PacketEvents": null
+    },
+    {
+      "Case": "excess-scopes",
+      "Command": "packet",
+      "ExitCode": 0,
+      "Status": "PreparedForHumanReview",
+      "PacketEvents": [
+        "MatchedRequestScopesChanged"
+      ]
+    },
+    {
+      "Case": "request-blocked",
+      "Command": "explain",
+      "ExitCode": 4,
+      "Status": "Blocked",
+      "PacketEvents": null
+    },
+    {
+      "Case": "request-blocked",
+      "Command": "check",
+      "ExitCode": 4,
+      "Status": "Blocked",
+      "PacketEvents": null
+    },
+    {
+      "Case": "request-blocked",
+      "Command": "packet",
+      "ExitCode": 0,
+      "Status": "PreparedForHumanReview",
+      "PacketEvents": [
+        "Unknown"
+      ]
+    }
+  ],
+  "OptimizationGuardResult": {
+    "Command": "python3 -O examples/offline-admin/replay.py --help",
+    "ExitCode": 1,
+    "Result": "Rejected before argument parsing, output directory creation or native execution"
+  },
+  "FixtureAndRunnerSha256": {
+    "examples/offline-admin/expected.json": "d3bf94d099560c55750e3168ca48831d1a88fa91d7f60e03f314c86706b33464",
+    "examples/offline-admin/inputs/before.json": "97ab9ad7ac7e8f93f60b6d85df5fd781d907fd10fc0bdb18158d12a4e7685f23",
+    "examples/offline-admin/inputs/excess-scopes.json": "8cb9d14349822b1e81457b7759e602db0e6bcbc4afb6645cd4126c7560443541",
+    "examples/offline-admin/inputs/incomparable.json": "496ce2a7e070bc64d2725a7d5fddd5fd44f865475a2c0c5e4e22e0bcd114306e",
+    "examples/offline-admin/inputs/incomplete.json": "c5499cb57c30688cde2dd884e1ea066e36a6a6f06e01afab9ccb7175e299ef60",
+    "examples/offline-admin/inputs/inventory.json": "e16257879667b5802e33775b9d085222da7348d69dd61145fdc26822d4b1d162",
+    "examples/offline-admin/inputs/missing.json": "e6e47dcffe369fa97efbf6a5933f26243f17b9fbe6dd5cd0982a56e891a79fdb",
+    "examples/offline-admin/inputs/profile.json": "f508aeb29fcd7fb4c4f6b95870ea922804dd89a16e11a48ae013dd824e752bcd",
+    "examples/offline-admin/inputs/request-blocked.json": "70e4f5752455c7db1c30a65913aac68c31f0d46543cfd64fadb03bcae107f4a9",
+    "examples/offline-admin/inputs/requirements.json": "8bc314454b30e8986e7387a0390a8f8a05cbb8412a7624c1dffc4f10a57883b9",
+    "examples/offline-admin/inputs/stale.json": "10ea9ea823947f54fa4e95ea7070a4443599d866d2cd8ae3b9fc66cda32a229c",
+    "examples/offline-admin/inputs/success.json": "81e26b0b93e2dc1c43e0df6aea868a767b91fc574840315711a1e8136918f286",
+    "examples/offline-admin/replay.py": "a6bf73480d95fb76a793e7065c4112d80e6822cf688c989f69506c0857e4b4f8"
+  },
+  "ValidationGap": "None for these 21 commands on the exact pinned package. Integration with any changed runtime/package baseline requires a new replay; no live authorization/API or broad runtime-suite claim."
+}

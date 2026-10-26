@@ -14,4 +14,6 @@ Dated receipts, historical run summaries, upstream fixtures and `docs/history/` 
 
 The original Goal 6 deployment lane remains inert and is not migrated or activated here. `New-TokenForgeSealerReviewKit.py`, `New-TokenForgeCanarySubject.ps1` and `TokenForgeCanaryAction.mjs` bind exact older `net8.0` DLL bytes, source/package hashes and synthetic producer inventories. Their path/hash pairs remain frozen review evidence, not an alternative supported runtime or a package fallback. They cannot consume the new package. Existing unconditional service/bootstrap gates, zero signer pin and disabled workflow/template guards remain. Reopening that lane requires separate scope, exact-source review and approval; changing a path alone would invalidate its evidence.
 
+The disabled public-metadata-health workflow retains current main's previously reviewed delivery URLs and asset hashes. Those delivery pins are deferred evidence and require separate review and updating before the job can be enabled. Updating the maintained sealer's PowerShell guard also regenerates its current source-hash declaration; it changes no archive validation, operational gate or frozen runtime pin.
+
 Local acceptance results and exact source/package identities are recorded separately after testing. Historical counts are not acceptance evidence for this candidate.

@@ -24,6 +24,21 @@ BeforeAll {
     function Invoke-PackageFixture($Fixture){& "$repo/scripts/New-TokenForgePublicHealthPackage.ps1" -RebuiltPackagePath $Fixture.Package -BuildReceiptPath $Fixture.ReceiptPath -OutputPath $Fixture.Output -SourceRevision $head}
 }
 Describe 'Rebuilt public health package source custody' {
+    It 'allows a prior compilation commit only with identical complete native input blobs' {
+        $f=New-PackageBuildFixture
+        $built=(& git -C $repo log -1 --format=%H -- global.json native src/TokenForge/Core scripts/Build-TokenForgeNative.ps1 scripts/Build-TokenForgeCredentials.ps1 scripts/Copy-TokenForgePackageSource.ps1).Trim()
+        $f.Receipt.sourceRevision=$built;Write-PackageReceipt $f.ReceiptPath $f.Receipt
+        $result=Invoke-PackageFixture $f|ConvertFrom-Json -AsHashtable
+        $result.nativeSource|Should -BeExactly $built
+        $result.sourceRevision|Should -BeExactly $head
+    }
+    It 'rejects an available prior source with different compilation inputs' {
+        $f=New-PackageBuildFixture
+        $f.Receipt.sourceRevision='9f6b4f2fea2e7afb9b80dfb14a707a47ff9ed0c7'
+        Write-PackageReceipt $f.ReceiptPath $f.Receipt
+        {Invoke-PackageFixture $f}|Should -Throw '*build revision*'
+        Test-Path $f.Output|Should -BeFalse
+    }
     It 'assembles reviewed binaries only when complete input and payload hashes match owning HEAD' {
         $f=New-PackageBuildFixture
         $result=Invoke-PackageFixture $f|ConvertFrom-Json -AsHashtable

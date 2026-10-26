@@ -9,6 +9,7 @@ param(
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot TokenForgePublicHealth.ps1)
 . (Join-Path $PSScriptRoot Copy-TokenForgePackageSource.ps1)
+$repo=Split-Path $PSScriptRoot -Parent
 $rebuilt=$PSCmdlet.ParameterSetName -ceq 'Rebuilt'
 $base=[IO.Path]::GetFullPath($(if($rebuilt){$RebuiltPackagePath}else{$BasePackagePath}))
 Assert-TokenForgeHealthPath $base -Directory
@@ -16,13 +17,14 @@ if($rebuilt){
     Assert-TokenForgeHealthPath $BuildReceiptPath
     $receiptSha=(Get-FileHash -LiteralPath $BuildReceiptPath).Hash.ToLowerInvariant()
     $baseline=Get-Content -LiteralPath $BuildReceiptPath -Raw|ConvertFrom-Json -AsHashtable
-    if($baseline.schemaVersion -ne 1 -or $baseline.kind -cne 'TokenForgePublicHealthExactLinuxBuild' -or $baseline.runtime -cne 'linux-x64' -or $baseline.sdk -cne '10.0.401' -or $baseline.sourceRevision -cne $SourceRevision){throw 'Rebuilt package receipt identity is invalid.'}
+    if($baseline.schemaVersion -ne 1 -or $baseline.kind -cne 'TokenForgePublicHealthExactLinuxBuild' -or $baseline.runtime -cne 'linux-x64' -or $baseline.sdk -cne '10.0.401' -or $baseline.sourceRevision -cnotmatch '^[a-f0-9]{40}$' -or $baseline.sourceRevision -ceq ('0'*40)){throw 'Rebuilt package receipt identity is invalid.'}
+    & git -C $repo cat-file -e ($baseline.sourceRevision+'^{commit}') 2>$null
+    if($LASTEXITCODE){throw 'Rebuilt package receipt identity is invalid.'}
 }else{
     if((Get-FileHash (Join-Path $base local-package-manifest.json)).Hash.ToLowerInvariant() -cne '8295f2508bc95d67c1ce61904cd3a4bba5a7ccac0f8d30af8ef34066eff383c9'){throw 'Base package manifest is not the accepted receipt.'}
     $baseline=Get-Content (Join-Path $base local-package-manifest.json) -Raw|ConvertFrom-Json -AsHashtable
     if($baseline.sourceRevision -cne '0a1704d057417e58b92fd5eac8c546541d3f7ec2'){throw 'Unreviewed base package source.'}
 }
-$repo=Split-Path $PSScriptRoot -Parent
 $head=(& git -C $repo rev-parse HEAD).Trim()
 if($LASTEXITCODE -or $SourceRevision -cne $head){throw 'Package source revision must be the owning HEAD.'}
 $scriptNames=@('tokenforge.ps1','Invoke-TokenForgePublicHealth.ps1','Sync-TokenForgePublicHealth.ps1','Test-TokenForgePublicContribution.ps1','TokenForgePublicHealth.ps1','TokenForgePublicHealthSync.ps1')
@@ -44,6 +46,10 @@ if($rebuilt){
         if(-not $baseline.nativeInputs.Contains($relative)){throw 'Rebuilt native input inventory is incomplete.'}
         $path=Join-Path $repo $relative;Assert-TokenForgeHealthPath $path
         $expected=(& git -C $repo rev-parse ($SourceRevision+':'+$relative)).Trim()
+        # Compilation identity may precede a script/docs overlay, but every input
+        # must be the same literal blob in both locally available commits.
+        $built=(& git -C $repo rev-parse ($baseline.sourceRevision+':'+$relative) 2>$null)
+        if($LASTEXITCODE -or $built.Trim() -cne $expected){throw 'Rebuilt native inputs differ from the build revision.'}
         $actual=(& git -C $repo hash-object --no-filters -- $path).Trim()
         if($LASTEXITCODE -or $actual -cne $expected -or (Get-FileHash -LiteralPath $path).Hash.ToLowerInvariant() -cne $baseline.nativeInputs[$relative]){throw 'Rebuilt native inputs differ from the owning revision.'}
     }

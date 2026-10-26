@@ -1,0 +1,495 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgeMergedRuntimeLocalPackageQualification",
+  "clientDate": "2026-10-26",
+  "mainSource": "ecf16f4fe98e2b29dc444e273fcc08d795a0d915",
+  "packagedAndDriverSource": "a7694cb65d8cfadfe41ba7efbd6d20cdec4effa4",
+  "containingCommit": "Documentation-only evidence checkpoint; not package source",
+  "closureRecommendation": {
+    "issue": 98,
+    "readyAfterReviewAndMerge": true,
+    "scope": "Agreed runtime baseline; source-bound local Linux x64 offline qualification and module ZIP on Linux PowerShell 7.6+",
+    "issueActuallyClosed": false
+  },
+  "toolchain": {
+    "platform": "Linux x64",
+    "python": "3.13.5",
+    "powershell": "7.6.7",
+    "pester": "6.2.0",
+    "powershellDotnet": "10.0.13",
+    "nativeCompilationSDK": "10.0.401 (historical, not invoked)",
+    "newCompilation": false
+  },
+  "packages": [
+    {
+      "path": "TokenForge-linux-x64.tar.gz",
+      "sha256": "df3be70e6f21b0360c701799c9ad03543e0b8cdfada53c0bf16de950762f77dc",
+      "bytes": 33898204,
+      "payloadFiles": 263,
+      "source": "a7694cb65d8cfadfe41ba7efbd6d20cdec4effa4",
+      "files": 263,
+      "sourceFiles": 260,
+      "manifestSha256": "3dc6c625b93e2669d21efd4d62e7d51c2eecfc7b179df53682b21e2e4b829076",
+      "compilationInputs": 100,
+      "localArtifact": ".cache/qualification/packages-a7694cb/TokenForge-linux-x64.tar.gz",
+      "compiledSource": "c32cd7b27e98fdeac9f376807999205d99133a38",
+      "payloadHashes": {
+        "scripts/Invoke-TokenForgeInventory.ps1": "79a8305b0d917529e7bf1e3616a34a12a83e3181212da95fdb37011c7f9db52f",
+        "src/TokenForge/Private/OperationBudget.ps1": "e8cd3278c6a481e2ec088c94a6ba3628dd385eca6aabf1b8a7f35509ee78243e",
+        "src/TokenForge/lib/net10.0/TokenForge.Credentials.dll": "a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52",
+        "tokenforge": "42773ca3e048d5d29dd3edf488ca33ace5116d47afdd4513fa8df95b24a3047e"
+      },
+      "completePayloadHashes": "Embedded package manifest enumerates every other file; local qualification-packages.json also includes manifest hash",
+      "moduleSourceFiles": 87
+    },
+    {
+      "path": "TokenForge-module.zip",
+      "sha256": "4e3b69a6b1f3ffd8c44031bdabd88d1a489724f67b3d18829c9598bc16aa2be2",
+      "bytes": 928514,
+      "payloadFiles": 261,
+      "source": "a7694cb65d8cfadfe41ba7efbd6d20cdec4effa4",
+      "files": 261,
+      "sourceFiles": 259,
+      "manifestSha256": "bffaa91377d2387ff037b18bcbc429de590596f2ea6f59676aa2691fbb464fee",
+      "compilationInputs": 100,
+      "localArtifact": ".cache/qualification/packages-a7694cb/TokenForge-module.zip",
+      "compiledSource": "cbea33eca2dfde24f0c92b0385784876510e4ece",
+      "payloadHashes": {
+        "scripts/Invoke-TokenForgeInventory.ps1": "79a8305b0d917529e7bf1e3616a34a12a83e3181212da95fdb37011c7f9db52f",
+        "src/TokenForge/Private/OperationBudget.ps1": "e8cd3278c6a481e2ec088c94a6ba3628dd385eca6aabf1b8a7f35509ee78243e",
+        "src/TokenForge/lib/net10.0/TokenForge.Credentials.dll": "969c5ff5020b4be4e41b64a3a63c3602aa2d433b69cad853e42fe03ad801c2a4"
+      },
+      "completePayloadHashes": "Embedded package manifest enumerates every other file; local qualification-packages.json also includes manifest hash",
+      "moduleSourceFiles": 87
+    }
+  ],
+  "newChecks": {
+    "linuxPackagedPester": {
+      "powershell": "7.6.7",
+      "dotnet": ".NET 10.0.13",
+      "pester": "6.2.0",
+      "passed": 138,
+      "failed": 0,
+      "skipped": 0,
+      "notRun": 0,
+      "containersFailed": 0,
+      "failedTests": [],
+      "tests": [
+        "CollectorSafety",
+        "OperationBudget",
+        "InventoryCheckpoint",
+        "ResearchChunkPending",
+        "ProbeReadBounds",
+        "DiscoveryBootstrap",
+        "CredentialBootstrap"
+      ],
+      "exitCode": 0,
+      "rawSummarySha256": "0842c969b002efac94c3d19915129d80ba3bfa72d59c9a3f092e7d7fa4b6d4ac",
+      "rawLogSha256": "a80d280acc83b7afbf7a41604b7b20744b3399d2717b45c399b952029559a33c",
+      "testFilesSha256": {
+        "CollectorSafety": "5a2c2dc8dd5de40289c65c53948aa65800c46a2c9b6c76377d7db6f9763ecb59",
+        "OperationBudget": "548d813e758b7462b55b1dce68bbadefd9341809909de9e88e76a403baa80847",
+        "InventoryCheckpoint": "9438919b5d72774bd387592e68a74262e4a0af42f69efde3d06a4aea465a0bf9",
+        "ResearchChunkPending": "6325c252ba6466711c89f6cf48d8cc2aaec5e35973be915f11fea62f3a92747e",
+        "ProbeReadBounds": "97265d47548390a53be2bba7bcb2e2b793c35efcd709fb2fb5489797deedb55a",
+        "DiscoveryBootstrap": "328e58f2452a7154dc7eae59c34ac29ed47d1f455167ee02700138d1cc1d90b1",
+        "CredentialBootstrap": "2f62bb6f86f921bad8fca583ac2097c62aee1b9301e4116d279a995aee909cc3"
+      }
+    },
+    "modulePackagedPester": {
+      "powershell": "7.6.7",
+      "dotnet": ".NET 10.0.13",
+      "pester": "6.2.0",
+      "passed": 138,
+      "failed": 0,
+      "skipped": 0,
+      "notRun": 0,
+      "containersFailed": 0,
+      "failedTests": [],
+      "tests": [
+        "CollectorSafety",
+        "OperationBudget",
+        "InventoryCheckpoint",
+        "ResearchChunkPending",
+        "ProbeReadBounds",
+        "DiscoveryBootstrap",
+        "CredentialBootstrap"
+      ],
+      "exitCode": 0,
+      "rawSummarySha256": "0842c969b002efac94c3d19915129d80ba3bfa72d59c9a3f092e7d7fa4b6d4ac",
+      "rawLogSha256": "398d28ba3c2c45fce8f551b24ec434ade82da8792d14ef4cf83e3e58aae5875e",
+      "testFilesSha256": {
+        "CollectorSafety": "5a2c2dc8dd5de40289c65c53948aa65800c46a2c9b6c76377d7db6f9763ecb59",
+        "OperationBudget": "548d813e758b7462b55b1dce68bbadefd9341809909de9e88e76a403baa80847",
+        "InventoryCheckpoint": "9438919b5d72774bd387592e68a74262e4a0af42f69efde3d06a4aea465a0bf9",
+        "ResearchChunkPending": "6325c252ba6466711c89f6cf48d8cc2aaec5e35973be915f11fea62f3a92747e",
+        "ProbeReadBounds": "97265d47548390a53be2bba7bcb2e2b793c35efcd709fb2fb5489797deedb55a",
+        "DiscoveryBootstrap": "328e58f2452a7154dc7eae59c34ac29ed47d1f455167ee02700138d1cc1d90b1",
+        "CredentialBootstrap": "2f62bb6f86f921bad8fca583ac2097c62aee1b9301e4116d279a995aee909cc3"
+      }
+    },
+    "repackerUnit": {
+      "passed": 9,
+      "failed": 0,
+      "exitCode": 0,
+      "command": "python3 -B tests/RuntimePackages.test.py",
+      "resultEvidence": "Actual producer tool execution; no separate raw log retained"
+    },
+    "operator": {
+      "SchemaVersion": 1,
+      "Synthetic": true,
+      "AsOf": "2026-10-26T19:07:28.5711833+00:00",
+      "Checks": 33,
+      "Version": "0.48.0",
+      "AdministratorWorkflows": 4,
+      "Acquisition": "BlockedWithoutSession",
+      "SelectedRefreshRequests": 0,
+      "ReusedRefreshRequests": 1,
+      "CollectorStatus": "Pending",
+      "CandidateVerified": true,
+      "SnapshotRestore": true,
+      "LiveProof": false,
+      "AuthorizationEstablished": false,
+      "exitCode": 0,
+      "rawLogSha256": "abe2460e85eac2c813da0da130d649020fcc154518b68fec66af41246a4ace5a"
+    },
+    "administrator": {
+      "SourceRevision": "a7694cb65d8cfadfe41ba7efbd6d20cdec4effa4",
+      "PackageManifestSha256": "3dc6c625b93e2669d21efd4d62e7d51c2eecfc7b179df53682b21e2e4b829076",
+      "ExecutableSha256": "42773ca3e048d5d29dd3edf488ca33ace5116d47afdd4513fa8df95b24a3047e",
+      "AsOf": "2026-10-24T12:00:00Z",
+      "CommandsPassed": 21,
+      "Results": [
+        {
+          "Case": "success",
+          "Command": "explain",
+          "ExitCode": 0,
+          "Status": "VerifiedWorking",
+          "PacketEvents": null
+        },
+        {
+          "Case": "success",
+          "Command": "check",
+          "ExitCode": 0,
+          "Status": "VerifiedWorking",
+          "PacketEvents": null
+        },
+        {
+          "Case": "success",
+          "Command": "packet",
+          "ExitCode": 0,
+          "Status": "PreparedForHumanReview",
+          "PacketEvents": []
+        },
+        {
+          "Case": "missing",
+          "Command": "explain",
+          "ExitCode": 3,
+          "Status": "NeedsObservation",
+          "PacketEvents": null
+        },
+        {
+          "Case": "missing",
+          "Command": "check",
+          "ExitCode": 3,
+          "Status": "NeedsObservation",
+          "PacketEvents": null
+        },
+        {
+          "Case": "missing",
+          "Command": "packet",
+          "ExitCode": 0,
+          "Status": "PreparedForHumanReview",
+          "PacketEvents": [
+            "LostVisibility"
+          ]
+        },
+        {
+          "Case": "stale",
+          "Command": "explain",
+          "ExitCode": 2,
+          "Status": "AtRisk",
+          "PacketEvents": null
+        },
+        {
+          "Case": "stale",
+          "Command": "check",
+          "ExitCode": 2,
+          "Status": "AtRisk",
+          "PacketEvents": null
+        },
+        {
+          "Case": "stale",
+          "Command": "packet",
+          "ExitCode": 0,
+          "Status": "PreparedForHumanReview",
+          "PacketEvents": [
+            "Stale"
+          ]
+        },
+        {
+          "Case": "incomplete",
+          "Command": "explain",
+          "ExitCode": 2,
+          "Status": "AtRisk",
+          "PacketEvents": null
+        },
+        {
+          "Case": "incomplete",
+          "Command": "check",
+          "ExitCode": 2,
+          "Status": "AtRisk",
+          "PacketEvents": null
+        },
+        {
+          "Case": "incomplete",
+          "Command": "packet",
+          "ExitCode": 0,
+          "Status": "PreparedForHumanReview",
+          "PacketEvents": [
+            "LostVisibility"
+          ]
+        },
+        {
+          "Case": "incomparable",
+          "Command": "explain",
+          "ExitCode": 3,
+          "Status": "NeedsObservation",
+          "PacketEvents": null
+        },
+        {
+          "Case": "incomparable",
+          "Command": "check",
+          "ExitCode": 3,
+          "Status": "NeedsObservation",
+          "PacketEvents": null
+        },
+        {
+          "Case": "incomparable",
+          "Command": "packet",
+          "ExitCode": 0,
+          "Status": "PreparedForHumanReview",
+          "PacketEvents": [
+            "Incomparable"
+          ]
+        },
+        {
+          "Case": "excess-scopes",
+          "Command": "explain",
+          "ExitCode": 4,
+          "Status": "Blocked",
+          "PacketEvents": null
+        },
+        {
+          "Case": "excess-scopes",
+          "Command": "check",
+          "ExitCode": 4,
+          "Status": "Blocked",
+          "PacketEvents": null
+        },
+        {
+          "Case": "excess-scopes",
+          "Command": "packet",
+          "ExitCode": 0,
+          "Status": "PreparedForHumanReview",
+          "PacketEvents": [
+            "MatchedRequestScopesChanged"
+          ]
+        },
+        {
+          "Case": "request-blocked",
+          "Command": "explain",
+          "ExitCode": 4,
+          "Status": "Blocked",
+          "PacketEvents": null
+        },
+        {
+          "Case": "request-blocked",
+          "Command": "check",
+          "ExitCode": 4,
+          "Status": "Blocked",
+          "PacketEvents": null
+        },
+        {
+          "Case": "request-blocked",
+          "Command": "packet",
+          "ExitCode": 0,
+          "Status": "PreparedForHumanReview",
+          "PacketEvents": [
+            "Unknown"
+          ]
+        }
+      ],
+      "exitCode": 0,
+      "rawSummarySha256": "a9a933a8cff3ba12a607d19e22bef11c6024e881b34d907f297358a6dec21ce7",
+      "rawReceiptFiles": 75,
+      "receiptHashes": {
+        "excess-scopes-check.command.json": "f0d2f2c03835039bab7573ef7c7405b4aea5fc5a5e6b2243105c5381c3b39670",
+        "excess-scopes-check.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "excess-scopes-check.stdout.json": "24291f771260eaf6254a3486ec1d50ade3c697bac32b40194892cc4da3fbdae3",
+        "excess-scopes-explain.command.json": "9ca4a8db23f857d084146f4ebb0abb0a42fac05773eeea5348cbcc12c913e8fa",
+        "excess-scopes-explain.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "excess-scopes-explain.stdout.json": "0fae50f7c716cad729bc92e48c0f349a64d5c708f467a3556091605cee4cae97",
+        "excess-scopes-packet.command.json": "42118025d1b53a9f49f050d0214ba091cc7dfef58b014bc7a980a2dca0231d36",
+        "excess-scopes-packet.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "excess-scopes-packet.stdout.json": "388cc67cd656d914fa4aa524d2b70b38d7e003cafa72e14afda172f10df5e30f",
+        "incomparable-check.command.json": "f8304dccd820525bc407969cb27e66d22ebb6046b82be3a9c7487e4027ccbdfc",
+        "incomparable-check.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "incomparable-check.stdout.json": "67e2ee81c28a332bdfc69780d6a09fb84616680a0bd5b53c5249a03aadd9a263",
+        "incomparable-explain.command.json": "24bd205adf3a91a0a1824eeb57d55765a7c6f49901c07092c66d968f51566d81",
+        "incomparable-explain.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "incomparable-explain.stdout.json": "e878e4400810b73fd084e8775dc68b6792f8251adb240f0e37c95dd3e926d955",
+        "incomparable-packet.command.json": "ea59f5b269a2b0236e338c64c1e18def6477427a6093409a906e5fad554522e0",
+        "incomparable-packet.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "incomparable-packet.stdout.json": "b436e2640936578c5f53583400838c4e8ccbe5487588badc57d10fc3ef6b140a",
+        "incomplete-check.command.json": "c0cb46d6ff38572cdf1557a7a33830ffa311d2d0f6a70431d212fcce3250116b",
+        "incomplete-check.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "incomplete-check.stdout.json": "8b2679f136abfd02c61e4d2b558c1795acf43ac4cfaff3cb3ef1ede9cdd4008d",
+        "incomplete-explain.command.json": "6fdf89d150cf31643bd261080e666ebe690b5cdf45de07327e3c12d4003468f3",
+        "incomplete-explain.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "incomplete-explain.stdout.json": "849af6294ecd63692e441b5a0b7ba8ff0f0c327139607c35fcf960435e485287",
+        "incomplete-packet.command.json": "bd85f9789ce67d59c0b4e6d26733797d94399d7057328495d68128f48e82d9e0",
+        "incomplete-packet.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "incomplete-packet.stdout.json": "1372ed812fb2dda2b5dcc1ff286ab87c0359ffd15bdc7f436ff9f03fe28ba4f9",
+        "inputs/before.json": "97ab9ad7ac7e8f93f60b6d85df5fd781d907fd10fc0bdb18158d12a4e7685f23",
+        "inputs/excess-scopes.json": "8cb9d14349822b1e81457b7759e602db0e6bcbc4afb6645cd4126c7560443541",
+        "inputs/incomparable.json": "496ce2a7e070bc64d2725a7d5fddd5fd44f865475a2c0c5e4e22e0bcd114306e",
+        "inputs/incomplete.json": "c5499cb57c30688cde2dd884e1ea066e36a6a6f06e01afab9ccb7175e299ef60",
+        "inputs/inventory.json": "e16257879667b5802e33775b9d085222da7348d69dd61145fdc26822d4b1d162",
+        "inputs/missing.json": "e6e47dcffe369fa97efbf6a5933f26243f17b9fbe6dd5cd0982a56e891a79fdb",
+        "inputs/profile.json": "f508aeb29fcd7fb4c4f6b95870ea922804dd89a16e11a48ae013dd824e752bcd",
+        "inputs/request-blocked.json": "70e4f5752455c7db1c30a65913aac68c31f0d46543cfd64fadb03bcae107f4a9",
+        "inputs/requirements.json": "8bc314454b30e8986e7387a0390a8f8a05cbb8412a7624c1dffc4f10a57883b9",
+        "inputs/stale.json": "10ea9ea823947f54fa4e95ea7070a4443599d866d2cd8ae3b9fc66cda32a229c",
+        "inputs/success.json": "81e26b0b93e2dc1c43e0df6aea868a767b91fc574840315711a1e8136918f286",
+        "missing-check.command.json": "f15828bec9621e5ed862cf8addfd0ce8140932d047328919c9a5cfa5cd13fb36",
+        "missing-check.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "missing-check.stdout.json": "ce98dc3742c909fd71cd1ffe8f1b93654437e62e53c18205aaf4651463e93a8e",
+        "missing-explain.command.json": "741b7d662ed9907819cc427915e1a1dfefa26c23a656cb142016d6261088321d",
+        "missing-explain.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "missing-explain.stdout.json": "5c6514feff5eff91a7f739a6e39d349ea4ad6f6c6f7b1bff0acceaa069c63de2",
+        "missing-packet.command.json": "44ee943f4487197c8944337c2fe38b7ec3f48bd6fa7ddb06dbfa8395b25b49d0",
+        "missing-packet.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "missing-packet.stdout.json": "3ddf66aecbb7653becffff5276deb781f81b47ab50949bebe6d0101d037217ed",
+        "request-blocked-check.command.json": "e22c7696b1e30bb98397ae57bddaf9a1efcbc548fc00f1027fc968069e496949",
+        "request-blocked-check.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "request-blocked-check.stdout.json": "a07528ab0b8cc47ccd690ad56aab15c1730a13c2ea8bf4f03654480c67dcd3cd",
+        "request-blocked-explain.command.json": "7a56bf1c65f3cdc6b973c668010bf24779a2bc39623f5d4443aafa7550e1b2f0",
+        "request-blocked-explain.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "request-blocked-explain.stdout.json": "cd6717e71e16ad7f7e936ac2830e9db94b9e1bf8998101be6ecfbb87e9d2f78e",
+        "request-blocked-packet.command.json": "9b566c6a6a47acec9efc961fa0b401ea4e744bde06321c412434daa7dbf67aa6",
+        "request-blocked-packet.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "request-blocked-packet.stdout.json": "4c56971167fc33f4f7fe597cfb33f42ecd081212428e565950aebcc9c5a74f34",
+        "stale-check.command.json": "4dd83561b2941b22b5b12d77e92ed48650788791e12026cf346535cca94941ce",
+        "stale-check.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stale-check.stdout.json": "ff3c08171cbb125e18efd79199cba5eaaeaed18fc189d75d7f20c84403ae9408",
+        "stale-explain.command.json": "b651e2caaf362b78fb65d948961780ff424cfa2a7653b210a05c71abe5b3598a",
+        "stale-explain.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stale-explain.stdout.json": "900b5160abad6bb327f538b3fcfef7b4eb98a0e7a6575e9bdf2a500da712e621",
+        "stale-packet.command.json": "e093dea2fe1ee132305e665f0f1a79475fb4b9956307f29d8d6915359b444ced",
+        "stale-packet.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stale-packet.stdout.json": "cd6e9ace5571bef65b553c1832c59aa33e234206a0cf646f6813de1fccb73917",
+        "success-check.command.json": "b8f475841f9fa6e1dfb6091d626c7e80673437ddf1c946befbc2c0de73ce21b2",
+        "success-check.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "success-check.stdout.json": "1eb53fb2f3d8bdf16115c1977b109e1f171cbf6e9cadcee932013834f7ab0eb5",
+        "success-explain.command.json": "960f3604a361c5bf4b940b290a65d402c1bb2d07c76779eb5e484afdfa836dea",
+        "success-explain.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "success-explain.stdout.json": "68ff1869612743dfe35783878d06d87e32e1c324d0cbdd71695158011ead9ad8",
+        "success-packet.command.json": "a597dab72e76a658d58d46bcffd2aac15d1221bad722f4341368bd859407d2ea",
+        "success-packet.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "success-packet.stdout.json": "3b30c403230ff72b4dd38c8b05a6b8f47922cbd1fc8f719efead6c451769b68e",
+        "summary.json": "a9a933a8cff3ba12a607d19e22bef11c6024e881b34d907f297358a6dec21ce7"
+      }
+    }
+  },
+  "reusedEvidence": {
+    "fullHistorical": {
+      "file": "full-58203ec.log",
+      "sha256": "02456ad5ac99ae666f7b3aa277147def8ddb2e708513e94eee10271cfe552044",
+      "hashMatchedHistoricalReceipt": true
+    },
+    "nativeCore": {
+      "file": "native-core.log",
+      "sha256": "e7ffdc548c3df3dae85f5ca13d603fd1ddb5aee0d710ccddc5915c92f97665a6",
+      "hashMatchedHistoricalReceipt": true
+    },
+    "sealer": {
+      "file": "sealer-repair.json",
+      "sha256": "18db04489a957fea7dff1d46331b3cbf938ea053ad63264405598501bb2fd379",
+      "hashMatchedHistoricalReceipt": true
+    },
+    "changedProductionAndTests": [
+      "scripts/Invoke-TokenForgeInventory.ps1",
+      "scripts/New-TokenForgeRuntimePackages.py",
+      "src/TokenForge/Private/OperationBudget.ps1",
+      "tests/CollectorSafety.Tests.ps1",
+      "tests/OperationBudget.Tests.ps1",
+      "tests/RuntimePackages.test.py"
+    ],
+    "priorWindowsValidatedFiles": {
+      "scripts/Invoke-TokenForgeInventory.ps1": "79a8305b0d917529e7bf1e3616a34a12a83e3181212da95fdb37011c7f9db52f",
+      "src/TokenForge/Private/OperationBudget.ps1": "e8cd3278c6a481e2ec088c94a6ba3628dd385eca6aabf1b8a7f35509ee78243e",
+      "tests/CollectorSafety.Tests.ps1": "5a2c2dc8dd5de40289c65c53948aa65800c46a2c9b6c76377d7db6f9763ecb59",
+      "tests/OperationBudget.Tests.ps1": "548d813e758b7462b55b1dce68bbadefd9341809909de9e88e76a403baa80847",
+      "tests/InventoryCheckpoint.Tests.ps1": "9438919b5d72774bd387592e68a74262e4a0af42f69efde3d06a4aea465a0bf9",
+      "tests/ResearchChunkPending.Tests.ps1": "6325c252ba6466711c89f6cf48d8cc2aaec5e35973be915f11fea62f3a92747e",
+      "tests/ProbeReadBounds.Tests.ps1": "97265d47548390a53be2bba7bcb2e2b793c35efcd709fb2fb5489797deedb55a",
+      "tests/DiscoveryBootstrap.Tests.ps1": "328e58f2452a7154dc7eae59c34ac29ed47d1f455167ee02700138d1cc1d90b1"
+    },
+    "executedScaffoldingAndPayloadBytesUnchanged": true,
+    "historicalFullSuite": {
+      "source": "58203ecdcee47c4bdaaef0801d0b496d22daa35f",
+      "passed": 1663,
+      "skipped": 4,
+      "rerun": false,
+      "currentFullSuitePassClaimed": false
+    },
+    "nativeCoreChecks": 1157,
+    "sealerChecks": 224,
+    "priorWindows": {
+      "passed": 131,
+      "failed": 0,
+      "skipped": 0,
+      "sourceAndTestHashesReverified": true,
+      "privateLogsIndependentlyInspected": false,
+      "newWindowsPackageTest": false
+    }
+  },
+  "review": {
+    "reviewer": "qualification_review",
+    "sourceReviewed": "a7694cb65d8cfadfe41ba7efbd6d20cdec4effa4",
+    "codeAndActualArchives": "No blocking findings",
+    "allPayloadSourceAndCompilationMappingsVerified": true,
+    "producerSuitesRerunByReviewer": false,
+    "finalReceiptAudit": "No remaining findings; actual completed logs, 75 administrator receipt files, post-execution payload/scaffolding identities and reused historical evidence independently verified; producer suites not rerun"
+  },
+  "rejectedAttempts": [
+    {
+      "reason": "Abbreviated source identity instead of exact owning HEAD",
+      "outputCreated": false,
+      "correctedExactInvocation": "Succeeded"
+    }
+  ],
+  "boundaries": {
+    "localArtifactsOnly": true,
+    "binariesOrRawReceiptsCommitted": false,
+    "hostedWorkflows": false,
+    "dependencyInstallation": false,
+    "authentication": false,
+    "liveCollection": false,
+    "operationalActivation": false,
+    "release": false,
+    "merge": false,
+    "issueClosure": false
+  },
+  "limitations": [
+    "No new Windows/macOS/ARM execution or builds",
+    "No standalone Secret Service integration",
+    "No live/API assurance or production qualification",
+    "No package signing/notarization",
+    "Frozen Goal 6 runtime/delivery lane remains deferred/inert",
+    "Historical nine analyzer findings remain; no analyzer rerun because no PowerShell changes",
+    "Historical Windows private logs unavailable for independent inspection",
+    "Focused new checks plus explicit reused evidence; no new full-suite claim"
+  ]
+}

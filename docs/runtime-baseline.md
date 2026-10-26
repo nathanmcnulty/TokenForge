@@ -1,5 +1,7 @@
 # Supported runtime baseline
 
+Current local packages and the #98 closure recommendation are recorded in [merged runtime package qualification](runtime-package-qualification.md). Earlier receipts retain their original source identities.
+
 Issue #98 and PR #106 align the maintained module, script entry points and packages on **PowerShell 7.6 or later and .NET 10**. Tests use **Pester 6.2 or later**; reproducible repository runners and manual workflow setup select exactly **6.2.0**. Runtime summaries record the actual selected PowerShell, .NET and Pester versions. No execution-mode or parallelization change is included.
 
 The SDK is exactly **10.0.401**, with roll-forward disabled. Its locked ILLink tooling is 10.0.12; automatically selecting a later SDK patch can request a different tooling package and fail locked restore. An SDK update requires deliberate lock reconciliation and local validation. Package versions, content hashes and existing RID lock coverage are preserved. Only Linux x64 is built and tested for this candidate.

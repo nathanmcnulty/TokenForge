@@ -1,3 +1,7 @@
+# Merged runtime packages - local qualification
+
+Read [the qualification and #98 recommendation](runtime-package-qualification.md) and [sanitized identities/results](runtime-package-qualification.json). Packages bind exact source `a7694cb65d8cfadfe41ba7efbd6d20cdec4effa4` above merged main `ecf16f4fe98e2b29dc444e273fcc08d795a0d915`. Both extracted payloads passed 138 focused checks; operator 33 and administrator 21 passed. Compiled inputs/binaries were reused after equivalence checks. Independent packaging/artifact review found no blocker. Packages/raw receipts remain local. Recommend closing #98 after final PR review/merge; no merge, release, closure, hosted/live work or activation was performed. Earlier handoffs below remain historical.
+
 # Review corrections and source acceptance - PR #106
 
 Read the [review follow-up](pr106-review-followup.md) and [exact-file receipt](pr106-review-followup.json). Two bounded runtime corrections now supersede the earlier documentation-only delta: inventory budget forwarding and Windows request-ledger replacement. Final related offline checks passed 131/131 with no skips. Historical Linux package/full-suite receipts below remain scoped to their original source and do not qualify the corrected scripts or a new distribution. Both review findings are resolved; the final review response pins the complete immutable candidate. No push, merge, hosted workflow, package release or operational activation was performed in this follow-up. Earlier handoffs below describe historical checkpoints.

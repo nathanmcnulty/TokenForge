@@ -14,13 +14,15 @@ function Get-TokenForgeTenantInventory {
     $principal = [string]$payload['oid']
     $principalFingerprint = if ($principal) { Get-TokenForgeFingerprint -Value "$($payload['tid'])/$principal" } else { $null }
     $select = 'id,appId,displayName,servicePrincipalType,loginUrl,logoutUrl,homepage,appOwnerOrganizationId,accountEnabled,replyUrls,oauth2PermissionScopes,appRoles,servicePrincipalNames,appRoleAssignmentRequired,signInAudience,preferredSingleSignOnMode'
-    $all = Get-TokenForgeGraphCollection -AccessToken $GraphToken -Uri "https://graph.microsoft.com/v1.0/servicePrincipals?`$select=$select&`$top=999"
+    $inventoryQuery="https://graph.microsoft.com/v1.0/servicePrincipals?`$select=$select&`$top=999"
+    $grantQuery='https://graph.microsoft.com/v1.0/oauth2PermissionGrants?$select=clientId,resourceId,scope,consentType,principalId&$top=999'
+    $all = Get-TokenForgeGraphCollection -AccessToken $GraphToken -Uri $inventoryQuery
     $objects = @{}; $byApp = @{}
     foreach ($sp in $all) { $objects[[string]$sp['id']] = $sp; $byApp[[string]$sp['appId']] = $sp }
     $grants = @(); $grantStatus = 'Skipped'
     if (-not $SkipGrants) {
         try {
-            $rawGrants = Get-TokenForgeGraphCollection -AccessToken $GraphToken -Uri 'https://graph.microsoft.com/v1.0/oauth2PermissionGrants?$select=clientId,resourceId,scope,consentType,principalId&$top=999'
+            $rawGrants = Get-TokenForgeGraphCollection -AccessToken $GraphToken -Uri $grantQuery
             $grants = @(foreach ($grant in $rawGrants) {
                 $client = $objects[[string]$grant['clientId']]; $resource = $objects[[string]$grant['resourceId']]
                 if (-not $client -or -not $resource -or $client['appOwnerOrganizationId'] -notin $script:MicrosoftOwnerTenants -or $resource['appOwnerOrganizationId'] -notin $script:MicrosoftOwnerTenants) { continue }
@@ -94,6 +96,8 @@ function Get-TokenForgeTenantInventory {
         VerifiedMicrosoftServicePrincipalCount = @($all | Where-Object { $_['appOwnerOrganizationId'] -in $script:MicrosoftOwnerTenants }).Count
         GrantEnumeration = $grantStatus; Applications = @($apps | Sort-Object AppId); TenantGrants = $grants
         DiscoveryCatalogHash = $Discovery.CatalogContentSha256
+        # Receipt describes the unchanged queries and local visible-edge projection; no additional request.
+        EvidenceCoverage = [pscustomobject]@{SchemaVersion=1;InventoryQueryFingerprint=(Get-TokenForgeFingerprint ($inventoryQuery+'|projection/v1|'+($script:MicrosoftOwnerTenants -join ',')));GrantQueryFingerprint=(Get-TokenForgeFingerprint ($grantQuery+'|aggregate-visible-Microsoft-edges/v1|'+($script:MicrosoftOwnerTenants -join ',')))}
     }
 }
 

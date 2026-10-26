@@ -22,8 +22,11 @@ function Invoke-TokenForgeScopeProbe {
         [ValidateRange(1,1000)][int]$MaxRedirects = 8,
         [ValidateRange(0,60000)][int]$DelayMilliseconds = 250,
         [switch]$Refresh,[switch]$StopOnTransientFailure,[scriptblock]$CheckpointAction,
+        $OperationBudget,[switch]$RecoverUnknown,[switch]$ResumePaused,
         [string]$Tenant = 'organizations'
     )
+    if($Refresh -and $OperationBudget){throw 'Bounded same-plan refresh is refused; review a new cohort before collecting again.'}
+    if(($RecoverUnknown -or $ResumePaused) -and -not $OperationBudget){throw 'Explicit recovery requires a finite operation budget.'}
     $Protocols=@($Protocols|Select-Object -Unique)
     $probePrincipal = if ($PrincipalFingerprint) { $PrincipalFingerprint } else { $Inventory.PrincipalFingerprint }
     if (-not $probePrincipal) { throw 'A probe principal fingerprint is required.' }
@@ -47,7 +50,8 @@ function Invoke-TokenForgeScopeProbe {
     }else{$database=Get-TokenForgeScopeDatabase $DatabasePath}
     if(-not $FlowDatabasePath){$FlowDatabasePath=$DatabasePath+'.flows.json'}
     $sqliteFlows=$FlowDatabasePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)
-    $flows=if($sqliteFlows){$null}else{Get-TokenForgeFlowEvidence $FlowDatabasePath}
+    # Validate all historical evidence before any selected-plan reads or dispatch.
+    $flows=Get-TokenForgeFlowEvidence $FlowDatabasePath -NativeExecutablePath $NativeExecutablePath
     $apps = @($Inventory.Applications | Where-Object { -not $ClientId -or $_.AppId -in @($ClientId | ForEach-Object ToString) } | Sort-Object {[string]$_.AppId})
     $processedApplications = 0
     foreach ($app in $apps) {
@@ -90,14 +94,14 @@ function Invoke-TokenForgeScopeProbe {
             $flowPlan=@{TenantFingerprint=$Inventory.TenantFingerprint;PrincipalFingerprint=$probePrincipal;ClientId=$app.AppId;ResourceId=$resource.ToString();Tenant=$Tenant;CatalogHash=if($Inventory.DiscoveryCatalogHash -match '^[a-f0-9]{64}$'){$Inventory.DiscoveryCatalogHash}else{$null};Eligibility=$eligibility;ResourceAliases=$aliases;Cells=@($slots);PlannedAt=[DateTimeOffset]::UtcNow.ToString('o')}
             if($CohortFingerprint){$flowPlan.CohortFingerprint=$CohortFingerprint}
             $planHash=Get-TokenForgeFlowPlanHash $flowPlan
-            if($sqliteFlows){$flows=Get-TokenForgeFlowEvidence $FlowDatabasePath -PlanFingerprint $planHash -NativeExecutablePath $NativeExecutablePath}
+            if($sqliteFlows){$flows=Get-TokenForgeFlowEvidence $FlowDatabasePath -PlanFingerprint $planHash -IncludeHistory -NativeExecutablePath $NativeExecutablePath}
             if($null -ne $FlowChanges -and $flows.Plans.ContainsKey($planHash)){
                 Add-TokenForgeFlowChanges $FlowChanges $flows.Plans[$planHash] $planHash
                 foreach($prior in @($flows.Attempts|Where-Object PlanFingerprint -eq $planHash)){Add-TokenForgeFlowChanges $FlowChanges -Attempt $prior}
             }
             $priorSlots=@{}
             foreach($prior in @($flows.Attempts|Where-Object PlanFingerprint -eq $planHash|Sort-Object {([DateTimeOffset]$_.ObservedAt).UtcDateTime})){$priorSlots[$prior.AttemptKey]=$prior}
-            $previousAttempts=@($priorSlots.Values|Where-Object Outcome -ne 'Started')
+            $previousAttempts=@($priorSlots.Values|Where-Object Outcome -notin @('Started','SessionPaused','TransientFailure'))
             $previousKeys=@($previousAttempts|ForEach-Object {$_.AttemptKey}|Sort-Object -Unique)
             $previousSuccess=@($previousAttempts|Where-Object Outcome -in @('Succeeded','OpaqueToken','NoDelegatedScp'))
             $aggregateDatabase=$database
@@ -116,7 +120,7 @@ function Invoke-TokenForgeScopeProbe {
                     $hasAggregate=$aggregate[0].Outcome -eq $expectedOutcome
                 }
             }
-            $pairComplete=($flowPlan.Cells.Count -eq $previousKeys.Count -or (-not $ExploreAllFlows -and $previousSuccess.Count)) -and -not @($priorSlots.Values|Where-Object Outcome -eq 'Started').Count
+            $pairComplete=($flowPlan.Cells.Count -eq $previousKeys.Count -or (-not $ExploreAllFlows -and $previousSuccess.Count)) -and -not @($priorSlots.Values|Where-Object Outcome -in @('Started','SessionPaused','TransientFailure')).Count
             if(-not $Refresh -and $flows.Plans.ContainsKey($planHash) -and $pairComplete -and $hasAggregate -and -not @($previousAttempts|Where-Object Outcome -eq 'ContextMismatch').Count){if($null -ne $ScopeChanges){$ScopeChanges["$($app.AppId)/$resource"]=$aggregate[0]};continue}
             if(-not $processedThisApp){if($processedApplications -ge $MaxApplications){return};$processedApplications++;$processedThisApp=$true}
             $flows=Save-TokenForgeFlowEvidence $FlowDatabasePath -Plan $flowPlan -PlanFingerprint $planHash -ExistingDocument $flows -NativeExecutablePath $NativeExecutablePath -Changes $FlowChanges
@@ -140,7 +144,28 @@ function Invoke-TokenForgeScopeProbe {
                         $attemptKey=Get-TokenForgeFingerprint ($planHash+'|'+$attempt.Protocol+'|'+[int]$spa+'|'+$redirectHash)
                         $previous=@($flows.Attempts|Where-Object {$_.PlanFingerprint -eq $planHash -and $_.AttemptKey -eq $attemptKey}|Sort-Object {([DateTimeOffset]$_.ObservedAt).UtcDateTime} -Descending|Select-Object -First 1)
                         $flowAttempt=$null
-                        if(-not $Refresh -and $previous.Count -and $previous[0].Outcome -ne 'Started'){$flowAttempt=$previous[0]}
+                        if($previous.Count -and $previous[0].Outcome -eq 'ContextMismatch'){
+                            $PSCmdlet.ThrowTerminatingError([Management.Automation.ErrorRecord]::new([InvalidOperationException]::new('Saved account/request mismatch stops collection.'),'TokenForge.AccountMismatch',[Management.Automation.ErrorCategory]::SecurityError,$null))
+                        }
+                        if($previous.Count -and $previous[0].Outcome -eq 'SessionPaused' -and -not $ResumePaused){
+                            $PSCmdlet.ThrowTerminatingError([Management.Automation.ErrorRecord]::new([InvalidOperationException]::new('Explicit same-account session continuation is required.'),'TokenForge.SessionPaused',[Management.Automation.ErrorCategory]::AuthenticationError,$null))
+                        }
+                        if($previous.Count -and $previous[0].Outcome -in @('SessionPaused','TransientFailure')){
+                            $unresolved=@($flows.Attempts|Where-Object {$_.AttemptKey -eq $attemptKey -and $_.Outcome -eq 'Started'})
+                            if($unresolved.Count){
+                                $PSCmdlet.ThrowTerminatingError([Management.Automation.ErrorRecord]::new([InvalidOperationException]::new('The single uncertainty recovery was consumed; inspect saved evidence.'),'TokenForge.RecoveryExhausted',[Management.Automation.ErrorCategory]::InvalidOperation,$null))
+                            }
+                        }
+                        if($previous.Count -and $previous[0].Outcome -eq 'Started'){
+                            # An interrupted remote operation may have succeeded. Never silently replay it.
+                            $uncertain=@($flows.Attempts|Where-Object {$_.AttemptKey -eq $attemptKey -and $_.Outcome -eq 'Started'})
+                            if(-not $RecoverUnknown -or $uncertain.Count -ge 2){
+                                $PSCmdlet.ThrowTerminatingError([Management.Automation.ErrorRecord]::new([InvalidOperationException]::new('An in-flight request is unknown; one explicit bounded recovery may be authorized.'),'TokenForge.InFlightUnknown',[Management.Automation.ErrorCategory]::InvalidOperation,$null))
+                            }
+                            # Charge the previous uncertain issuance as well as the proposed recovery.
+                            if($OperationBudget){Start-TokenForgeBudgetIssuance -Budget $OperationBudget -Kind Issuance}
+                        }
+                        if(-not $Refresh -and $previous.Count -and $previous[0].Outcome -notin @('Started','SessionPaused','TransientFailure')){$flowAttempt=$previous[0]}
                         if($flowAttempt){
                             $observation.AttemptCount++
                             if($flowAttempt.Outcome -eq 'ContextMismatch'){$observation.Outcome='ContextMismatch';break}
@@ -151,17 +176,26 @@ function Invoke-TokenForgeScopeProbe {
                             }
                             continue
                         }
+                        if($OperationBudget){
+                            Assert-TokenForgeOperationBudget -Budget $OperationBudget
+                            Start-TokenForgeBudgetIssuance -Budget $OperationBudget -Kind Issuance -Retry:($previous.Count -gt 0) -OperationId $attemptKey
+                        }
+                        $request = New-TokenForgeDiscoveryRequest -Application $app -ResourceId $resource -RedirectUri $redirect -Tenant $Tenant -Spa:$spa -Protocol $attempt.Protocol
                         $started=[DateTimeOffset]::UtcNow.ToString('o')
-                        $transientFailure=$false
+                        $transientFailure=$false;$sessionPaused=$false;$budgetStop=$false;$unknownFailure=$false
                         $flowAttempt=@{AttemptId=[guid]::NewGuid().ToString();PlanFingerprint=$planHash;AttemptKey=$attemptKey;ClientId=$app.AppId;ResourceId=$resource.ToString();TenantFingerprint=$Inventory.TenantFingerprint;PrincipalFingerprint=$probePrincipal;StartedAt=$started;ObservedAt=$started;Protocol=$attempt.Protocol;Spa=[bool]$spa;RedirectFingerprint=$redirectHash;Outcome='Started';ResponseScopes=@();ScpScopes=@();ClaimsReadable=$false;HasScpClaim=$false;NamespaceVerification='Unverifiable';RequestVerification='Unverifiable';SignatureValidated=$false;ErrorCodes=@();ElapsedSeconds=0}
+                        if($OperationBudget){
+                            $recipe=@{Version=1;Protocols=@($Protocols);MaxRedirects=$MaxRedirects;ExploreAllFlows=[bool]$ExploreAllFlows;ResourceAliases=@($aliases);Cells=@($slots);SelectionPolicy='VerifiedMicrosoftRegistered/no-consent/v1'}
+                            $flowAttempt.ComparisonContext=New-TokenForgeFlowComparisonContext -Attempt $flowAttempt -FlowPlan $flowPlan -Recipe $recipe -Budget $OperationBudget -DelayMilliseconds $DelayMilliseconds -MaxApplications $MaxApplications -StopOnTransientFailure $StopOnTransientFailure.IsPresent -RecoverUnknown $RecoverUnknown.IsPresent -ResumePaused $ResumePaused.IsPresent -Redirect $redirect -Request $request
+                        }
                         $flows=Save-TokenForgeFlowEvidence $FlowDatabasePath -Attempt $flowAttempt -ExistingDocument $flows -NativeExecutablePath $NativeExecutablePath -Changes $FlowChanges
                         if($CheckpointAction){& $CheckpointAction}
                         $attemptWatch=[Diagnostics.Stopwatch]::StartNew()
                         $observation.AttemptCount++
                         if($observation.Outcome -notin @('Succeeded','OpaqueToken','NoDelegatedScp')){$observation.Protocol = $attempt.Protocol;$observation.Spa = $spa}
                         try {
-                            $request = New-TokenForgeDiscoveryRequest -Application $app -ResourceId $resource -RedirectUri $redirect -Tenant $Tenant -Spa:$spa -Protocol $attempt.Protocol
-                            $token = Get-TokenForgeToken -Request $request -EstsAuth $EstsAuth -CookieName $CookieName -WarningAction SilentlyContinue
+                            $tokenOptions=@{};if($OperationBudget){$tokenOptions.OperationBudget=$OperationBudget}
+                            $token = Get-TokenForgeToken -Request $request -EstsAuth $EstsAuth -CookieName $CookieName -WarningAction SilentlyContinue @tokenOptions
                             $claims = $token.TokenClaims
                             if ($claims.PSObject.Properties['TenantFingerprint'] -and $claims.PSObject.Properties['PrincipalFingerprint']) {
                                 if (($claims.TenantFingerprint -and $claims.TenantFingerprint -ne $Inventory.TenantFingerprint) -or ($claims.PrincipalFingerprint -and $claims.PrincipalFingerprint -ne $probePrincipal)) {
@@ -196,15 +230,20 @@ function Invoke-TokenForgeScopeProbe {
                             if($flowAttempt.Outcome -eq 'Succeeded' -and ($flowAttempt.NamespaceVerification -ne 'Matched' -or $flowAttempt.RequestVerification -ne 'Matched')){$flowAttempt.Outcome='NoDelegatedScp';$observation.Outcome='NoDelegatedScp'}
                             if(-not $ExploreAllFlows){break}
                         } catch {
-                            $transientFailure=$StopOnTransientFailure -and ($_.Exception.Message -match '\bHTTP (429|5[0-9]{2})\b|Identity transport failed or timed out')
-                            $observation.ErrorCodes = @(@($observation.ErrorCodes) + @([regex]::Matches($_.Exception.Message,'\bAADSTS([0-9]{4,9})\b') | ForEach-Object { $_.Groups[1].Value }) | Sort-Object -Unique)
-                            $flowAttempt.ErrorCodes=@([regex]::Matches($_.Exception.Message,'\bAADSTS([0-9]{4,9})\b')|ForEach-Object {$_.Groups[1].Value}|Sort-Object -Unique|Select-Object -First 16)
-                            $flowAttempt.Outcome=if($transientFailure){'Started'}else{'Failed'}
+                            $transientFailure=$StopOnTransientFailure -and ($_.Exception.Message -match '\bHTTP (429|5[0-9]{2})\b')
+                            $stoppedError=$_
+                            $classification=Get-TokenForgeProbeFailure $_
+                            $budgetStop=$classification.Status -eq 'BudgetReached'
+                            $unknownFailure=$classification.Status -eq 'InFlightUnknown'
+                            $sessionPaused=$classification.Status -eq 'SessionPaused'
+                            $flowAttempt.ErrorCodes=@($classification.ErrorCodes)
+                            $observation.ErrorCodes=@($classification.ErrorCodes)
+                            $flowAttempt.Outcome=if($budgetStop -or $unknownFailure){'Started'}elseif($transientFailure){'TransientFailure'}else{$classification.Status}
                         } finally {
                             # A transient failure keeps the original durable Started event unchanged.
                             # SQLite permits that event to transition only to a terminal outcome.
                             try{
-                                if(-not $transientFailure){
+                                if(-not $budgetStop -and -not $unknownFailure){
                                     $flowAttempt.ObservedAt=[DateTimeOffset]::UtcNow.ToString('o');$flowAttempt.ElapsedSeconds=[math]::Round($attemptWatch.Elapsed.TotalSeconds,3)
                                     $flows=Save-TokenForgeFlowEvidence $FlowDatabasePath -Attempt $flowAttempt -ExistingDocument $flows -NativeExecutablePath $NativeExecutablePath -Changes $FlowChanges
                                 }
@@ -214,6 +253,9 @@ function Invoke-TokenForgeScopeProbe {
                             }
                             if($CheckpointAction){& $CheckpointAction}
                         }
+                        if($budgetStop){$PSCmdlet.ThrowTerminatingError($stoppedError)}
+                        if($unknownFailure){$PSCmdlet.ThrowTerminatingError([Management.Automation.ErrorRecord]::new([InvalidOperationException]::new('Identity transport outcome is unknown; explicit recovery is required.'),'TokenForge.InFlightUnknown',[Management.Automation.ErrorCategory]::InvalidOperation,$null))}
+                        if($sessionPaused){$PSCmdlet.ThrowTerminatingError([Management.Automation.ErrorRecord]::new([InvalidOperationException]::new('Session context is invalid or ambiguous; pending work is paused.'),'TokenForge.SessionPaused',[Management.Automation.ErrorCategory]::AuthenticationError,$null))}
                         if($transientFailure){$PSCmdlet.ThrowTerminatingError([Management.Automation.ErrorRecord]::new([InvalidOperationException]::new('A transient identity failure interrupted this flow; resume its checkpoint later.'),'TokenForge.TransientIdentity',[Management.Automation.ErrorCategory]::ResourceUnavailable,$null))}
                         if ($DelayMilliseconds) { Start-Sleep -Milliseconds $DelayMilliseconds }
                     }
@@ -227,8 +269,18 @@ function Invoke-TokenForgeScopeProbe {
             elseif($best.Count){
                 foreach($field in @('Outcome','ObservedAt','Protocol','Spa','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','NamespaceVerification','RequestVerification')){$observation.$field=$best[0][$field]}
                 $observation|Add-Member RedirectFingerprint $best[0].RedirectFingerprint -Force
+                if($best[0].Contains('ComparisonContext')){$observation|Add-Member ComparisonContext $best[0].ComparisonContext -Force;$observation.RequestedScopes=@($best[0].ComparisonContext.RequestedScopes)}
             }
             if(-not $best.Count -and $latest.Count){$observation.ObservedAt=@($latest.Values|Sort-Object {([DateTimeOffset]$_.ObservedAt).UtcDateTime} -Descending)[0].ObservedAt}
+            if(-not $best.Count -and $latest.Count){
+                $lastAttempt=@($latest.Values|Sort-Object {([DateTimeOffset]$_.ObservedAt).UtcDateTime} -Descending)[0]
+                if($lastAttempt.Contains('ComparisonContext')){
+                    $observation.Protocol=$lastAttempt.Protocol;$observation.Spa=$lastAttempt.Spa
+                    $observation|Add-Member RedirectFingerprint $lastAttempt.RedirectFingerprint -Force
+                    $observation|Add-Member ComparisonContext $lastAttempt.ComparisonContext -Force
+                    $observation.RequestedScopes=@($lastAttempt.ComparisonContext.RequestedScopes)
+                }
+            }
             $observation|Add-Member PlanFingerprint $planHash -Force
             $observation.ElapsedSeconds = [math]::Round($watch.Elapsed.TotalSeconds,3)
             $database = Add-TokenForgeScopeObservation -Database $database -Observation $observation -Path $DatabasePath -NativeExecutablePath $NativeExecutablePath

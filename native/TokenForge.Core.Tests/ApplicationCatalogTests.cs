@@ -63,6 +63,37 @@ static class ApplicationCatalogTests
                 a.Import(olderPresent);check(!JsonNode.Parse(a.Export())!["Applications"]![id]!["Records"]!["Discovery///"]!["PresentInLatestRun"]!.GetValue<bool>());
                 var wrongLink=JsonNode.Parse(a.Export())!;var app=wrongLink["Applications"]![id]!.ToJsonString();var duplicate=wrongLink.ToJsonString().Replace("\"Applications\":{","\"Applications\":{"+JsonSerializer.Serialize(id)+":"+app+",");reject(()=>a.Import(duplicate));
             }
+            using(var a=new ApplicationCatalogStore(Path.Combine(root,"history-a.sqlite")))using(var b=new ApplicationCatalogStore(Path.Combine(root,"history-b.sqlite"))){
+                a.Update(Update("A","2026-01-01T00:00:00Z").ToJsonString());var snapshotA=a.Export();
+                b.Update(Update("B","2026-01-02T00:00:00Z").ToJsonString());var snapshotB=b.Export();
+                foreach(var reverse in new[]{true,false})using(var destination=new ApplicationCatalogStore(Path.Combine(root,"history-order-"+reverse+".sqlite"))){
+                    destination.Update(Update("Private","2026-01-03T00:00:00Z","Inventory").ToJsonString());
+                    var privateBefore=JsonNode.Parse(destination.Export())!["Applications"]![id]!["Records"]!["Inventory/"+tenant+"//"]!.ToJsonString();
+                    destination.Import(reverse?snapshotB:snapshotA);destination.Import(reverse?snapshotA:snapshotB);
+                    var once=destination.Export();check(destination.Import(snapshotA)==0);check(destination.Export()==once);
+                    var view=JsonNode.Parse(once)!;var record=view["Applications"]![id]!["Records"]!["Discovery///"]!;
+                    check(record["Attributes"]!["Name"]!.GetValue<string>()=="B");check(record["PresentInLatestRun"]!.GetValue<bool>());
+                    check(record["LastSeenAt"]!.GetValue<string>()=="2026-01-02T00:00:00.0000000+00:00");
+                    var history=record["PreviousVersions"]!.AsArray();check(history.Count==1);check(history[0]!["Attributes"]!["Name"]!.GetValue<string>()=="A");
+                    check(view["Origins"]!["Discovery///"]!["LastObservedAt"]!.GetValue<string>()=="2026-01-02T00:00:00.0000000+00:00");
+                    check(view["Applications"]![id]!["Records"]!["Inventory/"+tenant+"//"]!.ToJsonString()==privateBefore);
+                }
+                // A linked snapshot already names A as explicit history. Importing
+                // it after standalone B/A must reconcile, rather than append A.
+                a.Update(Update("B","2026-01-02T00:00:00Z").ToJsonString());var linked=a.Export();
+                b.Import(snapshotA);b.Import(linked);var reconciled=b.Export();b.Import(linked);check(b.Export()==reconciled);
+                check(JsonNode.Parse(reconciled)!["Applications"]![id]!["Records"]!["Discovery///"]!["PreviousVersions"]!.AsArray().Count==1);
+            }
+            // Equal-date transitions can legitimately contain the same historical
+            // version twice. The automatic old-current save is included in that
+            // count, not an additional occurrence beside explicit history.
+            using(var transitions=new ApplicationCatalogStore(Path.Combine(root,"equal-transitions.sqlite")))using(var destination=new ApplicationCatalogStore(Path.Combine(root,"equal-import.sqlite"))){
+                transitions.Update(Update("A").ToJsonString());var a=transitions.Export();
+                transitions.Update(Update("B").ToJsonString());transitions.Update(Update("A").ToJsonString());transitions.Update(Update("B").ToJsonString());
+                var linked=transitions.Export();destination.Import(a);destination.Import(linked);var once=destination.Export();
+                check(JsonNode.Parse(once)!["Applications"]![id]!["Records"]!["Discovery///"]!["PreviousVersions"]!.AsArray().Count==3);
+                destination.Import(linked);check(destination.Export()==once);
+            }
             using(var raw=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=path,Pooling=false}.ToString())) {
                 raw.Open();using var command=raw.CreateCommand();command.CommandText="UPDATE catalog_records SET hash=$hash WHERE origin='Discovery///';";command.Parameters.AddWithValue("$hash",new string('f',64));command.ExecuteNonQuery();
                 using(var corrupt=new ApplicationCatalogStore(path,true))reject(()=>corrupt.Export());

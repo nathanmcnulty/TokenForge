@@ -1,0 +1,94 @@
+{
+  "AsOf": "2026-10-24T12:00:00Z",
+  "Cases": [
+    {
+      "Name": "success",
+      "Snapshot": "success.json",
+      "Status": "VerifiedWorking",
+      "ExitCode": 0,
+      "Reasons": [],
+      "PacketBefore": "before.json",
+      "PacketEvents": []
+    },
+    {
+      "Name": "missing",
+      "Snapshot": "missing.json",
+      "Status": "NeedsObservation",
+      "ExitCode": 3,
+      "Reasons": [
+        "ExactRequestNeedsObservation"
+      ],
+      "PacketBefore": "before.json",
+      "PacketEvents": [
+        "LostVisibility"
+      ]
+    },
+    {
+      "Name": "stale",
+      "Snapshot": "stale.json",
+      "Status": "AtRisk",
+      "ExitCode": 2,
+      "Reasons": [
+        "ExactRequestNeedsObservation"
+      ],
+      "PacketBefore": "stale.json",
+      "PacketEvents": [
+        "Stale"
+      ]
+    },
+    {
+      "Name": "incomplete",
+      "Snapshot": "incomplete.json",
+      "Status": "AtRisk",
+      "ExitCode": 2,
+      "Reasons": [
+        "ExactRequestNeedsObservation"
+      ],
+      "PacketBefore": "before.json",
+      "PacketEvents": [
+        "LostVisibility"
+      ]
+    },
+    {
+      "Name": "incomparable",
+      "Snapshot": "incomparable.json",
+      "Status": "NeedsObservation",
+      "ExitCode": 3,
+      "Reasons": [
+        "ExactRequestNeedsObservation"
+      ],
+      "PacketBefore": "before.json",
+      "PacketEvents": [
+        "Incomparable"
+      ]
+    },
+    {
+      "Name": "excess-scopes",
+      "Snapshot": "excess-scopes.json",
+      "Status": "Blocked",
+      "ExitCode": 4,
+      "Reasons": [
+        "ObservedAdditionalScopesExceedPolicy",
+        "ExactRequestNeedsObservation"
+      ],
+      "PacketBefore": "before.json",
+      "PacketEvents": [
+        "MatchedRequestScopesChanged"
+      ]
+    },
+    {
+      "Name": "request-blocked",
+      "Snapshot": "request-blocked.json",
+      "Status": "Blocked",
+      "ExitCode": 4,
+      "Reasons": [
+        "LatestMatchedRequestBlocked",
+        "ExactRequestNeedsObservation"
+      ],
+      "PacketBefore": "before.json",
+      "PacketEvents": [
+        "Unknown"
+      ]
+    }
+  ]
+}

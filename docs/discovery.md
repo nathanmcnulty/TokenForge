@@ -1,3 +1,5 @@
+For credential-free public metadata, start with [public health and workstation sync](public-metadata-health.md). The account-bound collection and exact-plan resume commands below remain private workstation operations; public health never starts them automatically. The old discovery workflow remains disabled.
+
 # Run discovery locally
 
 Discovery runs in PowerShell on your machine. It does not require Codex, an LLM API, or GitHub Actions. Authentication still requires an authorized account and an existing supported session or software passkey.
@@ -8,8 +10,8 @@ For the engineering backlog and proposed collection improvements, see the [disco
 
 ## Requirements
 
-- PowerShell 7.4+ and a trusted Linux TokenForge native package matching the source version.
-- An authorized software passkey and XDRInternals authentication module, or an existing SecureString ESTS session.
+- PowerShell 7.6+ and a trusted Linux TokenForge native package matching the source version.
+- An explicitly supplied existing SecureString ESTS session. Obtain or renew it separately; the bounded runner does not sign in.
 - A private state directory outside your Git checkout, with one directory per account.
 - A private passkey file and containing directory. On Unix use mode 0600 for the file and 0700 for its directory; file permissions alone are insufficient.
 
@@ -17,12 +19,11 @@ For the engineering backlog and proposed collection improvements, see the [disco
 pwsh -NoProfile -File ./scripts/Invoke-TokenForgeDiscoveryRun.ps1 `
     -StatePath /private/tokenforge/nora `
     -NativeExecutablePath /path/to/linux-x64/tokenforge `
-    -PasskeyPath /private/nora.passkey `
-    -XdrModulePath /path/to/XDRInternals.psd1 `
-    -MaxMinutes 60
+    -EstsAuth $operatorSession `
+    -MaxMinutes 15
 ```
 
-Rerun the same command to resume. Completed flow cells are checkpointed before the next request; a completed client is not requested again within that cohort. A run stops at its chunk or time budget, or when an error prevents progress. Throttling, server errors, and transport timeouts leave the affected client pending. The runner retries these failures up to three times per invocation, waiting 30, 60, then 120 seconds. Completed clients remain checkpointed and are skipped when automatic discovery retries a partly completed batch. Uncheckpointed clients still run evidence and metadata repair before completion. Use `-MaxTransientRetries 0` to disable retries or change the initial wait with `-RetryDelaySeconds` (subsequent waits double, capped at 300 seconds). Other failures stop immediately. Retries reuse the current session; they never sign in again or request consent. The time budget is checked between chunks, so one chunk may extend beyond it. Smaller `-BatchSize` values give shorter stopping intervals. Failed chunk attempts count toward `-MaxChunks`; the runner also stops before a retry wait that would consume its remaining time budget. Results distinguish `ChunkAttempts`, successfully returned `ChunksExecuted`, and `TransientRetries`.
+Rerun the same command to resume. Completed flow cells are checkpointed before the next request; a completed client is not requested again within that cohort. A run stops at its chunk, request or cooperative time budget, or when an error prevents progress. See the [Goal 1 offline contract](goal1-collector.md) for explicit ceilings, status, interruption and export recovery. Definite throttling and server errors leave the affected client pending. A transport timeout can hide remote issuance: its durable intent remains unknown and requires an explicit bounded recovery decision. The runner retries these failures up to three times per invocation, waiting 30, 60, then 120 seconds. Completed clients remain checkpointed and are skipped when automatic discovery retries a partly completed batch. Uncheckpointed clients still run evidence and metadata repair before completion. Use `-MaxTransientRetries 0` to disable retries or change the initial wait with `-RetryDelaySeconds` (subsequent waits double, capped at 300 seconds). Other failures stop immediately. Retries reuse the current session; they never sign in again or request consent. The bounded runner includes preflight in its timer, checks budgets before safe operations and bounds transport cancellation by the remaining deadline. Local work and an in-flight operation can overrun cooperatively; the receipt reports this. Smaller `-BatchSize` values give shorter stopping intervals. Failed chunk attempts count toward `-MaxChunks`; the runner also stops before a retry wait that would consume its remaining time budget. Results distinguish `ChunkAttempts`, successfully returned `ChunksExecuted`, and `TransientRetries`.
 
 For an existing cohort with small stored batches, `-MaxPendingClients 25` processes up to 25 pending clients per processing batch, even across stored chunk boundaries. A discovery run can execute many such batches; this option does not cap the total clients in the entire run. Use `-MaxChunks` and `-MaxMinutes` for overall bounds. It keeps the same cohort and flow-plan identity, skips completed clients, and batches metadata projection before per-client completion checkpoints. This can reduce local database/process overhead; it does not parallelize requests. The default `0` keeps the original one-chunk execution behavior. It is a runtime cap, not a change to frozen membership or protocol bounds, and cannot be combined with an explicit `-ChunkIndex` repair request. `ChunkIndex` in a combined result is the first stored chunk selected; `SelectedClients` gives the actual count. `MaxChunks`, `ChunkAttempts`, and `ChunksExecuted` count invocation attempts/returns even when a call spans several stored chunks. Larger caps can extend stopping intervals and memory use; start small.
 
@@ -54,7 +55,7 @@ The bootstrap requests `User.Read` and `Application.Read.All` through Microsoft 
 
 A refreshed inventory replaces the saved snapshot only after metadata writes succeed. Failed writes retain the previous snapshot rather than advertising a successful refresh.
 
-A fresh session may be needed between runs. Inventory older than 24 hours is refreshed. If application metadata changed, the frozen cohort refuses it; use `-NewRun` after reviewing the change. `-RefreshDiscovery` fetches updated public sources and refreshes inventory. `-GraphOnly` limits a new cohort to Graph; otherwise the planner uses known resource relationships. Use `-ExploreAllFlows:$false` on a new cohort to stop each pair after its first issuance; the default explores all three implemented protocols, with at most eight callbacks per client by default. The saved cohort retains its original exploration settings when resumed. These bounds do not prove support for every possible authentication method.
+A fresh session may be needed between runs. Paused session continuation requires explicit `-ResumePaused` with an operator-renewed same-account session; an unknown request requires a separately reviewed `-RecoverUnknown` decision and budget. Neither flag signs in. Inventory older than 24 hours is refreshed. If application metadata changed, the frozen cohort refuses it; use `-NewRun` after reviewing the change. `-RefreshDiscovery` fetches updated public sources and refreshes inventory. `-GraphOnly` limits a new cohort to Graph; otherwise the planner uses known resource relationships. Use `-ExploreAllFlows:$false` on a new cohort to stop each pair after its first issuance; the default explores all three implemented protocols, with at most eight callbacks per client by default. The saved cohort retains its original exploration settings when resumed. These bounds do not prove support for every possible authentication method.
 
 Missing, disabled, or ownership-unverified applications stay in metadata but are excluded from token requests. Use the separate [registration stage](inventory.md) if you intentionally want to register candidates. Unknown metadata or an excluded request is not a successful token observation.
 

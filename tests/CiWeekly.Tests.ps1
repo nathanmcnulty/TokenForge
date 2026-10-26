@@ -286,7 +286,7 @@ Describe 'Weekly publisher integration' {
   foreach($app in $discovery.Applications){$prior.DeepSelectionHistory[$app.AppId]=$prior.Recipe.Week}
   $prior|ConvertTo-Json -Depth 100|Set-Content "$data/weekly-deep.json"
   $changed=$discovery|ConvertTo-Json -Depth 100|ConvertFrom-Json -AsHashtable
-  $changed.Applications[-1].Name+=' changed'
+  $changed.Applications[-1].RedirectUris+=@('https://login.microsoftonline.com/organizations/oauth2/nativeclient')
   Mock Update-TokenForgeDiscovery {$changed}
   $null=& $runner -Action Prepare -DataPath $data -BundlePath $bundle -Mode Deep -DeepMaxApplications 1
   $deep=Get-Content "$data/weekly-deep.json" -Raw|ConvertFrom-Json -AsHashtable

@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 <# .SYNOPSIS
 Summarize or filter a public permission snapshot offline; this does not establish consent.
 #>

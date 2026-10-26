@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgeRemoteWriterOfflineAcceptance",
+  "recordedUtc": "2026-10-23T20:30:52.931754+00:00",
+  "disposition": "OfflineValidatedRemoteWriterImplementation",
+  "goal6Complete": false,
+  "publicationReady": false,
+  "hostedExecutionProven": false,
+  "source": {
+    "commit": "d9d5f16d3bbf645d425955d91c133c6c0a5749ba",
+    "parent": "67b71f128ac22ce9547d08f876d9a9d775317a5a",
+    "branch": "codex/goal6-remote-writer",
+    "verificationCheckpoint": "9c2ee3e6cd2d6df3d6511cea4197926667b87378",
+    "preservedHandoff": "19470aeba7a949e4204e4ecf5586a6ffb3171c69",
+    "localOnly": true,
+    "unmerged": true,
+    "filesSha256": {
+      "scripts/TokenForgePublicationAdapter.ps1": "7069a7bec8a731c2fb637dd96760e08e57a8767c1ab596301cff7452780d1697",
+      "scripts/TokenForgePublicationWriter.ps1": "86591d37f5b5dc0750b35a2667655aae4fdf9e67a75d22f76c98ffc83f24e08d",
+      "scripts/Invoke-TokenForgeLocalValidation.ps1": "254cb383e53a144eb0cf76691e36be2fc24ca7607af8e704f842d96190bbcb4f",
+      "tests/PublicationWriter.Tests.ps1": "2cf59e7b20fa7827d1a5b95a80e5a43dee1fe1de494e1a0eaf23d1f52029cff3",
+      "tests/PublicationGitProtocol.Tests.ps1": "c196292e22b199fe727030c80a16abab9d440c6e868c366ea5457bd853eb8821",
+      "tests/fixtures/publication/WriterFixture.ps1": "e8765a81b42587867c0a3f44dba4974f3f01bec29226d4007a86919cfa3a0a3d"
+    }
+  },
+  "unchangedPackage": {
+    "version": "0.48.0",
+    "runtimeSource": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "unbundledValidatorSource": "68dd61cb8dbd142ef06d28840e2f21d1bc17a0e6",
+    "root": ".cache/goal6/accepted-package/linux-x64",
+    "manifestSha256": "8295f2508bc95d67c1ce61904cd3a4bba5a7ccac0f8d30af8ef34066eff383c9",
+    "executableSha256": "987c863bc92f29de27ff812ad360cd1be1a8bde0fda6080f465827dbb6eb99db",
+    "credentialsDllSha256": "30d5d1268223c806e8c6d26fd138ef2f1db58dd23f067f59ac38387e2d7bad32",
+    "archive": ".cache/goal6/TokenForge-0.48.0-goal6-accepted-linux-x64.tar.gz",
+    "archiveSha256": "f95f8d926c4afd0ca761f3a659378b27706d796c0cb0c61388ddb70e599bfe6b",
+    "writerIncluded": false,
+    "rebuilt": false,
+    "reason": "No module, native, builder, dependency or workflow input changed. Reused exact accepted compiled private-file and atomic-transaction primitives; historical broad package/core results were not rerun or represented as new results."
+  },
+  "validation": {
+    "platform": "linux-x64",
+    "powershell": "7.6.7",
+    "pester": "6.2.0",
+    "localGit": "2.47.3",
+    "externalNetworkIsolation": "unshare -Urn; synthetic/local bare repositories only",
+    "command": "unshare -Urn pwsh -NoProfile -File scripts/Invoke-TokenForgeLocalValidation.ps1 -Preset Publication -NativeExecutable .cache/goal6/accepted-package/linux-x64/tokenforge -ReportPath .cache/goal6-writer/publication-accepted-gate.json",
+    "summary": {
+      "preset": "Publication",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 225,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": []
+    },
+    "newWriterAndProtocolCases": 56,
+    "existingVerificationCandidatePlannerPolicyCases": 169,
+    "gitDiffCheck": "Passed",
+    "testPaths": [
+      "tests/PublicationAdapter.Tests.ps1",
+      "tests/PublicationWriter.Tests.ps1",
+      "tests/PublicationGitProtocol.Tests.ps1",
+      "tests/PublicationRecovery.Tests.ps1",
+      "tests/DiscoveryCandidate.Tests.ps1",
+      "tests/ReleaseReadinessPolicy.Tests.ps1"
+    ],
+    "coverage": [
+      "Explicit execution flag and exact transaction; public Verify cannot accept mutation options; live/synthetic parameter sets cannot mix",
+      "Writer/producer separation and current authority; withdrawal during discovery caught by final verification",
+      "Durable intent before POST, shared custody lock, no resend of the same transaction; all-ref uncertainty barrier across new approvals",
+      "Lost or malformed acknowledgement, post-write observation failure, success followed by rewind, definitive rejection",
+      "Crash before intent, after intent before send, and after remote application before local result durability",
+      "Independent recovery after PR closure, main advance, approval revocation, artifact expiry and archive removal",
+      "Missing/linked/shared/mismatched journal, immutable commit/tree/parent binding, known-applied rewind consumption",
+      "Strict protocol framing, capability/object format/target binding, complete report-status, response/request/byte/time refusal",
+      "Both verification and writer deadlines and expiry checked before/after durable intent",
+      "Actual local receive-pack existing-object update, genuine fast-forward race refused by exact-old CAS, branch disappearance, missing object and rejecting hook"
+    ],
+    "diagnostics": [
+      ".cache/goal6-writer/publication-accepted-gate.json",
+      ".cache/goal6-writer/publication-accepted-gate.log",
+      ".cache/goal6-writer/focused-first.log",
+      ".cache/goal6-writer/focused-second.log",
+      ".cache/goal6-writer/focused-third.log",
+      ".cache/goal6-writer/focused-fourth.log",
+      ".cache/goal6-writer/focused-fifth.log"
+    ],
+    "earlierFailures": "Initial runs exposed strict-mode optional dictionary-key access and PowerShell null-to-empty packet sentinel behavior. Pester closure scope required capturing the fixture packet scriptblock; test Git plumbing had emitted a CLR task result into its return stream. Corrected each, then 44 and 55 focused cases passed. Review added a genuine fast-forward CAS case, discovery reorder and aggregate/deadline corrections; final combined gate passed 225. Earlier diagnostics are preserved and not presented as green."
+  },
+  "independentReview": {
+    "reviewer": "Independent read-only review agent",
+    "disposition": "No outstanding material static findings within offline-reviewed scope",
+    "addressed": [
+      "Separate recovery from fresh PR/main/artifact/approval predicates",
+      "Unresolved or consumed state blocks the whole repository/ref, including new transaction IDs",
+      "Git discovery/repository rebinding precedes final authority pass; data ref remains last remote read before intent",
+      "Enforce custom aggregate streaming bounds and state Git2MiB/API4MiB limits accurately",
+      "Prove CAS against an actual ancestor->old->new fast-forward rewind, not unrelated histories",
+      "Recheck both original verification and writer clocks before and after intent persistence"
+    ]
+  },
+  "protocol": {
+    "transport": "Fixed-origin Git smart HTTP receive-pack; one SHA1 ref update and checksummed empty pack; all objects must already exist in same repository",
+    "refUpdate": "Exact expected-old server comparison; no force fallback or application-level retry",
+    "writerCalls": {
+      "gitDiscoveryGet": 1,
+      "gitPostMaximum": 1,
+      "additionalApiGetsMaximum": 2,
+      "writerSeconds": 30,
+      "verificationApiGetsMaximum": 32,
+      "verificationSeconds": 60,
+      "clocksOverlapAndNeverReplenish": true,
+      "gitResponseMaximumBytes": 2097152,
+      "apiResponseMaximumBytes": 4194304,
+      "writerAggregateResponseMaximumBytes": 8388608
+    },
+    "recovery": {
+      "apiGetsMaximum": 4,
+      "seconds": 30,
+      "canPost": false
+    },
+    "journal": "writer.json and .writer.initialized under existing policy-pinned private root and shared exclusive .writer.lock; flushed atomic transaction",
+    "states": [
+      "DispatchStarted",
+      "Unknown",
+      "Rejected",
+      "Applied",
+      "Consumed"
+    ],
+    "noOverrideOrReset": true
+  },
+  "operations": {
+    "authentication": false,
+    "protectedCredentialsRead": false,
+    "githubApiCalls": false,
+    "realGitHubPublication": false,
+    "tenantChanges": false,
+    "liveDiscovery": false,
+    "actionsEnabledOrDispatched": false,
+    "remotePush": false,
+    "pullRequest": false,
+    "merge": false,
+    "dependenciesInstalled": false,
+    "otherPlatformsBuiltOrTested": false,
+    "localSyntheticBareRepositoryRefUpdates": true
+  },
+  "remainingGates": [
+    "Installed gh 2.46.0 has no attestation command. Provision independently pinned compatible verifier/root/bundle and validate real signed positive/negative bundles; fixture certificates are not cryptographic proof.",
+    "Audited reusable sealer and trusted policy/custody provisioning remain absent; do not sign producer-controlled digests without independent sealing.",
+    "Actual GitHub smart-HTTP existing-object compatibility, identity/permissions, branch/ruleset rejection, expected-old race and lost-ack behavior need separately authorized bounded live tests. Local Git is not hosted proof.",
+    "Repository-ID-restricted writer credential and supported operational policy/consumer mapping must be separately reviewed/provisioned. Metadata observations are not atomic with a GitHub write.",
+    "Unresolved/Consumed/global custody blocks cannot be cleared by a new transaction. External history, full custody rollback or hostile same-user store replacement require separate audited intervention; no override/abandonment mechanism is supplied.",
+    "This writer remains source-only, not included in the accepted native package or connected to a workflow. Historical fresh human administrator workflow/collector-recovery and other Goal 6 release gates remain open."
+  ],
+  "specificApprovals": {
+    "liveServiceTest": "Name GitHub account/repository, exact source/policy/tool/root/bundle/candidate/transaction and disposable approved target ref; one POST maximum, bounded discovery/API/time envelope and explicit GET-only recovery allowance. Read-only authentication permission does not authorize POST.",
+    "hostedCompute": "Separate explicit Actions authorization and runtime/concurrency budget",
+    "publicationPrMerge": "Separate approval; none implied by offline implementation/acceptance"
+  }
+}

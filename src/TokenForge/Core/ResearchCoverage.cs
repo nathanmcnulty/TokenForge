@@ -99,7 +99,8 @@ public static class ResearchCoverage
                 int cells=p.GetProperty("Cells").GetArrayLength();if(latest.Length>cells)throw Invalid();
                 var c=new Dictionary<string,object?> {
                     ["ResourceId"]=Text(p,"ResourceId"),["PlanFingerprint"]=entry.Hash,["Eligibility"]=Text(p,"Eligibility"),
-                    ["PlannedSlots"]=cells,["TerminalSlots"]=latest.Length-Count("Started"),["InterruptedSlots"]=Count("Started"),["UntestedSlots"]=cells-latest.Length,
+                    ["PlannedSlots"]=cells,["TerminalSlots"]=latest.Length-Count("Started")-Count("SessionPaused")-Count("TransientFailure"),["InterruptedSlots"]=Count("Started"),["UntestedSlots"]=cells-latest.Length,
+                    ["PausedSlots"]=Count("SessionPaused"),["RequestBlockedSlots"]=Count("RequestBlocked"),["TransientExhaustedSlots"]=Count("TransientFailure"),
                     ["SuccessfulSlots"]=success.Length,["FailedSlots"]=Count("Failed"),["ContextMismatchSlots"]=Count("ContextMismatch"),
                     ["ObservedProtocols"]=success.Select(x=>Text(x,"Protocol")).Distinct(StringComparer.Ordinal).OrderBy(x=>x,StringComparer.Ordinal).ToArray(),
                     ["SpaRedemptionObserved"]=success.Any(x=>x.GetProperty("Spa").GetBoolean()),

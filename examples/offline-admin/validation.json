@@ -1,0 +1,299 @@
+{
+  "Status": "PassedForPinnedLocalCandidate",
+  "ValidatedDate": "2026-10-26",
+  "SourceRevision": "58203ecdcee47c4bdaaef0801d0b496d22daa35f",
+  "CandidateParent": "ccc14d843f53a35d5f15e69a986467f0b7381ce3",
+  "NativeBuildSourceRevision": "c32cd7b27e98fdeac9f376807999205d99133a38",
+  "PackageDirectory": "/home/nathan/.codex/worktrees/issue98-runtime-integration/TokenForge/.cache/issue98/final-package-58203ec/linux-x64",
+  "PackageManifest": "public-health-package.json",
+  "PackageManifestSha256": "8c550f08b5632f13a48a07558574370bd4375794fe09b3fe9120d72de3efe0a7",
+  "NativeBuildReceiptPath": "/home/nathan/.codex/worktrees/issue98-runtime-integration/TokenForge/.cache/issue98/verified-build-receipt.json",
+  "NativeBuildReceiptSha256": "7f5bf66466aae9ef68c81d7403ff055f4de650a04fd6ce5eaa2b490441245a66",
+  "NativeInputsMatched": 100,
+  "PackagedModuleSourceFilesMatched": 87,
+  "PayloadFilesVerified": 166,
+  "ExecutableSha256": "42773ca3e048d5d29dd3edf488ca33ace5116d47afdd4513fa8df95b24a3047e",
+  "CredentialDllSha256": "a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52",
+  "Runtime": "Linux x64; TokenForge 0.48.0; self-contained .NET 10 package",
+  "PythonVersion": "3.13.5",
+  "NewBuild": false,
+  "Installs": false,
+  "Authentication": false,
+  "LiveDiscovery": false,
+  "HostedWorkflows": false,
+  "Publication": false,
+  "NetworkClaim": "Replay executed under unshare -Urn in a new network namespace with no external interfaces, a clean env -i environment, private TMPDIR and explicit private DOTNET_BUNDLE_EXTRACT_BASE_DIR. Selected commands perform saved-file analysis only.",
+  "ActualRunDirectory": "/home/nathan/.codex/worktrees/issue98-runtime-integration/TokenForge/.cache/offline-admin-final-replay/run-02",
+  "ActualRunSummarySha256": "d74af934527223e0d4ee80fbe1ca672e4eadfeff4034a6fd7d80a18bdd151179",
+  "CommandsPassed": 21,
+  "ActualResults": [
+    {
+      "Case": "success",
+      "Command": "explain",
+      "ExitCode": 0,
+      "Status": "VerifiedWorking",
+      "PacketEvents": null
+    },
+    {
+      "Case": "success",
+      "Command": "check",
+      "ExitCode": 0,
+      "Status": "VerifiedWorking",
+      "PacketEvents": null
+    },
+    {
+      "Case": "success",
+      "Command": "packet",
+      "ExitCode": 0,
+      "Status": "PreparedForHumanReview",
+      "PacketEvents": []
+    },
+    {
+      "Case": "missing",
+      "Command": "explain",
+      "ExitCode": 3,
+      "Status": "NeedsObservation",
+      "PacketEvents": null
+    },
+    {
+      "Case": "missing",
+      "Command": "check",
+      "ExitCode": 3,
+      "Status": "NeedsObservation",
+      "PacketEvents": null
+    },
+    {
+      "Case": "missing",
+      "Command": "packet",
+      "ExitCode": 0,
+      "Status": "PreparedForHumanReview",
+      "PacketEvents": [
+        "LostVisibility"
+      ]
+    },
+    {
+      "Case": "stale",
+      "Command": "explain",
+      "ExitCode": 2,
+      "Status": "AtRisk",
+      "PacketEvents": null
+    },
+    {
+      "Case": "stale",
+      "Command": "check",
+      "ExitCode": 2,
+      "Status": "AtRisk",
+      "PacketEvents": null
+    },
+    {
+      "Case": "stale",
+      "Command": "packet",
+      "ExitCode": 0,
+      "Status": "PreparedForHumanReview",
+      "PacketEvents": [
+        "Stale"
+      ]
+    },
+    {
+      "Case": "incomplete",
+      "Command": "explain",
+      "ExitCode": 2,
+      "Status": "AtRisk",
+      "PacketEvents": null
+    },
+    {
+      "Case": "incomplete",
+      "Command": "check",
+      "ExitCode": 2,
+      "Status": "AtRisk",
+      "PacketEvents": null
+    },
+    {
+      "Case": "incomplete",
+      "Command": "packet",
+      "ExitCode": 0,
+      "Status": "PreparedForHumanReview",
+      "PacketEvents": [
+        "LostVisibility"
+      ]
+    },
+    {
+      "Case": "incomparable",
+      "Command": "explain",
+      "ExitCode": 3,
+      "Status": "NeedsObservation",
+      "PacketEvents": null
+    },
+    {
+      "Case": "incomparable",
+      "Command": "check",
+      "ExitCode": 3,
+      "Status": "NeedsObservation",
+      "PacketEvents": null
+    },
+    {
+      "Case": "incomparable",
+      "Command": "packet",
+      "ExitCode": 0,
+      "Status": "PreparedForHumanReview",
+      "PacketEvents": [
+        "Incomparable"
+      ]
+    },
+    {
+      "Case": "excess-scopes",
+      "Command": "explain",
+      "ExitCode": 4,
+      "Status": "Blocked",
+      "PacketEvents": null
+    },
+    {
+      "Case": "excess-scopes",
+      "Command": "check",
+      "ExitCode": 4,
+      "Status": "Blocked",
+      "PacketEvents": null
+    },
+    {
+      "Case": "excess-scopes",
+      "Command": "packet",
+      "ExitCode": 0,
+      "Status": "PreparedForHumanReview",
+      "PacketEvents": [
+        "MatchedRequestScopesChanged"
+      ]
+    },
+    {
+      "Case": "request-blocked",
+      "Command": "explain",
+      "ExitCode": 4,
+      "Status": "Blocked",
+      "PacketEvents": null
+    },
+    {
+      "Case": "request-blocked",
+      "Command": "check",
+      "ExitCode": 4,
+      "Status": "Blocked",
+      "PacketEvents": null
+    },
+    {
+      "Case": "request-blocked",
+      "Command": "packet",
+      "ExitCode": 0,
+      "Status": "PreparedForHumanReview",
+      "PacketEvents": [
+        "Unknown"
+      ]
+    }
+  ],
+  "OptimizationGuardResult": {
+    "Command": "unshare -Urn env -i PATH=/usr/bin:/bin /usr/bin/python3 -I -B -O examples/offline-admin/replay.py --help",
+    "ExitCode": 1,
+    "Result": "Rejected before argument parsing, output directory creation or native execution",
+    "StderrSha256": "09d726fcbf2939bcc5d3fb4363195f136a6d0c04be69641e6460d1f174f4de95"
+  },
+  "FixtureAndRunnerSha256": {
+    "examples/offline-admin/expected.json": "d3bf94d099560c55750e3168ca48831d1a88fa91d7f60e03f314c86706b33464",
+    "examples/offline-admin/inputs/before.json": "97ab9ad7ac7e8f93f60b6d85df5fd781d907fd10fc0bdb18158d12a4e7685f23",
+    "examples/offline-admin/inputs/excess-scopes.json": "8cb9d14349822b1e81457b7759e602db0e6bcbc4afb6645cd4126c7560443541",
+    "examples/offline-admin/inputs/incomparable.json": "496ce2a7e070bc64d2725a7d5fddd5fd44f865475a2c0c5e4e22e0bcd114306e",
+    "examples/offline-admin/inputs/incomplete.json": "c5499cb57c30688cde2dd884e1ea066e36a6a6f06e01afab9ccb7175e299ef60",
+    "examples/offline-admin/inputs/inventory.json": "e16257879667b5802e33775b9d085222da7348d69dd61145fdc26822d4b1d162",
+    "examples/offline-admin/inputs/missing.json": "e6e47dcffe369fa97efbf6a5933f26243f17b9fbe6dd5cd0982a56e891a79fdb",
+    "examples/offline-admin/inputs/profile.json": "f508aeb29fcd7fb4c4f6b95870ea922804dd89a16e11a48ae013dd824e752bcd",
+    "examples/offline-admin/inputs/request-blocked.json": "70e4f5752455c7db1c30a65913aac68c31f0d46543cfd64fadb03bcae107f4a9",
+    "examples/offline-admin/inputs/requirements.json": "8bc314454b30e8986e7387a0390a8f8a05cbb8412a7624c1dffc4f10a57883b9",
+    "examples/offline-admin/inputs/stale.json": "10ea9ea823947f54fa4e95ea7070a4443599d866d2cd8ae3b9fc66cda32a229c",
+    "examples/offline-admin/inputs/success.json": "81e26b0b93e2dc1c43e0df6aea868a767b91fc574840315711a1e8136918f286",
+    "examples/offline-admin/replay.py": "a6bf73480d95fb76a793e7065c4112d80e6822cf688c989f69506c0857e4b4f8"
+  },
+  "ValidationGap": "None for these 21 commands on the exact pinned package. No live authorization/API assurance or issue closure claimed; prior runtime acceptance is recorded separately in docs/runtime-baseline-validation.json.",
+  "OriginalCandidateCommit": "113b6c1c56608a9229d6b746a4018f433fbce9a7",
+  "OriginalCandidateParent": "cbea33eca2dfde24f0c92b0385784876510e4ece",
+  "IntegratedCandidateCommit": "911156e2175be78882a132611d4836214fd80a72",
+  "InitialAttempt": {
+    "Directory": "/home/nathan/.codex/worktrees/issue98-runtime-integration/TokenForge/.cache/offline-admin-final-replay/run-01",
+    "Result": "Launch failed before native command processing: clean environment had neither HOME nor DOTNET_BUNDLE_EXTRACT_BASE_DIR. Original stderr and command receipt retained. Supplied private bundle extraction directory for run-02; no runtime defect or source change."
+  },
+  "PackageArchiveSha256": "975a8407cc0e7c90939fc630f48b7da2b92947ee2c8d11435944cc1c15e5ea7d",
+  "PackagePreflight": "Exact archive and manifest hashes; archive manifest bytes match staged manifest; complete staged file membership, no symlinks; all 166 payload sizes/hashes verified.",
+  "ReceiptFileSha256": {
+    "excess-scopes-check.command.json": "6e77609e622daa177f80930cdba92a1524753f9c81d3ea05e2ef15df111948b3",
+    "excess-scopes-check.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "excess-scopes-check.stdout.json": "24291f771260eaf6254a3486ec1d50ade3c697bac32b40194892cc4da3fbdae3",
+    "excess-scopes-explain.command.json": "9d381d08270a9820a7965d52e2ff58ec7bb2709298141becae9747b23335751a",
+    "excess-scopes-explain.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "excess-scopes-explain.stdout.json": "0fae50f7c716cad729bc92e48c0f349a64d5c708f467a3556091605cee4cae97",
+    "excess-scopes-packet.command.json": "dc796020220b82cfb2ebddb2dee02ccc8283b4f23ee4f603e7720905855b329d",
+    "excess-scopes-packet.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "excess-scopes-packet.stdout.json": "8520a78550242e576fa9b15d954d09b851b4e2965b58909297e4e862baaa6358",
+    "incomparable-check.command.json": "c6641209091050800d660e5bf36a9f41dc403216a795db792cbd96e3ad726196",
+    "incomparable-check.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "incomparable-check.stdout.json": "67e2ee81c28a332bdfc69780d6a09fb84616680a0bd5b53c5249a03aadd9a263",
+    "incomparable-explain.command.json": "7d196b75f12e574ba7ac471e1359b5d045553d645dcacc0959a3103f1071ac8f",
+    "incomparable-explain.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "incomparable-explain.stdout.json": "e878e4400810b73fd084e8775dc68b6792f8251adb240f0e37c95dd3e926d955",
+    "incomparable-packet.command.json": "5aa4f877d2e24d9de1dd044fca4d1e4a95e24e06f9791b0d245455607b0d4dde",
+    "incomparable-packet.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "incomparable-packet.stdout.json": "ae8bd0e440b03a10787ae77206a65b84132b6240113e12935c7e627c46e36e0b",
+    "incomplete-check.command.json": "20a90191bdec58a24524d9fc4d9d0357e3633cb27764937f13500520500ff153",
+    "incomplete-check.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "incomplete-check.stdout.json": "8b2679f136abfd02c61e4d2b558c1795acf43ac4cfaff3cb3ef1ede9cdd4008d",
+    "incomplete-explain.command.json": "e745d5bf7338683bcfcab48d39b51aced5981d9d62ee687e5b2716fee2917290",
+    "incomplete-explain.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "incomplete-explain.stdout.json": "849af6294ecd63692e441b5a0b7ba8ff0f0c327139607c35fcf960435e485287",
+    "incomplete-packet.command.json": "35516f663b665992f4e9ee7e05010daa1d587ae768aca15a3a5143ea3cd0b877",
+    "incomplete-packet.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "incomplete-packet.stdout.json": "c9e8d0a136cc96c1054712b69f4e87b4a519444c9e41c7fb8b2dc9e17f80ca05",
+    "inputs/before.json": "97ab9ad7ac7e8f93f60b6d85df5fd781d907fd10fc0bdb18158d12a4e7685f23",
+    "inputs/excess-scopes.json": "8cb9d14349822b1e81457b7759e602db0e6bcbc4afb6645cd4126c7560443541",
+    "inputs/incomparable.json": "496ce2a7e070bc64d2725a7d5fddd5fd44f865475a2c0c5e4e22e0bcd114306e",
+    "inputs/incomplete.json": "c5499cb57c30688cde2dd884e1ea066e36a6a6f06e01afab9ccb7175e299ef60",
+    "inputs/inventory.json": "e16257879667b5802e33775b9d085222da7348d69dd61145fdc26822d4b1d162",
+    "inputs/missing.json": "e6e47dcffe369fa97efbf6a5933f26243f17b9fbe6dd5cd0982a56e891a79fdb",
+    "inputs/profile.json": "f508aeb29fcd7fb4c4f6b95870ea922804dd89a16e11a48ae013dd824e752bcd",
+    "inputs/request-blocked.json": "70e4f5752455c7db1c30a65913aac68c31f0d46543cfd64fadb03bcae107f4a9",
+    "inputs/requirements.json": "8bc314454b30e8986e7387a0390a8f8a05cbb8412a7624c1dffc4f10a57883b9",
+    "inputs/stale.json": "10ea9ea823947f54fa4e95ea7070a4443599d866d2cd8ae3b9fc66cda32a229c",
+    "inputs/success.json": "81e26b0b93e2dc1c43e0df6aea868a767b91fc574840315711a1e8136918f286",
+    "missing-check.command.json": "8a17b55d121e182ad731da9b8c6cbfecabfb0f2d39f6a807ae2eb602ba1ccf31",
+    "missing-check.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "missing-check.stdout.json": "ce98dc3742c909fd71cd1ffe8f1b93654437e62e53c18205aaf4651463e93a8e",
+    "missing-explain.command.json": "bcae3e49cd17ac70f811e638090c9decf0b25daf5ff8ecd5f3aa0ffe5593a47b",
+    "missing-explain.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "missing-explain.stdout.json": "5c6514feff5eff91a7f739a6e39d349ea4ad6f6c6f7b1bff0acceaa069c63de2",
+    "missing-packet.command.json": "c0da375020bcd7831f0a57b92c0d07634bcbaa9d9b9adad29d7fde607af70801",
+    "missing-packet.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "missing-packet.stdout.json": "d32742e8af596946779beb99d3fc94a56075f8f2450f114c29dca916f52f2b81",
+    "request-blocked-check.command.json": "28745adb40c0a9d3e87ccac7edb9f4a05261cdc70bd58756593c9d4ab58c9ecc",
+    "request-blocked-check.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "request-blocked-check.stdout.json": "a07528ab0b8cc47ccd690ad56aab15c1730a13c2ea8bf4f03654480c67dcd3cd",
+    "request-blocked-explain.command.json": "d6ed198406e9de0529415ab69e812bf7f18def3fd8d3a25ea30b6ab3d20a7743",
+    "request-blocked-explain.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "request-blocked-explain.stdout.json": "cd6717e71e16ad7f7e936ac2830e9db94b9e1bf8998101be6ecfbb87e9d2f78e",
+    "request-blocked-packet.command.json": "54931b96ebff591d5cec1da42f4154658dc7767543715fda7bea651931c2a4bf",
+    "request-blocked-packet.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "request-blocked-packet.stdout.json": "6862639c96b65ec6bcf9c82696fdfa41ecafbd189ef4836d7332f5c1d0b850da",
+    "stale-check.command.json": "c9ec805b61a4dccc176b7d87267a68346df2bcea61a7364b27923cb38972144e",
+    "stale-check.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stale-check.stdout.json": "ff3c08171cbb125e18efd79199cba5eaaeaed18fc189d75d7f20c84403ae9408",
+    "stale-explain.command.json": "15c99cf7762b9b52951c061cee0b5c9b28fe788c5f17749e1aed57c92c143ab2",
+    "stale-explain.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stale-explain.stdout.json": "900b5160abad6bb327f538b3fcfef7b4eb98a0e7a6575e9bdf2a500da712e621",
+    "stale-packet.command.json": "db13d96fa37e7e50e63d64e034d8ee6ef1fafd151b5268068373b9fdc1684c87",
+    "stale-packet.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stale-packet.stdout.json": "a1b70793cc56c8d0a0bed1bf856b4d44600e2d9a648c865971b60080a9cd5afb",
+    "success-check.command.json": "e220152bbe6038fa1c4cdf46c6f8187e516222527ee851a79c3f9b616527a352",
+    "success-check.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "success-check.stdout.json": "1eb53fb2f3d8bdf16115c1977b109e1f171cbf6e9cadcee932013834f7ab0eb5",
+    "success-explain.command.json": "5cda7417449a203029105c661610128d987e9fa764fdcb964c20bfe9452e181c",
+    "success-explain.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "success-explain.stdout.json": "68ff1869612743dfe35783878d06d87e32e1c324d0cbdd71695158011ead9ad8",
+    "success-packet.command.json": "5064ba96f0b20f1f9ba7d39b1d5b81a2bd41e57cab56dfa2cbb90e8dfca75863",
+    "success-packet.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "success-packet.stdout.json": "2e35adde13a673269c1680ccddcfb25ff9b1419dc4507e0966732e433e677c7d",
+    "summary.json": "d74af934527223e0d4ee80fbe1ca672e4eadfeff4034a6fd7d80a18bdd151179"
+  },
+  "ReceiptFileCount": 75
+}

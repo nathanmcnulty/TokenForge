@@ -1,0 +1,13 @@
+# Consolidated inert-candidate checkpoint
+
+Start review with [the receipt](goal6-inert-activation-validation.json), [implemented boundary](goal6-inert-activation.md) and [single NO-GO packet](goal6-canary-decision.md).
+
+Reviewed implementation **441bf8020b11c9770115e896d73134c298dd9c1d**; exact tested source/template **eaec9e025e29de31c3d580a58e3e8b4a33a2fea0**. The containing checkpoint is documentation-only. Dot's review from `01c6b3c56470902791e22ce1b387ed17386ebd29` was adopted unchanged on top of `5a137f5a4bcac9560edada472b577ddd9ed8a41b`.
+
+Producer exact-kit gates passed: **416 Node tests and 224 Pester 6.2 tests**, zero failures/skips/cancellations or failed containers. Independent reviewer ran 11 service/authority checks and 15 controller recovery cases, reviewed the full source/template/packet, and separately audited saved gate evidence and package/source hashes. It did not rerun the combined suite or Pester. Earlier development failures and corrections remain disclosed in the receipt; runtime pins and refusal gates were preserved.
+
+Private kit SHA-256 **c1a6aa46272adf1977b1bf8e9f31069c0fd819ce2635d027f529fab5d7e2dd6e**; manifest **644e79f5c7f29e7cec12d78119640a30f357e69283352aec8a2ce25e8323f790**. All **484 literal Git blobs, 486 payload files and 144 unchanged native/module/build inputs** were verified, including after tests. Existing native runtime source stays `0a1704d057417e58b92fd5eac8c546541d3f7ec2`; no build or dependency install. No private archive, binary, raw log or key is pushed.
+
+**This is a validated inert engineering checkpoint, not completion of the full real activation closure or a live-ready canary.** The real controller HTTPS leaf is absent because enforceable GitHub custody/conditional mutation authority has not been established. The single packet also bundles selected runner/distribution mismatch, dynamic signed-plan delivery and signer provisioning, existing/default-branch workflow behavior, and credential/service authority. It names the evidence/decision needed for each. A signature or gate change cannot substitute for those facts; no executable activation diff or current canary authorization exists.
+
+The next decision is to resolve that concrete feasibility bundle together, not to run another abstract fake milestone. Only a separately reviewed, fully bound real candidate could later request specific live credentials, settings/control writes and one bounded Linux job. Current credentials/external transport/Actions/activation stay blocked. No protected credentials, artifact/control-service request, Actions change, tenant change, hosted run, artifact signing/publication, PR or merge occurred. The authorized sanitized source push uses existing Git authentication/signing only.

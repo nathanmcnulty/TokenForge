@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "status": "Passed",
+  "baselineRevision": "68ae5749bbc609937290e2209a5cda89375d7313",
+  "PowerShell": "7.6.7",
+  "Pester": "6.2.0",
+  "platform": "linux-x64",
+  "fullSuite": {
+    "TotalCount": 965,
+    "PassedCount": 961,
+    "FailedCount": 0,
+    "SkippedCount": 4,
+    "FailedContainersCount": 0
+  },
+  "testFileCount": 64,
+  "nativeWorkflowSelection": {
+    "Passed": 340,
+    "Failed": 0,
+    "Skipped": 3,
+    "ExpectedPassesUnchanged": 340,
+    "TestFiles": 21,
+    "Evidence": "Derived per-file detailed results reconciled to the actual full-suite summary."
+  },
+  "platformSkips": [
+    {
+      "File": "NativeOAuth.Tests.ps1",
+      "Case": "rejects a Windows ACL permitting another principal 2ms"
+    },
+    {
+      "File": "NativeProfiles.Tests.ps1",
+      "Case": "preserves moved OS-profile ciphertext on an unsupported platform 3ms"
+    },
+    {
+      "File": "Profiles.Tests.ps1",
+      "Case": "fails closed on macOS until a signed helper exists 1ms"
+    },
+    {
+      "File": "Vault.Tests.ps1",
+      "Case": "creates protected current-user ACLs on Windows 0ms"
+    }
+  ],
+  "localRunnerReleaseGuards": {
+    "preset": "ReleaseGuards",
+    "platform": "linux",
+    "version": "0.48.0",
+    "passed": 27,
+    "failed": 0,
+    "skipped": 0,
+    "containersfailed": 0,
+    "code": "Success",
+    "failedTests": []
+  },
+  "entryPointSha256": {
+    "scripts/Test-TokenForge.ps1": "f097c7ba81ace556bfedd608d56c4c91f176872056a014d71198a837224c6ebd",
+    "scripts/Invoke-TokenForgeLocalValidation.ps1": "b259767c1e4721f8dc39262dead48db0177caeada9f1e027d3be8df0f6601a5e",
+    ".github/workflows/ci.yml": "3703274305ef849729dddf7cb3db5091d0320205f2eea7ea83f2c4d9959f05e2",
+    ".github/workflows/native.yml": "7452bca996d9aad8618284ea996796babfb8d61528e4fea890ba8df4f5ac407b"
+  },
+  "package": {
+    "sourceRevision": "f5df773c177cd11dcf3befc53b3e7507f08e2041",
+    "version": "0.48.0",
+    "manifestSha256": "6e203055aa9414d894ef7763f488479b2c1f8d19ca4cbfc17a5503f54d19aa15",
+    "executableSha256": "d65f1686542444dcfab9fe1bb38eb5989a815a2e743fc04a6276648fcf7de196",
+    "nativeInputsSha256": "e045aa00fe2cc1a2bfc3c9a9dca2098f45bd658610650d8ad51646bac4dd648c",
+    "Rebuilt": false,
+    "Reason": "Runtime module, native/core/build inputs unchanged by this tooling-only migration."
+  },
+  "ActionsDispatched": false,
+  "AutomaticTriggersAdded": false,
+  "LiveAuthenticationPerformed": false,
+  "ProductionCodeChanged": false,
+  "historicalReceiptsRewritten": false,
+  "independentReview": "No findings: pins, manual workflow boundary, actual full/native-subset results, package reuse and receipt hashes independently verified."
+}

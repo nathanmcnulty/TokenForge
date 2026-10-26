@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgeSealerDotReviewFollowup",
+  "recordedUtc": "2026-10-24T00:25:32.389436+00:00",
+  "disposition": "PrivateParentFixPassed_CompleteOriginalZipPrivacyConfirmedBlocked",
+  "reviewedBaseline": "fb6d2602c64a62108b4dab3e17d43cea1c7117fd",
+  "goal6Complete": false,
+  "publicationReady": false,
+  "hostedValidationReady": false,
+  "completeOriginalZipPrivacyGatePassed": false,
+  "readyForFurtherOfflineReview": true,
+  "source": {
+    "implementationCommit": "eaea345873364d5caf4f4e6cab1762edd774d1e8",
+    "workflowCommit": "cdddd002be28f39b1be9cbe7fe4c639407d69d03",
+    "branch": "codex/goal6-reusable-sealer",
+    "implementationParent": "fb6d2602c64a62108b4dab3e17d43cea1c7117fd",
+    "preservedHandoff": "19470aeba7a949e4204e4ecf5586a6ffb3171c69",
+    "unmerged": true,
+    "filesSha256": {
+      ".github/workflows/tokenforge-sealer.yml": "c4d32f6dd22988e252137bc7a1f073b6fdc647ca2c19112cea399195a449af5c",
+      "docs/goal6-dot-review.md": "16856bd134e04e2b16aee5aab06bbea794e4c542e7f2670bb1a28b13799bd55e",
+      "docs/goal6-sealer-followup.md": "ae9b8b7321dca789b9f1f7fa07d456e3c1e6efdbd35ec45171cf3d390730239b",
+      "docs/goal6-sealer.md": "a4804f5cb3bf8973452c17bd684b6cd5f3261e770012c2ab93d484c909cba84c",
+      "publication/tokenforge-sealer.template.yml": "4a4bea472f67695e15765f0aef8b7ee2705932974e08bdf29ec4dfd4e438a46f",
+      "scripts/Invoke-TokenForgeSealer.ps1": "c81bf162b4ddcee58b81f92d7ef7c509200e6d075c35ceb83134187102a42824",
+      "scripts/TokenForgeSealer.ps1": "688db06bfd93cccdfbd5e68dd94f0ca9d26548e80fc859ead2cabbc784bcce4e",
+      "scripts/TokenForgeSealerPolicy.ps1": "d6b8bb983437a69a2d4c9c68b22b2fb5c69c3c6b49c4935713366c558dc20442",
+      "tests/Sealer.Tests.ps1": "ae7a954565cb210373b084e0e79d75c11a9148223c05ce7cac7212e011a05203",
+      "tests/SealerPolicy.Tests.ps1": "7f9a62e678b442f4d743086bf25f553023b3c751cce53f847355fb21e16edfe9",
+      "tests/fixtures/publication/MutateSealerZip.py": "ac74abb9c57ec2c42daab7c59d4090ee9892054a89f2a8a53687d2aaec919e1c",
+      "publication/sealer-policy-followup-review-plan.json": "09ea099eaadd6caefce8544413d6ece90c2aab99930c460570949468f723b835",
+      "docs/HANDOFF.md": "bf5f4748c07ed335f9fa8b4c56251365ec9aba6fab4f9ad3ea8343c073084a87"
+    }
+  },
+  "temporaryDirectoryFix": {
+    "parent": "${RUNNER_TEMP}/tokenforge-sealer-private",
+    "parentMode": "0700",
+    "output": "${RUNNER_TEMP}/tokenforge-sealer-private/sealed",
+    "temporaryRootRegressionMode": "0755",
+    "temporaryRootModePreserved": true,
+    "parentCreatedBeforeResolve": true,
+    "existingParentAndEvidencePreservedByRefusal": true,
+    "linkedRootsRefused": true,
+    "signingAndUploadPathsMatch": true,
+    "newRegressionChecks": 5
+  },
+  "privacyInvestigation": {
+    "confirmed": true,
+    "status": "Unresolved activation blocker",
+    "boundary": "Existing validators check extracted seven-file structure/content, not every byte of the signed/uploaded original ZIP.",
+    "independentProbe": {
+      "network": "unshare -Urn",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "Case": "baseline-dotnet",
+          "Accepted": true,
+          "SubjectSha256": "4a8633d06a9883fb41843bec4eb5ecbab6c2f582822aa893ab1daa3c46719fe1",
+          "OriginalUnchanged": true,
+          "MarkerRetained": false,
+          "StructuralValidation": true,
+          "SigningPerformed": false
+        },
+        {
+          "Case": "archive-comment",
+          "Accepted": true,
+          "SubjectSha256": "aeffc80e1af009abd6b1df5f9653a5f9c0c361ae056261d8623c76f6710eb76e",
+          "OriginalUnchanged": true,
+          "MarkerRetained": true,
+          "StructuralValidation": true,
+          "SigningPerformed": false
+        },
+        {
+          "Case": "entry-comment",
+          "Accepted": true,
+          "SubjectSha256": "4bd67bcd38655d4c4b84d8b33a3fc270e4cea143cf086adfe8c3dac23180c615",
+          "OriginalUnchanged": true,
+          "MarkerRetained": true,
+          "StructuralValidation": true,
+          "SigningPerformed": false
+        },
+        {
+          "Case": "local-and-central-extra",
+          "Accepted": true,
+          "SubjectSha256": "b79efa1efa9252f4d13e60beb3aea011fb5a13b54719651c5b807ff7bf805794",
+          "OriginalUnchanged": true,
+          "MarkerRetained": true,
+          "StructuralValidation": true,
+          "SigningPerformed": false
+        },
+        {
+          "Case": "appended-bytes",
+          "Accepted": true,
+          "SubjectSha256": "b04c00c8e067d9bf7c883821e9a92f0027e34ac774dc5c57a012d391c419f9a8",
+          "OriginalUnchanged": true,
+          "MarkerRetained": true,
+          "StructuralValidation": true,
+          "SigningPerformed": false
+        },
+        {
+          "Case": "prepended-unadjusted",
+          "Accepted": false,
+          "Error": "Sealing validation failed at Candidate; no signing performed."
+        },
+        {
+          "Case": "prepended-adjusted",
+          "Accepted": true,
+          "SubjectSha256": "fa74b75c483651f478bd91d50d014762581b3ec57f34a95116c9c04b80602d07",
+          "OriginalUnchanged": true,
+          "MarkerRetained": true,
+          "StructuralValidation": true,
+          "SigningPerformed": false
+        },
+        {
+          "Case": "gap-before-central-directory",
+          "Accepted": true,
+          "SubjectSha256": "d1471ff543a07bcf32eea90631e52da0244ac7caf3b2b9e196161015742788d8",
+          "OriginalUnchanged": true,
+          "MarkerRetained": true,
+          "StructuralValidation": true,
+          "SigningPerformed": false
+        },
+        {
+          "Case": "gap-before-end-record",
+          "Accepted": true,
+          "SubjectSha256": "6c8b198574309f0f1a9c204bad12a80ba84030ccfba30f641f1167e65ee8b8d2",
+          "OriginalUnchanged": true,
+          "MarkerRetained": true,
+          "StructuralValidation": true,
+          "SigningPerformed": false
+        }
+      ],
+      "caseCount": 9,
+      "baselineAccepted": 1,
+      "markerBearingVariantsAcceptedUnchanged": 7,
+      "malformedPrefixRejected": 1,
+      "generatedArchivesPublished": false
+    },
+    "checkedInReproduction": {
+      "mutator": "tests/fixtures/publication/MutateSealerZip.py",
+      "tests": "tests/Sealer.Tests.ps1",
+      "tag": "KnownPrivacyGap",
+      "caseCount": 9,
+      "meaning": "Passing characterization assertions reproduce a confirmed unsafe acceptance; they are not safety/privacy passes."
+    },
+    "safetyResponse": {
+      "subjectAndPlanField": "CompleteOriginalZipPrivacyValidated=false",
+      "planBlockingReason": "CompleteOriginalZipPrivacyValidationUnresolved",
+      "operationalPolicyAlwaysRefused": true,
+      "overrideAvailable": false,
+      "workflowQuarantined": true,
+      "signingOrUploadPerformed": false
+    },
+    "remainingRemediation": "Review and implement a complete-original-archive contract covering metadata and extra bytes/stream boundaries, or explicitly revise original-artifact/canonicalization identity. Convert characterizations into fail-closed safety regressions; independent review and fresh gates required. No complete-byte/DLP guarantee is claimed."
+  },
+  "validation": {
+    "exactPackagePreflight": "Before invoking runner, assert manifest, executable and credential-DLL SHA256 and runtime source revision.",
+    "networkIsolation": "unshare -Urn",
+    "finalSuite": {
+      "preset": "Sealer",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 200,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": []
+    },
+    "normalChecksPassed": 191,
+    "knownGapCharacterizationsPassed": 9,
+    "completeZipPrivacyPassed": false,
+    "command": "unshare -Urn pwsh -NoProfile -File .cache/goal6-sealer-followup/RunAcceptance.ps1",
+    "runner": "scripts/Invoke-TokenForgeLocalValidation.ps1 -Preset Sealer -NativeExecutable .cache/goal6/accepted-package/linux-x64/tokenforge -ReportPath <new-report-path>",
+    "packagePreflightWrapperSha256": "586637cf80c632ba00ebd8b22ed332db7eaf927d30a8159f51fe36d855462472",
+    "afterPinWorkflowChecks": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0
+    },
+    "committedPolicyCheck": {
+      "CommittedCodePinVerified": true,
+      "Quarantined": true,
+      "CallerConnected": false,
+      "MissingIdentityBindings": 6,
+      "CompleteOriginalZipPrivacyValidated": false,
+      "OperationalEmissionRefused": true,
+      "Network": false,
+      "Authentication": false
+    },
+    "pythonFixtureSyntax": "Passed",
+    "gitDiffCheck": "Passed",
+    "diagnostics": [
+      {
+        "phase": "First directory-only focused run",
+        "passed": 49,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "phase": "First complete suite before final explicit blocking-reason assertion",
+        "passed": 200,
+        "failed": 0,
+        "skipped": 0
+      }
+    ],
+    "unchangedHistoricalGates": "Prior package/native and attestation results were not rerun. New source-only changes are not part of the historical native package."
+  },
+  "package": {
+    "runtimeSource": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "path": ".cache/goal6/accepted-package/linux-x64",
+    "filesSha256": {
+      "local-package-manifest.json": "8295f2508bc95d67c1ce61904cd3a4bba5a7ccac0f8d30af8ef34066eff383c9",
+      "tokenforge": "987c863bc92f29de27ff812ad360cd1be1a8bde0fda6080f465827dbb6eb99db",
+      "src/TokenForge/lib/net8.0/TokenForge.Credentials.dll": "30d5d1268223c806e8c6d26fd138ef2f1db58dd23f067f59ac38387e2d7bad32"
+    },
+    "archive": ".cache/goal6/TokenForge-0.48.0-goal6-accepted-linux-x64.tar.gz",
+    "archiveSha256": "f95f8d926c4afd0ca761f3a659378b27706d796c0cb0c61388ddb70e599bfe6b",
+    "rebuilt": false,
+    "nativeSourceChanged": false,
+    "newSourceToolsIncludedInHistoricalPackage": false
+  },
+  "independentReview": {
+    "agent": "independent_review",
+    "readOnly": true,
+    "result": "Clear for A/B checkpoint within limited scope; no new material static issue. Exact package pins and saved200/0/0 verified; open privacy blocker remains.",
+    "probeSummary": "Independently reproduced all nine archive variants; marker retained unchanged in seven accepted subjects.",
+    "limits": "No signing, uploading, hosted compatibility or live authority proof.",
+    "finalReceiptAudit": "Clear for receipt checkpoint; independently verified 13 source/plan/handoff hashes, A/B ancestry, exact dormant template, saved gates, nine probe cases and package pins. No inaccurate claims found."
+  },
+  "tools": {
+    "PowerShell": "7.6.7",
+    "Pester": "6.2.0",
+    "Git": "2.47.3",
+    "fixturePython": "Python 3.13.5",
+    "policyParser": "Existing PyYAML6.0.2, isolated /usr/bin/python3 -I",
+    "dependenciesInstalled": false
+  },
+  "boundaries": {
+    "actionsEnabledOrDispatched": false,
+    "workflowQuarantineRemoved": false,
+    "producerCallerAdded": false,
+    "newAuthentication": false,
+    "tenantAuthenticationOrProtectedCredentialAccess": false,
+    "dataPublicationOrUpload": false,
+    "tenantPermissionChanges": false,
+    "hostedValidation": false,
+    "pr": false,
+    "merge": false,
+    "sourceOnlyReviewBranchPushPreviouslyAuthorized": true,
+    "originalCheckoutChanged": false
+  },
+  "requiredBeforeActivation": [
+    "Complete-original-ZIP privacy contract and fail-closed remediation, independently reviewed.",
+    "Exact final source/package and trusted identity/custody bindings.",
+    "Separate bounded hosted Actions and real origin/certificate approval/proof.",
+    "Separate publication permission/CAS/race/lost-ack recovery approval/proof.",
+    "Fresh-operator administrator workflow and collector recovery acceptance."
+  ]
+}

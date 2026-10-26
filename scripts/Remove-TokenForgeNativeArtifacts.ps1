@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 [CmdletBinding(SupportsShouldProcess)]
 param([Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$')][string]$Repository, [ValidateRange(0,9223372036854775807)][long]$CurrentRunId=0)
 $ErrorActionPreference='Stop'

@@ -1,5 +1,7 @@
 # Profiles and the CLI
 
+For the current Linux x64 offline release candidate, start with the [operator runbook](goal6-operator-runbook.md). The compatibility profile/login examples below can authenticate and are outside the offline acceptance path. The separate [strict administrator workflow](goal3-admin-workflows.md) uses `TokenForgeStrictProfile`, explicit approved clients and independent scope ceilings; compatibility profiles and their fallback/cache behavior are not substitutes.
+
 A profile remembers the tenant, account binding, evidence folder, bootstrap client, scope limits,
 and session policy. It contains no cookie, token, vault passphrase, or passkey private material.
 Create separate profiles for separate accounts. Login confirms the account with Graph `/me` and
@@ -9,8 +11,9 @@ Version 0.20 validates the existing version 1/2 profile configuration through th
 core before the PowerShell projection reads it. Field names and integer types are strict;
 unknown, duplicate, escaped-duplicate, and case-colliding fields are rejected. Tenant/account
 bindings, scope limits, storage/key-ID policy, and timestamp parsing remain enforced. Generated
-profile formats remain compatible. File permissions, paths, locks, atomic writes, and login
-remain in the PowerShell workflow; this milestone does not provide direct native profile commands.
+profile formats remain compatible. This describes the historical 0.20 milestone. Later native
+profile creation, inspection, logout and explicit login/acquisition implementations are described
+in the [native CLI guide](native-cli.md); their presence does not authorize live use.
 See the [sanitized validation report](profile-core-validation-2026-10-10.json).
 
 ## Start in PowerShell
@@ -109,8 +112,8 @@ while unlocked; the process cache retains only SecureStrings and nonsecret metad
 ## Persisted lifecycle implementation
 
 Version 0.28 uses the shared C# credential runtime in process for persisted cache selection,
-same-client renewal, policy enforcement, and atomic persistence. Fresh candidate planning and
-login remain PowerShell operations; Memory sessions remain process-local. A cache hit makes
+same-client renewal, policy enforcement, and atomic persistence. The 0.28 milestone retained PowerShell fresh planning/login; later native implementations are
+described in the [native CLI guide](native-cli.md). Memory sessions remain process-local. A cache hit makes
 no token request and does not rewrite the vault. Expired saved tokens must still pass identity,
 client, audience, scope and known-expiry checks before their refresh credential can be used.
 A failed renewal does not silently try another client. When renewal omits a replacement refresh
@@ -124,7 +127,7 @@ Failure preserves the existing ciphertext. Owned plaintext byte buffers and fail
 cleared or disposed; managed strings and library allocations cannot be guaranteed immediate
 erasure. The checks inspect JWT payloads and do not verify token signatures.
 
-Packages contain `src/TokenForge/lib/net8.0/TokenForge.Credentials.dll`, with no SQLite dependency.
+Packages contain `src/TokenForge/lib/net10.0/TokenForge.Credentials.dll`, with no SQLite dependency.
 Source imports compile the same sources together. Restart PowerShell after changing runtime
 versions; mixed or incompatible credential types fail with a fresh-process instruction.
 
@@ -166,3 +169,10 @@ Fresh acquisition now shares explicit request construction with the native crede
 Warm observation-based requests and cold hint-based requests retain different redirect rules;
 see [shared explicit request planning](native-architecture.md#shared-explicit-request-planning).
 This is an internal planning change. Profile login and fresh acquisition still use PowerShell.
+
+
+## Upgrades and local decommissioning
+
+Keep each complete package in its own versioned directory, stop writers and restart PowerShell before importing a different credential runtime. Preserve compatible pre-upgrade state and package/source receipts; an older executable can reject newer catalog schemas or evidence outcomes. See the [operator runbook](goal6-operator-runbook.md) for SQLite-aware copies, separately retained JSON journals and rollback into a new private directory.
+
+Native `tokenforge logout --profile lab` removes the selected local persisted session while preserving configuration, unrelated sessions and the OS key. `tokenforge profile forget-key --profile lab` is for an OS-backed profile: it removes the encrypted vault before trying to delete its platform key and reports whether retry is needed. Passphrase profiles require their separate unlock path for local logout. These operations do not remove evidence folders or backups, revoke server sessions or erase credentials owned by another process. Dispose in-process token copies and disconnect owned SDK connections separately. Retention and any removal of profile configuration, metadata or backups require an explicit operator decision.

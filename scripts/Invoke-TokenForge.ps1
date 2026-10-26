@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 [CmdletBinding()]
 param(
  [Parameter(Mandatory)][ValidateSet('Connect','Token','Candidates','Plan','Maintain','VaultCreate','VaultList','VaultToken','VaultRemove','VaultView')][string]$Action,

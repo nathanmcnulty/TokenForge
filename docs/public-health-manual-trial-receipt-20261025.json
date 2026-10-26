@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgePublicHealthApprovedTrialReceipt",
+  "recordedAt": "2026-10-25T03:28:39.349889+00:00",
+  "adoptedCorrection": "401b247cd2ce7bac7c4097c4b78e09ed80c1a1fc",
+  "reviewedCheckpoint": "3c1e274af04c22c8ef6db651dd025c2ad6739217",
+  "testedPackageSource": "c7d0b255612280e05605eca2e9ccfb44d5d68e18",
+  "approval": "Exact two assets, disabled-main registration and one branch-specific dispatch; later explicit repository Actions enable approval; stop for PR/merge/additional setting changes; artifact download/sync blocked.",
+  "repositoryActions": {
+    "before": false,
+    "after": true,
+    "allowedActions": "all, unchanged existing policy",
+    "legacyWorkflowsStillDisabled": 8,
+    "defaultTokenPermissions": "read",
+    "canApprovePullRequests": false,
+    "logRetentionDays": 90,
+    "requestedArtifactRetentionDays": 14,
+    "mainBranchProtected": false,
+    "rulesets": []
+  },
+  "release": {
+    "id": 423124164,
+    "tag": "public-health-offline-20261024",
+    "target": "3c1e274af04c22c8ef6db651dd025c2ad6739217",
+    "url": "https://github.com/nathanmcnulty/TokenForge/releases/tag/public-health-offline-20261024",
+    "assets": [
+      {
+        "id": 673976288,
+        "name": "PowerShell-7.6.7-reviewed-linux-x64.tar.gz",
+        "size": 75877688,
+        "digest": "sha256:3da36d92808db25aa2466422b1b765da792adc159d890512fbae852e2b495d3b",
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/nathanmcnulty/TokenForge/releases/download/public-health-offline-20261024/PowerShell-7.6.7-reviewed-linux-x64.tar.gz"
+      },
+      {
+        "id": 673976282,
+        "name": "TokenForge-public-health-linux-x64.tar.gz",
+        "size": 33630055,
+        "digest": "sha256:2b92b0d0662809f3aeaf4992935cc38323c78d8223430b5f58eb9216156ef3e8",
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/nathanmcnulty/TokenForge/releases/download/public-health-offline-20261024/TokenForge-public-health-linux-x64.tar.gz"
+      }
+    ]
+  },
+  "publicationAudit": {
+    "primaryAndIndependentReview": true,
+    "productFiles": 167,
+    "runtimeFiles": 580,
+    "completeSafeRegularOrDirectoryInventories": true,
+    "noDuplicatesLinksEscapesOrPrivateEvidenceDetected": true,
+    "runtimeMatchesApprovedInstalledTree": true,
+    "runtimeNoticesPreserved": true,
+    "nativeBuildPathDisclosure": "Credentials DLL embeds nonsecret compiler checkout path; no actual PDB.",
+    "upstreamRuntimeSignatureVerified": false,
+    "limit": "Static hygiene inspection cannot prove absence of every possible secret."
+  },
+  "mainRegistration": {
+    "parent": "1be12d75c7e2a63eac8e14c32d54e79cec4a23ef",
+    "commit": "4c9865185977033e110e8eaaf71fb8f649ec18f2",
+    "onlyAddedPath": ".github/workflows/public-metadata-health.yml",
+    "jobCondition": false,
+    "workflowId": 395612174,
+    "platformWorkflowState": "active (shared across refs); main job false"
+  },
+  "trial": {
+    "branch": "codex/public-health-manual-trial-20261025",
+    "base": "3c1e274af04c22c8ef6db651dd025c2ad6739217",
+    "head": "589357448104ca6f5d0239138d0094dff57057db",
+    "onlyAddedPath": ".github/workflows/public-metadata-health.yml",
+    "workflowId": 395612174,
+    "dispatch": {
+      "workflowId": 395612174,
+      "ref": "codex/public-health-manual-trial-20261025",
+      "expectedHead": "589357448104ca6f5d0239138d0094dff57057db",
+      "attemptsReserved": 1,
+      "maximumAttempts": 1,
+      "reservedAt": "2026-10-25T03:26:13.880810+00:00",
+      "state": "RejectedBeforeRun",
+      "exitCode": 1,
+      "httpStatus": 422,
+      "observedRunCount": 0,
+      "retryRequiresApproval": true
+    },
+    "error": "Unrecognized named-value runner in steps.shell expression runner.temp",
+    "observedRuns": 0,
+    "hostedCollectionExecuted": false,
+    "newArtifactCreated": false,
+    "retryAttempted": false,
+    "limits": {
+      "runner": "ubuntu-24.04 x64",
+      "jobs": 1,
+      "matrix": false,
+      "timeoutMinutes": 10,
+      "collectorAcceptanceSeconds": 480,
+      "requests": 6,
+      "attemptsPerSource": 2,
+      "requestSeconds": 30,
+      "files": [
+        "manifest.json",
+        "health.json",
+        "metadata.json"
+      ],
+      "requestedRetentionDays": 14
+    }
+  },
+  "proposedCorrection": {
+    "patch": "publication/health/public-health-shell-fix.patch",
+    "sha256": "c924467e633e139f6bcda384747ff18f537b444b662cabe443a1015292346e9d",
+    "appliesTo": "589357448104ca6f5d0239138d0094dff57057db",
+    "change": "Use bash to write a quoted PowerShell heredoc and invoke exact reviewed runtime with -File; no runner context expression in shell.",
+    "originalPowerShellBodyUnchanged": true,
+    "powerShellBodySha256": "d4de3b26b380e1d1dfda59870fd6cd96d2562e70c752fdc0cb57fc1eed7c6f49",
+    "validation": [
+      "YAML parse",
+      "bash -n on both steps",
+      "PowerShell AST parse using reviewed runtime",
+      "independent exact-diff/body/boundary review"
+    ],
+    "collectorOrSourceRequestsDuringValidation": false,
+    "remoteWorkflowUpdatedWithCorrection": false,
+    "newDispatchApprovalRequired": true
+  },
+  "boundaries": {
+    "artifactDownloadOrSync": false,
+    "entraCredentialsUsed": false,
+    "tenantPermissionsChanged": false,
+    "pullRequestsCreated": false,
+    "mergesPerformed": false,
+    "legacyWorkflowsEnabled": false,
+    "automaticScheduleAdded": false,
+    "goal6OperationalActivation": false
+  },
+  "macOSRunnerPolicy": {
+    "trialLinuxOnly": true,
+    "repositoryWideMacOSBlockApplied": false,
+    "reason": "Organization Team/Enterprise runner group control does not apply to this personally owned repository."
+  },
+  "privateEvidenceRoot": ".cache/public-health-trial-20261025/"
+}

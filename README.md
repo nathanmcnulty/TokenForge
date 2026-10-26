@@ -2,7 +2,13 @@
 
 TokenForge researches Microsoft Entra applications and the permissions available through them. It collects application metadata, tests supported token flows using an authorized account, and records the results for later comparison.
 
-The project provides a PowerShell module and a native CLI. Discovery execution currently requires PowerShell 7.4+; the native CLI supplies SQLite storage and offline reporting.
+The project provides a PowerShell module and a native CLI. The [supported baseline](docs/runtime-baseline.md) is PowerShell 7.6+, .NET 10 and Pester 6.2 for tests; the native CLI supplies SQLite storage and offline reporting.
+
+## Public health and private workstation work
+
+Use [public metadata health and workstation sync](docs/public-metadata-health.md) for the credential-free collection → validated exchange → private SQLite loop. `pwsh scripts/tokenforge.ps1 health collect`, `health sync` and `health status` provide the command path; start with the checked-in synthetic fixtures. Status reports collection/import separately, freshness, conflicts and retention gaps. Account-bound discovery and exact-plan deep resume remain workstation operations under their existing authorization boundaries.
+
+The proposed Linux workflow is dormant outside active workflows. Actions, live credentials and operational data publication remain blocked. Goal 6's original-ZIP/sealer experiment remains parked; historical receipts are not evidence of hosted completion. The [current handoff](docs/HANDOFF.md) identifies the reviewed source and local validation.
 
 ## Application database
 

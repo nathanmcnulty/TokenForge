@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 <# .SYNOPSIS
 Assess a rotating legacy batch or a frozen weekly batch using an action-provided cookie.
 .DESCRIPTION
@@ -41,6 +41,10 @@ if($IsMacOS -and $tempRoot.StartsWith('/var/',[StringComparison]::Ordinal)){$tem
 $state=Join-Path $tempRoot ('TokenForge-ci-'+[guid]::NewGuid())
 $cookie=$null;$graph=$null;$weekly=$null;$checkpointWatch=[Diagnostics.Stopwatch]::StartNew();$timer=[Diagnostics.Stopwatch]::StartNew()
 if($WeeklyStatePath){. (Join-Path $PSScriptRoot 'TokenForgeCiState.ps1');$weekly=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson((Get-Content -LiteralPath $WeeklyStatePath -Raw));Assert-TfCiState $weekly;if($ChunkIndex -lt 0){throw 'A frozen worker requires ChunkIndex.'};$selected=@(Get-TfCiMembers $weekly $ChunkIndex);$receipt=[ordered]@{SchemaVersion=1;PlanId=$weekly.PlanId;Index=$ChunkIndex;Attempt=($weekly.Batches[$ChunkIndex].Attempts+1);Status='Failed';Assessed=0;Successful=0;DurationSeconds=0;ObservedAt=[DateTimeOffset]::UtcNow.ToString('o')}}
+if($weekly -and $weekly.Contains('EvidenceSelectionSha256')){
+ . (Join-Path $PSScriptRoot 'TokenForgeCiEvidenceQueue.ps1')
+ $null=Read-TfCiEvidenceSelection $weekly (Split-Path -Parent ([IO.Path]::GetFullPath($WeeklyStatePath)))
+}
 if($weekly -and $weekly.SchemaVersion -eq 2){$receipt.SchemaVersion=2;$receipt.AssessedPairs=0;$receipt.SuccessfulPairs=0}
 try {
  $null=New-Item -ItemType Directory -Path $state

@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 # Build input is a Git checkout. Copy tracked source files, never local state.
 function Copy-TokenForgePackageSource {
  [CmdletBinding()]
@@ -23,7 +23,7 @@ function Copy-TokenForgePackageSource {
  if(-not $paths.Count){throw 'Required package source files are missing.'}
  $seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
  foreach($relative in $paths){
-  if(-not $relative.StartsWith("$Prefix/",[StringComparison]::Ordinal) -or $relative -match '[\\\x00-\x1f\x7f]' -or ($relative.Split('/') | Where-Object {$_ -in @('','.', '..')}).Count -gt 0 -or -not $seen.Add($relative)){throw 'Invalid package source path.'}
+  if(-not $relative.StartsWith("$Prefix/",[StringComparison]::Ordinal) -or $relative -match '[\\\x00-\x1f\x7f]' -or @($relative.Split('/') | Where-Object {$_ -in @('','.', '..')}).Count -gt 0 -or -not $seen.Add($relative)){throw 'Invalid package source path.'}
   if($Prefix -eq 'docs' -and -not $relative.EndsWith('.md',[StringComparison]::Ordinal)){continue}
   $sourceFile=Join-Path $source $relative
   for($part=$sourceFile;$part;$part=[IO.Path]::GetDirectoryName($part)){

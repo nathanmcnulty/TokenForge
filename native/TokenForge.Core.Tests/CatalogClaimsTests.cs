@@ -58,6 +58,16 @@ static class CatalogClaimsTests
     store.Update(Update(legacy:true,kind:"Inventory").ToJsonString());legacyExport=store.Export();
    }
    LegacyMarker(legacyPath);string before=Bytes(legacyPath);
+   string rollbackPath=Path.Combine(root,"legacy-restored.sqlite");
+   if(OperatingSystem.IsLinux()){
+    string backupPath=Path.Combine(root,"legacy-backup.sqlite");
+    check(SqliteSnapshot.Save(legacyPath,backupPath,"applications").StoreVersion==1);
+    check(SqliteSnapshot.Save(backupPath,rollbackPath,"applications").StoreVersion==1);
+    check(Bytes(legacyPath)==before);
+    using var restored=new ApplicationCatalogStore(rollbackPath,true);
+    var expectedRollback=JsonNode.Parse(legacyExport)!;expectedRollback["SchemaVersion"]=1;
+    check(JsonNode.DeepEquals(JsonNode.Parse(restored.Export()),expectedRollback));
+   }
    using(var readOnly=new ApplicationCatalogStore(legacyPath,true)){
     var read=JsonNode.Parse(readOnly.Export())!;check(read["SchemaVersion"]!.GetValue<int>()==1);
     var expected=JsonNode.Parse(legacyExport)!;expected["SchemaVersion"]=1;check(JsonNode.DeepEquals(read,expected));
@@ -71,6 +81,11 @@ static class CatalogClaimsTests
    using(var migrated=new ApplicationCatalogStore(legacyPath)){migrated.Import(legacyExport);check(migrated.Export()==legacyExport);}
    using(var raw=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=legacyPath,Pooling=false}.ToString())){
     raw.Open();using var command=raw.CreateCommand();command.CommandText="PRAGMA user_version;";check(Convert.ToInt32(command.ExecuteScalar())==2);
+   }
+   if(OperatingSystem.IsLinux()){
+    using var rollback=new ApplicationCatalogStore(rollbackPath,true);
+    var expectedRollback=JsonNode.Parse(legacyExport)!;expectedRollback["SchemaVersion"]=1;
+    check(JsonNode.DeepEquals(JsonNode.Parse(rollback.Export()),expectedRollback));
    }
    string sharedPath=Path.Combine(root,"shared.sqlite");
    using(var seed=new ApplicationCatalogStore(sharedPath))seed.Update(Update(legacy:true).ToJsonString());

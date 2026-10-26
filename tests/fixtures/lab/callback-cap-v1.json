@@ -1,0 +1,79 @@
+{
+  "Format": "TokenForgeSyntheticCallbackCases",
+  "SchemaVersion": 1,
+  "StudyId": "goal5-observed-callback-cap-v1",
+  "Cases": [
+    {
+      "Id": "d01",
+      "Partition": "Discovery",
+      "Primary": "Success",
+      "Secondary": "Rejected"
+    },
+    {
+      "Id": "d02",
+      "Partition": "Discovery",
+      "Primary": "Rejected",
+      "Secondary": "Success"
+    },
+    {
+      "Id": "d03",
+      "Partition": "Discovery",
+      "Primary": "ExcessScopes",
+      "Secondary": "Success"
+    },
+    {
+      "Id": "d04",
+      "Partition": "Discovery",
+      "Primary": "Rejected",
+      "Secondary": "Rejected"
+    },
+    {
+      "Id": "d05",
+      "Partition": "Discovery",
+      "Primary": "Opaque",
+      "Secondary": "Success"
+    },
+    {
+      "Id": "d06",
+      "Partition": "Discovery",
+      "Primary": "Throttled",
+      "Secondary": "Success"
+    },
+    {
+      "Id": "d07",
+      "Partition": "Discovery",
+      "Primary": "SessionLost",
+      "Secondary": "Success"
+    },
+    {
+      "Id": "d08",
+      "Partition": "Discovery",
+      "Primary": "Success",
+      "Secondary": "Success"
+    },
+    {
+      "Id": "h01",
+      "Partition": "Holdout",
+      "Primary": "WrongPrincipal",
+      "Secondary": "Success"
+    },
+    {
+      "Id": "h02",
+      "Partition": "Holdout",
+      "Primary": "Success",
+      "Secondary": "Throttled"
+    },
+    {
+      "Id": "h03",
+      "Partition": "Holdout",
+      "Primary": "Rejected",
+      "Secondary": "Success"
+    },
+    {
+      "Id": "h04",
+      "Partition": "Holdout",
+      "Primary": "PromptRequired",
+      "Secondary": "Success"
+    }
+  ]
+}

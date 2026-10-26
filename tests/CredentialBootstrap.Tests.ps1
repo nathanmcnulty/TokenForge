@@ -37,21 +37,34 @@ Describe 'Unified in-process credential runtime bootstrap' {
  It 'rejects an incompatible runtime marker instead of mixing source assemblies' {
   Invoke-Bootstrap ("Add-Type -TypeDefinition 'namespace TokenForge.Core {public static class CredentialRuntime {public const string Version=""0.0.0"";}}'; Import-Module "+(Quote-BootstrapPath $manifest)) 1|Should -Match 'fresh PowerShell process'
  }
- It 'validates agreement between the source loader and compiled credential project' {
+ It 'aligns credential sources, all shared/native targets and the PowerShell runtime floor' {
   $names=Get-Content (Join-Path $PSScriptRoot '../src/TokenForge/Core/CredentialSources.json') -Raw|ConvertFrom-Json
   $project=[xml](Get-Content (Join-Path $PSScriptRoot '../native/TokenForge.Credentials/TokenForge.Credentials.csproj') -Raw)
   $compiled=@($project.Project.ItemGroup.Compile|ForEach-Object {[IO.Path]::GetFileName($_.Include)})
   @(Compare-Object $names $compiled).Count|Should -Be 0
+  foreach($projectPath in Get-ChildItem (Join-Path $PSScriptRoot '../native') -Recurse -Filter '*.csproj'){
+   ([xml](Get-Content $projectPath.FullName -Raw)).Project.PropertyGroup.TargetFramework|Should -Be 'net10.0'
+  }
+  foreach($lockPath in Get-ChildItem (Join-Path $PSScriptRoot '../native') -Recurse -Filter 'packages.lock.json'){
+   $lock=Get-Content $lockPath.FullName -Raw|ConvertFrom-Json
+   foreach($target in $lock.dependencies.PSObject.Properties.Name){$target|Should -Match '^net10\.0(?:/|$)'}
+  }
+  ((Get-Content (Join-Path $PSScriptRoot '../global.json') -Raw|ConvertFrom-Json).sdk.version)|Should -Match '^10\.0\.'
+  (Import-PowerShellDataFile -LiteralPath $manifest).PowerShellVersion|Should -Be '7.6'
+  foreach($script in Get-ChildItem (Join-Path $PSScriptRoot '../scripts') -File -Filter '*.ps1'){
+   $requirement=@(Get-Content $script.FullName -TotalCount 1)
+   if($requirement[0] -match '^#Requires -Version '){$requirement[0]|Should -Be '#Requires -Version 7.6'}
+  }
  }
  It 'loads the packaged BCL DLL in a fresh process' -Skip:(-not $nativeAvailable) {
   $packaged=Join-Path (Split-Path $env:TOKENFORGE_TEST_NATIVE -Parent) 'src/TokenForge/TokenForge.psd1'
-  $result=Invoke-Bootstrap ("Import-Module "+(Quote-BootstrapPath $packaged)+"; @{Name=[TokenForge.Core.ProfileTokenLifecycle].Assembly.GetName().Name;Version=[TokenForge.Core.CredentialRuntime]::Version;SqliteDependency=@([TokenForge.Core.ProfileTokenLifecycle].Assembly.GetReferencedAssemblies()|Where-Object Name -Like '*Sqlite*').Count}|ConvertTo-Json")
-  $result.Name|Should -Be TokenForge.Credentials;$result.Version|Should -Be $expectedVersion;$result.SqliteDependency|Should -Be 0
+  $result=Invoke-Bootstrap ("Import-Module "+(Quote-BootstrapPath $packaged)+"; @{Name=[TokenForge.Core.ProfileTokenLifecycle].Assembly.GetName().Name;Version=[TokenForge.Core.CredentialRuntime]::Version;TargetFramework=([TokenForge.Core.ProfileTokenLifecycle].Assembly.GetCustomAttributes([Runtime.Versioning.TargetFrameworkAttribute],`$false)).FrameworkName;SqliteDependency=@([TokenForge.Core.ProfileTokenLifecycle].Assembly.GetReferencedAssemblies()|Where-Object Name -Like '*Sqlite*').Count}|ConvertTo-Json")
+  $result.Name|Should -Be TokenForge.Credentials;$result.Version|Should -Be $expectedVersion;$result.SqliteDependency|Should -Be 0;$result.TargetFramework|Should -Be '.NETCoreApp,Version=v10.0'
  }
  It 'refuses an invalid bundled DLL without source fallback' {
   $copy=Join-Path $TestDrive brokenmodule
   Copy-Item (Join-Path $PSScriptRoot '../src/TokenForge') $copy -Recurse
-  $lib=Join-Path $copy lib/net8.0;$null=New-Item -ItemType Directory $lib -Force
+  $lib=Join-Path $copy lib/net10.0;$null=New-Item -ItemType Directory $lib -Force
   [IO.File]::WriteAllBytes((Join-Path $lib TokenForge.Credentials.dll),[byte[]]@(1,2,3))
   Invoke-Bootstrap ("Import-Module "+(Quote-BootstrapPath (Join-Path $copy TokenForge.psd1))) 1|Should -Match 'source fallback is disabled'
  }

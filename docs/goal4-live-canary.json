@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "status": "ScopedLiveCanaryPassedWithHttpAttributionLimit",
+  "scopeOfAcceptance": "Only the dated approved read-profile acquisition, selected Graph GET, durable terminal and saved-evidence reuse. Full original process HTTP attribution remains unproven.",
+  "runtimeSourceRevision": "8d625be62ef70a43a765e37faf29b3f4c9e780d4",
+  "operatorCheckpointRevision": "a9a5e923dac918838dd862f5c3d883f84126a3ac",
+  "package": {
+    "sourceRevision": "8d625be62ef70a43a765e37faf29b3f4c9e780d4",
+    "packagePath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal4/accepted-package/linux-x64",
+    "manifestSha256": "1cee964b74fe63c8ffffecec8d2ed4075963d217c28d9554e3da5196f3caceea",
+    "archivePath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal4/TokenForge-0.48.0-goal4-accepted-linux-x64.tar.gz",
+    "archiveSha256": "23656191835272d65cedbb6574e1527a44ff5fc44a7a97b1ae1f000f74550876",
+    "executableSha256": "d45619f1238d858d918b8b36d1b3c551d06fee6bbb75a215e660bc4219757eaa",
+    "credentialDllSha256": "d977e4ea04a015ed80a3c46ceaa23a0cb09af6e8628cd878cb673dbe5dbeba34",
+    "payloadFileCount": 150,
+    "moduleSourceFileCount": 87,
+    "nativeInputCount": 97,
+    "nativeInputsSha256": "150445e941c1d0ad4df882dc721a1be42e977cbf6a47d35f391777ee8e5c27f9"
+  },
+  "packageVerification": {
+    "sourceRevision": "8d625be62ef70a43a765e37faf29b3f4c9e780d4",
+    "validationRevision": "a9a5e923dac918838dd862f5c3d883f84126a3ac",
+    "packageVerified": true,
+    "completeModuleSourceFiles": 87,
+    "packagePayloadFiles": 150,
+    "nativeInputsVerified": 97,
+    "validationFilesVerified": 83,
+    "validationInputsSha256": "18e4a40fea9b7907f00fff90f1bb68f4fce2df5c8b2f9c39ffe681530a5cc395",
+    "workflowFilesUnchanged": 7,
+    "handoffPreserved": true
+  },
+  "configuration": {
+    "account": "secadmin@sharemylabs.com",
+    "clientName": "ZTNA Network Access Client",
+    "bootstrapAndFinalClientId": "038ddad9-5bbe-4f64-b0cd-12434d1e633b",
+    "callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+    "resourceId": "00000003-0000-0000-c000-000000000000",
+    "explicitApiScopes": [
+      "User.Read"
+    ],
+    "maxAdditionalApiScopes": 0,
+    "maxBootstrapAdditionalApiScopes": 0,
+    "maxIssuanceAttempts": 2,
+    "maxSeconds": 180,
+    "maxRefreshHttpRequests": 24,
+    "maxBootstrapHttpRequests": 11,
+    "maxTransientRetries": 0,
+    "selectedOperation": "GraphMeV1 GET /v1.0/me?$select=id",
+    "inventoryCapturedAt": "2026-10-22T06:33:02.6003045+00:00",
+    "inventoryRelabeledOrRecollected": false,
+    "inventoryLimitHours": 24,
+    "pinDefinitions": "Private pin-definitions.json records actual schema/core file digests, original catalog digest, canonical approved requirements digest and unchanged inventory file digest."
+  },
+  "observed": {
+    "startedAt": "2026-10-22T21:24:35.3476192+00:00",
+    "totalHarnessSeconds": 107.264,
+    "authenticationAttempts": 1,
+    "authenticationHttpEvents": 5,
+    "bootstrapIssuanceAttempts": 1,
+    "bootstrapOAuthRequests": 2,
+    "identityGraphGetRequests": 1,
+    "finalIssuanceAttempts": 1,
+    "finalOAuthRequests": 2,
+    "selectedGraphGetRequests": 1,
+    "journalHttpRequests": 6,
+    "processWideObservedHttpEvents": 13,
+    "unattributedProcessHttpEvents": 2,
+    "completeOriginalHttpDestinationAttribution": false,
+    "observerCancellationThreshold": 39,
+    "transientRetries": 0,
+    "recoveryRetries": 0,
+    "inFlightUnknownCount": 0,
+    "completedCount": 1,
+    "bootstrapApiScopes": [
+      "User.Read"
+    ],
+    "finalApiScopes": [
+      "User.Read"
+    ],
+    "oidcScopes": [
+      "email",
+      "openid",
+      "profile"
+    ],
+    "bootstrapAdditionalApiScopes": [],
+    "finalAdditionalApiScopes": [],
+    "bootstrapResponseAdditionalScopeCount": 0,
+    "finalResponseAdditionalScopeCount": 0,
+    "currentContextConfirmed": true,
+    "apiStatus": 200,
+    "apiAccepted": true,
+    "toolHealth": "VerifiedWorking",
+    "credentialDisplayOrPersistence": false,
+    "ownedCredentialsDisposedBeforeProjection": true,
+    "tenantPermissionChangingOperationsInvoked": 0
+  },
+  "reuse": {
+    "HistoryProjectionIdempotent": true,
+    "OriginalCompletedFacadeOutputs": 0,
+    "FreshFacadeOutputs": 0,
+    "OriginalDatesAndIdsRetained": true,
+    "JournalUnchanged": true,
+    "ExternalRequests": 0,
+    "SelectedCount": 0,
+    "ReusedCount": 1
+  },
+  "savedConsumerVerification": {
+    "HistoryProjectionIdempotent": true,
+    "AdditionalIssuanceAttempts": 0,
+    "CurrentStatusDeadlineReached": true,
+    "DeadlineStatusEvaluatedAtReadTime": true,
+    "OriginalObservationReferenceCount": 2,
+    "NoCredentialParameterAccepted": true,
+    "OriginalIdsDatesAndContextsRetained": true,
+    "NativeStatusProjectCapturePlanValidateParity": true,
+    "Status": "SavedEvidenceVerified",
+    "OriginalStatusDeadlineReached": false,
+    "JournalUnchanged": true
+  },
+  "originalNativeStatusExactlyMatchesOriginalPowerShellStatus": true,
+  "originalObservationReferenceCount": 2,
+  "originalIdsDatesAndContextsRetained": true,
+  "httpDiagnostic": {
+    "originalCounterRetainedDestinations": false,
+    "isolatedReproduction": {
+      "dc.services.visualstudio.com": 2
+    },
+    "isolation": "unshare -Urn; no remote connectivity, TokenForge import, authentication or credential access",
+    "conclusion": "Bare PowerShell reproduced two Application Insights RequestStart events. Consistent with background host telemetry, but does not attribute the original two events. Original total13 remains unchanged.",
+    "futureLaunchRecommendation": "Disable PowerShell telemetry and update checks before future live process startup; use phase/allowlisted-category telemetry if original host traffic attribution is required. No additional live retry was run."
+  },
+  "independentReview": {
+    "preDispatchHarnessAndPackagePins": "Passed",
+    "actualRouteScopesContextBudgetsAndOriginalReferences": "Passed with explicit HTTP attribution limit",
+    "finalReceipt": "Reviewed before local checkpoint"
+  },
+  "validationReuse": {
+    "runtimeInputsUnchanged": true,
+    "newBuildOrInstallRequired": false,
+    "pesterVersion": "6.2.0",
+    "offlineFull": {
+      "passed": 1217,
+      "failed": 0,
+      "skipped": 4
+    },
+    "offlineRefresh": {
+      "passed": 97,
+      "failed": 0,
+      "skipped": 0
+    },
+    "nativeCorePassed": 1086,
+    "reason": "Exact runtime source, package and test inputs unchanged. Reused successful offline gates; executed credential-free concrete-route preflight, bounded live proof and saved native consumers instead of repeating unchanged tests."
+  },
+  "evidence": {
+    "privateRoot": "/home/nathan/.local/share/TokenForge/goal4-secadmin-canary-dpX5D8ig",
+    "privateFilesSha256": {
+      ".refresh-account.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "acquisition.json": "3cf820096d28edcbcbfcfad17a2ac428e50adbc8951b259087245de6b7179220",
+      "attempt.json": "c637c729c2403a73da828387af5b1a31e9db22182e72dddffc5426d2c4e319db",
+      "health.json": "c105c97dd4629eb2201d4398b2023b9e207dcce2d2e29fb5d76b2910eea746e7",
+      "history.json": "787664d1a25e8a0d11bf2ff68cdfaaf42334c5a888d01a9edaa82ca196f97987",
+      "input.json": "bf5dc132545f9233da3ec79269700bc875961994073d72ffe31fcc50726216fd",
+      "intent.json": "a8e548e339bad71c0a0330159fe831a7bfea00d9d2839cec25968fe5c38ad2c8",
+      "native-capture.json": "787664d1a25e8a0d11bf2ff68cdfaaf42334c5a888d01a9edaa82ca196f97987",
+      "native-history.json": "787664d1a25e8a0d11bf2ff68cdfaaf42334c5a888d01a9edaa82ca196f97987",
+      "native-reuse-plan.json": "14f05611f2023ddd5676e87bea5b74b4e8649fdb3377954b6ef8433d398d23f8",
+      "native-status.json": "f38b29d03c7ccfde637cb1b53e8413221251f2257a12b0eea6d85eadd7cc0a16",
+      "native-validated-plan.json": "363db0399b38883ac769d9abc47e3a30b4af3a6dc84e5c415dbccd0a588bd68d",
+      "operator-harness.ps1": "48e9d832c70282268a128987340639d09aa76a76c0dc28323e29dfc9ca7ad0a3",
+      "pin-definitions.json": "f4b7d335070370814591abf37eb1258ae71e35b2ab3f7e26a92d8bdb5e408b72",
+      "plan.json": "f44352266a8b210ef34f82aa05374f52cda03cdd1240d89c52f90953bfe4f048",
+      "profile.json": "26bc0128cb67c896cd4aa08382a4fe9876ac102073fbf8aa1949782b45f0319b",
+      "refresh-run.json": "9ef59e909bc23b1f0d0bce662ee3cdd18f63f1f696ecf8ed1735a4bd6169a523",
+      "refresh-run.json.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "refresh-store.json": "5c426295895b3c553da6c5d5311b2fe8dc135c7ad09fc726594f0d66794b0033",
+      "requirements.json": "cb9b1377835ebfa5c6a22c56d5debb1e90569cab728f6018893466509c538316",
+      "result.json": "48cb19cb98bcb7d057a96a9b289a763b236c27d8aaa522324ce777bb445183cc",
+      "reuse-input.json": "6cfcea3ac5ee5666b8aff43574b646f701882d6ad4ad892246953fe881293c4c",
+      "reuse-plan.json": "363db0399b38883ac769d9abc47e3a30b4af3a6dc84e5c415dbccd0a588bd68d",
+      "reuse-verification.json": "3238357dabe6cffec8b9ad7bf27473b8fb3e6b254caf390300b9e313784557b0",
+      "saved-verification.json": "0bc7e92e2e06b25c459826f0fed7dfc1e334057377a383980274102bb8541810",
+      "saved-verifier.ps1": "9042817900989e10d62bdf44e6990cd0cdf07601535da12ce854d67b97efe872",
+      "snapshot.json": "bb69f614a887bbd7694d928fc6e531c5f8763c68e43f90802a1ac9557c290e15",
+      "status.json": "f38b29d03c7ccfde637cb1b53e8413221251f2257a12b0eea6d85eadd7cc0a16"
+    },
+    "localFilesSha256": {
+      "Invoke-Goal4LiveCanary.ps1": "48e9d832c70282268a128987340639d09aa76a76c0dc28323e29dfc9ca7ad0a3",
+      "VerifyCanaryPackage.py": "fb4adef944eafdee5f6270bcf3c5d3584379d1d8f521713773d369618c89d643",
+      "VerifySavedCanary.ps1": "9042817900989e10d62bdf44e6990cd0cdf07601535da12ce854d67b97efe872",
+      "live-preflight.log": "bb354ec53b331c472edab489a12b40064bdb2dca2e5f3f5720f6ee1fb0e195d4",
+      "live-canary-result.log": "606b09b5d6cb1601689a657f27d783b045e214771cd7463f2cb1e3f90c794765",
+      "saved-canary-verification.log": "b9f48dffc899c07fb719fffbf6ebc791dcd22b4bbac79e291dd7f73b7df5bfe0",
+      "saved-canary-reverification.log": "f2de4b8183414545f6bfd45142f5690c322301aca4b7a93f562ecb7506323f48",
+      "saved-canary-final-verification.log": "3394d284f36e66e3adf0df18e123f073078e9c2924730217d45d842c4bdd604b",
+      "live-package-verification.json": "3aa50016573d1df39f31ef152448b4db27f7518abf1fb0ebd9b9eee00f16d0a2",
+      "ObserveHostHttp.cs": "73737d673bacceafc2720550d509d3bd45318798cf6b6cbb1c12cde1e54e9018",
+      "ObserveOfflineHost.ps1": "e515f5a3d20ed6452d76867cb9980b5d3cf7dd2b9ec3f88545a8df38e292dcb4",
+      "offline-host-http-observation.json": "508cdac24b7827f5ac66674d288925c2499257816bb3a5c2174bda87dac6bcc4",
+      "offline-host-http-observation.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "originalInventorySha256Unchanged": "659d2f9cd4f599fd368bbbd5901e5a0b2d166ed273cdd112097822a021b38042",
+    "priorGoal3ArtifactHashesStillMatch": 12,
+    "journalUnchangedByReuse": true
+  },
+  "remainingLiveGateBlockers": [],
+  "remainingAccountingLimit": "Two original process-wide HTTP events remain unattributed; do not claim complete HTTP destination attribution.",
+  "limitations": [
+    "Only one dated exact account/client/callback/scope/operation route was exercised",
+    "No JWT signature verification, arbitrary-tool support or production completion",
+    "Existing inventory was within24hours, not refreshed; no tenant-wide before/after permission comparison",
+    "Full-input validation/projection dominates elapsed time;107seconds is not network latency",
+    "Native saved status matched original status exactly; later DeadlineReached becomes true as wall clock advances without changing the journal",
+    "Saved-only verifier corrected an array fingerprint wrapper and compared deadline status at read time; initial logs retained, no runtime change or additional issuance",
+    "No hosted compute, tenant permission change, publication, push, PR, merge or Goal5 work"
+  ],
+  "productionReady": false
+}

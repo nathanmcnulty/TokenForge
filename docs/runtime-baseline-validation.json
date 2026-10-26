@@ -1,0 +1,220 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgeRuntimeBaselineOfflineAcceptance",
+  "clientDate": "2026-10-25",
+  "scope": "Issue 98 and draft PR 106 runtime integration; Linux x64 offline only",
+  "sources": {
+    "testedAndReviewedCandidate": "58203ecdcee47c4bdaaef0801d0b496d22daa35f",
+    "main": "4c9865185977033e110e8eaaf71fb8f649ec18f2",
+    "priorPR106": "b35461a6aeeb8f614f9d3592e0890af10a957843",
+    "newerOwningCheckpoint": "9f6b4f2fea2e7afb9b80dfb14a707a47ff9ed0c7",
+    "linuxCompiledSource": "c32cd7b27e98fdeac9f376807999205d99133a38",
+    "moduleCompiledSource": "cbea33eca2dfde24f0c92b0385784876510e4ece",
+    "allThreeIntegrationParentsRetained": true,
+    "checkpointDelta": "Containing checkpoint adds acceptance/handoff documentation only"
+  },
+  "toolchain": {
+    "sdk": "10.0.401",
+    "sdkRollForward": "disable",
+    "powershell": "7.6.7",
+    "powershellDotnetRuntime": "10.0.13",
+    "pester": "6.2.0",
+    "targetFramework": "net10.0",
+    "selfContainedRuntime": "10.0.12",
+    "dependencyInstallation": false,
+    "packageVersionsContentHashesAndRIDsPreserved": true
+  },
+  "tests": {
+    "full": {
+      "source": "58203ecdcee47c4bdaaef0801d0b496d22daa35f",
+      "command": "scripts/Test-TokenForge.ps1",
+      "namespace": "unshare -Urn; loopback enabled; no external network",
+      "passed": 1663,
+      "failed": 0,
+      "skipped": 4,
+      "inconclusive": 0,
+      "notRun": 0,
+      "exitCode": 0,
+      "failedContainers": 0,
+      "containerProof": "The unchanged fail-closed entry point exits nonzero on any failed container",
+      "durationSeconds": 663.66,
+      "logSha256": "02456ad5ac99ae666f7b3aa277147def8ddb2e708513e94eee10271cfe552044",
+      "exclusions": [],
+      "skips": [
+        "Windows ACL rejects another principal",
+        "Moved OS-profile ciphertext on an unsupported platform",
+        "macOS signed helper unavailable",
+        "Windows current-user ACL creation"
+      ]
+    },
+    "nativeCore": {
+      "passed": 1157,
+      "failed": 0,
+      "logSha256": "e7ffdc548c3df3dae85f5ca13d603fd1ddb5aee0d710ccddc5915c92f97665a6",
+      "reuse": "Native test/implementation source content and selected SDK remain unchanged; no rerun solely for script/metadata overlays"
+    },
+    "sealerRepair": {
+      "preset": "Sealer",
+      "platform": "linux",
+      "version": "0.48.0",
+      "powershell": "7.6.7",
+      "dotnetRuntime": ".NET 10.0.13",
+      "pester": "6.2.0",
+      "passed": 224,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": []
+    },
+    "sealerRepairReportSha256": "18db04489a957fea7dff1d46331b3cbf938ea053ad63264405598501bb2fd379",
+    "developmentFocusedGates": {
+      "ReleaseGuards": {
+        "passed": 30,
+        "failed": 0,
+        "skipped": 0
+      },
+      "PublicHealth": {
+        "passed": 163,
+        "failed": 0,
+        "skipped": 0
+      },
+      "note": "Intermediate development reports are supplemental; final full-suite acceptance above covers the final applicable test tree"
+    },
+    "extractedPackageWalkthrough": {
+      "checks": 33,
+      "passed": true,
+      "liveProof": false,
+      "reuse": "Final 166 payload files are byte-identical to the successfully tested extraction; only the provenance document changed",
+      "logSha256": "7be488f0a75904f548ef5c3a2398bba12336b98ffd6fc1315f8a72df0f44dc71"
+    },
+    "sourceAndPackagedBootstrap": "Covered by full suite in fresh subprocesses; target .NET 10, corrupt-DLL refusal and zero SQLite references retained"
+  },
+  "staticChecks": {
+    "powershellParser": {
+      "files": 190,
+      "errors": 0,
+      "inputReuse": "All PowerShell file bytes unchanged from the recorded parser input through final candidate"
+    },
+    "scriptAnalyzer": {
+      "version": "1.25.0",
+      "severity": "Error",
+      "baselineFindings": 9,
+      "candidateFindings": 9,
+      "newFindings": 0,
+      "exactFindingsEqual": true,
+      "baselineReportSha256": "16815f50e7d4f0883be1b3e3cd78b0ba82734c9a0873cac974e15d56253e8c6d",
+      "candidateReportSha256": "633ff85b8f18384c1dc51495e7f99bda5442d68187e92c3b7e2997141f79663c",
+      "note": "Not a clean analyzer result; existing conversions remain unchanged, with no suppressions added"
+    },
+    "workflowYaml": {
+      "parser": "PyYAML 6.0.2",
+      "changedWorkflows": 3,
+      "manualOnly": true
+    },
+    "earlyNativeRuntimePreflight": {
+      "executedLocally": true,
+      "selectedSDK": "10.0.401",
+      "selectedPowerShell": "7.6.7",
+      "hostDotnet": "10.0.13"
+    },
+    "generatedZipProfile": {
+      "hashesMatchSource": true,
+      "sealerSha256": "dff05745028c1b5fbae3af478e484663bea8f27a9a1e0355206026f57f637258",
+      "zipHelperSha256": "9f121b793c056312dad75d3042293d26a2c854a798b10cee0bd1cb082b25b70c"
+    },
+    "bicep": "Not applicable: no Bicep files or changed Bicep inputs",
+    "actionlint": "Not installed or run; YAML parsing, local preflight and repository workflow/policy tests used without adding dependencies"
+  },
+  "packages": {
+    "linux": {
+      "sourceRevision": "58203ecdcee47c4bdaaef0801d0b496d22daa35f",
+      "payloadFiles": 167,
+      "sha256": "975a8407cc0e7c90939fc630f48b7da2b92947ee2c8d11435944cc1c15e5ea7d",
+      "bytes": 33629642,
+      "published": false,
+      "nativeSource": "c32cd7b27e98fdeac9f376807999205d99133a38",
+      "nativeInputsVerified": 100,
+      "buildReceiptSha256": "7f5bf66466aae9ef68c81d7403ff055f4de650a04fd6ce5eaa2b490441245a66",
+      "nativeBuild": "RebuiltExactSource",
+      "sdk": "10.0.401",
+      "localArtifact": ".cache/issue98/final-package-58203ec/TokenForge-public-health-linux-x64.tar.gz",
+      "payloadHashesVerified": 166,
+      "sourceBackedPayloadsVerified": 164,
+      "completeCompiledInputsVerified": 100,
+      "sourceModuleFilesVerified": 87,
+      "exports": 73,
+      "credentialFramework": ".NETCoreApp,Version=v10.0",
+      "sqliteCredentialAssemblyReferences": 0,
+      "nativeExecutableSha256": "42773ca3e048d5d29dd3edf488ca33ace5116d47afdd4513fa8df95b24a3047e",
+      "credentialAssemblySha256": "a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52"
+    },
+    "powershellModule": {
+      "deltaFromBuiltModule": "docs/runtime-baseline.md only",
+      "compiledSource": "cbea33eca2dfde24f0c92b0385784876510e4ece",
+      "sha256": "b953287a8364cdead26391dc12175b8a8e99a82df5cacd6e69140967b903cd0f",
+      "bytes": 861843,
+      "published": false,
+      "sourceRevision": "58203ecdcee47c4bdaaef0801d0b496d22daa35f",
+      "localArtifact": ".cache/issue98/module-package-final/TokenForge-0.48.0.zip",
+      "members": 237,
+      "sourceBackedMembersVerified": 236,
+      "moduleSourceFilesVerified": 87,
+      "exports": 73,
+      "credentialFramework": ".NETCoreApp,Version=v10.0",
+      "sqliteCredentialAssemblyReferences": 0,
+      "credentialAssemblySha256": "969c5ff5020b4be4e41b64a3a63c3602aa2d433b69cad853e42fe03ad801c2a4"
+    },
+    "provenance": "Separate binary compilation and script-overlay identities; complete compilation file sets and literal blobs match in both commits. Fixed independent binary hashes are retained. Different DLL hashes include their distinct build-commit metadata."
+  },
+  "review": {
+    "independentReviewer": "Sol subagent integration_review",
+    "sourceVerdict": "No remaining findings at exact candidate",
+    "artifactVerdict": "Exact archive membership, source-backed payloads, binary hashes and all 100 compilation inputs independently verified",
+    "producerSuitesIndependentlyRerun": false,
+    "finalReceiptAudit": {
+      "reviewedDocumentationCheckpoint": "16977166fbbca1a2100783ce73ed04891c8ebeef",
+      "verdict": "No remaining findings",
+      "scope": "Actual completed logs, exact hashes/counts, prior failures, reuse evidence, archives and ancestry independently inspected; no producer suite rerun"
+    }
+  },
+  "earlierResults": {
+    "fullCbea": {
+      "source": "cbea33eca2dfde24f0c92b0385784876510e4ece",
+      "passed": 1662,
+      "failed": 1,
+      "skipped": 4,
+      "durationSeconds": 735.09,
+      "reason": "Stale generated SealerSha256 after the PowerShell guard changed; regenerated declaration, assertion and operational refusal retained",
+      "logSha256": "f7335e4239475b42739e802e9c154f1ebd56e9d9875b47248f04050000fe2cd0"
+    },
+    "interruptedExplorations": [
+      "full-offline.log found packaged-runtime preload problem; stopped without a pass claim",
+      "full-final.log stopped after final compilation-file-set guard landed; no pass claim"
+    ],
+    "rejectedPackageAttempt": "An incorrect explicit source SHA was refused at the owning-HEAD check before output creation; verified absence before corrected invocation"
+  },
+  "boundaries": {
+    "hostedActionsDispatched": false,
+    "workflowSettingsChanged": false,
+    "authentication": false,
+    "credentialAccess": false,
+    "liveCollection": false,
+    "artifactDownloadSyncImport": false,
+    "dependencyInstall": false,
+    "packagePublication": false,
+    "release": false,
+    "merge": false,
+    "newPR": false,
+    "originalGoal6DeploymentReopened": false,
+    "platformsBuiltOrTested": [
+      "linux-x64"
+    ],
+    "notRun": [
+      "Windows/macOS/other-architecture builds",
+      "standalone Secret Service integration",
+      "hosted/manual trial",
+      "frozen Goal6 Node/service/bootstrap deployment gates"
+    ]
+  }
+}

@@ -39,18 +39,18 @@ Describe 'Exact flow evidence and coverage' {
   Mock Get-TokenForgeToken -ModuleName TokenForge {throw 'AADSTS65001 private-user private-cookie'} -ParameterFilter {$Request.Protocol -ne 'OAuth2V2Pkce'}
   $null=Invoke-TokenForgeScopeProbe $inventory $secret -ResourceId $graph -DatabasePath $path -ExploreAllFlows -DelayMilliseconds 0
   $flows=Get-TokenForgeFlowEvidence $flowPath
-  @($flows.Attempts|Where-Object Outcome -eq Failed).Count|Should -Be 2
+  @($flows.Attempts|Where-Object Outcome -eq RequestBlocked).Count|Should -Be 2
   (Get-Content $flowPath -Raw)|Should -Not -Match 'private-user|private-cookie|private-access'
   $null=Update-TokenForgeApplicationMetadata $metadata $inventory Inventory
   $null=Update-TokenForgeApplicationMetadata $metadata $flows FlowAttempts
   $report=Get-TokenForgeResearchCoverage $metadata -FlowPath $flowPath -TenantFingerprint ('a'*64) -PrincipalFingerprint ('b'*64)
-  $report.Applications[0].FlowCoverage[0].FailedSlots|Should -Be 2
+  $report.Applications[0].FlowCoverage[0].RequestBlockedSlots|Should -Be 2
  }
  It 'leaves recognizable transient identity failures resumable and retries only the interrupted slot' {
   Mock Get-TokenForgeToken -ModuleName TokenForge {throw 'Token request failed (HTTP 429). Details suppressed.'}
   {Invoke-TokenForgeScopeProbe $inventory $secret -ResourceId $graph -DatabasePath $path -StopOnTransientFailure -DelayMilliseconds 0}|Should -Throw '*transient*'
   $flows=Get-TokenForgeFlowEvidence $flowPath
-  $flows.Attempts[-1].Outcome|Should -Be Started
+  $flows.Attempts[-1].Outcome|Should -Be TransientFailure
   Mock Get-TokenForgeToken -ModuleName TokenForge {param($Request) [pscustomobject]@{AccessToken=ConvertTo-SecureString synthetic-access -AsPlainText -Force;RefreshToken=$null;GrantedScopes=@('User.Read');TokenClaims=[pscustomobject]@{Readable=$true;HasDelegatedScopeClaim=$true;Scopes=@('User.Read');TenantFingerprint=('a'*64);PrincipalFingerprint=('b'*64);ClientId=$Request.ClientId;Audience=$Request.ResourceId}}}
   $null=Invoke-TokenForgeScopeProbe $inventory $secret -ResourceId $graph -DatabasePath $path -StopOnTransientFailure -DelayMilliseconds 0
   @((Get-TokenForgeScopeDatabase $path).Observations).Count|Should -Be 1
@@ -65,12 +65,13 @@ Describe 'Exact flow evidence and coverage' {
   (Get-TokenForgeScopeDatabase $path).Observations.Count|Should -Be 1
   Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 4
  }
- It 'retries a newer Started slot even when older terminal evidence exists' {
+ It 'requires explicit recovery for a newer Started slot even when older terminal evidence exists' {
   $null=Invoke-TokenForgeScopeProbe $inventory $secret -ResourceId $graph -DatabasePath $path -ExploreAllFlows -DelayMilliseconds 0
   $flows=Get-TokenForgeFlowEvidence $flowPath;$row=$flows.Attempts[0].Clone()
   $row.AttemptId=[guid]::NewGuid().ToString();$row.StartedAt=[DateTimeOffset]::UtcNow.ToString('o');$row.ObservedAt=$row.StartedAt;$row.Outcome='Started'
   & (Get-Module TokenForge) {param($path,$row) $null=Save-TokenForgeFlowEvidence $path -Attempt $row} $flowPath $row
-  $null=Invoke-TokenForgeScopeProbe $inventory $secret -ResourceId $graph -DatabasePath $path -ExploreAllFlows -DelayMilliseconds 0
+  {Invoke-TokenForgeScopeProbe $inventory $secret -ResourceId $graph -DatabasePath $path -ExploreAllFlows -DelayMilliseconds 0}|Should -Throw '*unknown*'
+  $null=Invoke-TokenForgeScopeProbe $inventory $secret -ResourceId $graph -DatabasePath $path -ExploreAllFlows -DelayMilliseconds 0 -RecoverUnknown -OperationBudget (& (Get-Module TokenForge) {New-TokenForgeOperationBudget})
   Should -Invoke Get-TokenForgeToken -ModuleName TokenForge -Times 5
  }
  It 'reconstructs the aggregate after a new plan checkpoint without repeating issuance' {

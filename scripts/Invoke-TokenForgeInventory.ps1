@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 <#
 .SYNOPSIS
 Run one resumable discovery, registration, or scope-observation stage.
@@ -12,7 +12,7 @@ non-Microsoft principals. Probe uses existing consent and stops at interactive p
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
- [Parameter(Mandatory)][ValidateSet('Discover','SignIns','Inventory','Register','Probe','Merge','Export','Report','ExportFlows','NewCohort','ProbeChunk','CohortStatus')][string]$Action,
+ [Parameter(Mandatory)][ValidateSet('Discover','SignIns','Inventory','Register','Probe','Merge','Export','Report','ExportFlows','NewCohort','ProbeChunk','CohortStatus','CollectorStatus')][string]$Action,
  [Parameter(Mandatory)][string]$StatePath,
  [string]$MetadataPath,[string]$DatabasePath,[string]$FlowPath,[string]$NativeExecutablePath,[switch]$ExploreAllFlows,[switch]$SummaryOnly,[switch]$InventoryAccount,
  [securestring]$GraphToken,
@@ -37,10 +37,12 @@ param(
  [string]$ExportPath,
  [ValidatePattern('^[a-f0-9]{64}$')][string]$CohortId,
  [ValidateRange(-1,100000)][int]$ChunkIndex=-1,[ValidateRange(1,1000)][int]$BatchSize=25,
- [ValidateRange(0,1000)][int]$MaxPendingClients=0
+ [ValidateRange(0,1000)][int]$MaxPendingClients=0,
+ $OperationBudget
 )
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1') -Force
+if($OperationBudget){& (Get-Module TokenForge) {param($budget) $script:OperationBudget=$budget;Assert-TokenForgeOperationBudget $budget} $OperationBudget}
 if($InventoryAccount -and ($Action -ne 'Report' -or $PrincipalFingerprint)){throw 'InventoryAccount requires Report without PrincipalFingerprint.'}
 # Reports inspect existing files without creating directories, changing modes, or taking the writer lock.
 if($Action -eq 'Report'){
@@ -70,11 +72,14 @@ if($Action -eq 'Report'){
  return
 }
 # Status is read-only and remains available while a discovery writer holds its lock.
-if($Action -eq 'CohortStatus'){
+if($Action -in @('CohortStatus','CollectorStatus')){
  if(-not $DatabasePath){$DatabasePath=Join-Path $StatePath 'scopes.sqlite'}
  if(-not (Test-Path -LiteralPath $DatabasePath -PathType Leaf)){throw 'Cohort status requires an existing scope database.'}
  if(-not $CohortId){$CohortId=& (Get-Module TokenForge) {param($p) Get-TokenForgeDiscoveryRunId $p} (Join-Path $StatePath 'discovery-run.json')}
- Get-TokenForgeResearchCohort $DatabasePath $CohortId -NativeExecutablePath $NativeExecutablePath -SummaryOnly:$SummaryOnly
+ if($Action -eq 'CollectorStatus'){
+  if(-not $FlowPath){$FlowPath=Join-Path $StatePath 'flows.sqlite'}
+  Get-TokenForgeCollectorStatus -DatabasePath $DatabasePath -CohortId $CohortId -FlowPath $FlowPath -NativeExecutablePath $NativeExecutablePath
+ }else{Get-TokenForgeResearchCohort $DatabasePath $CohortId -NativeExecutablePath $NativeExecutablePath -SummaryOnly:$SummaryOnly}
  return
 }
 $null=New-Item -ItemType Directory -Path $StatePath -Force
@@ -101,7 +106,7 @@ try {
    if(-not $CohortId -or -not $EstsAuth){throw 'ProbeChunk requires CohortId and EstsAuth.'}
    $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
    if($PrincipalFingerprint){$cohort=Get-TokenForgeResearchCohort $DatabasePath $CohortId -NativeExecutablePath $NativeExecutablePath;if($PrincipalFingerprint -ne $cohort.Cohort.PrincipalFingerprint){throw 'Principal selection differs from the frozen cohort.'}}
-   Invoke-TokenForgeResearchChunk -Inventory $inventory -EstsAuth $EstsAuth -CookieName $CookieName -DatabasePath $DatabasePath -CohortId $CohortId -ChunkIndex $ChunkIndex -MaxPendingClients $MaxPendingClients -FlowDatabasePath $FlowPath -MetadataPath $MetadataPath -NativeExecutablePath $NativeExecutablePath -WhatIf:$WhatIfPreference -Confirm:$false
+   Invoke-TokenForgeResearchChunk -Inventory $inventory -EstsAuth $EstsAuth -CookieName $CookieName -DatabasePath $DatabasePath -CohortId $CohortId -ChunkIndex $ChunkIndex -MaxPendingClients $MaxPendingClients -FlowDatabasePath $FlowPath -MetadataPath $MetadataPath -NativeExecutablePath $NativeExecutablePath -OperationBudget $OperationBudget -WhatIf:$WhatIfPreference -Confirm:$false
   }
   'Discover' {Update-TokenForgeDiscovery -Path $discoveryPath -MetadataPath $MetadataPath -NativeExecutablePath $NativeExecutablePath}
   'SignIns' {
@@ -142,7 +147,7 @@ try {
    $inventory=Get-Content -LiteralPath $inventoryPath -Raw|ConvertFrom-Json
    $plan=Get-TokenForgeProbePlan -Inventory $inventory -ClientId $ClientId -GraphOnly:$GraphOnly @principalOptions
    $flowChanges=@{Plans=@{};Attempts=@{}};$scopeChanges=@{}
-   try{Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $EstsAuth -CookieName $CookieName -Plan $plan -DatabasePath $databasePath -ClientId $ClientId @principalOptions -Tenant $Tenant -MaxApplications $MaxApplications -MaxRedirects $MaxRedirects -Refresh:$Refresh -FlowDatabasePath $FlowPath -ExploreAllFlows:$ExploreAllFlows -NativeExecutablePath $NativeExecutablePath -FlowChanges $flowChanges -ScopeChanges $scopeChanges}finally{
+   try{Invoke-TokenForgeScopeProbe -Inventory $inventory -EstsAuth $EstsAuth -CookieName $CookieName -Plan $plan -DatabasePath $databasePath -ClientId $ClientId @principalOptions -Tenant $Tenant -MaxApplications $MaxApplications -MaxRedirects $MaxRedirects -Refresh:$Refresh -FlowDatabasePath $FlowPath -ExploreAllFlows:$ExploreAllFlows -NativeExecutablePath $NativeExecutablePath -OperationBudget $OperationBudget -FlowChanges $flowChanges -ScopeChanges $scopeChanges}finally{
    if($scopeChanges.Count){$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document @{SchemaVersion=1;UpdatedAt=[DateTimeOffset]::UtcNow.ToString('o');Observations=@($scopeChanges.Values)} -Kind ScopeObservations -NativeExecutablePath $NativeExecutablePath}
    if($flowChanges.Plans.Count){$changed=@{Format='TokenForgeFlowEvidence';SchemaVersion=1;UpdatedAt=[DateTimeOffset]::UtcNow.ToString('o');Plans=$flowChanges.Plans;Attempts=@($flowChanges.Attempts.Values)};$null=Update-TokenForgeApplicationMetadata -Path $MetadataPath -Document $changed -Kind FlowAttempts -NativeExecutablePath $NativeExecutablePath}
    }

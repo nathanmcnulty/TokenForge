@@ -1,0 +1,311 @@
+{
+  "SchemaVersion": 1,
+  "Milestone": "Goal6OfflineReleaseReadiness",
+  "RecordedAt": "2026-10-23T19:14:02.502785+00:00",
+  "Disposition": "OfflineValidationPassedReleaseCandidate",
+  "FullGoal6Complete": false,
+  "ProductionReady": false,
+  "PublicationReady": false,
+  "Branch": "codex/goal6-offline-release-readiness",
+  "ParentGoal5Revision": "534520fd52a47b3cd80138efac5d2ce2081247cc",
+  "RoadmapHandoff": "19470aeba7a949e4204e4ecf5586a6ffb3171c69",
+  "RuntimeSourceRevision": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+  "ValidationRevision": "68dd61cb8dbd142ef06d28840e2f21d1bc17a0e6",
+  "Package": {
+    "sourceRevision": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "packagePath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal6/accepted-package/linux-x64",
+    "manifestSha256": "8295f2508bc95d67c1ce61904cd3a4bba5a7ccac0f8d30af8ef34066eff383c9",
+    "archivePath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal6/TokenForge-0.48.0-goal6-accepted-linux-x64.tar.gz",
+    "archiveSha256": "f95f8d926c4afd0ca761f3a659378b27706d796c0cb0c61388ddb70e599bfe6b",
+    "executableSha256": "987c863bc92f29de27ff812ad360cd1be1a8bde0fda6080f465827dbb6eb99db",
+    "credentialDllSha256": "30d5d1268223c806e8c6d26fd138ef2f1db58dd23f067f59ac38387e2d7bad32",
+    "payloadFileCount": 160,
+    "moduleSourceFileCount": 87,
+    "nativeInputCount": 100,
+    "nativeInputsSha256": "e8c73eb8bfc36e9ad179924f298e7de869ae1fce14f95026741eb7d571ad0608"
+  },
+  "PackageVerification": {
+    "sourceRevision": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "packageVerified": true,
+    "extractedPath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal6/extracted/linux-x64",
+    "completeModuleSourceFiles": 87,
+    "packagePayloadFiles": 160,
+    "nativeInputsVerified": 100,
+    "operatorFilesVerified": 71,
+    "validationFilesVerified": 85,
+    "validationInputsSha256": "d0584e2a62d8328cdbdd51417ae65f884745f2a032a093dc908d96d868d234b9",
+    "manualOnlyEntrypoints": true,
+    "legacyWriterQuarantined": true,
+    "handoffPreserved": true
+  },
+  "FinalValidationInputs": {
+    "validationRevision": "68dd61cb8dbd142ef06d28840e2f21d1bc17a0e6",
+    "runtimeSourceRevision": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "nativeAndPackageInputsUnchanged": true,
+    "validationFiles": 86,
+    "validationInputsSha256": "8bac97a5f13915c2e8b10a9814a3fcd0abee18802a7dd5e41957a696657b3c94",
+    "finalFocusedReplay": "ReleaseGuards30Passed0Failed",
+    "changedUnbundledValidationFiles": [
+      "scripts/Test-TokenForgeReleaseAssets.ps1",
+      "tests/ReleaseAssets.Tests.ps1"
+    ]
+  },
+  "Support": {
+    "Runtime": "linux-x64",
+    "Version": "0.48.0 local candidate; no release/version promotion",
+    "SDK": "10.0.401",
+    "DotNetRuntime": "10.0.12",
+    "PowerShell": "7.6.7",
+    "Pester": "6.2.0",
+    "MicrosoftDataSqlite": "10.0.12",
+    "SQLitePCLRaw": "2.1.12",
+    "Restore": "Locked cached packages, cleared feeds, external network isolated",
+    "LockFilesSha256": {
+      "native/TokenForge.Cli/packages.lock.json": "86c908bb8cd366c89904c3d93a9db1100cb65e835bf931a11f3bb5e008a40b5e",
+      "native/TokenForge.Core/packages.lock.json": "544feacb9c2b54b57ad59e84a21d4cbf3773e062ec524a3573526136e55acb09",
+      "native/TokenForge.Core.Tests/packages.lock.json": "a9f991434ff791b1b984590cf9cb2e0ee29ca25c23b29497adbbe307deb06e22",
+      "native/TokenForge.Credentials/packages.lock.json": "d44273041b9c4ddb15767ba165caa64f08b1e1f185f7433f48dc4a93153d8cd0"
+    }
+  },
+  "Validation": {
+    "FullMatchingPackagePesterExcludingHistoricalExperiment": {
+      "Passed": 1286,
+      "Failed": 0,
+      "Skipped": 4,
+      "ContainersFailed": 0,
+      "Total": 1292,
+      "ElapsedSeconds": 500.354,
+      "FailedTests": []
+    },
+    "HistoricalExactPinExperimentReplay": {
+      "Passed": 2,
+      "Failed": 0,
+      "Skipped": 0,
+      "ContainersFailed": 0,
+      "PackageSource": "8d625be62ef70a43a765e37faf29b3f4c9e780d4",
+      "ManifestSha256": "1cee964b74fe63c8ffffecec8d2ed4075963d217c28d9554e3da5196f3caceea"
+    },
+    "InitialSourceCompilationBroadDiagnostic": {
+      "Passed": 1286,
+      "Failed": 2,
+      "Skipped": 4,
+      "ContainersFailed": 0,
+      "Total": 1292,
+      "ElapsedSeconds": 566.94,
+      "FailedTests": [
+        "Goal 5 actual core callback experiment.retains the charged active trial and its partial trace on a reduced-budget stop",
+        "Goal 5 actual core callback experiment.runs both counterbalanced arms, retains all failures and rejects lost verified pairs"
+      ]
+    },
+    "LockedDependencyVerification": {
+      "SchemaVersion": 1,
+      "VerifiedPackages": 8,
+      "Packages": [
+        {
+          "LockContentHashVerified": true,
+          "Package": "Microsoft.NET.ILLink.Tasks/10.0.12",
+          "SignedArchiveIntegrityVerified": true,
+          "ExtractedFilesVerified": 40,
+          "ContentSha512": "xi+BDjFpW+Sb+MHFHaH6Y/gV9I8BluFwRXc1QyCdoZbIK26eNiBeFuMTe/FMwc33G1wdHCyDg7CVTmb8OdQrMQ==",
+          "RawArchiveSha256": "37aa984da51fdc01cc7d57a8647893392f3539cdd5a1d32ce4982be5309bc08b"
+        },
+        {
+          "LockContentHashVerified": true,
+          "Package": "Microsoft.Data.Sqlite/10.0.12",
+          "SignedArchiveIntegrityVerified": true,
+          "ExtractedFilesVerified": 5,
+          "ContentSha512": "xUq9xUc653ue7ac2rMfCaf8UQN+U3zS8poWYlugycpvJllplMM0Mk7v/+MM0CTlu9zGvbGML4BPH8YWhrUOfGw==",
+          "RawArchiveSha256": "246679d8c6c83ffcf4c8a480066e3f4fc4e051c96b71bedfd932fe7a5af1f7d4"
+        },
+        {
+          "LockContentHashVerified": true,
+          "Package": "Microsoft.Data.Sqlite.Core/10.0.12",
+          "SignedArchiveIntegrityVerified": true,
+          "ExtractedFilesVerified": 8,
+          "ContentSha512": "2aL9eL5HQr0V4b8V909SD+jQAx6qnTTl7sT/v3D8dIvmr2UGdpZIQxqm1pj2Js3e4EYTvpw0oMH7DjapJJuPPw==",
+          "RawArchiveSha256": "5e8ed353006dadf55d5c7f56d237321c20bb10c786262e6b25526756e1036332"
+        },
+        {
+          "LockContentHashVerified": true,
+          "Package": "SQLitePCLRaw.bundle_e_sqlite3/2.1.12",
+          "SignedArchiveIntegrityVerified": true,
+          "ExtractedFilesVerified": 9,
+          "ContentSha512": "mAgscpQMLw5/nfA1Q5oJVAT29yROUo1ifZGbbTpx/lwZpSxMUGoYbKfmvdm8oXER+RzxqBmmQzeBEVKfeHv2nw==",
+          "RawArchiveSha256": "a9a06e6b5a313f6ef3675f91997d012adeffe8aa9e1ffd69ed46a4e685b054e1"
+        },
+        {
+          "LockContentHashVerified": true,
+          "Package": "SQLitePCLRaw.core/2.1.12",
+          "SignedArchiveIntegrityVerified": true,
+          "ExtractedFilesVerified": 3,
+          "ContentSha512": "ETpNw9DY3ckWLgRRAeCHj+GKOuPi61aeczkXhgHexUvqoZBAYg8RYESE2J7O1M7+o6QbdSEZwrw9bfqztUVWXg==",
+          "RawArchiveSha256": "af06904138ffa6dc95a599133d64d254716d6facc7543a6b3b910793dae9dca5"
+        },
+        {
+          "LockContentHashVerified": true,
+          "Package": "SQLitePCLRaw.lib.e_sqlite3/2.1.12",
+          "SignedArchiveIntegrityVerified": true,
+          "ExtractedFilesVerified": 34,
+          "ContentSha512": "fWi8Dbknuhgg72fWinIdjXVaqO1hHL4YBBwVLnr7e1c9TAZwJ0QE38j9syW1hwx6HaqEVTwI+O07WPdZn8Rp0w==",
+          "RawArchiveSha256": "4a22c02ffcf489792903cf263def9fce27739716883f965f0b5eeff1637430ac"
+        },
+        {
+          "LockContentHashVerified": true,
+          "Package": "SQLitePCLRaw.provider.e_sqlite3/2.1.12",
+          "SignedArchiveIntegrityVerified": true,
+          "ExtractedFilesVerified": 5,
+          "ContentSha512": "W3oH4XIfCzFrgUSDKHhN6N+dgzA5YHOR2VxX8GB6Qy7CyrJJgxPEG8NirgYWlPQC5P2jz2knSsexWu4tDUL33g==",
+          "RawArchiveSha256": "df2b3271992e5d719186c4671e3cf4f8658097c154cbcd41494ab594c5997595"
+        },
+        {
+          "LockContentHashVerified": true,
+          "Package": "System.Memory/4.5.3",
+          "SignedArchiveIntegrityVerified": true,
+          "ExtractedFilesVerified": 12,
+          "ContentSha512": "3oDzvc/zzetpTKWMShs1AADwZjQ/36HnsufHRPcOjyRAAMLDlu2iD33MBI2opxnezcVUtXyqDXXjoFMOU9c7SA==",
+          "RawArchiveSha256": "0af97b45b45b46ef6a2b37910568dabd492c793da3859054595d523e2a545859"
+        }
+      ],
+      "Method": "SDK NuGet.Packaging lock-content hash and signed archive content integrity; exact extracted files including normalized nuspec; no signer trust assertion",
+      "SignerOrOnlineCertificateOrRevocationVerification": false
+    },
+    "ReleaseReadiness": {
+      "preset": "ReleaseReadiness",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 85,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": []
+    },
+    "FinalReleaseGuardsReplay": {
+      "preset": "ReleaseGuards",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 30,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": []
+    },
+    "NativeCoreChecks": 1135,
+    "HistoricalCasesExcludedFromCurrentPackage": 2,
+    "PlatformSkips": [
+      "Windows ACL protection",
+      "Windows native ACL rejection",
+      "macOS profile fail-closed",
+      "macOS moved-profile ciphertext preservation"
+    ],
+    "SnapshotChecks": 44,
+    "CatalogClaimsWithRollbackChecks": 35,
+    "ExtractedPackageSmoke": {
+      "SchemaVersion": 1,
+      "Synthetic": true,
+      "AsOf": "2026-10-23T18:53:50.9206897+00:00",
+      "Checks": 33,
+      "Version": "0.48.0",
+      "AdministratorWorkflows": 4,
+      "Acquisition": "BlockedWithoutSession",
+      "SelectedRefreshRequests": 0,
+      "ReusedRefreshRequests": 1,
+      "CollectorStatus": "Pending",
+      "CandidateVerified": true,
+      "SnapshotRestore": true,
+      "LiveProof": false,
+      "AuthorizationEstablished": false
+    },
+    "ExtractedSmokeCost": {
+      "elapsedSeconds": 18.923,
+      "maxChildRssKiB": 195440,
+      "exitCode": 0,
+      "externalNetwork": "Isolated",
+      "fixture": "SyntheticOnly",
+      "sourceCheckoutDependency": false,
+      "developerToolsRequired": false
+    },
+    "ActualArchiveGate": {
+      "SchemaVersion": 1,
+      "Version": "0.48.0",
+      "SourceCommit": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+      "Archives": [
+        {
+          "Runtime": "linux-x64",
+          "Archive": "TokenForge-0.48.0-linux-x64.tar.gz",
+          "Sha256": "f95f8d926c4afd0ca761f3a659378b27706d796c0cb0c61388ddb70e599bfe6b",
+          "Bytes": 33600105
+        }
+      ]
+    }
+  },
+  "ValidationReuse": "Runtime/package source frozen at 0a1704d. Validation-only scalar correction is committed at 68dd61c; complete ReleaseGuards replay30/0 and frozen broad package run follow. Matching package DLL preloaded and hash asserted before broad non-Experiment suite. Two historical Experiment tests require a different immutable package and run separately with that exact DLL preloaded; no aggregate is a single-package all-tests pass. Initial source-compilation diagnostic1286/2/4 remains recorded. No repeated native build for validation-only changes.",
+  "IndependentReview": {
+    "NativeAndPublication": "independent_review: all material findings corrected, final static review clear",
+    "PackageInstructionsAndSmoke": "saved_export: fresh timestamp, compiled DLL, packet/privacy assertions fixed; final review clear",
+    "FinalValidatorCorrection": "independent_review: scalar rename/consumer compatibility reviewed"
+  },
+  "Reconciliation": {
+    "Draft117": "079a0ab8a5f46116bfbd5e97faf28c8601c5e544",
+    "Draft119": "e2aab00b2079dc1e99dc38aa1a994d4877b1bbf5",
+    "Draft120": "360d0e04edbfca41f8001d4838ef8d67b5ef338e",
+    "Status": "Remain pinned unmerged design/building blocks; no draft merge assumed. Preserve existing seven-file candidate; publication envelopes bind its manifest digest and are not a new export schema."
+  },
+  "RemainingGates": [
+    "A fresh human operator has not completed all four real administrator workflows plus collector recovery from these instructions with this exact package. Synthetic scripted walkthrough is not this live gate.",
+    "No Goal6 authentication/live discovery/API call was authorized or performed. Historical Goal4 canary is not fresh Goal6 proof and retains two unattributed HTTP events from its original process.",
+    "Publication-capable immutable-candidate hosted adapter remains unconnected; legacy writer is quarantined. Before any publication, implement/review the trusted origin/reviewer/current-main/commit adapter, then separately authorize actual hosted ACL/API/ref race and lost-ack proof. Offline caller-supplied hashes/journals never establish authority.",
+    "Source remains a local codex branch rather than an approved current-main release source. No publication, PR, merge, push, tag or version promotion is authorized.",
+    "Only Linux x64 is declared/validated. SQLite copies are private per-store backups, not credential redaction, account-wide atomicity or power-failure durability; cancellation is cooperative."
+  ],
+  "ApprovalBoundary": {
+    "AuthenticationPerformed": false,
+    "ProtectedCredentialsRead": false,
+    "TenantPermissionChanges": false,
+    "ActionsEnabledOrDispatched": false,
+    "PublishedPushedOrMerged": false,
+    "NeededForLiveCanary": "Separate Goal6 approval naming secadmin account, exact reviewed strict client/bootstrap/callback/scope route, selected Graph GET, at most two issuance attempts and 180 seconds inclusive of bootstrap, explicit recovery allowance and saved-evidence reuse. Additional collector recovery must fit its own explicitly approved aggregate envelope; no tenant permission changes. Do not reuse historical approval.",
+    "NeededForHosted": "Separate approval for any authenticated hosted ACL/API proof, Actions enable/dispatch or publication; implementing an offline reviewed adapter alone authorizes none."
+  },
+  "HarnessNotes": [
+    "Initial full source-compilation suite used new package for the closed Goal5 study and correctly hit two exact-pin refusals. First old-pin replay still had in-memory source types; fresh replay preloaded old pinned DLL. Final matching-package suite preloads and verifies current DLL, excluding only two independently replayed historical tests.",
+    "Naive raw nupkg ZIP SHA512 differs from NuGet signed-content hashes. Verified all8 lock content pins using approved SDK NuGet.GetContentHash plus signed archive integrity and existing extracted file comparison; no online certificate chain/revocation check.",
+    "Initial JsonDocument duplicate parser was corrected for culture-sensitive BOM prefix matching; final guards pass.",
+    "An isolated core run stalled because loopback was down; stopped without a pass claim and reran with only loopback enabled in the isolated namespace.",
+    "A smoke timing wrapper failed before launch because /usr/bin/time was absent; Python stdlib measured the successful extracted run.",
+    "The real archive guard correctly refused an initial hardlink alias; the final gate used a regular copy of the identical archive."
+  ],
+  "ArtifactsSha256": {
+    ".cache/goal6/accepted-package-receipt.json": "ece389dd9c6cf753a8a4bc17cc9d05be46fd1cad54b0f98bd9eac7add1f86fae",
+    ".cache/goal6/accepted-package-verification.json": "3ea6e7dc4d3a90a1fd5ae99f633df9c6c9fe8cd8183491b1d8a784c481cd3a4f",
+    ".cache/goal6/final-validation-inputs.json": "05715567afe76ea04af58e5687d9f5dac1447e1b5908c576e02a26a506569c20",
+    ".cache/goal6/release-readiness.json": "c661f53bc2812905ffab6ce5ac11b708e2cc1c2f54bde2cccb7280afa5edf2b2",
+    ".cache/goal6/release-guards-scalar-final.json": "ae3318bee74547c4f334862e55f68c97aa1be1ea53252e148b6995f3dc344a22",
+    ".cache/goal6/full-suite.json": "e0cae0813070e745c5f1258ec8e4a7ac84783f1f5528c9e0d4977f99fd5c5773",
+    ".cache/goal6/core-accepted-full.log": "d3b96d796af86663de4c1aacb177c6e37080dcd73698692ca8f635ab875a5323",
+    ".cache/goal6/snapshot-final.log": "f7ea0acdd3324640ac25318fa7d4077ab9062bb04b0dedc63f76130ed98d2291",
+    ".cache/goal6/catalog-rollback.log": "0fa6417855cec61f5beef6719512e35c8584d634b9a806b7974a5426986cc1de",
+    ".cache/goal6/extracted-smoke-final.json": "966f96007aa77c0984e7698efe59a995794714ecebddbdb77effb507b908168c",
+    ".cache/goal6/extracted-smoke-cost.json": "c0d1d69d751a81493a9420f5c5dc8f2e7a108c5935fdbb415caff2b65186be17",
+    ".cache/goal6/real-release-assets-scalar.json": "7fd340248fcb92c1b76e1469b983b034cb9f48698fa157246ea59591a4416b2b",
+    ".cache/goal6/build-reviewed-linux.log": "d54b836d4251f7ab15e1ac5f777876f389dddea70ea72889a81e6e907068a518",
+    ".cache/goal6/AcceptedPackageReceipt.py": "3f648de324bbead3779b2bf8b9982899cbbd7148a85a39eae6c6ce6cb3ae10a0",
+    ".cache/goal6/VerifyAcceptedPackage.py": "74a128bbe82f05a5dbad146b843bfedef15e7831b4f85c72c0ee12221c19cf46",
+    ".cache/goal6/RunFull.ps1": "6dcf48d75382e47243e2010c5e8f14acff73fa7ea8167ab9460dbfdd00eea848",
+    ".cache/goal6/RunCoreOffline.sh": "f7e9a607017d5ec34d4f2eaa240229d71ceaf27877d61abf4ee3588ac6dff78f",
+    ".cache/goal6/RunFullOffline.sh": "569c7da82673e091fe20a21ef6d25bf3086dcdc62fd431991d0866666a95988f",
+    ".cache/goal6/RunExtractedSmoke.py": "c88876e11c8d520764f2744c36c9ff08103afd1c67dac5fdcc121d0d7f8d2e66",
+    ".cache/goal6/full-package-suite.json": "9a448d12c37f70328465bff53a45bc1c9927169ea84d82e72a35040e934146c0",
+    ".cache/goal6/pinned-experiment-replay-accepted.json": "dd2d0b5170046e786ff6cebdb17e311dd9197531a6aef897015cdc149b7156f9",
+    ".cache/goal6/locked-package-verification-complete.json": "d28f88201f6015a4f76f124d38445bcb514772b4ff82837085819a27e82e67c4",
+    ".cache/goal6/VerifyLockedPackages.ps1": "8ad1419f279e47af7e1894ce1829ab1af8e1cefe93c865c9db79b637984246f6",
+    ".cache/goal6/RunFullPackage.ps1": "3f2a1e1f52e39964a60a91ef6d9d2c3b077f99205415ef8ed01128df0d185681",
+    ".cache/goal6/RunFullPackageOffline.sh": "830a6582fe8759b23854364e42c0bd9429de31a5cdedd619d3fdbc9c5fdfced0",
+    ".cache/goal6/RunPinnedExperimentAccepted.ps1": "dbae5b1651a4f3ef6498722888f9c78841796c5c5ff9b14879385530474be779",
+    ".cache/goal6/RecordAcceptance.py": "629e98bb834ce933959e150465ed4c56dbf0e6fc0782c133e990ee38a3172188",
+    ".cache/goal6/callback-diagnosis.log": "77aa96a5dded731cf1b4503002c853040d4c1ca47b82fe16bcc81bfacc08619e",
+    ".cache/goal6/pinned-experiment-replay.json": "867abde145c116264d95f7fb830ac692f3a2cf6ce082f88fe7bc81e615a6f11f",
+    ".cache/goal6/pinned-experiment-replay.log": "9f8dd6096bba28ae9322d969a38745e3f5d77cb897a10aacbe9a0ccd5256804c"
+  }
+}

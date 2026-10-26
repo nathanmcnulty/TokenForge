@@ -1,14 +1,16 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 [CmdletBinding()]
 param(
- [Parameter(Position=0,Mandatory)][ValidateSet('profile','login','logout','status','doctor','token','scopes','graph','research')][string]$Command,
- [Parameter(Position=1)][ValidateSet('create','forget-key','show','get','explain','permissions','connect','disconnect','report','export-flows','backup','weekly')][string]$Operation,
+ [Parameter(Position=0,Mandatory)][ValidateSet('profile','login','logout','status','doctor','token','scopes','graph','research','health')][string]$Command,
+ [Parameter(Position=1)][ValidateSet('create','forget-key','show','get','explain','permissions','connect','disconnect','report','export-flows','backup','weekly','collect','sync','status','contribution')][string]$Operation,
  [ValidatePattern('^[a-z][a-z0-9_-]{0,63}$')][string]$Profile='default',
  [string]$SnapshotPath,[string]$BackupDirectory,[string]$Root,[string]$Tenant,[string]$StatePath,[string]$ExportPath,[string]$FlowPath,[string]$MetadataPath,[string]$NativeExecutablePath,[switch]$SummaryOnly,
  [ValidatePattern('^[a-f0-9]{64}$')][string]$TenantFingerprint,[ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,
  [ValidateSet('Memory','Passphrase','OperatingSystem')][string]$Storage='Memory',
  [ValidateSet('graph','arm')][string]$Resource='graph',[string[]]$Scope,
  [securestring]$VaultPassword,[securestring]$EstsAuth,
+ [string]$ExchangePath,[string]$OutputPath,[string]$FixturePath,[string]$PreviousExchangePath,[string]$SourceRevision,[string]$ContributionPath,
+ [string]$Repository,[string]$RepositoryId,[string]$WorkflowId,[string]$RunId,[string]$SourceBranch,[securestring]$GitHubToken,
  [string]$PasskeyPath,[string]$XdrModulePath,[ValidateLength(0,320)][string]$LoginHint,[switch]$Browser,[switch]$Interactive,
  [guid]$BootstrapClientId='038ddad9-5bbe-4f64-b0cd-12434d1e633b',
  [ValidateRange(0,8760)][int]$MaxAdditionalScopes=0,[ValidateRange(0,8760)][int]$MaxBootstrapAdditionalScopes=0,
@@ -16,6 +18,29 @@ param(
 )
 $ErrorActionPreference='Stop'
 $manifest=Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1'
+if($Command -eq 'health'){
+ if(@($PSBoundParameters.Keys|Where-Object {$_ -in @('Profile','Root','Tenant','VaultPassword','EstsAuth','PasskeyPath','XdrModulePath','LoginHint','Browser','Interactive','PromptPassphrase','Scope','ApiUri','GraphCommand')}).Count){throw 'Public health does not accept account authentication options.'}
+ if(-not $NativeExecutablePath){$NativeExecutablePath=Join-Path $PSScriptRoot '../tokenforge'}
+ $options=@{NativeExecutablePath=$NativeExecutablePath}
+ switch($Operation){
+  collect {
+   $options.OutputPath=$OutputPath;$options.SourceRevision=$SourceRevision
+   if($FixturePath){$options.FixturePath=$FixturePath};if($PreviousExchangePath){$options.PreviousExchangePath=$PreviousExchangePath}
+   $healthResult=& (Join-Path $PSScriptRoot 'Invoke-TokenForgePublicHealth.ps1') @options|ConvertFrom-Json
+  }
+  sync {
+   $options.StatePath=$StatePath
+   if($Repository){foreach($key in @('Repository','RepositoryId','WorkflowId','RunId','SourceRevision','SourceBranch')){$options[$key]=$PSBoundParameters[$key]};if($GitHubToken){$options.GitHubToken=$GitHubToken}}
+   else{$options.ExchangePath=$ExchangePath}
+   $healthResult=& (Join-Path $PSScriptRoot 'Sync-TokenForgePublicHealth.ps1') @options
+  }
+  status {$options.StatePath=$StatePath;$options.Status=$true;$healthResult=& (Join-Path $PSScriptRoot 'Sync-TokenForgePublicHealth.ps1') @options}
+  contribution {$options.InputPath=$ContributionPath;if($ExchangePath){$options.ExchangePath=$ExchangePath};$healthResult=& (Join-Path $PSScriptRoot 'Test-TokenForgePublicContribution.ps1') @options|ConvertFrom-Json}
+  default {throw 'Use health collect, sync, status or contribution.'}
+ }
+ if($Json){$healthResult|ConvertTo-Json -Depth 100}else{$healthResult}
+ return
+}
 if(-not (Get-Module TokenForge)){Import-Module $manifest}
 $common=@{Name=$Profile;Root=$Root}
 try{

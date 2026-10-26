@@ -1,0 +1,43 @@
+{
+  "SchemaVersion": 1,
+  "Kind": "TokenForgeSealerPolicyReviewPlan",
+  "Operational": false,
+  "AuthorizationEstablished": false,
+  "CurrentMainVerified": false,
+  "RolePermissionsVerified": false,
+  "HostedSealingProven": false,
+  "CompleteOriginalZipPrivacyValidated": false,
+  "BlockingReasons": [
+    "CompleteOriginalZipPrivacyValidationUnresolved"
+  ],
+  "SealerCommit": "cdddd002be28f39b1be9cbe7fe4c639407d69d03",
+  "ProducerCommit": "cdddd002be28f39b1be9cbe7fe4c639407d69d03",
+  "ImplementationCommit": "eaea345873364d5caf4f4e6cab1762edd774d1e8",
+  "ImplementationSha256": "688db06bfd93cccdfbd5e68dd94f0ca9d26548e80fc859ead2cabbc784bcce4e",
+  "PinnedInputs": {
+    "ProducerWorkflowSha256": "3c9e91b0fe27d69b9516f62320950ff931b97aaa72597e8a737f8779d8179fb6",
+    "SealerWorkflowSha256": "c4d32f6dd22988e252137bc7a1f073b6fdc647ca2c19112cea399195a449af5c",
+    "TrustRootSha256": "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c",
+    "VerifierSha256": "cbfdc94f3a5c0713c0d6df3e0a1d88a59a76b0c52332aad7d21d112f9da2cc0e"
+  },
+  "Quarantined": true,
+  "CallerPinsSealer": false,
+  "MissingBindings": [
+    "RepositoryId",
+    "WorkflowId",
+    "ProducerIds",
+    "ReviewerIds",
+    "MaintainerIds",
+    "ReaderIds"
+  ],
+  "ProposedPolicy": null,
+  "BindingPreview": null,
+  "RequiredGates": [
+    "CompleteOriginalZipPrivacyValidation",
+    "SeparateActivationApproval",
+    "ImmutableSameRepositoryCallerPin",
+    "TrustedOperatorIdentityBindings",
+    "HostedOriginalZipAndCertificateProof",
+    "SeparatePublicationPermissionAndRecoveryProof"
+  ]
+}

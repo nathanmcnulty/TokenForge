@@ -51,7 +51,7 @@ The public export includes only client ID, resource ID, observation time, scopes
 
 ```powershell
 ./scripts/Build-TokenForgePackage.ps1
-# Extract dist/TokenForge-0.3.0.zip; use PowerShell 7.4+.
+# Extract dist/TokenForge-0.3.0.zip; use PowerShell 7.6+.
 ./scripts/Invoke-TokenForge.ps1 -Action Connect -RequestPath ./request.json
 ```
 

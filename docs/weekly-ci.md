@@ -42,7 +42,7 @@ The PowerShell entry point is:
 ./scripts/tokenforge.ps1 research weekly -StatePath /path/to/discovery-data -Json
 ```
 
-These commands require no Entra login or profile. They validate frozen recipe hashes and recompute reports without writing files. The native CLI runs without PowerShell; the script entry point requires PowerShell 7.4+. Old-week recipes report `CurrentWeek=false`. Future-week recipes and creation times more than five minutes ahead are rejected. The command does not inspect or endorse unrelated checkout files.
+These commands require no Entra login or profile. They validate frozen recipe hashes and recompute reports without writing files. The native CLI runs without PowerShell; the script entry point requires PowerShell 7.6+. Old-week recipes report `CurrentWeek=false`. Future-week recipes and creation times more than five minutes ahead are rejected. The command does not inspect or endorse unrelated checkout files.
 
 Public outputs distinguish:
 

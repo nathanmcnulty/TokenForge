@@ -1,9 +1,12 @@
 #Requires -Version 7.6
 [CmdletBinding()]
 param(
-    [ValidateSet('Weekly', 'Native', 'Discovery', 'ReleaseGuards')]
+    [ValidateSet('PublicHealth', 'Weekly', 'Native', 'Discovery', 'Collector', 'Changes', 'Admin', 'Refresh', 'Lab', 'Publication', 'Attestation', 'Sealer', 'ReleaseReadiness', 'ReleaseGuards')]
     [string]$Preset = 'Weekly',
     [string]$NativeExecutable,
+    [string]$BasePackage,
+    [string]$AttestationVerifierPath,
+    [string]$AttestationReleaseArchive,
     [string]$ReportPath
 )
 
@@ -25,10 +28,26 @@ $summary = [ordered]@{
     failedTests = @()
 }
 $previousNative = $env:TOKENFORGE_TEST_NATIVE
+$previousBasePackage = $env:TOKENFORGE_TEST_BASE_PACKAGE
+$previousVerifier = $env:TOKENFORGE_TEST_ATTESTATION_VERIFIER
+$previousArchive = $env:TOKENFORGE_TEST_ATTESTATION_ARCHIVE
 $reportTarget = $null
 $testPaths = @()
 
 try {
+    if ($Preset -eq 'PublicHealth') {
+        if (-not $BasePackage -or -not (Test-Path (Join-Path $BasePackage local-package-manifest.json) -PathType Leaf)) { throw 'PublicHealth requires the existing reviewed BasePackage for provenance refusal tests.' }
+        $env:TOKENFORGE_TEST_BASE_PACKAGE=(Resolve-Path $BasePackage).Path
+    }
+    if ($Preset -eq 'Attestation') {
+        if ([string]::IsNullOrWhiteSpace($AttestationVerifierPath) -or [string]::IsNullOrWhiteSpace($AttestationReleaseArchive)) { throw 'Attestation requires existing verifier and release archive paths; no install/download fallback.' }
+        $env:TOKENFORGE_TEST_ATTESTATION_VERIFIER = (Resolve-Path -LiteralPath $AttestationVerifierPath).Path
+        $env:TOKENFORGE_TEST_ATTESTATION_ARCHIVE = (Resolve-Path -LiteralPath $AttestationReleaseArchive).Path
+    } else {
+        # Other presets cannot accidentally inherit permission to execute an external verifier.
+        Remove-Item Env:TOKENFORGE_TEST_ATTESTATION_VERIFIER -ErrorAction SilentlyContinue
+        Remove-Item Env:TOKENFORGE_TEST_ATTESTATION_ARCHIVE -ErrorAction SilentlyContinue
+    }
     if (-not [string]::IsNullOrWhiteSpace($ReportPath)) {
         $reportTarget = [IO.Path]::GetFullPath($ReportPath)
         $reportEntry = [IO.FileInfo]::new($reportTarget)
@@ -41,8 +60,8 @@ try {
             $cursor = if ($cursor.Parent) { Get-Item -LiteralPath $cursor.Parent.FullName -Force } else { $null }
         }
     }
-    if ($Preset -in @('Weekly', 'Native', 'Discovery')) {
-        if ([string]::IsNullOrWhiteSpace($NativeExecutable)) { throw 'NativeExecutable is required for the Weekly, Native, and Discovery presets.' }
+    if ($Preset -ne 'ReleaseGuards') {
+        if ([string]::IsNullOrWhiteSpace($NativeExecutable)) { throw 'NativeExecutable is required for this preset.' }
         $exe = (Resolve-Path -LiteralPath $NativeExecutable).Path
         if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'NativeExecutable must be an existing Linux executable file.' }
         $executeBits = [IO.UnixFileMode]::UserExecute -bor [IO.UnixFileMode]::GroupExecute -bor [IO.UnixFileMode]::OtherExecute
@@ -57,9 +76,15 @@ try {
         Remove-Module TokenForge -ErrorAction SilentlyContinue
     }
     $testPaths = switch ($Preset) {
+        'PublicHealth' { @('./tests/MicrosoftAppsDiagnostic.Tests.ps1', './tests/PublicHealthFinishingReview.Tests.ps1', './tests/PublicHealthPackage.Tests.ps1', './tests/PublicHealth.Tests.ps1', './tests/PublicHealthSync.Tests.ps1', './tests/PublicHealthIndependent.Tests.ps1', './tests/DiscoveryClaims.Tests.ps1', './tests/ApplicationMetadata.Tests.ps1', './tests/SqliteCatalog.Tests.ps1', './tests/CatalogDownload.Tests.ps1', './tests/WeeklyCli.Tests.ps1') }
         'Weekly' {
             @('./tests/WeeklyCli.Tests.ps1', './tests/NativeWeekly.Tests.ps1', './tests/CiWeekly.Tests.ps1', './tests/CredentialBootstrap.Tests.ps1')
         }
+        'Lab' { @('./tests/CallbackExperiment.Tests.ps1', './tests/ScopeCandidates.Tests.ps1', './tests/NativeScopePlanning.Tests.ps1') }
+        'Refresh' { @('./tests/RefreshPlanning.Tests.ps1', './tests/RefreshGrantDependencies.Tests.ps1', './tests/NativeRefresh.Tests.ps1', './tests/CiEvidenceQueue.Tests.ps1') }
+        'Admin' { @('./tests/AdminWorkflows.Tests.ps1', './tests/NativeAdminWorkflows.Tests.ps1') }
+        'Changes' { @('./tests/ChangeReports.Tests.ps1', './tests/NativeChangeReports.Tests.ps1') }
+        'Collector' { @('./tests/CollectorSafety.Tests.ps1', './tests/CollectorNativeSafety.Tests.ps1', './tests/OperationBudget.Tests.ps1', './tests/DiscoveryCandidate.Tests.ps1', './tests/DiscoveryCandidateNative.Tests.ps1', './tests/CollectorKill.Tests.ps1') }
         'Discovery' { @('./tests/DiscoveryRun.Tests.ps1', './tests/DiscoveryStatus.Tests.ps1', './tests/DiscoveryReport.Tests.ps1', './tests/DiscoveryBootstrap.Tests.ps1', './tests/InventoryCheckpoint.Tests.ps1', './tests/InventoryShape.Tests.ps1', './tests/ProbeReadBounds.Tests.ps1', './tests/RoleOrigin.Tests.ps1', './tests/ResearchCohort.Tests.ps1', './tests/ResearchChunkPending.Tests.ps1', './tests/PublicPermissions.Tests.ps1', './tests/PermissionIdentifiers.Tests.ps1', './tests/RegistrationResume.Tests.ps1') }
         'Native' {
             $workflow = Get-Content -LiteralPath (Join-Path $repo '.github/workflows/native.yml') -Raw
@@ -74,10 +99,14 @@ try {
             }
             $paths
         }
+        'Publication' { @('./tests/PublicationAdapter.Tests.ps1', './tests/PublicationWriter.Tests.ps1', './tests/PublicationGitProtocol.Tests.ps1', './tests/PublicationRecovery.Tests.ps1', './tests/DiscoveryCandidate.Tests.ps1', './tests/ReleaseReadinessPolicy.Tests.ps1') }
+        'Sealer' { @('./tests/Sealer.Tests.ps1', './tests/SealerPolicy.Tests.ps1', './tests/PublicationAdapter.Tests.ps1', './tests/DiscoveryCandidate.Tests.ps1', './tests/ReleaseReadinessPolicy.Tests.ps1') }
+        'Attestation' { @('./tests/AttestationVerifier.Tests.ps1', './tests/PublicationAdapter.Tests.ps1', './tests/ReleaseReadinessPolicy.Tests.ps1') }
+        'ReleaseReadiness' { @('./tests/ReleaseSource.Tests.ps1', './tests/ReleaseAssets.Tests.ps1', './tests/PublicationRecovery.Tests.ps1', './tests/ReleaseReadinessPolicy.Tests.ps1', './tests/NativeStorage.Tests.ps1') }
         'ReleaseGuards' { @('./tests/ReleaseSource.Tests.ps1', './tests/ReleaseAssets.Tests.ps1') }
     }
 
-    Import-Module Pester -RequiredVersion 5.7.1 -ErrorAction Stop
+    Import-Module Pester -RequiredVersion 6.2.0 -ErrorAction Stop
     $summary.code = 'Ready'
 } catch {
     $summary.code = 'SetupFailed'
@@ -120,8 +149,14 @@ try {
     if ($summary.code -ne 'SetupFailed') { $summary.code = 'TestsFailed' }
     if ($summary.failed -eq 0 -and $summary.containersfailed -eq 0) { $summary.failed = 1 }
 } finally {
+    if ($null -eq $previousBasePackage) { Remove-Item Env:TOKENFORGE_TEST_BASE_PACKAGE -ErrorAction SilentlyContinue }
+    else { $env:TOKENFORGE_TEST_BASE_PACKAGE = $previousBasePackage }
     if ($null -eq $previousNative) { Remove-Item Env:TOKENFORGE_TEST_NATIVE -ErrorAction SilentlyContinue }
     else { $env:TOKENFORGE_TEST_NATIVE = $previousNative }
+    if ($null -eq $previousVerifier) { Remove-Item Env:TOKENFORGE_TEST_ATTESTATION_VERIFIER -ErrorAction SilentlyContinue }
+    else { $env:TOKENFORGE_TEST_ATTESTATION_VERIFIER = $previousVerifier }
+    if ($null -eq $previousArchive) { Remove-Item Env:TOKENFORGE_TEST_ATTESTATION_ARCHIVE -ErrorAction SilentlyContinue }
+    else { $env:TOKENFORGE_TEST_ATTESTATION_ARCHIVE = $previousArchive }
 }
 
 if ($null -ne $reportTarget -and $summary.code -ne 'SetupFailed') {

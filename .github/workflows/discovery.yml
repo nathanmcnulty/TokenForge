@@ -326,7 +326,10 @@ jobs:
           if-no-files-found: error
   push:
     needs: [prepare, publish]
-    if: always() && needs.prepare.result == 'success' && !inputs.validation_only && (needs.publish.result == 'success' || (needs.publish.result == 'skipped' && needs.prepare.outputs.inline_publication == 'True' && needs.prepare.outputs.has_work == 'False'))
+    # Quarantined: the legacy validated-data writer has no independently authorized
+    # immutable-candidate adapter. Offline policy tests do not establish hosted ACLs.
+    # Reconnection requires separate authorization and real hosted permission proof.
+    if: ${{ false }}
     permissions:
       contents: write
     runs-on: ubuntu-latest

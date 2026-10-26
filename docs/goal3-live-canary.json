@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "status": "LiveCanaryStopped",
+  "liveWorkingAcceptance": "NotPassed",
+  "sourceRevision": "6b9921c514fda88c41d9e0f54f9dc8fd8c5a5b13",
+  "offlineBaselineSource": "8b989dc1e22abfa7383f966fb425eecaffea91f1",
+  "package": {
+    "sourceRevision": "6b9921c514fda88c41d9e0f54f9dc8fd8c5a5b13",
+    "packagePath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal3/live-package/linux-x64",
+    "manifestSha256": "afb5bfa1cf438462739496873e4cab3b484850e7560db95a121a1da89c9bd9c5",
+    "archivePath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal3/TokenForge-0.48.0-goal3-live-linux-x64.tar.gz",
+    "archiveSha256": "081e2dfed35088a072ce3b45b132dd639c0c7e0ff986e68bac294aa0ec4f3176",
+    "executableSha256": "05c06dc040ae6f34c4d22d7f78aed454a4b3e3cfb12eb2cf7a7972be0e964718",
+    "credentialDllSha256": "9ee633c1720b08cec9137fb901c4817b34fa7e7c2541757784a9aab101a908a8",
+    "payloadFileCount": 146,
+    "moduleSourceFileCount": 83,
+    "nativeInputCount": 93,
+    "nativeInputsSha256": "14280e93497cf795d5a5ca8480b391f12cc83f71664db559c8ce03bb6b9c97b7"
+  },
+  "sourcePackageVerification": {
+    "sourceRevision": "6b9921c514fda88c41d9e0f54f9dc8fd8c5a5b13",
+    "packageVerified": true,
+    "completeModuleSourceFiles": 83,
+    "packagePayloadFiles": 146,
+    "nativeInputsVerified": 93,
+    "validationFilesVerified": 70,
+    "validationInputsSha256": "3d11c957204227f91bbd54c3e20faec0f95ff8851f5af5e20a6f4538da33314a",
+    "workflowFilesUnchanged": 7,
+    "handoffPreserved": true
+  },
+  "runtime": {
+    "platform": "linux-x64",
+    "sdk": "10.0.401",
+    "powershell": "7.6.7",
+    "pester": "6.2.0"
+  },
+  "authorizedScope": {
+    "account": "Operator-selected secadmin account; key username checked privately",
+    "bootstrapClientId": "14d82eec-204b-4c2f-b7e8-296a70dab67e",
+    "finalClientId": "04b07795-8ddb-461a-bbee-02f9e1bf7b46",
+    "callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+    "resourceId": "00000003-0000-0000-c000-000000000000",
+    "scopes": [
+      "User.Read"
+    ],
+    "maxIssuanceAttempts": 2,
+    "maxSeconds": 180,
+    "selectedOperation": "GraphMeV1 GET /v1.0/me?$select=id",
+    "maxBootstrapAdditionalScopes": 0,
+    "maxFinalAdditionalScopes": 0
+  },
+  "observed": {
+    "startedAt": "2026-10-22T17:07:18.6735226+00:00",
+    "seconds": 11.952,
+    "authenticationAttempts": 1,
+    "authenticationHttpRequests": 5,
+    "bootstrapIssuanceAttempts": 1,
+    "bootstrapHttpRequests": 2,
+    "finalIssuanceAttempts": 0,
+    "canaryTotalHttpRequests": 7,
+    "publicRealmPreflightRequests": 1,
+    "bootstrapScopeStringCount": 111,
+    "bootstrapApiScopeCount": 108,
+    "additionalApiScopeCount": 107,
+    "responseAdditionalScopeCount": 107,
+    "additionalScopeNamesSha256": "9fcf8c0990e0b6bd0f7f17c7ca33dbdc7ab2fbacfdb1f45f58d8629cd565d2bd",
+    "scopePolicyResult": "Zero-ceiling rejection",
+    "derivedStopReason": "BootstrapAdditionalApiScopesExceedZeroCeiling",
+    "savedAcquisitionReason": "BootstrapSilentAttemptOrPolicyFailed",
+    "currentGraphIdentityConfirmed": false,
+    "selectedGraphProofPerformed": false,
+    "graphHttpRequests": 0,
+    "finalCredentialReturned": false,
+    "healthStatus": "NeedsObservation",
+    "tenantPermissionMutationOperationsInvoked": 0,
+    "credentialDisplayOrPersistence": false
+  },
+  "compatibilityFix": {
+    "problem": "Own legacy tenant inventory producer emits exact {Name:TenantDiscovery,Evidence:VerifiedMicrosoftOwner} source without Location. Strict normalization rejected the real full inventory during offline preflight.",
+    "change": "Only that exact two-field Inventory source is deep-cloned with Location=null before existing full validation. Original document hash/date/input preserved; unknown or credential-bearing source rows still fail.",
+    "legacyRowsInSavedInventory": 64,
+    "savedInventoryFullyValidatedUnchanged": true,
+    "testsAdded": 3,
+    "independentReview": "Passed"
+  },
+  "validation": {
+    "savedRealEvidenceNativePowerShellParity": {
+      "snapshotEqual": true,
+      "healthEqual": true,
+      "healthExitCode": 3,
+      "externalRequests": 0,
+      "powerShellOnChildPath": false
+    },
+    "Admin": {
+      "preset": "Admin",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 76,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": []
+    },
+    "Changes": {
+      "preset": "Changes",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 83,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": []
+    },
+    "baselineFullSuite": "Historical8b989dc receipt:1117 passed/0failed/4platformskips. Not rerun or relabeled as this source.",
+    "selectionReason": "Focused Admin/Changes cover the narrow source-adapter change and matching native consumers; unchanged broad checks reused."
+  },
+  "independentReview": {
+    "sourceCompatibilityFix": "Passed",
+    "operatorHarness": "Passed after authentication-count/intent-ownership/hash-pin fixes",
+    "matchingPackageAndArchive": "Passed",
+    "actualCanaryEvidence": "Passed; confirms stopped disposition, not live working completion"
+  },
+  "evidence": {
+    "privateRoot": "/home/nathan/.local/share/TokenForge/goal3-secadmin-canary-4l0j9apq",
+    "privateFilesSha256": {
+      "acquisition.json": "d82aa524b094e6a9b3c2766ec0085dc4fe3977439716201ea7a64e5505c26940",
+      "health.json": "4ccc680ae3effc0d94fbe02f9ba633a3e2d5570e83cf400f947465364b3582d1",
+      "intent.json": "5e634fa3577e9fff8961dd5d5c6560b0e2defd07bb22a840db13915771a743b7",
+      "native-health.json": "5336154f0a3aa0a4ed46cadb49e32d5b64da9dba27016bdc435c6b3c1d58b897",
+      "native-snapshot.json": "4773d973943777e32fa5d3c6499b781d8cf07a6a783a37db94371cfdbb217ec0",
+      "operator-harness.ps1": "7370397f42dd33969ccee49d675ef64b536c8c8c01eb24be9c3ac79c4f816a16",
+      "plan.json": "a146f9e04a350ddf35f868378dd287d972ebfe78e644d98b5d00b3da92f37936",
+      "profile.json": "cb60658dbb49f9681d98445f030c3206738094782faa43ed00c061cd0c166ce5",
+      "public-realm.json": "f1d80bf095f722103625796cfa37a124a53e90ff085e829cb8b27f8c0d4ebcf7",
+      "requirements.json": "fc446ca839c645ecd55a1589c97fe540ada2077488c52a3c7df1ffa03933aee3",
+      "result.json": "866d3e9a174a4824c3d86907932a1bef5ecec752388b1fde018c32862a9d3299",
+      "snapshot.json": "86a1c31bdf5b577e3ab58970f75151155c34616d19880ae88807b839caf7eb68"
+    },
+    "localFilesSha256": {
+      "live-build.log": "23f03a2c8d6d3d3de5973f4db0181e49d41aa02b262c09c7f1fe5bd7fea5a65e",
+      "live-admin-summary.json": "84e0aaf4facc7828fb934cc387f1c0a84d55e253515a663e2b6831f73b53a106",
+      "live-changes-summary.json": "b93219b7f459101b4c50f495ecff90b1cc9865be4e0a5d2d8eeb07dbd26b13a8",
+      "live-package-receipt.json": "2627a47ad79c61b017f478f6a1b017d0e5d5edfe117b9eabc4abde1c39b2b78c",
+      "live-package-verification.json": "1124d41275b7be860a93e9ccfb1052eae4fc87a1a06eb9e1a9b9a2826b71430b",
+      "live-run-summary.log": "c1eaab56695af9e8bc861cdbca9405660b1b8a8f750037c3ebe66b529cebff2b",
+      "Invoke-Goal3LiveCanary.ps1": "7370397f42dd33969ccee49d675ef64b536c8c8c01eb24be9c3ac79c4f816a16"
+    },
+    "originalInventorySha256Unchanged": "659d2f9cd4f599fd368bbbd5901e5a0b2d166ed273cdd112097822a021b38042",
+    "fullAdditionalScopeNamesLocation": "Private acquisition.json; not copied into repository receipt"
+  },
+  "remainingBlocker": "Approved Graph PowerShell bootstrap returned107 additional API scopes despite explicit User.Read. The strict zero-ceiling route cannot proceed in this observation.",
+  "nextApproval": "A separate live run and explicit alternative bootstrap-client/callback choice are required to continue; retain zero ceilings, no permission changes and finite attempts/time. No alternate route or remaining attempt was automatically used.",
+  "boundaries": {
+    "actionsUnchangedManualOnly": true,
+    "permissionInventoryRefreshed": false,
+    "tenantPermissionMutationInvoked": false,
+    "sourceRefresh": false,
+    "fallbackOrAutomaticReauthentication": false,
+    "publishPushPrMerge": false,
+    "goal4Work": false,
+    "productionCompletionClaim": false
+  }
+}

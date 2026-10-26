@@ -188,6 +188,14 @@ public sealed class ApplicationCatalogStore : IDisposable
             next["PresentInLatestRun"]=newEvent?(present==true?true:oldPresent):importedPresent;
             WriteRecord(app,origin,next,tx);
         }else{
+            // An independently collected older snapshot still contains evidence.
+            // Use the same version shape and occurrence identity as explicit
+            // PreviousVersions so replaying or importing linked history cannot
+            // duplicate this observation. New Update events retain their policy.
+            if(!newEvent && Text(incoming,"ContentSha256")!=old["ContentSha256"]!.GetValue<string>()){
+                var previous=new JsonObject { ["FirstSeenAt"]=next["CurrentVersionFirstSeenAt"]!.DeepClone(),["LastSeenAt"]=next["LastSeenAt"]!.DeepClone(),["Attributes"]=next["Attributes"]!.DeepClone(),["Sources"]=next["Sources"]!.DeepClone(),["ContentSha256"]=next["ContentSha256"]!.DeepClone()};
+                using var version=Parse(previous.ToJsonString());WriteVersion(app,origin,version.RootElement,tx,1);
+            }
             var earlier=StringComparer.Ordinal.Compare(first,oldFirst)<0;if(earlier)old["FirstSeenAt"]=first;
             if(earlier || !newEvent && oldPresent!=importedPresent)WriteRecord(app,origin,old,tx);
         }

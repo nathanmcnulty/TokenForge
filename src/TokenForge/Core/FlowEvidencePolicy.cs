@@ -67,14 +67,19 @@ public static class FlowEvidencePolicy
     }
     public static void ValidateAttempt(JsonElement row, string hash, JsonElement plan)
     {
-        Keys(row, "AttemptId PlanFingerprint AttemptKey ClientId ResourceId TenantFingerprint PrincipalFingerprint StartedAt ObservedAt Protocol Spa RedirectFingerprint Outcome ResponseScopes ScpScopes ClaimsReadable HasScpClaim NamespaceVerification RequestVerification SignatureValidated ErrorCodes ElapsedSeconds");
+        Keys(row, "AttemptId PlanFingerprint AttemptKey ClientId ResourceId TenantFingerprint PrincipalFingerprint StartedAt ObservedAt Protocol Spa RedirectFingerprint Outcome ResponseScopes ScpScopes ClaimsReadable HasScpClaim NamespaceVerification RequestVerification SignatureValidated ErrorCodes ElapsedSeconds"+(row.TryGetProperty("ComparisonContext",out var comparison)?" ComparisonContext":""));
+        if(comparison.ValueKind!=JsonValueKind.Undefined){
+            ChangeReports.ValidateBoundContext(comparison.GetRawText(),row.GetRawText());
+            using var c=JsonDocument.Parse(comparison.GetRawText());
+            if(c.RootElement.GetProperty("AuthorityFingerprint").GetString()!=Hash(Text(plan,"Tenant")))throw Invalid();
+        }
         GuidValue(Text(row, "AttemptId"));
         foreach (var field in new[] { "AttemptKey", "PlanFingerprint", "TenantFingerprint", "PrincipalFingerprint", "RedirectFingerprint" }) HashValue(Text(row, field));
         if (Text(row, "PlanFingerprint") != hash) throw Invalid();
         foreach (var field in new[] { "TenantFingerprint", "PrincipalFingerprint", "ClientId", "ResourceId" }) if (Text(row, field) != Text(plan, field)) throw Invalid();
         if (!plan.GetProperty("Cells").EnumerateArray().Any(x => Cell(x) == Cell(row)) || Text(row, "AttemptKey") != Hash(hash + "|" + Cell(row))) throw Invalid();
         var start = Date(row, "StartedAt"); var observed = Date(row, "ObservedAt"); if (StringComparer.Ordinal.Compare(start, observed) > 0) throw Invalid();
-        Choice(row, "Outcome", "Started Failed Succeeded OpaqueToken NoDelegatedScp ContextMismatch");
+        Choice(row, "Outcome", "Started Failed Succeeded OpaqueToken NoDelegatedScp ContextMismatch SessionPaused RequestBlocked TransientFailure");
         foreach (var field in new[] { "NamespaceVerification", "RequestVerification" }) Choice(row, field, "Matched Mismatch Unverifiable");
         foreach (var field in new[] { "Spa", "ClaimsReadable", "HasScpClaim" }) row.GetProperty(field).GetBoolean();
         if (row.GetProperty("SignatureValidated").GetBoolean()) throw Invalid();

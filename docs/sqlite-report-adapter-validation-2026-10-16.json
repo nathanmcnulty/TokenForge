@@ -1,0 +1,57 @@
+{
+  "SchemaVersion": 1,
+  "ValidatedOn": "2026-10-16",
+  "Platform": "Linux",
+  "TrustedNativePackageVersion": "0.48.0",
+  "NativeBuildPerformed": false,
+  "HostedComputeUsed": false,
+  "AuthenticationPerformed": false,
+  "FocusedTests": {
+    "Passed": 39,
+    "Failed": 0,
+    "Skipped": 0,
+    "FailedContainers": 0
+  },
+  "NativeWorkflowDiscovery": {
+    "Total": 343,
+    "Eligible": 340,
+    "PlatformSkips": 3,
+    "DiscoveryErrors": 0,
+    "FullSuiteExecuted": false,
+    "SyntheticGateCasesPassed": 6
+  },
+  "FailureParity": {
+    "BaselineRejected": 7,
+    "CandidateRejected": 7,
+    "DetailsSuppressed": true,
+    "Cases": [
+      "HistoricalCatalog",
+      "CatalogIndexMismatch",
+      "UnselectedFlowHistory",
+      "FlowIndexMismatch",
+      "BroadFileMode",
+      "LinkedFile",
+      "LinkedParent"
+    ]
+  },
+  "CompletedAssessmentComparison": {
+    "ApplicationCount": 5515,
+    "SelectedPlans": 2030,
+    "SuccessfulApplications": 238,
+    "PlannedSlots": 2470,
+    "ExactRecursiveJsonFieldTypeEquality": true,
+    "BaselineElapsedMilliseconds": 188438,
+    "CandidateElapsedMilliseconds": 48760,
+    "BaselinePeakRssKiB": 819748,
+    "CandidatePeakRssKiB": 446212,
+    "MemoryMeasurement": "Maximum resident memory per variant, including children; not summed concurrent memory.",
+    "ReportContentSha256": {
+      "baseline": "9b3cee5b3807f06ac22b31db944b2b5d072992980b45917c82a9e4d0e7886683",
+      "candidate": "9b3cee5b3807f06ac22b31db944b2b5d072992980b45917c82a9e4d0e7886683"
+    },
+    "ComparisonCount": 1
+  },
+  "ReadOnlyInputs": true,
+  "RequiredAuthenticationFlowInferred": false,
+  "CredentialOutput": false
+}

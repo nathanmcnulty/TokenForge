@@ -32,6 +32,26 @@ The text view summarizes counts. `--json` includes application rows unless
 `--summary-only` is supplied. `--app` selects one canonical application ID;
 `--max-age-hours` changes the freshness window from its default of 24 hours.
 
+## PowerShell SQLite reports
+
+`Get-TokenForgeResearchCoverage` delegates directly to the existing native report
+when metadata is SQLite, flow evidence is absent or SQLite, and at most one
+application is selected. It passes explicit paths and account selectors; it does
+not discover a profile or sibling flow file. JSON, mixed-format, and multiple-app
+requests retain the existing adapter.
+
+This avoids expanding and serializing the complete ledgers through PowerShell.
+Both paths still validate complete history before filtering. Native reporting is
+bounded to five minutes, suppresses child-process diagnostics on failure, and uses
+the same private-path checks without creating missing stores or directories.
+
+A local comparison on the completed assessment (5,515 catalog applications and
+2,030 selected plans) produced identical detailed report fields and values.
+Elapsed time changed from 188.4 to 48.8 seconds; maximum resident memory per run
+changed from 819,748 to 446,212 KiB. These are one local comparison using the same
+saved inputs and existing Linux package, not a throughput guarantee or a sum of
+concurrent process memory. See the [validation summary](sqlite-report-adapter-validation-2026-10-16.json).
+
 ## Read the evidence in order
 
 1. **Published role and callback hints** describe source metadata. A broker-shaped

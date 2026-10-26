@@ -1,0 +1,8 @@
+[
+  {
+    "AppId": "11111111-1111-1111-1111-111111111111",
+    "AppDisplayName": "Conflicting fixture name",
+    "AppOwnerOrganizationId": "f8cdef31-a31e-4b4a-93e4-5f571e91255a",
+    "Source": "Graph"
+  }
+]

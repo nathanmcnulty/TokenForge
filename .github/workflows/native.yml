@@ -37,13 +37,13 @@ jobs:
           if (-not (Get-PSResourceRepository -Name PSGallery -ErrorAction SilentlyContinue)) {
             Register-PSResourceRepository -PSGallery -ErrorAction Stop
           }
-          Install-PSResource Pester -Version 5.7.1 -Repository PSGallery -Scope CurrentUser -TrustRepository -Reinstall -ErrorAction Stop
-          Import-Module Pester -RequiredVersion 5.7.1 -Force -ErrorAction Stop
+          Install-PSResource Pester -Version 6.2.0 -Repository PSGallery -Scope CurrentUser -TrustRepository -Reinstall -ErrorAction Stop
+          Import-Module Pester -RequiredVersion 6.2.0 -Force -ErrorAction Stop
           $env:TOKENFORGE_TEST_NATIVE = (Resolve-Path './dist/native/linux-x64/tokenforge').Path
           Import-Module (Join-Path (Split-Path $env:TOKENFORGE_TEST_NATIVE -Parent) src/TokenForge/TokenForge.psd1) -Force
           Remove-Module TokenForge # Keep compiled credential types loaded while tests import their source module.
           $result = Invoke-Pester ./tests/PasskeyAdapter.Tests.ps1,./tests/NativePasskeyRecovery.Tests.ps1,./tests/ResearchCoverage.Tests.ps1,./tests/SqliteFlow.Tests.ps1,./tests/SqliteCatalog.Tests.ps1,./tests/SqliteScope.Tests.ps1,./tests/ResearchCohort.Tests.ps1,./tests/WeeklyCli.Tests.ps1,./tests/NativeWeekly.Tests.ps1,./tests/NativeOAuth.Tests.ps1,./tests/NativeMaintenanceBackup.Tests.ps1,./tests/NativeMaintenanceSnapshot.Tests.ps1,./tests/NativeProfiles.Tests.ps1,./tests/NativeProfileTokens.Tests.ps1,./tests/CredentialBootstrap.Tests.ps1,./tests/Profiles.Tests.ps1,./tests/NativeScopePlanning.Tests.ps1,./tests/ScopeCandidates.Tests.ps1,./tests/Assessment.Tests.ps1,./tests/ScopedToken.Tests.ps1,./tests/Browser.Tests.ps1 -PassThru -Output Detailed
-          $expectedPasses = 332 # 335 discovered cases minus three Linux platform skips.
+          $expectedPasses = 340 # 343 discovered cases minus three Linux platform skips.
           if ($result.FailedCount -or $result.FailedContainersCount -or $result.PassedCount -ne $expectedPasses) { throw 'Native metadata and weekly CLI tests failed.' }
       - name: Smoke-test packaged CLI
         shell: pwsh

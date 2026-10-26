@@ -20,8 +20,8 @@ public static class ApplicationCatalogPolicy
         ["Inventory"]="AppId Name PublishedName ServicePrincipalType PreferredSingleSignOnMode LoginUrl LogoutUrl Homepage Registration Ownership OwnerTenantId AccountEnabled AssignmentRequired SignInAudience PublicClient Foci RedirectUris TenantRedirectUris PreferredRedirectUri PublishedGrants DelegatedScopeDefinitions AppRoleDefinitions IdentifierUris IsResourceCandidate",
         ["SignIns"]="AppId SignInCount KnownInInventory RegisteredMicrosoft Evidence ProtocolCounts ClientTypeCounts EventTypeCounts ResourceCounts OutcomeCounts AuthenticationMethodCounts CredentialTypeCounts IncomingTokenTypeCounts",
         ["RegistrationAttempts"]="AppId Outcome HttpStatus",
-        ["ScopeObservations"]="ClientId ResourceId Outcome Protocol Spa RequestedScopes ResponseScopes ScpScopes ClaimsReadable HasScpClaim SignatureValidated NamespaceVerification RequestVerification ErrorCodes AttemptCount ElapsedSeconds RedirectFingerprint CatalogHash PlanFingerprint",
-        ["FlowAttempts"]="AttemptKey PlanFingerprint Protocol Spa RedirectFingerprint Outcome ResponseScopes ScpScopes ClaimsReadable HasScpClaim NamespaceVerification RequestVerification SignatureValidated ErrorCodes ElapsedSeconds"
+        ["ScopeObservations"]="ClientId ResourceId Outcome Protocol Spa RequestedScopes ResponseScopes ScpScopes ClaimsReadable HasScpClaim SignatureValidated NamespaceVerification RequestVerification ErrorCodes AttemptCount ElapsedSeconds RedirectFingerprint CatalogHash PlanFingerprint ComparisonContext",
+        ["FlowAttempts"]="AttemptKey PlanFingerprint Protocol Spa RedirectFingerprint Outcome ResponseScopes ScpScopes ClaimsReadable HasScpClaim NamespaceVerification RequestVerification SignatureValidated ErrorCodes ElapsedSeconds ComparisonContext"
     };
     public static bool IsKind(string kind)=>Kinds.Contains(kind);
     public static void ValidateDocument(string json)
@@ -72,6 +72,10 @@ public static class ApplicationCatalogPolicy
     public static void ValidateVersion(JsonElement version,string kind,string app,JsonElement record){Keys(version,"FirstSeenAt LastSeenAt Attributes Sources ContentSha256");ValidatePayload(version,kind,app);ValidateContext(version.GetProperty("Attributes"),kind,record);if(StringComparer.Ordinal.Compare(Date(version,"FirstSeenAt"),Date(version,"LastSeenAt"))>0)throw Invalid();}
     public static void ValidateContext(JsonElement attributes,string kind,JsonElement record)
     {
+        if(attributes.TryGetProperty("ComparisonContext",out var comparison)){
+            ChangeReports.ValidateComparisonContext(comparison.GetRawText());
+            foreach(var field in new[]{"TenantFingerprint","PrincipalFingerprint","ResourceId"})if(comparison.GetProperty(field).GetString()!=NullableText(record,field))throw Invalid();
+        }
         if(kind=="ScopeObservations" && attributes.TryGetProperty("ResourceId",out var resource) && resource.ValueKind!=JsonValueKind.Null && Guid.Parse(resource.GetString()!).ToString()!=NullableText(record,"ResourceId"))throw Invalid();
         if(kind=="FlowAttempts")foreach(var field in new[]{"AttemptKey","PlanFingerprint","Protocol","Spa","RedirectFingerprint"}){
             var current=record.GetProperty("Attributes");if(attributes.TryGetProperty(field,out var value) && (!current.TryGetProperty(field,out var expected) || Canonical(value)!=Canonical(expected)))throw Invalid();
@@ -93,6 +97,10 @@ public static class ApplicationCatalogPolicy
         foreach(var field in attributes.EnumerateObject()) {
             if(field.Name is "SourceClaims" or "MetadataConflicts")continue;
             var value=field.Value;if(value.ValueKind==JsonValueKind.Null)continue;
+            if(field.Name=="ComparisonContext"){
+                ChangeReports.ValidateBoundContext(value.GetRawText(),attributes.GetRawText());
+                if(value.GetProperty("ClientId").GetString()!=app)throw Invalid();continue;
+            }
             if(field.Name is "Grants" or "PublishedGrants" or "DelegatedScopeDefinitions" or "AppRoleDefinitions" || field.Name.EndsWith("Counts",StringComparison.Ordinal)){
                 if(value.ValueKind!=JsonValueKind.Array)throw Invalid();foreach(var item in value.EnumerateArray()){
                     var columns=field.Name switch {"Grants" or "PublishedGrants"=>"ResourceId Scopes","DelegatedScopeDefinitions"=>"Id Value Enabled ConsentType AdminConsentDisplayName AdminConsentDescription UserConsentDisplayName UserConsentDescription","AppRoleDefinitions"=>"Id Value DisplayName Description AllowedMemberTypes Enabled Origin",_=>"Value Count"};

@@ -1,0 +1,17 @@
+{
+  "Format": "TokenForgeToolRequirements",
+  "SchemaVersion": 1,
+  "Tools": [
+    {
+      "Id": "read-profile",
+      "ClientIds": ["11111111-1111-1111-1111-111111111111"],
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "Scopes": ["User.Read"],
+      "Protocol": "OAuth2V2Pkce",
+      "CallbackClass": "Native",
+      "Operations": ["GraphMeV1"],
+      "Prerequisites": [],
+      "SecuritySensitive": false
+    }
+  ]
+}

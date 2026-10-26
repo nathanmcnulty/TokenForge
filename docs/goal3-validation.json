@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "status": "OfflineReady",
+  "sourceRevision": "8b989dc1e22abfa7383f966fb425eecaffea91f1",
+  "roadmapHandoff": "19470aeba7a949e4204e4ecf5586a6ffb3171c69",
+  "goal2ReceiptRevision": "90528b0d3d5e446f1c6faed03085fa2b715574c5",
+  "pesterMigrationRevision": "63a782b4e54d84c0a947e78a3d6456d919748f9d",
+  "pinnedDraft118": "2153779f7a1d5748dc14046f9d60f3ce2fa18837",
+  "platform": "linux-x64",
+  "sdk": "10.0.401",
+  "powershell": "7.6.7",
+  "pester": "6.2.0",
+  "fullSuite": {
+    "TotalCount": 1121,
+    "PassedCount": 1117,
+    "FailedCount": 0,
+    "SkippedCount": 4,
+    "FailedContainersCount": 0,
+    "Duration": {
+      "Ticks": 4899730846,
+      "Days": 0,
+      "Hours": 0,
+      "Milliseconds": 973,
+      "Microseconds": 84,
+      "Nanoseconds": 600,
+      "Minutes": 8,
+      "Seconds": 9,
+      "TotalDays": 0.005670984775462963,
+      "TotalHours": 0.1361036346111111,
+      "TotalMilliseconds": 489973.0846,
+      "TotalMicroseconds": 489973084.6,
+      "TotalNanoseconds": 489973084600.0,
+      "TotalMinutes": 8.166218076666667,
+      "TotalSeconds": 489.9730846
+    }
+  },
+  "testFileCount": 68,
+  "focusedAdmin": {
+    "preset": "Admin",
+    "platform": "linux",
+    "version": "0.48.0",
+    "passed": 76,
+    "failed": 0,
+    "skipped": 0,
+    "containersfailed": 0,
+    "code": "Success",
+    "failedTests": []
+  },
+  "nativeCoreChecks": 1086,
+  "nativeWorkflowSelection": {
+    "passed": 340,
+    "failed": 0,
+    "skipped": 3,
+    "testFiles": 21,
+    "derivedFromFullSuite": true
+  },
+  "package": {
+    "sourceRevision": "8b989dc1e22abfa7383f966fb425eecaffea91f1",
+    "packagePath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal3/package/linux-x64",
+    "manifestSha256": "717327dc14da5bfc804922b449f959f1f59092bca1d8a23659653ead80ed5a72",
+    "archivePath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal3/TokenForge-0.48.0-goal3-linux-x64.tar.gz",
+    "archiveSha256": "938670e14bb5cc9421ec2e36bf272219f3c05a28388a9665a462ca871add6913",
+    "executableSha256": "dc646281b6fbcde3d2b57e85cdb6540fa54d6e16136218b1518083425ae0e41b",
+    "credentialDllSha256": "299e42298d26b9be4f97733e79a7ace391eeb9f01f458777448dc356903f9be4",
+    "payloadFileCount": 146,
+    "moduleSourceFileCount": 83,
+    "nativeInputCount": 93,
+    "nativeInputsSha256": "c8c732d5af1b59504fcc3a77056bcb72f1c48583f268fb3e10bb604099aa6c91"
+  },
+  "sourcePackageVerification": {
+    "sourceRevision": "8b989dc1e22abfa7383f966fb425eecaffea91f1",
+    "packageVerified": true,
+    "completeModuleSourceFiles": 83,
+    "packagePayloadFiles": 146,
+    "nativeInputsVerified": 93,
+    "validationFilesVerified": 70,
+    "validationInputsSha256": "33db3e2e175fd7bdd2e306992f7b9981eef104b573645d4e5c2960d5c190db0b",
+    "workflowFilesUnchanged": 7,
+    "handoffPreserved": true
+  },
+  "independentReview": {
+    "static": "Passed after fixes",
+    "packageSourceArchive": "Passed",
+    "findingsAddressed": [
+      "Complete receipt field/state/provenance validation",
+      "Exact API method/version/approval/callback matching",
+      "UTC-instant cross-source contradictions remain unknown",
+      "Bootstrap readiness and historical AsOf",
+      "Context validation before scope projection",
+      "Final freshness and prerequisite expiry",
+      "Collection coverage loss mapped to tools",
+      "Prerequisite validation before route early return"
+    ]
+  },
+  "acceptanceAudit": [
+    {
+      "requirement": "Explain exact request",
+      "evidence": "Approved/declared clients, published callback fingerprints/classes, source hashes/conflicts/age and same-resource/all-scope annotations, visible subject-bound grants, anonymous/private breadth separation, exact context and role/license prerequisites; uncertainty retained.",
+      "status": "PassedOffline"
+    },
+    {
+      "requirement": "Acquire without broadening authorization",
+      "evidence": "Separate opt-in format, explicit approved bootstrap/final clients, explicit scopes, silent PKCE only, no alternate request after denial, independent zero-default ceilings, current-account check, cooperative total deadline and freshness at completion; optional fixed separately selected Graph GET.",
+      "status": "PassedOffline"
+    },
+    {
+      "requirement": "Check declared tools",
+      "evidence": "Strict versioned named requirements; four dated statuses and shared exit codes; no arbitrary-script inference or credential display.",
+      "status": "PassedOffline"
+    },
+    {
+      "requirement": "Prepare report",
+      "evidence": "Recomputed Goal 2 typed changes mapped to tools, including collection-level visibility loss; caller-supplied source/package and input hashes; max 128 entries / 1 MiB with omission counts; private disclosure and no sending.",
+      "status": "PassedOffline"
+    },
+    {
+      "requirement": "End-to-end examples",
+      "evidence": "Synthetic acquisition to typed snapshot to health success/API 403; no route; bootstrap/final/response excess; unknown/expired/unsatisfied prerequisites and contradictory saved scope evidence; deadline/expiry; typed scope/grant changes and bounded packet.",
+      "status": "PassedOffline"
+    },
+    {
+      "requirement": "Consumer agreement",
+      "evidence": "Actual Linux native and PowerShell explanation/health JSON equality and exit 0/2/3/4; invalid 1; evidence/packet equality; no-cookie and blocked preflight; unsafe file/argument/credential rejection with no PowerShell on native PATH.",
+      "status": "PassedOffline"
+    },
+    {
+      "requirement": "Reconcile dependencies",
+      "evidence": "Stacked on reviewed Goal 2 receipt 90528b0; #118 pinned 2153779f7a1d5748dc14046f9d60f3ce2fa18837, unmerged; useful public/anonymous/source contracts reused without private authorization claims.",
+      "status": "PassedOffline"
+    },
+    {
+      "requirement": "Local reviewed checkpoint and gates",
+      "evidence": "Independent static review and separate package/source/archive integrity review passed; focused Admin, native core and full Linux suite passed; Actions unchanged, no auth/tenant changes/publication/PR/merge.",
+      "status": "PassedOffline"
+    }
+  ],
+  "remainingOfflineBlockers": [],
+  "limitations": [
+    "No live service or production completion claim.",
+    "Only silent OAuth2V2Pkce Native/Spa routes are implemented; unsupported routes block.",
+    "Only optional GraphMeV1 GET operation is implemented.",
+    "Facades emit metadata and dispose tokens; trusted in-process delivery requires owned disposable Core result.",
+    "Saved hashes/receipt metadata are not cryptographic service attestations; JWT signature validation is not claimed.",
+    "Producer source/package pins in report packets are caller-supplied and require independent verification.",
+    "No tenant changes, auth, hosted compute, send/publication/PR/merge or Goal4 work."
+  ],
+  "futureLiveApproval": "Separately approve exact account, one approved bootstrap client and one tool client/callback, Graph User.Read, supplied existing-session handling and optional GraphMeV1 GET. At most one bootstrap and one final issuance; cooperative 180-second total deadline, existing bounded transport/redirect caps; no retry/client/callback/scope fallback, permission mutation or publication. Authentication requires separate authorization.",
+  "localEvidenceHashes": {
+    "build.log": "03f0eeabe8549f709e822577ceaa6e1032bc318205de7c2d3140648166623e35",
+    "full-suite.log": "129713858f5c245d6afb9d55721cfbcfc8b43379597924dba9902b92a03eea28",
+    "admin-summary.json": "84e0aaf4facc7828fb934cc387f1c0a84d55e253515a663e2b6831f73b53a106",
+    "core-gate.log": "52b9f7e1b237a995559f62f4c2778f886ec6e8908ae7857460bb0cfc0deb0259",
+    "full-summary.json": "bb51a97693d04b26fd962ace276b3ff35faff9a6a7c5531438ae6dec8c4b6085",
+    "full-containers.json": "688107c4e79ea53694ebcd16ae3ea4fa1283a2f5fc380c99362117e891e9b57c",
+    "full-containers.raw.json": "0309a2d0cd9142211734408430dfb9d992d4cd86b480bc80cdac0f5256a58611",
+    "package-receipt.json": "43ce189afd6fb2dc5d0a7a720c128ecb45cc52d70fe577ae69dabac4c6eadf90",
+    "package-verification.json": "129ff06c066d390ce848e4ef4c30bbfd943c06a14269a0e1efc17dcfd3677dae"
+  }
+}

@@ -51,7 +51,7 @@ function Add-TokenForgeScopeObservation {
     if ($Observation.PSObject.Properties['NamespaceVerification'] -and $Observation.NamespaceVerification -notin @('Matched','Mismatch','Unverifiable')) { throw 'Invalid namespace verification evidence.' }
     if ($Observation.PSObject.Properties['RequestVerification'] -and $Observation.RequestVerification -notin @('Matched','Mismatch','Unverifiable')) { throw 'Invalid request verification evidence.' }
     $clean = [ordered]@{}
-    foreach ($field in @('ClientId','ResourceId','Outcome','TenantFingerprint','PrincipalFingerprint','ObservedAt','Protocol','Spa','RedirectFingerprint','RequestedScopes','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','NamespaceVerification','RequestVerification','SignatureValidated','ErrorCodes','AttemptCount','ElapsedSeconds','CatalogHash','PlanFingerprint')) {
+    foreach ($field in @('ClientId','ResourceId','Outcome','TenantFingerprint','PrincipalFingerprint','ObservedAt','Protocol','Spa','RedirectFingerprint','RequestedScopes','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','NamespaceVerification','RequestVerification','SignatureValidated','ErrorCodes','AttemptCount','ElapsedSeconds','CatalogHash','PlanFingerprint','ComparisonContext')) {
         if ($Observation.PSObject.Properties[$field]) { $clean[$field] = $Observation.$field }
     }
     foreach ($field in @('RequestedScopes','ResponseScopes','ScpScopes')) {
@@ -60,6 +60,7 @@ function Add-TokenForgeScopeObservation {
         }
     }
     if ($clean.Contains('ErrorCodes')) { $clean.ErrorCodes = @($clean.ErrorCodes | Where-Object { [string]$_ -match '^[0-9]{4,9}$' } | Sort-Object -Unique -CaseSensitive) }
+    if($clean.Contains('ComparisonContext')){$null=[TokenForge.Core.ChangeReports]::ValidateBoundContext((ConvertTo-Json -InputObject $clean.ComparisonContext -Depth 32 -Compress),(ConvertTo-Json -InputObject $clean -Depth 32 -Compress))}
     $clean.SignatureValidated = $false
     if ($Path -and $Path.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)) {
         $checkpoint=New-TokenForgeScopeDatabase;$checkpoint.Observations=@([pscustomobject]$clean)
@@ -73,30 +74,13 @@ function Add-TokenForgeScopeObservation {
 
 function Compare-TokenForgeScopeDatabase {
     <# .SYNOPSIS
-    Compare the latest successful observations in the same tenant/principal namespace.
+    Report typed changes; legacy observations without full request context stay incomparable.
     #>
     [CmdletBinding()]
-    param([Parameter(Mandatory)]$Before, [Parameter(Mandatory)]$After)
-    $maps = @(@{},@{})
-    $index = 0
-    foreach ($database in @($Before,$After)) {
-        foreach ($observation in @($database.Observations | Sort-Object { [TokenForge.Core.V0240.TimestampPolicy]::Parse($_.ObservedAt).UtcDateTime })) {
-            $key = "$($observation.TenantFingerprint)/$($observation.PrincipalFingerprint)/$($observation.ClientId)/$($observation.ResourceId)"
-            $maps[$index][$key] = $observation
-        }
-        $index++
-    }
-    foreach ($key in @(@($maps[0].Keys) + @($maps[1].Keys) | Sort-Object -Unique -CaseSensitive)) {
-        $old = $maps[0][$key]; $new = $maps[1][$key]
-        $oldScopes = @(if ($old -and $old.Outcome -eq 'Succeeded') { $old.ScpScopes })
-        $newScopes = @(if ($new -and $new.Outcome -eq 'Succeeded') { $new.ScpScopes })
-        $added = @($newScopes | Where-Object { $oldScopes -cnotcontains $_ })
-        # A failed re-probe is availability evidence, not proof that scopes were removed.
-        $removed = @(if ($new -and $new.Outcome -eq 'Succeeded' -and $old -and $old.Outcome -eq 'Succeeded') { $oldScopes | Where-Object { $newScopes -cnotcontains $_ } })
-        if ($added.Count -or $removed.Count -or ($old -and $new -and $old.Outcome -ne $new.Outcome)) {
-            [pscustomobject]@{ Key = $key; AddedScopes = $added; RemovedScopes = $removed; BeforeOutcome = if ($old) { $old.Outcome } else { 'NotObserved' }; AfterOutcome = if ($new) { $new.Outcome } else { 'NotObserved' } }
-        }
-    }
+    param([Parameter(Mandatory)]$Before,[Parameter(Mandatory)]$After,
+        [ValidateRange(1,87600)][int]$MaxAgeHours=24,[DateTimeOffset]$AsOf=[DateTimeOffset]::UtcNow)
+    $report=Compare-TokenForgeEvidence -Before $Before -After $After -Kind ScopeDatabase -MaxAgeHours $MaxAgeHours -AsOf $AsOf
+    foreach($entry in $report.Entries){[pscustomobject]$entry}
 }
 
 function Export-TokenForgeScopeDatabase {

@@ -38,18 +38,20 @@ function Assert-TokenForgeFlowDocument {
     }
     $ids=@{}
     foreach($row in $Document.Attempts){
-        & $checkKeys $row @('AttemptId','PlanFingerprint','AttemptKey','ClientId','ResourceId','TenantFingerprint','PrincipalFingerprint','StartedAt','ObservedAt','Protocol','Spa','RedirectFingerprint','Outcome','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','NamespaceVerification','RequestVerification','SignatureValidated','ErrorCodes','ElapsedSeconds')
+        $rowKeys=@('AttemptId','PlanFingerprint','AttemptKey','ClientId','ResourceId','TenantFingerprint','PrincipalFingerprint','StartedAt','ObservedAt','Protocol','Spa','RedirectFingerprint','Outcome','ResponseScopes','ScpScopes','ClaimsReadable','HasScpClaim','NamespaceVerification','RequestVerification','SignatureValidated','ErrorCodes','ElapsedSeconds');if($row.Contains('ComparisonContext')){$rowKeys+='ComparisonContext';$null=[TokenForge.Core.ChangeReports]::ValidateBoundContext((ConvertTo-Json -InputObject $row.ComparisonContext -Depth 32 -Compress),(ConvertTo-Json -InputObject $row -Depth 32 -Compress))}
+        & $checkKeys $row $rowKeys
         & $guid $row.AttemptId
         if($ids.ContainsKey($row.AttemptId)){throw 'Duplicate flow attempt ID.'};$ids[$row.AttemptId]=$true
         foreach($field in @('PlanFingerprint','AttemptKey','TenantFingerprint','PrincipalFingerprint','RedirectFingerprint')){& $hash $row[$field]}
         $plan=$Document.Plans[$row.PlanFingerprint]
         if(-not $plan){throw 'Unknown flow plan.'}
+        if($row.Contains('ComparisonContext') -and $row.ComparisonContext.AuthorityFingerprint -cne (Get-TokenForgeFingerprint $plan.Tenant)){throw 'Flow comparison authority mismatch.'}
         foreach($field in @('ClientId','ResourceId','TenantFingerprint','PrincipalFingerprint')){if($row[$field] -cne $plan[$field]){throw 'Flow context mismatch.'}}
         $cell=@($plan.Cells|Where-Object {$_.Protocol -ceq $row.Protocol -and $_.Spa -eq $row.Spa -and $_.RedirectFingerprint -ceq $row.RedirectFingerprint})
         if($cell.Count -ne 1 -or $row.AttemptKey -cne (Get-TokenForgeFingerprint ($row.PlanFingerprint+'|'+$row.Protocol+'|'+[int]$row.Spa+'|'+$row.RedirectFingerprint))){throw 'Unknown flow slot.'}
         foreach($field in @('StartedAt','ObservedAt')){& $date $row[$field]}
         if(([DateTimeOffset]$row.StartedAt) -gt ([DateTimeOffset]$row.ObservedAt)){throw 'Invalid flow timing.'}
-        if($row.Outcome -cnotin @('Started','Failed','Succeeded','OpaqueToken','NoDelegatedScp','ContextMismatch') -or $row.NamespaceVerification -cnotin @('Matched','Mismatch','Unverifiable') -or $row.RequestVerification -cnotin @('Matched','Mismatch','Unverifiable')){throw 'Invalid flow outcome.'}
+        if($row.Outcome -cnotin @('Started','Failed','Succeeded','OpaqueToken','NoDelegatedScp','ContextMismatch','SessionPaused','RequestBlocked','TransientFailure') -or $row.NamespaceVerification -cnotin @('Matched','Mismatch','Unverifiable') -or $row.RequestVerification -cnotin @('Matched','Mismatch','Unverifiable')){throw 'Invalid flow outcome.'}
         foreach($field in @('Spa','ClaimsReadable','HasScpClaim','SignatureValidated')){if($row[$field] -isnot [bool]){throw 'Invalid flow boolean.'}}
         if($row.SignatureValidated){throw 'Flow evidence does not establish signature validation.'}
         if(($row.ElapsedSeconds -isnot [int] -and $row.ElapsedSeconds -isnot [long] -and $row.ElapsedSeconds -isnot [double] -and $row.ElapsedSeconds -isnot [decimal]) -or -not [double]::IsFinite([double]$row.ElapsedSeconds) -or $row.ElapsedSeconds -lt 0 -or $row.ElapsedSeconds -gt 86400){throw 'Invalid flow duration.'}
@@ -80,7 +82,20 @@ function Save-TokenForgeFlowEvidence {
         if(-not $lock){$lock=Open-TokenForgeVaultFile $lockPath}
         $db=Get-TokenForgeFlowEvidence $full
         if($Plan){$db.Plans[$PlanFingerprint]=$Plan}
-        if($Attempt){$db.Attempts=@($db.Attempts|Where-Object AttemptId -ne $Attempt.AttemptId)+@($Attempt)}
+        if($Attempt){
+            $prior=@($db.Attempts|Where-Object AttemptId -CEQ $Attempt.AttemptId)
+            if($prior.Count){
+                if($prior[0].Contains('ComparisonContext') -ne $Attempt.Contains('ComparisonContext')){throw 'Immutable flow comparison context.'}
+                if($prior[0].Contains('ComparisonContext') -and [TokenForge.Core.ChangeReports]::FingerprintJson((ConvertTo-Json -InputObject $prior[0].ComparisonContext -Depth 32 -Compress)) -cne [TokenForge.Core.ChangeReports]::FingerprintJson((ConvertTo-Json -InputObject $Attempt.ComparisonContext -Depth 32 -Compress))){throw 'Immutable flow comparison context.'}
+                foreach($field in @('AttemptId','PlanFingerprint','AttemptKey','Protocol','RedirectFingerprint','TenantFingerprint','PrincipalFingerprint','ClientId','ResourceId','Spa')){if($prior[0][$field] -cne $Attempt[$field]){throw 'Immutable flow attempt identity.'}}
+                if([DateTimeOffset]$prior[0].StartedAt -ne [DateTimeOffset]$Attempt.StartedAt -or [DateTimeOffset]$prior[0].ObservedAt -gt [DateTimeOffset]$Attempt.ObservedAt){throw 'Immutable flow attempt timing.'}
+                $oldJson=[Text.Json.JsonDocument]::Parse((ConvertTo-Json $prior[0] -Depth 12 -Compress))
+                $newJson=[Text.Json.JsonDocument]::Parse((ConvertTo-Json $Attempt -Depth 12 -Compress))
+                try{$same=[TokenForge.Core.FlowEvidencePolicy]::Canonical($oldJson.RootElement) -ceq [TokenForge.Core.FlowEvidencePolicy]::Canonical($newJson.RootElement)}finally{$oldJson.Dispose();$newJson.Dispose()}
+                if(-not $same -and ($prior[0].Outcome -ne 'Started' -or $Attempt.Outcome -eq 'Started')){throw 'Terminal flow evidence is immutable.'}
+            }
+            $db.Attempts=@($db.Attempts|Where-Object AttemptId -ne $Attempt.AttemptId)+@($Attempt)
+        }
         $db.UpdatedAt=[DateTimeOffset]::UtcNow.ToString('o')
         # Reparse to dictionary form for the same strict boundary used by reads.
         $json=ConvertTo-Json -InputObject $db -Depth 12
@@ -97,4 +112,14 @@ function Add-TokenForgeFlowChanges {
     if($null -eq $Changes){return}
     if($Plan){$Changes.Plans[$PlanFingerprint]=$Plan.Clone()}
     if($Attempt){$Changes.Attempts[$Attempt.AttemptId]=$Attempt.Clone()}
+}
+
+function New-TokenForgeFlowComparisonContext {
+    param($Attempt,$FlowPlan,$Recipe,$Budget,[int]$DelayMilliseconds,[int]$MaxApplications,[bool]$StopOnTransientFailure,[bool]$RecoverUnknown,[bool]$ResumePaused,[string]$Redirect,$Request)
+    if(-not $Budget){return}
+    if($Request.ClientId -cne $Attempt.ClientId -or $Request.ResourceId -cne $Attempt.ResourceId -or $Request.Protocol -cne $Attempt.Protocol -or $Request.Tenant -cne $FlowPlan.Tenant -or [bool]$Request.Spa -ne [bool]$Attempt.Spa -or (Get-TokenForgeFingerprint $Request.RedirectUri) -cne $Attempt.RedirectFingerprint){throw 'Constructed discovery request differs from the saved flow context.'}
+    $policy=@{Version=1;Limits=$Budget.Limits;MaxSeconds=$Budget.MaxSeconds;TransportTimeoutSeconds=$Budget.TransportTimeoutSeconds;DelayMilliseconds=$DelayMilliseconds;MaxApplications=$MaxApplications;StopOnTransientFailure=$StopOnTransientFailure;RecoverUnknown=$RecoverUnknown;ResumePaused=$ResumePaused}
+    $uri=[uri]$Redirect
+    $context=@{ContextVersion=1;QueryFingerprint=(Get-TokenForgeFingerprint 'issued-scopes/v1/delegated-inspection');TenantFingerprint=$Attempt.TenantFingerprint;PrincipalFingerprint=$Attempt.PrincipalFingerprint;ClientId=$Attempt.ClientId;ResourceId=$Attempt.ResourceId;AuthorityFingerprint=(Get-TokenForgeFingerprint $FlowPlan.Tenant);RequestedScopes=@(if($Request.Protocol -ne 'OAuth2V1Implicit'){$Request.OAuthScopes});Protocol=$Attempt.Protocol;CallbackFingerprint=$Attempt.RedirectFingerprint;Spa=[bool]$Attempt.Spa;CallbackClass=if($Attempt.Spa){'Spa'}elseif($uri.Scheme -ne 'https' -or $uri.Host -eq 'login.microsoftonline.com' -or $uri.Host -eq 'localhost'){'Native'}else{'Web'};RecipeFingerprint=[TokenForge.Core.ChangeReports]::FingerprintJson((ConvertTo-Json -InputObject $Recipe -Depth 32 -Compress));ExecutionPolicyFingerprint=[TokenForge.Core.ChangeReports]::FingerprintJson((ConvertTo-Json -InputObject $policy -Depth 32 -Compress))}
+    [TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([TokenForge.Core.ChangeReports]::ValidateBoundContext((ConvertTo-Json -InputObject $context -Depth 32 -Compress),(ConvertTo-Json -InputObject $Attempt -Depth 32 -Compress)))
 }

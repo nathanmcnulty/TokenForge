@@ -140,4 +140,61 @@ Describe 'Research coverage temporal and native parity' {
   }finally{$env:PATH=$savedPath}
   (Get-FileHash $catalogSqlite).Hash|Should -Be $before[0];(Get-FileHash $flowSqlite).Hash|Should -Be $before[1]
  }
+ It 'matches JSON report fields and types through SQLite delegation: summary=<Summary>, selected=<Selected>' -Skip:(-not $env:TOKENFORGE_TEST_NATIVE) -ForEach @(
+  @{Summary=$false;Selected=$false},@{Summary=$true;Selected=$false},
+  @{Summary=$false;Selected=$true},@{Summary=$true;Selected=$true}
+ ) {
+  param($Summary,$Selected)
+  $catalogSqlite=Join-Path $state applications.sqlite;$flowSqlite=Join-Path $state flows.sqlite
+  $null=Import-TokenForgeApplicationMetadata $catalogSqlite -InputPath $metadata -NativeExecutablePath $native
+  $null=Import-TokenForgeFlowEvidence $flowSqlite -InputPath $flow -NativeExecutablePath $native
+  $selection=@{SummaryOnly=$Summary;AppId=@([guid]$client)}
+  if($Selected){$selection.TenantFingerprint='a'*64;$selection.PrincipalFingerprint='b'*64}
+  $expected=Get-TokenForgeResearchCoverage $metadata -FlowPath $flow @selection
+  $before=@((Get-FileHash $catalogSqlite).Hash,(Get-FileHash $flowSqlite).Hash)
+  # SQLite reports must not expand either ledger through the PowerShell adapters.
+  Mock Get-TokenForgeApplicationMetadata -ModuleName TokenForge {throw 'Unexpected catalog projection.'}
+  Mock Get-TokenForgeFlowEvidence -ModuleName TokenForge {throw 'Unexpected flow projection.'}
+  $actual=Get-TokenForgeResearchCoverage $catalogSqlite -FlowPath $flowSqlite -NativeExecutablePath $native @selection
+  ($actual|ConvertTo-Json -Depth 30 -Compress)|Should -BeExactly ($expected|ConvertTo-Json -Depth 30 -Compress)
+  (Get-FileHash $catalogSqlite).Hash|Should -Be $before[0]
+  (Get-FileHash $flowSqlite).Hash|Should -Be $before[1]
+ }
+ It 'keeps multiple app selectors and mixed inputs on the full-history adapter' -Skip:(-not $env:TOKENFORGE_TEST_NATIVE) {
+  $catalogSqlite=Join-Path $state applications.sqlite;$flowSqlite=Join-Path $state flows.sqlite
+  $null=Import-TokenForgeApplicationMetadata $catalogSqlite -InputPath $metadata -NativeExecutablePath $native
+  $null=Import-TokenForgeFlowEvidence $flowSqlite -InputPath $flow -NativeExecutablePath $native
+  $selection=@{TenantFingerprint='a'*64;PrincipalFingerprint='b'*64;AppId=@([guid]$client,[guid]'22222222-2222-2222-2222-222222222222')}
+  $expected=Get-TokenForgeResearchCoverage $metadata -FlowPath $flow @selection
+  foreach($inputs in @(@{MetadataPath=$catalogSqlite;FlowPath=$flowSqlite},@{MetadataPath=$catalogSqlite;FlowPath=$flow},@{MetadataPath=$metadata;FlowPath=$flowSqlite})){
+   $actual=Get-TokenForgeResearchCoverage @inputs -NativeExecutablePath $native @selection
+   ($actual|ConvertTo-Json -Depth 30 -Compress)|Should -BeExactly ($expected|ConvertTo-Json -Depth 30 -Compress)
+  }
+ }
+ It 'reports SQLite catalog alone without discovering optional state or profiles' -Skip:(-not $env:TOKENFORGE_TEST_NATIVE) {
+  $catalogSqlite=Join-Path $state applications.sqlite
+  $null=Import-TokenForgeApplicationMetadata $catalogSqlite -InputPath $metadata -NativeExecutablePath $native
+  # A malformed sibling flow store must not be discovered implicitly.
+  [IO.File]::WriteAllText((Join-Path $state flows.sqlite),'synthetic-invalid')
+  $expected=Get-TokenForgeResearchCoverage $metadata -SummaryOnly
+  $actual=Get-TokenForgeResearchCoverage $catalogSqlite -NativeExecutablePath $native -SummaryOnly
+  ($actual|ConvertTo-Json -Depth 30 -Compress)|Should -BeExactly ($expected|ConvertTo-Json -Depth 30 -Compress)
+ }
+ It 'suppresses invalid explicit SQLite flow details even without account selection' -Skip:(-not $env:TOKENFORGE_TEST_NATIVE) {
+  $catalogSqlite=Join-Path $state applications.sqlite;$invalid=Join-Path $state invalid.sqlite
+  $null=Import-TokenForgeApplicationMetadata $catalogSqlite -InputPath $metadata -NativeExecutablePath $native
+  [IO.File]::WriteAllText($invalid,'synthetic-private-marker')
+  try{Get-TokenForgeResearchCoverage $catalogSqlite -FlowPath $invalid -NativeExecutablePath $native;throw 'Expected failure.'}
+  catch{ $_.Exception.Message|Should -BeExactly 'Research coverage cannot be read; check private paths, complete history, and native executable. Details suppressed.' }
+ }
+ It 'rejects missing explicit SQLite inputs without creating directories' -Skip:(-not $env:TOKENFORGE_TEST_NATIVE) {
+  $missing=Join-Path $state absent/catalog.sqlite
+  {Get-TokenForgeResearchCoverage $missing -NativeExecutablePath $native}|Should -Throw
+  Test-Path (Split-Path $missing -Parent)|Should -BeFalse
+  $catalogSqlite=Join-Path $state applications.sqlite
+  $null=Import-TokenForgeApplicationMetadata $catalogSqlite -InputPath $metadata -NativeExecutablePath $native
+  {Get-TokenForgeResearchCoverage $catalogSqlite -FlowPath (Join-Path $state absent/flows.sqlite) -NativeExecutablePath $native}|Should -Throw
+  Test-Path (Join-Path $state absent)|Should -BeFalse
+ }
+
 }

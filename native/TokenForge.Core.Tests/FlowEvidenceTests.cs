@@ -29,6 +29,11 @@ static class FlowEvidenceTests
             using (var store = new FlowEvidenceStore(path))
             {
                 FlowEvidenceStore.ValidateDocument(Document(row));
+                foreach(var outcome in new[]{"SessionPaused","RequestBlocked","TransientFailure"}) {
+                    var classified=new Dictionary<string,object?>(row){["Outcome"]=outcome};
+                    FlowEvidenceStore.ValidateDocument(Document(classified));
+                    check(true);
+                }
                 reject(()=>FlowEvidenceStore.ValidateDocument(Document(row).Replace("\"ElapsedSeconds\":0","\"ElapsedSeconds\":0,\"AccessToken\":\"synthetic\"")));
                 check(store.Import(Document(row))==1);
                 check(store.Import(Document(row))==0);

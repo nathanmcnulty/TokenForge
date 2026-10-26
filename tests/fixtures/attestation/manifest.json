@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgePinnedAttestationVerifierFixtureSet",
+  "version": "2.103.2",
+  "sourceCommit": "4f2cfe92e3499f8581bf39db77e0a1431fa7b55c",
+  "archive": {
+    "name": "gh_2.103.2_linux_amd64.tar.gz",
+    "url": "https://github.com/cli/cli/releases/download/v2.103.2/gh_2.103.2_linux_amd64.tar.gz",
+    "sha256": "62ccf747115ddc61237efffdde66a3c8f70ba249433dc64f70801089b59c59c8",
+    "bytes": 15031001
+  },
+  "executable": {
+    "member": "gh_2.103.2_linux_amd64/bin/gh",
+    "sha256": "cbfdc94f3a5c0713c0d6df3e0a1d88a59a76b0c52332aad7d21d112f9da2cc0e"
+  },
+  "checksumsSha256": "414d6009dc7f9f936d70831af818d1a32aa0ff07a77646861efd207356a36b2d",
+  "rootProvisioning": {
+    "command": "gh attestation trusted-root",
+    "retrievedUtc": "2026-10-23T21:16:11.816000+00:00",
+    "authentication": false,
+    "trustBootstrap": "CLI embedded TUF roots and authenticated TUF metadata; CLI itself provisioned through GitHub HTTPS distribution and pinned digest/checksums, not an independent reproducible-build trust anchor."
+  },
+  "files": {
+    "reusable-artifact": {
+      "sha256": "49a3aa6075e0f49f82843e74b5baa614ad2a588e6675612bf108a0a008c5ac25",
+      "bytes": 2962,
+      "source": "https://raw.githubusercontent.com/cli/cli/4f2cfe92e3499f8581bf39db77e0a1431fa7b55c/pkg/cmd/attestation/test/data/reusable-workflow-artifact"
+    },
+    "reusable-bundle.json": {
+      "sha256": "88e35c3496fc9b9bd29629b69271bd32738e170f0d85a12d67da0c72c743f3bd",
+      "bytes": 11346,
+      "source": "https://raw.githubusercontent.com/cli/cli/4f2cfe92e3499f8581bf39db77e0a1431fa7b55c/pkg/cmd/attestation/test/data/reusable-workflow-attestation.sigstore.json"
+    },
+    "same-repo-artifact.whl": {
+      "sha256": "ae57936def59bc4c75edd3a837d89bcefc6d3a5e31d55a6fa7a71624f92c3c3b",
+      "bytes": 1437,
+      "source": "https://raw.githubusercontent.com/cli/cli/4f2cfe92e3499f8581bf39db77e0a1431fa7b55c/pkg/cmd/attestation/test/data/github_provenance_demo-0.0.12-py3-none-any.whl"
+    },
+    "same-repo-bundle.json": {
+      "sha256": "4f8c096e38a0eee242574ab100d16701928605409225e59784a3636f742bb27e",
+      "bytes": 4885,
+      "source": "https://raw.githubusercontent.com/cli/cli/4f2cfe92e3499f8581bf39db77e0a1431fa7b55c/pkg/cmd/attestation/test/data/github_provenance_demo-0.0.12-py3-none-any-bundle.jsonl"
+    },
+    "public-good-root.json": {
+      "sha256": "455b3fe53e2678889f093d66ebbfda5f12ebb9d682b146c3535fa04e97689787",
+      "bytes": 3806,
+      "source": "https://raw.githubusercontent.com/cli/cli/4f2cfe92e3499f8581bf39db77e0a1431fa7b55c/pkg/cmd/attestation/test/data/trusted_root.json"
+    },
+    "provisioned-root.jsonl": {
+      "sha256": "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c",
+      "bytes": 34634,
+      "source": "fresh empty-environment gh attestation trusted-root output"
+    },
+    "cli-release-bundle.json": {
+      "sha256": "69c7c18ac8c1a16cd82b21fe95d47b9ec799f024d7eb2e80f92d7a97e478d480",
+      "bytes": 13962,
+      "source": "anonymous cli/cli release attestation API, bundle downloaded and Snappy-decoded"
+    },
+    "UPSTREAM-LICENSE": {
+      "sha256": "6da4adc42392c8485e40b4251c7e332fc3352df1947c9ffade71dd60b14a7a4f",
+      "bytes": 1068,
+      "source": "https://raw.githubusercontent.com/cli/cli/4f2cfe92e3499f8581bf39db77e0a1431fa7b55c/LICENSE"
+    }
+  },
+  "cases": {
+    "sameRepo": {
+      "repository": "actions/attest-demo",
+      "repositoryId": "763287532",
+      "source": "a6c23b9806c593664f68637c8f9d45dfcf98b2db",
+      "mainBranch": "main",
+      "sealerPath": ".github/workflows/build-python.yml",
+      "sealerCommit": "a6c23b9806c593664f68637c8f9d45dfcf98b2db",
+      "run": "8788389601",
+      "attempt": "1",
+      "artifactSha256": "ae57936def59bc4c75edd3a837d89bcefc6d3a5e31d55a6fa7a71624f92c3c3b",
+      "productionPolicyExpected": "Reject mutable certified signer URI"
+    },
+    "reusable": {
+      "repository": "malancas/attest-demo",
+      "repositoryId": "804070735",
+      "source": "95baf27389e83e6a5c48f42e190d48d7abcea19e",
+      "ref": "refs/heads/main",
+      "signerWorkflow": "github/artifact-attestations-workflows/.github/workflows/attest.yml",
+      "signerCommit": "09b495c3f12c7881b3cc17209a327792065c1a1d",
+      "run": "9228858953",
+      "attempt": "1",
+      "artifactSha256": "49a3aa6075e0f49f82843e74b5baa614ad2a588e6675612bf108a0a008c5ac25",
+      "productionPolicyExpected": "Reject cross-repository certified sealer"
+    },
+    "cliRelease": {
+      "repository": "cli/cli",
+      "repositoryId": "212613049",
+      "source": "4f2cfe92e3499f8581bf39db77e0a1431fa7b55c",
+      "ref": "refs/heads/trunk",
+      "signerWorkflow": "cli/cli/.github/workflows/deployment.yml",
+      "signerCommit": "4f2cfe92e3499f8581bf39db77e0a1431fa7b55c",
+      "run": "40017149075",
+      "attempt": "1",
+      "subjectCount": 21,
+      "productionPolicyExpected": "Not a TokenForge candidate: multiple subjects and mutable signer URI"
+    }
+  },
+  "releasePublishedUtc": "2026-10-23T20:24:12Z"
+}

@@ -66,7 +66,7 @@ function Update-TokenForgeCatalog {
     [CmdletBinding()]
     param([uri]$SourceUri = $script:CatalogUrl, [string]$Path = $script:CatalogPath)
     if ($SourceUri.Scheme -ne 'https' -or $SourceUri.UserInfo) { throw 'Catalog source must be HTTPS without user information.' }
-    $response=Invoke-WebRequest -Uri $SourceUri -TimeoutSec 30 -ErrorAction Stop
+    $response=Invoke-TokenForgeBudgetSource -Uri $SourceUri
     $data=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([string]$response.Content)
     $snapshot = @{ SchemaVersion = 1; Source = $SourceUri.AbsoluteUri; FetchedAt = [DateTimeOffset]::UtcNow.ToString('o'); Data = $data }
     $fullPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
@@ -193,8 +193,11 @@ function Get-TokenForgeToken {
         [Parameter(Mandatory, ParameterSetName = 'Browser')][switch]$Browser,
         [Parameter(ParameterSetName = 'Browser')][string]$LoginHint,
         [Parameter(ParameterSetName = 'Browser')][switch]$NoConsent,
-        [Parameter(ParameterSetName = 'Browser')][ValidateRange(30,900)][int]$TimeoutSeconds = 300
+        [Parameter(ParameterSetName = 'Browser')][ValidateRange(30,900)][int]$TimeoutSeconds = 300,
+        $OperationBudget=$script:OperationBudget
     )
+    Assert-TokenForgeOperationBudget $OperationBudget
+    if($OperationBudget -and $PSCmdlet.ParameterSetName -ne 'Cookie'){throw 'Bounded discovery permits only an explicitly supplied existing session.'}
     # The same typed boundary and transport serve PowerShell and native callers.
     $plan = [TokenForge.Core.V0180.OAuthRequest]::new()
     foreach ($field in @('ClientId','ResourceId','ResourceUri','Tenant','RedirectUri')) { $plan.$field = [string]$Request.$field }
@@ -211,7 +214,7 @@ function Get-TokenForgeToken {
         $form = $null
         if ($null -ne $fields) { $form = @{}; foreach ($key in $fields.Keys) { $form[$key] = $fields[$key] } }
         try {
-            $response = Invoke-TokenForgeHttp -Client $client -Uri $uri -Form $form -Origin $origin
+            $response = if($OperationBudget){Invoke-TokenForgeBudgetIdentityHttp -Client $client -Uri $uri -Form $form -Origin $origin -Budget $OperationBudget}else{Invoke-TokenForgeHttp -Client $client -Uri $uri -Form $form -Origin $origin}
             $location = if ($response -is [System.Collections.IDictionary]) { $response['Location'] } elseif ($response.PSObject.Properties['Location']) { $response.Location } else { $null }
             [TokenForge.Core.V0180.OAuthHttpResponse]::new([int]$response.Status, $location, [string]$response.Content)
         } finally { if ($null -ne $form) { $form.Clear() } }
@@ -244,6 +247,10 @@ function Get-TokenForgeToken {
         }
         $access = $null; $refresh = $null
         $token
+    } catch {
+        # The shared adapter sanitizes transport exceptions; recover the safe budget reason.
+        Assert-TokenForgeOperationBudget $OperationBudget
+        throw
     } finally {
         if ($null -ne $access) { $access.Dispose() }
         if ($null -ne $refresh) { $refresh.Dispose() }
@@ -254,6 +261,6 @@ function Get-TokenForgeToken {
 
 foreach ($file in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'Private') -Filter '*.ps1' | Sort-Object Name) { . $file.FullName }
 foreach ($file in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'Public') -Filter '*.ps1' | Sort-Object Name) { . $file.FullName }
-Export-ModuleMember -Function Invoke-TokenForgeDiscoveryRun, Import-TokenForgeFlowEvidence, Get-TokenForgeFlowEvidence, Export-TokenForgeFlowEvidence, New-TokenForgeResearchCohort, Get-TokenForgeResearchCohort, Invoke-TokenForgeResearchChunk, Get-TokenForgeResearchCoverage, Remove-TokenForgeProfileKey, Connect-TokenForgeGraph, Disconnect-TokenForgeGraph, Find-TokenForgeGraphPermission, Get-TokenForgeProfileToken, New-TokenForgeProfile, Get-TokenForgeProfile, Get-TokenForgeProfileStatus, Test-TokenForgeProfile, Connect-TokenForgeProfile, Disconnect-TokenForgeProfile, Get-TokenForgeApplicationMetadata, Update-TokenForgeApplicationMetadata, Import-TokenForgeApplicationMetadata, Update-TokenForgeCatalog, Get-TokenForgeCatalog, Find-TokenForgeApplication, New-TokenForgeRequest, Get-TokenForgeToken, Get-TokenForgeTokenClaims, Get-TokenForgeDiscovery, Update-TokenForgeDiscovery, Get-TokenForgeSignInApplications, Get-TokenForgeTenantInventory, Register-TokenForgeApplication, New-TokenForgeDiscoveryRequest, Merge-TokenForgeScopeDatabase, Import-TokenForgeScopeDatabase, New-TokenForgeScopeDatabase, Get-TokenForgeScopeDatabase, Add-TokenForgeScopeObservation, Compare-TokenForgeScopeDatabase, Export-TokenForgeScopeDatabase, Get-TokenForgeAssessmentCoverage, Invoke-TokenForgeScopeProbe, Sync-TokenForgeApplicationRegistration, Get-TokenForgeProbePlan, New-TokenForgeVault, Get-TokenForgeVault, Get-TokenForgeVaultToken, Remove-TokenForgeVaultEntry, Export-TokenForgeVaultView, Get-TokenForgeScopedToken, Get-TokenForgeScopeCandidates, Get-TokenForgeEstsCookie, Test-TokenForgeTokenAccess, New-TokenForgeTenantRequest, Get-TokenForgeAssessmentPlan, Get-TokenForgeMaintenanceReport
+Export-ModuleMember -Function Invoke-TokenForgeRefresh, Move-TokenForgeRefreshPlan, Get-TokenForgeRefreshPlan, ConvertTo-TokenForgeRefreshHistory, Get-TokenForgeRefreshStatus, Export-TokenForgeRefreshHistory, ConvertTo-TokenForgeToolEvidence, New-TokenForgeStrictProfile, Get-TokenForgeToolExplanation, Test-TokenForgeTool, Invoke-TokenForgeStrictAcquisition, New-TokenForgeToolChangePacket, ConvertTo-TokenForgeChangeSnapshot, Compare-TokenForgeEvidence, Get-TokenForgeChangeReport, Get-TokenForgeCollectorStatus, Invoke-TokenForgeDiscoveryRun, Import-TokenForgeFlowEvidence, Get-TokenForgeFlowEvidence, Export-TokenForgeFlowEvidence, New-TokenForgeResearchCohort, Get-TokenForgeResearchCohort, Invoke-TokenForgeResearchChunk, Get-TokenForgeResearchCoverage, Remove-TokenForgeProfileKey, Connect-TokenForgeGraph, Disconnect-TokenForgeGraph, Find-TokenForgeGraphPermission, Get-TokenForgeProfileToken, New-TokenForgeProfile, Get-TokenForgeProfile, Get-TokenForgeProfileStatus, Test-TokenForgeProfile, Connect-TokenForgeProfile, Disconnect-TokenForgeProfile, Get-TokenForgeApplicationMetadata, Update-TokenForgeApplicationMetadata, Import-TokenForgeApplicationMetadata, Update-TokenForgeCatalog, Get-TokenForgeCatalog, Find-TokenForgeApplication, New-TokenForgeRequest, Get-TokenForgeToken, Get-TokenForgeTokenClaims, Get-TokenForgeDiscovery, Update-TokenForgeDiscovery, Get-TokenForgeSignInApplications, Get-TokenForgeTenantInventory, Register-TokenForgeApplication, New-TokenForgeDiscoveryRequest, Merge-TokenForgeScopeDatabase, Import-TokenForgeScopeDatabase, New-TokenForgeScopeDatabase, Get-TokenForgeScopeDatabase, Add-TokenForgeScopeObservation, Compare-TokenForgeScopeDatabase, Export-TokenForgeScopeDatabase, Get-TokenForgeAssessmentCoverage, Invoke-TokenForgeScopeProbe, Sync-TokenForgeApplicationRegistration, Get-TokenForgeProbePlan, New-TokenForgeVault, Get-TokenForgeVault, Get-TokenForgeVaultToken, Remove-TokenForgeVaultEntry, Export-TokenForgeVaultView, Get-TokenForgeScopedToken, Get-TokenForgeScopeCandidates, Get-TokenForgeEstsCookie, Test-TokenForgeTokenAccess, New-TokenForgeTenantRequest, Get-TokenForgeAssessmentPlan, Get-TokenForgeMaintenanceReport
 
 $ExecutionContext.SessionState.Module.OnRemove = { if($script:GraphConnection){try{if([object]::ReferenceEquals((Get-MgContext),$script:GraphConnection.Context)){$null=Disconnect-MgGraph -ErrorAction Stop}}catch{}finally{$script:GraphConnection.Secret.Dispose();$script:GraphConnection=$null}}; foreach($key in @($script:ProfileContexts.Keys)){Clear-TokenForgeProfileContext $key} }

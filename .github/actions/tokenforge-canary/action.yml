@@ -1,0 +1,5 @@
+name: TokenForge dormant canary
+description: Service mode is blocked before context or credential access.
+runs:
+  using: node24
+  main: index.mjs

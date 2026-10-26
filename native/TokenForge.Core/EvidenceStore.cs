@@ -8,7 +8,7 @@ namespace TokenForge.Core;
 public sealed class EvidenceStore : IDisposable
 {
     private readonly SqliteConnection connection;
-    private static readonly HashSet<string> Fields = new("ClientId ResourceId Outcome TenantFingerprint PrincipalFingerprint ObservedAt Protocol Spa RedirectFingerprint RequestedScopes ResponseScopes ScpScopes ClaimsReadable HasScpClaim NamespaceVerification RequestVerification SignatureValidated ErrorCodes AttemptCount ElapsedSeconds CatalogHash PlanFingerprint".Split(' '), StringComparer.Ordinal);
+    private static readonly HashSet<string> Fields = new("ClientId ResourceId Outcome TenantFingerprint PrincipalFingerprint ObservedAt Protocol Spa RedirectFingerprint RequestedScopes ResponseScopes ScpScopes ClaimsReadable HasScpClaim NamespaceVerification RequestVerification SignatureValidated ErrorCodes AttemptCount ElapsedSeconds CatalogHash PlanFingerprint ComparisonContext".Split(' '), StringComparer.Ordinal);
     public EvidenceStore(string path, bool readOnly = false, bool requireExisting = false)
     {
         if((readOnly || requireExisting) && !File.Exists(path)) throw new InvalidOperationException("Evidence database does not exist.");
@@ -112,6 +112,7 @@ public sealed class EvidenceStore : IDisposable
                 "ErrorCodes" => Strings(value, "^[0-9]{4,9}$"),
                 "Spa" or "ClaimsReadable" or "HasScpClaim" => value.GetBoolean(),
                 "SignatureValidated" => false,
+                "ComparisonContext" => JsonSerializer.Deserialize<JsonElement>(ChangeReports.ValidateBoundContext(value.GetRawText(),row.GetRawText())),
                 "AttemptCount" => Number(value, 100000),
                 "ElapsedSeconds" => Number(value, 604800),
                 _ => throw new InvalidOperationException("Invalid evidence field.")

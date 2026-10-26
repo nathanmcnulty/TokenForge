@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "status": "LiveCanaryPassed",
+  "scopeOfAcceptance": "Only the dated declared read-profile client/request and selected GraphMeV1 operation; no arbitrary-tool or production claim.",
+  "sourceRevision": "6b9921c514fda88c41d9e0f54f9dc8fd8c5a5b13",
+  "package": {
+    "sourceRevision": "6b9921c514fda88c41d9e0f54f9dc8fd8c5a5b13",
+    "packagePath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal3/live-package/linux-x64",
+    "manifestSha256": "afb5bfa1cf438462739496873e4cab3b484850e7560db95a121a1da89c9bd9c5",
+    "archivePath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal3/TokenForge-0.48.0-goal3-live-linux-x64.tar.gz",
+    "archiveSha256": "081e2dfed35088a072ce3b45b132dd639c0c7e0ff986e68bac294aa0ec4f3176",
+    "executableSha256": "05c06dc040ae6f34c4d22d7f78aed454a4b3e3cfb12eb2cf7a7972be0e964718",
+    "credentialDllSha256": "9ee633c1720b08cec9137fb901c4817b34fa7e7c2541757784a9aab101a908a8",
+    "payloadFileCount": 146,
+    "moduleSourceFileCount": 83,
+    "nativeInputCount": 93,
+    "nativeInputsSha256": "14280e93497cf795d5a5ca8480b391f12cc83f71664db559c8ce03bb6b9c97b7"
+  },
+  "sourcePackageVerification": {
+    "sourceRevision": "6b9921c514fda88c41d9e0f54f9dc8fd8c5a5b13",
+    "packageVerified": true,
+    "completeModuleSourceFiles": 83,
+    "packagePayloadFiles": 146,
+    "nativeInputsVerified": 93,
+    "validationFilesVerified": 70,
+    "validationInputsSha256": "3d11c957204227f91bbd54c3e20faec0f95ff8851f5af5e20a6f4538da33314a",
+    "workflowFilesUnchanged": 7,
+    "handoffPreserved": true
+  },
+  "approvedConfiguration": {
+    "clientName": "ZTNA Network Access Client",
+    "bootstrapClientId": "038ddad9-5bbe-4f64-b0cd-12434d1e633b",
+    "finalClientId": "038ddad9-5bbe-4f64-b0cd-12434d1e633b",
+    "approvedClientCount": 1,
+    "callback": "https://login.microsoftonline.com/common/oauth2/nativeclient",
+    "resourceId": "00000003-0000-0000-c000-000000000000",
+    "explicitApiScopes": [
+      "User.Read"
+    ],
+    "protocol": "OAuth2V2Pkce",
+    "maxBootstrapAdditionalApiScopes": 0,
+    "maxFinalAdditionalApiScopes": 0,
+    "maxIssuanceAttempts": 2,
+    "maxSeconds": 180,
+    "selectedOperation": "GraphMeV1 GET /v1.0/me?$select=id",
+    "expectedAccount": "Operator-approved secadmin account; credential name checked privately and frozen principal verified against current Graph identity."
+  },
+  "selectionEvidence": {
+    "priorCandidateManifestSha256": "8583f0b60e24b67d3165060ee8e77538c81f85973496f18c995b145e2130654e",
+    "priorCandidateScopesSha256": "7c99bba99023c175c5ac5ee7bf20b1b49d844e0910014309dffe9ac4f5a5c399",
+    "basis": "One approved prior client observation had User.Read plus3OIDC scopes and no additional API scopes. This supported pre-dispatch candidate selection, not authorization or guaranteed issuance.",
+    "bothStagesSelectedBeforeAuthentication": true,
+    "configurationDiffersFromPriorTrial": true,
+    "notAComparableRegressionReport": true
+  },
+  "observed": {
+    "startedAt": "2026-10-22T18:41:55.5208591+00:00",
+    "seconds": 12.53,
+    "authenticationAttempts": 1,
+    "authenticationHttpRequests": 5,
+    "bootstrapIssuanceAttempts": 1,
+    "bootstrapHttpRequests": 2,
+    "identityGraphGetRequests": 1,
+    "finalIssuanceAttempts": 1,
+    "finalIssuanceHttpRequests": 2,
+    "selectedGraphGetRequests": 1,
+    "totalHttpRequests": 11,
+    "bootstrapApiScopes": [
+      "User.Read"
+    ],
+    "finalApiScopes": [
+      "User.Read"
+    ],
+    "oidcScopeNames": [
+      "email",
+      "openid",
+      "profile"
+    ],
+    "bootstrapAdditionalApiScopeCount": 0,
+    "finalAdditionalApiScopeCount": 0,
+    "bootstrapResponseAdditionalScopeCount": 0,
+    "finalResponseAdditionalScopeCount": 0,
+    "currentContextConfirmed": true,
+    "issuanceStatus": "IssuedWithinStrictPolicy",
+    "selectedGraphStatus": 200,
+    "selectedGraphAccepted": true,
+    "toolHealth": "VerifiedWorking",
+    "nativeHealthExitCode": 0,
+    "noCredentialDisplayOrPersistence": true,
+    "credentialsDisposed": true,
+    "permissionChangingApiOperationsInvoked": 0,
+    "permissionInventoryComparisonPerformed": false
+  },
+  "independentReview": {
+    "preDispatchHarnessAndPins": "Passed",
+    "actualScopesCurrentContextAndApiApprovalBinding": "Passed",
+    "privacyAndNativePowerShellParity": "Passed"
+  },
+  "validationReuse": {
+    "runtimeSourceUnchanged": true,
+    "newBuildOrInstallRequired": false,
+    "Pester": "6.2.0",
+    "Admin": {
+      "preset": "Admin",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 76,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": []
+    },
+    "Changes": {
+      "preset": "Changes",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 83,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": []
+    },
+    "reason": "Exact source, package and test inputs unchanged; reuse76+83 successful focused checks. New approved configuration passed dry preflight, live gates and actual saved native consumer parity without repeating unchanged tests."
+  },
+  "evidence": {
+    "privateRoot": "/home/nathan/.local/share/TokenForge/goal3-secadmin-canary2-gochvx6g",
+    "privateFilesSha256": {
+      "acquisition.json": "756e4274de7856c5964078235ef965b67bb0b94f639973eb44262af66b8442ca",
+      "health.json": "43eab897a894e971358997cd9c3a709d104e3630b02d77ab9a8455d14b170349",
+      "intent.json": "7f2b3179f5fd81ed90946090e33391e74228ea48e252a09810dc6a8c56a7d403",
+      "native-health.json": "6c4c623bd182e510ce6c0b8173c30da65389aafccc544ab96f3c679891d8d4a3",
+      "native-snapshot.json": "0326673dd94cea8598fb8c1ec2b82c8ffc0bd66eb6ee31d840b527f984f89e07",
+      "operator-harness.ps1": "6bafbbef985786ac6db16fa4132612371c1cf9bdc5ba403767e7a72470cc6077",
+      "plan.json": "75b6f9c9eab52df690ade7b722f60c6b9e5dd05d3f787eef70337acd5d11d179",
+      "profile.json": "26bc0128cb67c896cd4aa08382a4fe9876ac102073fbf8aa1949782b45f0319b",
+      "public-realm.json": "f1d80bf095f722103625796cfa37a124a53e90ff085e829cb8b27f8c0d4ebcf7",
+      "requirements.json": "bce9e5ffc7348903819b1d10f7a46331ce9cc3962b5414a4d50c4b6c89f07c5c",
+      "result.json": "6a6c01033ef35cc45694d315616f209bbfd2102e56f2a4267e431a23267bed6e",
+      "snapshot.json": "03c0ede80d4ab12c6ca4216693e42057e497153a4b98cb761798da52e8154a82"
+    },
+    "localFilesSha256": {
+      "Invoke-Goal3LiveCanary2.ps1": "6bafbbef985786ac6db16fa4132612371c1cf9bdc5ba403767e7a72470cc6077",
+      "live2-run-summary.log": "4454b8dee7823ecd31539c9d92b112db9b3bb7ad27869a3477ad3f30c2bb4e07",
+      "live-package-receipt.json": "2627a47ad79c61b017f478f6a1b017d0e5d5edfe117b9eabc4abde1c39b2b78c",
+      "live-package-verification.json": "1124d41275b7be860a93e9ccfb1052eae4fc87a1a06eb9e1a9b9a2826b71430b",
+      "live-admin-summary.json": "84e0aaf4facc7828fb934cc387f1c0a84d55e253515a663e2b6831f73b53a106",
+      "live-changes-summary.json": "b93219b7f459101b4c50f495ecff90b1cc9865be4e0a5d2d8eeb07dbd26b13a8"
+    },
+    "originalInventorySha256Unchanged": "659d2f9cd4f599fd368bbbd5901e5a0b2d166ed273cdd112097822a021b38042",
+    "allPriorCanaryArtifactHashesStillMatch": true
+  },
+  "remainingBlockersForThisCanary": [],
+  "limitations": [
+    "Only User.Read for the declared approved client/context and selected Graph v1.0 GET were validated.",
+    "Scope inspection is diagnostic; JWT signature validation is not claimed.",
+    "Prior Graph PowerShell route still has its original stopped result; new client/policy context is not an authorization regression comparison.",
+    "No tenant-wide before/after permission inventory comparison, publication, push, PR, merge, hosted compute or Goal4 work."
+  ],
+  "productionReady": false
+}

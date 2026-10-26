@@ -37,14 +37,15 @@ Describe 'Standalone discovery bootstrap boundaries' {
  It 'reports exhausted typed retries without exposing exception details' {
   Mock Invoke-TokenForgeDiscoveryRun {throw [Management.Automation.ErrorRecord]::new([InvalidOperationException]::new('synthetic private detail'),'TokenForge.TransientIdentity',[Management.Automation.ErrorCategory]::ResourceUnavailable,$null)}
   $r=& $runner -StatePath $state -NativeExecutablePath /synthetic/tokenforge -EstsAuth $cookie|ConvertFrom-Json
-  $r.Status|Should -Be Stopped
-  $r.Reason|Should -Be TransientIdentity
+  $r.Status|Should -Be TransientExhausted
+  $r.Reason|Should -Be TransientExhausted
   ($r|ConvertTo-Json -Compress)|Should -Not -Match 'synthetic private detail'
  }
  It 'does not classify an untyped failure as retryable' {
   Mock Invoke-TokenForgeDiscoveryRun {throw 'TokenForge.TransientIdentity'}
   $r=& $runner -StatePath $state -NativeExecutablePath /synthetic/tokenforge -EstsAuth $cookie|ConvertFrom-Json
-  $r.Reason|Should -Be Discovery
+  $r.Status|Should -Be Failed
+  $r.Stage|Should -Be Discovery
  }
  It 'keeps JSON output clean and emits only fixed orchestration stages with Verbose' {
   Mock Get-TokenForgeToken {
@@ -63,15 +64,15 @@ Describe 'Standalone discovery bootstrap boundaries' {
  It 'stops before inventory or discovery when issued permissions are insufficient' {
   $claims.Scopes=@('User.Read')
   $r=& $runner -StatePath $state -NativeExecutablePath /synthetic/tokenforge -EstsAuth $cookie|ConvertFrom-Json
-  $r.Status|Should -Be Stopped
-  $r.Reason|Should -Be Authorization
+  $r.Status|Should -Be RequestBlocked
+  $r.Reason|Should -Be RequestBlocked
   Should -Invoke Invoke-TokenForgeDiscoveryRun -Times 0
  }
  It 'rejects a cached workspace belonging to another principal' {
   $claims.PrincipalFingerprint='e'*64
   $r=& $runner -StatePath $state -NativeExecutablePath /synthetic/tokenforge -EstsAuth $cookie|ConvertFrom-Json
-  $r.Status|Should -Be Stopped
-  $r.Reason|Should -Be Authorization
+  $r.Status|Should -Be AccountMismatch
+  $r.Reason|Should -Be AccountMismatch
   Should -Invoke Invoke-TokenForgeDiscoveryRun -Times 0
  }
  It 'refuses concurrent orchestration before authentication and releases its own locks' {
@@ -79,7 +80,7 @@ Describe 'Standalone discovery bootstrap boundaries' {
   $lock=[TokenForge.Core.V0220.PrivateFiles]::Open($path,$true)
   try{
    $r=& $runner -StatePath $state -NativeExecutablePath /synthetic/tokenforge -EstsAuth $cookie|ConvertFrom-Json
-   $r.Status|Should -Be Stopped
+   $r.Status|Should -Be Failed
    Should -Invoke Get-TokenForgeToken -Times 0
   }finally{$lock.Dispose()}
   $r=& $runner -StatePath $state -NativeExecutablePath /synthetic/tokenforge -EstsAuth $cookie|ConvertFrom-Json

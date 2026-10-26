@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "result": "LivePreflightAuthenticatedStoppedAtInventoryBudget",
+  "offlineAcceptance": "unchanged: offline-ready",
+  "liveAcceptance": "pending; no client discovery probes executed",
+  "account": "secadmin@sharemylabs.com",
+  "accountIdentityVerified": true,
+  "sourceRevision": "3bf93cbcee318e8758005d12258808ec7184394f",
+  "receiptBaseHead": "6ea59f012ed5661d170b1a2cc4c7d0850cd24489",
+  "packageVersion": "0.48.0",
+  "runtime": "linux-x64",
+  "nativeExecutableSha256": "d65f1686542444dcfab9fe1bb38eb5989a815a2e743fc04a6276648fcf7de196",
+  "permissionFix": {
+    "containingDirectoryMode": "0700",
+    "credentialFileMode": "0600",
+    "credentialContentsEmitted": false,
+    "credentialCopyCreated": false
+  },
+  "authentication": {
+    "provider": "Existing native TokenForge SoftwarePasskey implementation",
+    "attempts": 1,
+    "httpRequests": 5,
+    "automaticRetries": 0,
+    "accountVerifiedThroughGraph": true,
+    "sessionAndTokenDisposed": true
+  },
+  "budget": {
+    "SchemaVersion": 1,
+    "Scope": "CurrentInvocationIncludingPreflight",
+    "StartedAt": "2026-10-22T06:06:15.3682630+00:00",
+    "MaxSeconds": 900.0,
+    "TransportTimeoutSeconds": 30.0,
+    "ElapsedSeconds": 52.475,
+    "OverrunSeconds": 0.0,
+    "StopReason": "InventoryPages",
+    "Limits": {
+      "IssuanceAttempts": 30,
+      "BootstrapAttempts": 1,
+      "BootstrapRequests": 20,
+      "InventoryRequests": 100,
+      "InventoryPages": 50,
+      "SourceRequests": 0,
+      "TotalRequests": 300,
+      "TransientRetries": 3
+    },
+    "Counts": {
+      "IssuanceAttempts": 1,
+      "IssuanceRetries": 0,
+      "BootstrapAttempts": 1,
+      "BootstrapRequests": 7,
+      "InventoryRequests": 51,
+      "InventoryPages": 50,
+      "SourceRequests": 0,
+      "IdentityRequests": 0,
+      "TotalRequests": 58,
+      "RequestRetries": 0,
+      "PreflightRequests": 58,
+      "InFlightOverruns": 0,
+      "ReservedUnknownRequests": 0
+    }
+  },
+  "selection": {
+    "frozenPairs": 0,
+    "clientProbeRequests": 0,
+    "reason": "Stopped before cohort selection/creation"
+  },
+  "checkedBeforeVisibility": {
+    "ServicePrincipals": {
+      "visibility": "Complete",
+      "count": 2327
+    },
+    "Applications": {
+      "visibility": "Complete",
+      "count": 186
+    },
+    "Grants": {
+      "visibility": "Complete",
+      "count": 85
+    }
+  },
+  "afterVerificationPerformed": false,
+  "tenantChangesInvoked": false,
+  "exportCandidateCreated": false,
+  "harness": {
+    "scriptSha256": "52552eefe79e2ba85f52f29de558d2ea73dc94bd3c32e87ff8fae3e1a9331b76",
+    "sourceVerifierSha256": "fe5d97d7518934a4cb53811c9e4d3b1cc4a86dfb8352d17b423b56065e1837c7",
+    "httpCounterSha256": "003979e03567a60965b070ed9af6b4bab9285522680c7f4022954ef04d50aadd",
+    "independentReview": "No remaining must-fix after pre-import exact pins, exclusive lock, and isolated Python verifier",
+    "syntheticCounterChecks": 2,
+    "offlinePreflight": "passed",
+    "concurrentStartRefusal": "passed"
+  },
+  "privateReceiptDirectory": "/home/nathan/.local/share/TokenForge/goal1-secadmin-canary-KSm0UsMm",
+  "nextApprovalNeeded": {
+    "inventoryPages": {
+      "currentTotalCeiling": 50,
+      "proposedTotalCeiling": 100,
+      "alreadyConsumed": 50,
+      "additionalPageAllowance": 50
+    },
+    "unchangedAggregateCeilings": {
+      "issuanceAttempts": 30,
+      "bootstrapHttpRequests": 20,
+      "inventoryHttpRequests": 100,
+      "sourceRequests": 0,
+      "totalHttpRequests": 300
+    },
+    "inventoryHttpRequestsAlreadyConsumed": 51,
+    "maximumFurtherInventoryHttpRequests": 49,
+    "deadline": "Continue only within original 15-minute deadline; a new window requires explicit authorization if expired.",
+    "note": "Higher page ceiling alone does not guarantee completion. Targeted inventory is preferable if full preflight cannot fit the remaining HTTP envelope."
+  },
+  "notPerformed": [
+    "Automatic reauthentication",
+    "Client discovery probes",
+    "Consent or registration changes",
+    "Tenant permission changes",
+    "Publication",
+    "Hosted compute",
+    "Push or PR",
+    "Goal 2"
+  ]
+}

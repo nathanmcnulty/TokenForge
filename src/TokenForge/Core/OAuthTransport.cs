@@ -120,6 +120,9 @@ namespace TokenForge.Core.V0180
         public static OAuthResult AcquireForAdapter(OAuthRequest request, string mode, SecureString credential, SecureString? verifier, string? redirect, string cookieName,
             Func<HttpClient, Uri, Dictionary<string, string>?, string?, OAuthHttpResponse> adapter)
             => Acquire(request, mode, credential, verifier, redirect, cookieName, adapter, default);
+        public static OAuthResult AcquireForAdapter(OAuthRequest request, string mode, SecureString credential, SecureString? verifier, string? redirect, string cookieName,
+            Func<HttpClient, Uri, Dictionary<string, string>?, string?, OAuthHttpResponse> adapter, CancellationToken cancellation)
+            => Acquire(request, mode, credential, verifier, redirect, cookieName, adapter, cancellation);
         public static void ValidateRequest(OAuthRequest request) => Snapshot(request);
         internal static OAuthRequest Snapshot(OAuthRequest p)
         {

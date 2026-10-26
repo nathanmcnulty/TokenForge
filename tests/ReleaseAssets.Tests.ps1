@@ -17,6 +17,7 @@ Describe 'Complete release asset validation' {
  It 'accepts exactly six source-bound archives with their actual hashes' {
   $report=& $validator -AssetPath $dir -Version $version -SourceCommit $commit
   $report.Archives.Count|Should -Be 6
+  foreach($entry in $report.Archives){($entry.Runtime -is [string])|Should -BeTrue}
   $report.SourceCommit|Should -BeExactly $commit
   $report.Archives[0].Sha256|Should -BeExactly (Get-FileHash (Join-Path $dir TokenForge-1.2.3-linux-x64.tar.gz)).Hash.ToLowerInvariant()
  }
@@ -25,6 +26,7 @@ Describe 'Complete release asset validation' {
   $report=& $validator -AssetPath $dir -Version $version -SourceCommit $commit -Runtime linux-x64
   $report.Archives.Count|Should -Be 1
   $report.Archives[0].Runtime|Should -BeExactly linux-x64
+  ($report.Archives[0].Runtime -is [string])|Should -BeTrue
   {& $validator -AssetPath $dir -Version $version -SourceCommit $commit}|Should -Throw '*exactly six*'
  }
  It 'rejects extra architectures when Linux alone is selected' {
@@ -37,6 +39,14 @@ Describe 'Complete release asset validation' {
  It 'rejects extra files including accidental private diagnostics' {
   Set-Content (Join-Path $dir private.log) 'synthetic'
   {& $validator -AssetPath $dir -Version $version -SourceCommit $commit}|Should -Throw '*exactly six*'
+ }
+ It 'rejects duplicate receipt fields before permissive conversion' -ForEach @(@{Field='SourceCommit'},@{Field='Sha256'},@{Field='SchemaVersion'}) {
+  $path=Join-Path $dir TokenForge-1.2.3-linux-x64.tar.gz.json
+  $text=[IO.File]::ReadAllText($path)
+  $record=$text|ConvertFrom-Json
+  $value=ConvertTo-Json -InputObject $record.$Field -Compress
+  [IO.File]::WriteAllText($path,($text.TrimEnd().Substring(0,$text.TrimEnd().Length-1)+',"'+$Field+'":'+$value+'}'))
+  {& $validator -AssetPath $dir -Version $version -SourceCommit $commit}|Should -Throw '*Duplicate release receipt field*'
  }
  It 'rejects changed archive bytes' {
   Set-Content (Join-Path $dir TokenForge-1.2.3-linux-x64.tar.gz) 'changed'

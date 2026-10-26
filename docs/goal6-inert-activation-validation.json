@@ -1,0 +1,399 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgeInertActivationCandidateLocalValidation",
+  "recordedUtc": "2026-10-24T18:11:14.920338+00:00",
+  "outcome": "InertEngineeringCheckpointValidated_FullActivationCandidateFeasibilityBlocked",
+  "canaryDecision": "NO-GO",
+  "runnableCurrentSource": false,
+  "fullRealExecutionClosureComplete": false,
+  "activationCommit": null,
+  "activationDiffAvailable": false,
+  "reviewBranch": "codex/goal6-reusable-sealer",
+  "startingCheckpoint": "5a137f5a4bcac9560edada472b577ddd9ed8a41b",
+  "implementationCommit": "441bf8020b11c9770115e896d73134c298dd9c1d",
+  "testedSourceCommit": "eaec9e025e29de31c3d580a58e3e8b4a33a2fea0",
+  "receiptScope": "Containing checkpoint adds sanitized documentation only; tested code/template/package unchanged.",
+  "adoptedReview": {
+    "sourceCommit": "01c6b3c56470902791e22ce1b387ed17386ebd29",
+    "adoptionCommit": "132820809675b2071b491e341976ed2310f8182e",
+    "path": "docs/goal6-dot-local-tls-review.md",
+    "sha256": "987e1c7d3193e770e133172b3a3e48532dfc73725aa3de2b90f56f12b5e0e48b",
+    "copiedUnchanged": true
+  },
+  "preservedRoadmapHandoff": "19470aeba7a949e4204e4ecf5586a6ffb3171c69",
+  "implemented": [
+    "L1 null-prototype response-header dictionary; actual single/duplicate __proto__ TLS refusals.",
+    "L2 independent complete method/Host/raw-target oracle for every artifact operation and 40 malformed wire variants.",
+    "Service Twirp/REST/Azure profile and explicit one-day retention from frozen journal.created; immutable canonical service context before store/open/exchange.",
+    "Closed synthetic C producer using existing complete-ZIP/privacy/business validators and pinned precompiled DLL before imports; no source fallback build.",
+    "Inert full artifact action/external engine source; only branded loopback service fixtures execute with fixed dummy role slots.",
+    "Actual public Results URL/run/attempt/event/job, complete action/producer source inventory and own runtime checks before application role reads.",
+    "Signed short-lived operator-plan verification with intentionally unconfigured signer; fixed wall/monotonic expiry through producer/exchange/parse.",
+    "Anonymous exact-Git-source bootstrap behind unconditional gates, private sterile child home, literal full-tree export and verbatim inactive-template closure.",
+    "Bounded durable controller/cancellation/restoration state machine exercised by branded network-free recording backend. Real controller transport is absent."
+  ],
+  "fixedArtifactBudgets": {
+    "archiveBytes": 65536,
+    "attempts": 12,
+    "mutations": 4,
+    "reads": 8,
+    "totalMs": 180000,
+    "perExchangeMs": 10000,
+    "aggregateReservedEntityBytes": 2097152,
+    "controlRequestBytes": 8192,
+    "controlResponseBytes": 131072,
+    "downloadBytes": 65536,
+    "responseHeaderBytes": 16384,
+    "responseHeaderFields": 64,
+    "headerValueCharacters": 4096,
+    "retentionRequestedMs": 86400000,
+    "retentionAnchor": "frozen transaction.created",
+    "refunds": false,
+    "retries": 0,
+    "allWireBytesBoundedByEntityReservation": false
+  },
+  "fixedControlBudgets": {
+    "attempts": 30,
+    "assignedSlots": 29,
+    "writes": 6,
+    "totalMs": 480000,
+    "perRequestMs": 10000,
+    "perControlBodyBytes": 1048576,
+    "dispatches": 1,
+    "discoveries": 1,
+    "statusReads": 10,
+    "cancelAttempts": 1,
+    "cancellationReads": 2,
+    "phaseEndsMs": {
+      "initialAndEnable": 80000,
+      "dispatchDiscovery": 100000,
+      "poll": 350000,
+      "cancel": 380000,
+      "restore": 440000,
+      "outer": 480000
+    },
+    "spareRetryPool": false
+  },
+  "producerEvidence": {
+    "node": {
+      "tests": 416,
+      "passed": 416,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "exitCode": 0,
+      "suiteCounts": {
+        "ArtifactTransaction": 129,
+        "ArtifactProtocol": 108,
+        "LocalTlsTransport": 39,
+        "CanaryPreflight": 38,
+        "CanaryControl": 72,
+        "CanaryBootstrap": 11,
+        "ServiceCandidate": 18,
+        "CanaryTemplate": 1
+      },
+      "command": "node --test tests/ArtifactTransaction.test.mjs tests/ArtifactProtocol.test.mjs tests/LocalTlsTransport.test.mjs tests/CanaryPreflight.test.mjs tests/CanaryControl.test.mjs tests/CanaryBootstrap.test.mjs tests/ServiceCandidate.test.mjs tests/CanaryTemplate.test.mjs",
+      "environment": "cleared, explicit approved existing TOKENFORGE_TEST_PWSH path; fixtures only",
+      "logSha256": "15ac80f2f8b9b515c58c70c794707f4c283d8c9eb570b3643c4f5bdb2d9207b8"
+    },
+    "pester": {
+      "preset": "Sealer",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 224,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": [],
+      "pesterVersion": "6.2.0",
+      "exitCode": 0,
+      "command": "pwsh -NoLogo -NoProfile -File scripts/Invoke-TokenForgeLocalValidation.ps1 -Preset Sealer -NativeExecutable <exact-kit>/tokenforge -ReportPath <private-report>",
+      "environment": "fresh cleared process, existing module path only",
+      "reportSha256": "6b7fa00ee0c0d37038feb06c4b55463b5681b502917b837a593f23ce6ca450c6",
+      "logSha256": "6b7fa00ee0c0d37038feb06c4b55463b5681b502917b837a593f23ce6ca450c6"
+    },
+    "priorDevelopmentFailures": [
+      {
+        "kind": "ActualPublicSlotTestInheritedSelectionFlags",
+        "passed": 4,
+        "failed": 1,
+        "exitCode": 1,
+        "logSha256": "2ac98c4f1df55957a949ff6c6d566b3ec1b396e8585f262545d3a0cfca6ba50c",
+        "correction": "Production empty-execArgv refusal was correct; isolated the public-slot test in a flag-free cleared-environment child, retaining runtime pin and guards."
+      },
+      {
+        "kind": "SyntheticProducerPrivatePathValidation",
+        "runs": 2,
+        "outcome": "Nonzero refusal before network/credentials",
+        "logSha256": [
+          "7adbc968bba6ef9572ca7e7f01f55046df5e7c3090d722cf138b06afb1813135",
+          "7adbc968bba6ef9572ca7e7f01f55046df5e7c3090d722cf138b06afb1813135"
+        ],
+        "correction": "Use a new private directory plus regular-file sentinel validation, rather than passing directory to PrivateFiles.Resolve; set new content files private before validation."
+      }
+    ],
+    "preCommitReviewCorrections": [
+      "Freeze canonical context in transport; reject context substitution before creation/open/dispatch.",
+      "Check actual Results public slot and action bytes, exact signed run/attempt/manual event/job, complete source map and root/ancestor link refusal.",
+      "Carry authority expiry through producer, before role reads, driver completion and post-parse acceptance.",
+      "Reject external brand at local-only action boundary.",
+      "Interrupted cancellation must preserve Unknown and named-owner recovery without resend.",
+      "Clock rollback during recovery must return a durable RecoveryRequired result rather than throw after preserving evidence."
+    ]
+  },
+  "independentReview": {
+    "role": "Independent read-only security/source reviewer separate from controller/bootstrap implementers",
+    "independentlyExecuted": {
+      "serviceContextSignatureAndAuthorityExpiryPassed": 11,
+      "controllerRecoveryPassed": 15,
+      "failed": 0,
+      "skipped": 0,
+      "runtime": "existing approved Node24.18.1 exact pin",
+      "environment": "cleared; synthetic values; local loopback/recording only"
+    },
+    "staticReview": [
+      "Inert service/external factory, role attachment and action/privacy/public-context/approval closure",
+      "Bootstrap source/ambient-credential exclusions and literal tree export",
+      "Controller budget/unknown/restoration state machine and final fixes",
+      "NO-GO packet and final exact template/source pin with Actions-read-only scope"
+    ],
+    "fullSuiteOrPesterIndependentlyRerun": false,
+    "remainingMaterialFindings": [],
+    "finalKitAndSavedReceiptAudit": "Verified: read-only literal source/archive/payload/native/template/log/report/hash audit and sanitized documentation-only delta; no full-suite/Pester rerun or live approval."
+  },
+  "exactSourceEvidence": {
+    "testedSource": "eaec9e025e29de31c3d580a58e3e8b4a33a2fea0",
+    "literalGitBlobsVerified": 484,
+    "payloadFilesVerified": 486,
+    "nativeModuleBuildInputsVerified": 144,
+    "allNativeInputsUnchanged": true,
+    "adoptedReviewSha256": "987e1c7d3193e770e133172b3a3e48532dfc73725aa3de2b90f56f12b5e0e48b",
+    "sourceSha256": {
+      ".github/actions/tokenforge-canary/index.mjs": "61f3046ff17f8d6c01a0819baec3ab8ff4bde0eedc765b8743428323dd0eba51",
+      "publication/canary/workflow.yml": "14441447e5e26f668b22a72db7d4924d0df2632b45b5c8b40616de5076592741",
+      "scripts/New-TokenForgeCanarySubject.ps1": "34d068a02a8958724969c70df5a175649750a718bbeb7e3f0144a1930ab232a3",
+      "scripts/TokenForgeCanaryBootstrap.py": "0de0aa2976ba725a93ccef5d1f10c9abaa3eac7bff50eaa44d7217226ad741ab",
+      "scripts/offline/TokenForgeArtifactProtocol.mjs": "efe7acdfed0b198cd04fedc3f1d5218fb74fede846bcf658fa17991433561bce",
+      "scripts/offline/TokenForgeArtifactTransaction.mjs": "98b62020f6d484050c9e3a41b6d511535e6d06dd9e86451836c6531e868fbbf9",
+      "scripts/transport/TokenForgeCanaryAction.mjs": "603a03628ba8147225a01fb9be8a3863f307d26ac80adcdbdf464c656f157a67",
+      "scripts/transport/TokenForgeCanaryControl.mjs": "f5b5f5ae3ad75aafc5ff3425dfd13029c6b610b3eedd95364ef5dd463e072c69",
+      "scripts/transport/TokenForgeLocalTlsTransport.mjs": "942271438f8e6841447d47735259da6600267fd0f9447401451e2b9a34db1ee7",
+      "tests/CanaryBootstrap.test.mjs": "2b4f055a377aa20c89ba447dd4c7a3b32cbc6fa63630e6cf1c4a829fd0c77696",
+      "tests/CanaryControl.test.mjs": "d0cb0e2ad1471e8201dade89dde5bc730a7dea477c498d7762aef418a273a799",
+      "tests/CanaryPreflight.test.mjs": "7d27205979e599c25e9221cdca21280e944040adfba9dda8b60a692667cac945",
+      "tests/CanaryTemplate.test.mjs": "65cc3926dc593514951449177eb16c2a61c01d38643eb611ab819acdc667cd79",
+      "tests/LocalTlsTransport.test.mjs": "d5179943a065d7c706236f447d09367a3cb75fc711995ec41b60ec1c6f3eb571",
+      "tests/ServiceCandidate.test.mjs": "71c1d024ebdf5d4a70f38c5aac1cd0d2f8ea6f535ea21232653f165b918bc307",
+      "tests/fixtures/publication/LocalTlsFixture.mjs": "a4d0c7ae43262dde984bc15901d6b0751235cc530b35ec3ef80d2225137ca58e"
+    },
+    "toolchain": {
+      "node": {
+        "version": "v24.18.1",
+        "sha256": "f3432a45b03b2da0d270095fdd8813dc34cbea73f5fc8b18c7a384b7cf9b333a"
+      },
+      "pwsh": {
+        "version": "7.6.7",
+        "sha256": "873de21f04b6a0269c220f9c8396ff5cd639e8deb058a32cc26df54b69bbff8d"
+      },
+      "git": {
+        "version": "git version 2.47.3",
+        "sha256": "356db14e102d68a1a37d8a1ac577dfd678d45d46e92f468bef8b7154e7bfdc60"
+      },
+      "python3": {
+        "version": "Python 3.13.5",
+        "sha256": "889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9"
+      },
+      "openssl": {
+        "version": "OpenSSL 3.5.7 9 Jun 2026 (Library: OpenSSL 3.5.7 9 Jun 2026)",
+        "sha256": "acc10176d038aeb7b2a77d9ec972ac2985857a7191f7aecb7c54ef0e2c7e9549"
+      },
+      "Pester": {
+        "version": "6.2.0",
+        "manifestSha256": "ea8445218d46eeb69dd08827d38222f1d23c592966722ecfd0bdc419bf045543"
+      },
+      "gitRemoteHttp": {
+        "sha256": "79f496498761bd098ee1048c761de85029851d22245e079971883ebed2460852",
+        "selectedHostedHelperApproved": false
+      }
+    },
+    "activeWorkflowDiffEmpty": true,
+    "implementationClosureUnchangedAfterA": true,
+    "postTestPayloadFilesUnchanged": 486
+  },
+  "privateReviewKit": {
+    "kind": "TokenForgeOfflineSealerReviewKit",
+    "sourceCommit": "eaec9e025e29de31c3d580a58e3e8b4a33a2fea0",
+    "runtimeSource": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "manifestSha256": "644e79f5c7f29e7cec12d78119640a30f357e69283352aec8a2ce25e8323f790",
+    "archiveSha256": "c1a6aa46272adf1977b1bf8e9f31069c0fd819ce2635d027f529fab5d7e2dd6e",
+    "archiveBytes": 34290805,
+    "files": 486,
+    "nativeRebuilt": false,
+    "privateNotPublished": true,
+    "releasePackage": false,
+    "extractedPayloadAndLiteralGitBlobsRehashed": true,
+    "permissionLayout": {
+      "privateRootsMode": "0700",
+      "archiveMode": "0600",
+      "payloadFilesModes": [
+        "0600",
+        "0700"
+      ],
+      "intermediateDirectoriesMayFollowUmask": true,
+      "allInnerDirectories0700Claimed": false,
+      "crossUmaskReproducibilityClaimed": false
+    }
+  },
+  "reusedLinuxRuntime": {
+    "sourceCommit": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "packageManifestSha256": "8295f2508bc95d67c1ce61904cd3a4bba5a7ccac0f8d30af8ef34066eff383c9",
+    "nativeExecutableSha256": "987c863bc92f29de27ff812ad360cd1be1a8bde0fda6080f465827dbb6eb99db",
+    "credentialsDllSha256": "30d5d1268223c806e8c6d26fd138ef2f1db58dd23f067f59ac38387e2d7bad32",
+    "nativeModuleBuildInputCount": 144,
+    "allInputsMatch": true,
+    "nativeRebuilt": false,
+    "dependenciesInstalled": false,
+    "taskCreatedDevelopmentDllCopyRemovedWithoutTouchingAcceptedPackages": true
+  },
+  "preservedSealer": {
+    "implementationCommit": "326cf8f1bc18a132b0401e994d9ea37ea253818a",
+    "dormantWorkflowCommit": "91e624733ff2e766be276ecb270a18638af5c1a5"
+  },
+  "dormantTemplate": {
+    "path": "publication/canary/workflow.yml",
+    "testedSourceCommit": "eaec9e025e29de31c3d580a58e3e8b4a33a2fea0",
+    "gitBlob": "2646b0ec019605b64ec5ac201e7fd2d8c89bef2e",
+    "sha256": "14441447e5e26f668b22a72db7d4924d0df2632b45b5c8b40616de5076592741",
+    "implementationPin": "441bf8020b11c9770115e896d73134c298dd9c1d",
+    "actionMetadataGitBlob": "c99d962a6886e6c42f67a04a2697e550489b523d",
+    "actionEntrypointGitBlob": "cc228e28c8938c5b67152e8dad418ff19f9f3c74",
+    "embeddedBootstrapSha256": "0de0aa2976ba725a93ccef5d1f10c9abaa3eac7bff50eaa44d7217226ad741ab",
+    "embeddedBootstrapBytes": 11922,
+    "pythonFlags": [
+      "-I",
+      "-S",
+      "-B"
+    ],
+    "thirdPartyCheckoutDependency": false,
+    "contentsTokenRequired": false,
+    "jobPermissions": {
+      "actions": "read"
+    },
+    "literalFalse": true,
+    "manualOnly": true,
+    "registered": false,
+    "jobTimeoutMinutes": 5,
+    "activeWorkflowFilesUnchanged": true
+  },
+  "bootstrapLimits": {
+    "localFixtureOnlyExecuted": true,
+    "externalFetchExecuted": false,
+    "sourceFilesMax": 4096,
+    "exportedSourceBytesMax": 33554432,
+    "futureFetchAndExportTotalSeconds": 30,
+    "remotePackNetworkDiskByteCapEstablished": false,
+    "freshPrivateChildToolHome": true,
+    "parentEnvironmentOrHomeChanged": false,
+    "globalTrustChanged": false
+  },
+  "approvalAndAuthority": {
+    "trustedSignerConfigured": false,
+    "configuredSignerSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "algorithm": "Ed25519",
+    "planLifetimeMaxMs": 480000,
+    "signedPlanProvisioned": false,
+    "dynamicSelectedRunBackendIssuanceProcedureEstablished": false,
+    "applicationCredentialReadOccurred": false,
+    "platformAvailabilityIsAuthorization": false,
+    "platformInjectionCanPrecedeNodeStartup": true,
+    "signatureEstablishesCustodyOrRuntimeAuthority": false
+  },
+  "recoveryLimits": {
+    "durableIntentBeforeAttempt": true,
+    "unknownMutationReplay": false,
+    "sameInMemoryFixtureAuthorityRequired": true,
+    "freshProcessOrBackendResume": false,
+    "staleLockTakeover": false,
+    "crossJobResume": false,
+    "powerLossProven": false,
+    "restoredEnablementMayStillHaveUnresolvedRun": true
+  },
+  "consolidatedBlockers": [
+    {
+      "id": "SelectedDistribution",
+      "fact": "Pinned runner source selects Node24.10.0; approved local tool is24.18.1. Local ELF, Git/helper/Python/PowerShell/native census does not prove selected hosted distribution.",
+      "neededDecision": "Accept and provision concrete complete Linux distribution/tool/package provenance before application token reads; no pin weakening or unapproved installation."
+    },
+    {
+      "id": "DynamicApprovalDelivery",
+      "fact": "Signer unconfigured; no trusted selected-run/attempt/backend plan provisioning channel.",
+      "neededDecision": "Approve a verified purpose/root and trusted late issuance/delivery/execution-exclusion procedure; custom image alone cannot precompute backend routing IDs."
+    },
+    {
+      "id": "WorkflowRegistration",
+      "fact": "Current main source contains original manual validation, not this canary; historical373691621 registration/ref/input behavior not freshly established.",
+      "neededDecision": "Verify safe exact registration/default-branch/alternate-ref behavior or obtain separate reviewed default-branch change authorization; never dispatch current main."
+    },
+    {
+      "id": "CustodyAndRealControlLeaf",
+      "fact": "No enforceable exclusion of competing GitHub ref/settings/admin/dispatch/rerun writers; no documented lease/CAS; external controller leaf absent.",
+      "neededDecision": "Choose enforceable exclusion or explicitly revise/review requirement, then implement/review real leaf and named recovery; gates alone cannot deploy this source."
+    },
+    {
+      "id": "CredentialAndServiceAuthority",
+      "fact": "No real runtime/read/control issuer/scope/origin/backend/lifetime or service C==R acceptance inspected.",
+      "neededDecision": "Independently establish authority/least scopes and approve exact credential sources plus bounded writes/job after all previous blockers close."
+    }
+  ],
+  "proposedCanary": {
+    "repository": "nathanmcnulty/TokenForge",
+    "repositoryId": "1402673320",
+    "historicalWorkflowId": "373691621",
+    "workflowPath": ".github/workflows/ci.yml",
+    "proposedCustodyAndRecoveryOwner": "nathanmcnulty",
+    "ownerAcceptedOrAuthorityEstablished": false,
+    "packet": "docs/goal6-canary-decision.md",
+    "currentExecutionRequest": false,
+    "jobCountMax": 1,
+    "linuxX64": true,
+    "jobTimeoutMinutes": 5,
+    "observedArtifactOwnAttempt": false,
+    "observedArtifactOwnWorkflowId": false,
+    "realServiceInteroperabilityProven": false,
+    "operationalApproval": false
+  },
+  "publicSourceFacts": {
+    "runnerSource": "c76c59996c8fa32e989164a5a695efb12608ae5a",
+    "runnerNodeVersion": "24.10.0",
+    "localNodeVersion": "24.18.1",
+    "nodeSource": "9623d9ad85d37d2f0610ec4a82b48182cf2c6061",
+    "defaultBranchSourceHeadObserved": "1be12d75c7e2a63eac8e14c32d54e79cec4a23ef",
+    "defaultCiBlob": "9132eee7c87fc91ae48f0ad9c5ba2b2dafe255f3",
+    "currentActionsSettingsOrRegisteredStateVerified": false,
+    "historicalAllEightDisabledNotRefreshed": true,
+    "references": [
+      "https://github.com/actions/runner/blob/c76c59996c8fa32e989164a5a695efb12608ae5a/src/Misc/externals.sh#L9",
+      "https://github.com/actions/runner/blob/c76c59996c8fa32e989164a5a695efb12608ae5a/src/Runner.Worker/Handlers/NodeScriptActionHandler.cs#L53",
+      "https://github.com/actions/runner/blob/c76c59996c8fa32e989164a5a695efb12608ae5a/src/Runner.Worker/Handlers/ScriptHandler.cs#L288",
+      "https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_dispatch",
+      "https://docs.github.com/en/rest/actions/permissions#set-github-actions-permissions-for-a-repository",
+      "https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event"
+    ]
+  },
+  "blocked": {
+    "realRuntimeReadControllerCredentials": true,
+    "externalArtifactControlTransport": true,
+    "ActionsEnableDispatchHostedCompute": true,
+    "tenantChanges": true,
+    "operationalEmission": true,
+    "artifactSigningPublication": true,
+    "PRorMerge": true
+  },
+  "authorizationBoundary": "Only final sanitized source/test/docs ordinary Git push uses existing Git auth/signing. Test-only TLS/signature keys are synthetic/private. No protected credential access, live token use, installs, external artifact/control calls or hosted execution.",
+  "publicDeltaAudit": {
+    "actualCredentialPrivateKeyOrAccountPathFindings": 0,
+    "privateArchivesBinariesOrRawLogsIncluded": false,
+    "activeWorkflowFilesChanged": false
+  }
+}

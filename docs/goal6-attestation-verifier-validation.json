@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgePinnedAttestationVerifierOfflineAcceptance",
+  "recordedUtc": "2026-10-23T21:27:51.898933+00:00",
+  "disposition": "PinnedVerifierAndSignedOfflineBundleGatesPassed",
+  "goal6Complete": false,
+  "publicationReady": false,
+  "operationalTokenForgeSealingProven": false,
+  "source": {
+    "commit": "44eb86a5620bac837ecaa725bf5d1464e4b8d5b6",
+    "parent": "8736412f2bbea5448e8399dd4d7f5458bf9e4542",
+    "branch": "codex/goal6-pinned-attestation-verifier",
+    "preservedHandoff": "19470aeba7a949e4204e4ecf5586a6ffb3171c69",
+    "localOnly": true,
+    "unmerged": true,
+    "filesSha256": {
+      "scripts/Invoke-TokenForgeLocalValidation.ps1": "f27eebde2c5b0c97d4eb78cc2a1390b0a2653748e18601a88c8b871a195d9bba",
+      "tests/AttestationVerifier.Tests.ps1": "ff8e9ad2e03eedfee97a6199662ba4eaa94cd9a396f8384b8405af17409c5d21",
+      "tests/fixtures/attestation/manifest.json": "e213d78fc512e40487f48c4a972486cc5293744810efe27a19c7e7a16b338a5d"
+    }
+  },
+  "installation": {
+    "version": "2.103.2",
+    "platform": "linux-amd64",
+    "upstreamSource": "4f2cfe92e3499f8581bf39db77e0a1431fa7b55c",
+    "releasePublishedUtc": "2026-10-23T20:24:12Z",
+    "archive": ".cache/goal6-attestation/gh_2.103.2_linux_amd64.tar.gz",
+    "archiveSha256": "62ccf747115ddc61237efffdde66a3c8f70ba249433dc64f70801089b59c59c8",
+    "checksumsSha256": "414d6009dc7f9f936d70831af818d1a32aa0ff07a77646861efd207356a36b2d",
+    "archiveDigestMatchedOfficialApiAndChecksums": true,
+    "absoluteVerifierPath": "/home/nathan/GitHub/TokenForge-goal1-2rQ8rilR/.cache/goal6-attestation/installed/gh-v2.103.2/gh",
+    "executableSha256": "cbfdc94f3a5c0713c0d6df3e0a1d88a59a76b0c52332aad7d21d112f9da2cc0e",
+    "executableMode": "0500",
+    "systemGhUnchanged": "2.46.0",
+    "pathOrProfileChanged": false,
+    "archiveExtraction": "Only expected regular bin/gh member read; no archive paths blindly extracted; new private destination, hash before execution",
+    "provenance": "Anonymous public GitHub release/API/checksum retrieval; exact source blob bindings; public signed release bundle verified offline. Initial executable/API/checksum bootstrap shares GitHub HTTPS distribution trust; not independent reproducible-build assurance."
+  },
+  "roots": {
+    "path": "tests/fixtures/attestation/provisioned-root.jsonl",
+    "sha256": "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c",
+    "provisioning": {
+      "command": "gh attestation trusted-root",
+      "retrievedUtc": "2026-10-23T21:16:11.816000+00:00",
+      "authentication": false,
+      "trustBootstrap": "CLI embedded TUF roots and authenticated TUF metadata; CLI itself provisioned through GitHub HTTPS distribution and pinned digest/checksums, not an independent reproducible-build trust anchor."
+    },
+    "tufReplayMetadataArchived": false,
+    "currentRevocationProven": false
+  },
+  "fixtures": {
+    "manifest": "tests/fixtures/attestation/manifest.json",
+    "files": {
+      "reusable-artifact": {
+        "sha256": "49a3aa6075e0f49f82843e74b5baa614ad2a588e6675612bf108a0a008c5ac25",
+        "bytes": 2962,
+        "source": "https://raw.githubusercontent.com/cli/cli/4f2cfe92e3499f8581bf39db77e0a1431fa7b55c/pkg/cmd/attestation/test/data/reusable-workflow-artifact"
+      },
+      "reusable-bundle.json": {
+        "sha256": "88e35c3496fc9b9bd29629b69271bd32738e170f0d85a12d67da0c72c743f3bd",
+        "bytes": 11346,
+        "source": "https://raw.githubusercontent.com/cli/cli/4f2cfe92e3499f8581bf39db77e0a1431fa7b55c/pkg/cmd/attestation/test/data/reusable-workflow-attestation.sigstore.json"
+      },
+      "same-repo-artifact.whl": {
+        "sha256": "ae57936def59bc4c75edd3a837d89bcefc6d3a5e31d55a6fa7a71624f92c3c3b",
+        "bytes": 1437,
+        "source": "https://raw.githubusercontent.com/cli/cli/4f2cfe92e3499f8581bf39db77e0a1431fa7b55c/pkg/cmd/attestation/test/data/github_provenance_demo-0.0.12-py3-none-any.whl"
+      },
+      "same-repo-bundle.json": {
+        "sha256": "4f8c096e38a0eee242574ab100d16701928605409225e59784a3636f742bb27e",
+        "bytes": 4885,
+        "source": "https://raw.githubusercontent.com/cli/cli/4f2cfe92e3499f8581bf39db77e0a1431fa7b55c/pkg/cmd/attestation/test/data/github_provenance_demo-0.0.12-py3-none-any-bundle.jsonl"
+      },
+      "public-good-root.json": {
+        "sha256": "455b3fe53e2678889f093d66ebbfda5f12ebb9d682b146c3535fa04e97689787",
+        "bytes": 3806,
+        "source": "https://raw.githubusercontent.com/cli/cli/4f2cfe92e3499f8581bf39db77e0a1431fa7b55c/pkg/cmd/attestation/test/data/trusted_root.json"
+      },
+      "provisioned-root.jsonl": {
+        "sha256": "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c",
+        "bytes": 34634,
+        "source": "fresh empty-environment gh attestation trusted-root output"
+      },
+      "cli-release-bundle.json": {
+        "sha256": "69c7c18ac8c1a16cd82b21fe95d47b9ec799f024d7eb2e80f92d7a97e478d480",
+        "bytes": 13962,
+        "source": "anonymous cli/cli release attestation API, bundle downloaded and Snappy-decoded"
+      },
+      "UPSTREAM-LICENSE": {
+        "sha256": "6da4adc42392c8485e40b4251c7e332fc3352df1947c9ffade71dd60b14a7a4f",
+        "bytes": 1068,
+        "source": "https://raw.githubusercontent.com/cli/cli/4f2cfe92e3499f8581bf39db77e0a1431fa7b55c/LICENSE"
+      }
+    },
+    "license": "tests/fixtures/attestation/UPSTREAM-LICENSE",
+    "artifactsExecutedOrImported": false,
+    "signedBundleDownloads": "Public anonymous API returned null inline bundles and temporary signed download URLs; downloaded and bounded Snappy-decompressed public bundle; temporary URLs are not retained in committed evidence."
+  },
+  "signedVerificationOutputs": {
+    "sameRepo": {
+      "path": ".cache/goal6-attestation/same-repo-verified2.json",
+      "sha256": "f46563c3a1ffb835dec870a01e6605960350ae9fdef073489fe5a9b33f03a324",
+      "sourceRepositoryId": "763287532",
+      "sourceCommit": "a6c23b9806c593664f68637c8f9d45dfcf98b2db",
+      "sourceRef": "refs/heads/main",
+      "signerURI": "https://github.com/actions/attest-demo/.github/workflows/build-python.yml@refs/heads/main",
+      "signerDigest": "a6c23b9806c593664f68637c8f9d45dfcf98b2db",
+      "runInvocationURI": "https://github.com/actions/attest-demo/actions/runs/8788389601/attempts/1",
+      "runnerEnvironment": "github-hosted",
+      "issuer": "https://token.actions.githubusercontent.com",
+      "subjectCount": 1,
+      "witnessedTimestamps": [
+        {
+          "type": "TimestampAuthority",
+          "uri": "timestamp.githubapp.com",
+          "timestamp": "2024-04-22T17:33:26Z"
+        }
+      ],
+      "productionPolicyExpected": "Reject mutable certified signer URI"
+    },
+    "reusable": {
+      "path": ".cache/goal6-attestation/reusable-verified.json",
+      "sha256": "358c5d6ab53e3737fade014f6d7b777e7040506497cc0d9b4f45cf6e5f3a3f70",
+      "sourceRepositoryId": "804070735",
+      "sourceCommit": "95baf27389e83e6a5c48f42e190d48d7abcea19e",
+      "sourceRef": "refs/heads/main",
+      "signerURI": "https://github.com/github/artifact-attestations-workflows/.github/workflows/attest.yml@09b495c3f12c7881b3cc17209a327792065c1a1d",
+      "signerDigest": "09b495c3f12c7881b3cc17209a327792065c1a1d",
+      "runInvocationURI": "https://github.com/malancas/attest-demo/actions/runs/9228858953/attempts/1",
+      "runnerEnvironment": "github-hosted",
+      "issuer": "https://token.actions.githubusercontent.com",
+      "subjectCount": 1,
+      "witnessedTimestamps": [
+        {
+          "type": "Tlog",
+          "uri": "https://rekor.sigstore.dev",
+          "timestamp": "2024-05-24T11:14:24-08:00"
+        }
+      ],
+      "productionPolicyExpected": "Reject cross-repository certified sealer"
+    },
+    "cliRelease": {
+      "path": ".cache/goal6-attestation/release-verified3.json",
+      "sha256": "89d283210f242817316c5dd57e20f1cbd389c571df815ef79ad4175a638cf67f",
+      "sourceRepositoryId": "212613049",
+      "sourceCommit": "4f2cfe92e3499f8581bf39db77e0a1431fa7b55c",
+      "sourceRef": "refs/heads/trunk",
+      "signerURI": "https://github.com/cli/cli/.github/workflows/deployment.yml@refs/heads/trunk",
+      "signerDigest": "4f2cfe92e3499f8581bf39db77e0a1431fa7b55c",
+      "runInvocationURI": "https://github.com/cli/cli/actions/runs/40017149075/attempts/1",
+      "runnerEnvironment": "github-hosted",
+      "issuer": "https://token.actions.githubusercontent.com",
+      "subjectCount": 21,
+      "witnessedTimestamps": [
+        {
+          "type": "Tlog",
+          "uri": "https://rekor.sigstore.dev",
+          "timestamp": "2026-10-23T12:22:16-08:00"
+        }
+      ],
+      "productionPolicyExpected": "Not a TokenForge candidate: multiple subjects and mutable signer URI"
+    }
+  },
+  "validation": {
+    "platform": "linux-x64",
+    "powershell": "7.6.7",
+    "pester": "6.2.0",
+    "command": "unshare -Urn pwsh -NoProfile -File scripts/Invoke-TokenForgeLocalValidation.ps1 -Preset Attestation -NativeExecutable .cache/goal6/accepted-package/linux-x64/tokenforge -AttestationVerifierPath .cache/goal6-attestation/installed/gh-v2.103.2/gh -AttestationReleaseArchive .cache/goal6-attestation/gh_2.103.2_linux_amd64.tar.gz -ReportPath .cache/goal6-attestation/attestation-accepted-gate.json",
+    "summary": {
+      "preset": "Attestation",
+      "platform": "linux",
+      "version": "0.48.0",
+      "passed": 119,
+      "failed": 0,
+      "skipped": 0,
+      "containersfailed": 0,
+      "code": "Success",
+      "failedTests": []
+    },
+    "realVerifierCases": 16,
+    "publicFixtureIntegrityCases": 1,
+    "existingSyntheticAdapterCases": 100,
+    "workflowPolicyCases": 2,
+    "networkIsolation": "Outer unshare -Urn plus each verifier child in its own user/network namespace",
+    "credentials": "Cleared child environment; fresh private HOME/config; closed stdin; no token or authentication",
+    "cases": [
+      "Unchanged adapter process and all CLI flags accept genuine GitHub signed material and parse certified identity/witnessed time",
+      "Explicit pinned cross-repository reusable signer succeeds in CLI; unchanged same-repository production policy still refuses it",
+      "Release archive signed provenance has exact cli/cli repository ID/source/run, one matching archive among 21 subjects",
+      "Mutable certified workflow URI is refused by unchanged production sealer policy",
+      "Tampered artifact, DSSE signature, certificate, payload, missing certificate and unrelated trust domain refused by real verifier",
+      "Wrong repository/source/ref/signer workflow/signer commit and OIDC issuer refused",
+      "Existing synthetic authority/certificate/predicate, parser, process-output, request/time, custody and recovery contracts replayed; manual-only workflow/quarantine policy retained"
+    ],
+    "gitDiffCheck": "Passed",
+    "diagnostics": [
+      ".cache/goal6-attestation/attestation-first-gate.json",
+      ".cache/goal6-attestation/attestation-first-gate.log",
+      ".cache/goal6-attestation/attestation-accepted-gate.json",
+      ".cache/goal6-attestation/attestation-accepted-gate.log"
+    ],
+    "earlierFailures": "Initial reusable invocation omitted explicit cross-repository signer and failed closed; corrected to certified signer. Initial same-repository invocation used incorrect repo name and failed closed; corrected to published fixture certified identity. Initial public API bundle:null was not a valid bundle; downloaded/Snappy-decoded public bundle then verified. No production policy was relaxed."
+  },
+  "independentReview": {
+    "reviewer": "Independent read-only review agent",
+    "disposition": "No outstanding material findings",
+    "verified": [
+      "Archive/API/checksum/extracted binary pin alignment",
+      "Eight public fixture hashes and six upstream Git blob bindings",
+      "All three saved signed output certificate/source/run/subject shapes",
+      "Runner explicit input/no download fallback; private staged verifier and wrong issuer negative",
+      "Correct separation of CLI/process compatibility, stricter production policy, trust bootstrap and hosted-proof limits"
+    ]
+  },
+  "unchangedPackage": {
+    "version": "0.48.0",
+    "runtimeSource": "0a1704d057417e58b92fd5eac8c546541d3f7ec2",
+    "manifestSha256": "8295f2508bc95d67c1ce61904cd3a4bba5a7ccac0f8d30af8ef34066eff383c9",
+    "executableSha256": "987c863bc92f29de27ff812ad360cd1be1a8bde0fda6080f465827dbb6eb99db",
+    "credentialsDllSha256": "30d5d1268223c806e8c6d26fd138ef2f1db58dd23f067f59ac38387e2d7bad32",
+    "newVerifierIncluded": false,
+    "rebuilt": false,
+    "reason": "No production module/native, adapter/writer implementation, package builder or workflow input changed. Reuse historical package/core and 225-case writer gate; do not represent them as new executions."
+  },
+  "operations": {
+    "publicAnonymousDownloadsAndApiReads": true,
+    "publicRootProvisioningOnline": true,
+    "signedVerificationOffline": true,
+    "authentication": false,
+    "protectedCredentialsRead": false,
+    "tenantChanges": false,
+    "liveDiscovery": false,
+    "actionsEnabledOrDispatched": false,
+    "realPublication": false,
+    "remotePush": false,
+    "pullRequest": false,
+    "merge": false,
+    "otherPlatformsBuiltOrTested": false,
+    "dependencyInstallation": "Only exact approved workspace-private Linux x64 verifier; no system package/profile changes"
+  },
+  "remainingGates": [
+    "Provision/review same-repository immutable reusable TokenForge sealer, trusted operational policy/root hash and genuine single-subject TokenForge candidate. Public fixtures are not operational TokenForge sealing proof.",
+    "Separate authorized live GitHub current identity/permission/ruleset, exact-old CAS, publication and lost-ack recovery validation remain open; no authentication/publication implied by offline provisioning approval.",
+    "No independent reproducible binary bootstrap, TUF metadata replay, current revocation or live owner/repository identity proof from static bundles.",
+    "Verifier/fixtures are source/workspace assets outside accepted native package; historical fresh human administrator workflow and collector-recovery release gates remain open."
+  ],
+  "specificApprovals": {
+    "authenticationAndPublication": "Separate approval naming GitHub account/repository, exact reviewed source/policy/root/bundle/candidate/transaction/ref and request/time/recovery envelope; read-only authentication is not publication permission",
+    "hostedCompute": "Separate explicit Actions authorization and runtime/concurrency budget",
+    "prMerge": "Separate approval required"
+  }
+}

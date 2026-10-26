@@ -329,6 +329,8 @@ function Assert-TokenForgePendingRequestRecovery {
             $old.LastRequest.StartedAt=$json.RootElement.GetProperty('LastRequest').GetProperty('StartedAt').GetString()
             $old.LastRequest.EndedAt=if($json.RootElement.GetProperty('LastRequest').GetProperty('EndedAt').ValueKind -eq [Text.Json.JsonValueKind]::Null){$null}else{$json.RootElement.GetProperty('LastRequest').GetProperty('EndedAt').GetString()}
             # Preserve the unknown remote outcome while recording its one authorized replay.
+            # The caller retains its discovery lock; Windows needs this reader closed before replacement.
+            $stream.Dispose();$stream=$null
             Save-TokenForgeDocument -Path $path -Document $old
             Save-TokenForgeBudgetLedger $Budget
         }catch{if($_.FullyQualifiedErrorId -match '^TokenForge\.'){throw};Throw-TokenForgeCollectorState Failed}finally{if($json){$json.Dispose()};if($stream){$stream.Dispose()}}

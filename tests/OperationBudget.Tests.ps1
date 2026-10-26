@@ -333,6 +333,34 @@ Describe 'Unknown read-only preflight request recovery' {
   {Assert-TokenForgePendingRequestRecovery -StatePath $directory -Budget $third -RecoverUnknown}|Should -Throw '*RecoveryExhausted*'
   $third.Counts.IssuanceAttempts|Should -Be 0
  }
+ It 'preserves the <Category> uncertainty snapshot and separate writer lock during recovery' -ForEach @(@{Category='Source'},@{Category='Inventory'}) {
+  Start-TokenForgeBudgetRequest -Budget $first -Category $Category
+  $expected=Get-Content $first.LedgerPath -Raw|ConvertFrom-Json -AsHashtable -DateKind String
+  $expected.RecoveryCount=1;$expected.RecoveryAuthorized=$true
+  $lockPath=Join-Path $directory '.discovery.lock'
+  $writerLock=[IO.File]::Open($lockPath,[IO.FileMode]::CreateNew,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
+  try{
+   $next=New-TokenForgeOperationBudget -LedgerPath (Join-Path $directory 'budget-intent-next.json')
+   Assert-TokenForgePendingRequestRecovery -StatePath $directory -Budget $next -RecoverUnknown
+   $saved=Get-Content $first.LedgerPath -Raw|ConvertFrom-Json -AsHashtable -DateKind String
+   ($saved|ConvertTo-Json -Depth 100 -Compress)|Should -BeExactly ($expected|ConvertTo-Json -Depth 100 -Compress)
+   $next.Counts.TotalRequests|Should -Be 1;$next.Counts.ReservedUnknownRequests|Should -Be 1
+   $next.Counts.IssuanceAttempts|Should -Be 0
+   {[IO.File]::Open($lockPath,[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None).Dispose()}|Should -Throw
+  }finally{$writerLock.Dispose()}
+ }
+ It 'retains the unknown ledger and refuses continuation if recovery publication fails' {
+  Start-TokenForgeBudgetRequest -Budget $first -Category Source
+  $before=(Get-FileHash $first.LedgerPath).Hash
+  $next=New-TokenForgeOperationBudget -LedgerPath (Join-Path $directory 'budget-intent-next.json')
+  Mock Save-TokenForgeDocument {throw 'synthetic replacement failure'} -ParameterFilter {$Path -eq $first.LedgerPath}
+  {Assert-TokenForgePendingRequestRecovery -StatePath $directory -Budget $next -RecoverUnknown}|Should -Throw '*Failed*'
+  (Get-FileHash $first.LedgerPath).Hash|Should -Be $before
+  Test-Path $next.LedgerPath|Should -BeFalse
+  $third=New-TokenForgeOperationBudget
+  {Assert-TokenForgePendingRequestRecovery -StatePath $directory -Budget $third}|Should -Throw '*InFlightUnknown*'
+  $third.Counts.TotalRequests|Should -Be 0;$third.Counts.IssuanceAttempts|Should -Be 0
+ }
  It 'permits a normal later run after the explicitly authorized read-only retry completed' {
   Start-TokenForgeBudgetRequest -Budget $first -Category Source
   $next=New-TokenForgeOperationBudget -LedgerPath (Join-Path $directory 'budget-intent-next.json')

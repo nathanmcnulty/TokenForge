@@ -1,3 +1,9 @@
+# Review corrections and source acceptance - PR #106
+
+Read the [review follow-up](pr106-review-followup.md) and [exact-file receipt](pr106-review-followup.json). Two bounded runtime corrections now supersede the earlier documentation-only delta: inventory budget forwarding and Windows request-ledger replacement. Final related offline checks passed 131/131 with no skips. Historical Linux package/full-suite receipts below remain scoped to their original source and do not qualify the corrected scripts or a new distribution. Both review findings are resolved; the final review response pins the complete immutable candidate. No push, merge, hosted workflow, package release or operational activation was performed in this follow-up. Earlier handoffs below describe historical checkpoints.
+
+---
+
 # Final pre-merge review — PR #106
 
 Read [the final review handoff for Dot](pr106-dot-final-review.md). The final reviewed walkthrough checkpoint is `7a0417dc17517880156f1dff26e1223b5c4210d5`; its 21-command replay passed against the exact reviewed runtime package from source `58203ecdcee47c4bdaaef0801d0b496d22daa35f`. The containing checkpoint adds handoff documentation only. Nathan authorized the source push and opening the existing PR for review on 2026-10-26; leave it unmerged pending Dot's final review and Nathan's merge authorization. Earlier draft/local-only statements below describe their historical checkpoints. Packages and raw receipts remain local; no hosted compute, authentication, live work, package publication or activation is authorized.

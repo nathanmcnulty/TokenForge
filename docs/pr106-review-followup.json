@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgePR106BoundedReviewFollowup",
+  "date": "2026-10-26",
+  "scope": "Whole-PR source review with two bounded corrections; focused offline Windows execution, not distribution qualification",
+  "sources": {
+    "main": "4c9865185977033e110e8eaaf71fb8f649ec18f2",
+    "originalReviewHead": "98e78695520e71adbcb3aeb224dff9ae73ae6c7b",
+    "wrapperCorrectionCommit": "6a927eb366f543557831e3ff3cdf0c646a3613d2",
+    "recoveryIntroducedBy": "3bf93cbcee318e8758005d12258808ec7184394f",
+    "recoveryHelperAbsentFromMain": true,
+    "validatedFilesSha256": {
+      "scripts/Invoke-TokenForgeInventory.ps1": "79a8305b0d917529e7bf1e3616a34a12a83e3181212da95fdb37011c7f9db52f",
+      "src/TokenForge/Private/OperationBudget.ps1": "e8cd3278c6a481e2ec088c94a6ba3628dd385eca6aabf1b8a7f35509ee78243e",
+      "tests/CollectorSafety.Tests.ps1": "5a2c2dc8dd5de40289c65c53948aa65800c46a2c9b6c76377d7db6f9763ecb59",
+      "tests/OperationBudget.Tests.ps1": "548d813e758b7462b55b1dce68bbadefd9341809909de9e88e76a403baa80847",
+      "tests/InventoryCheckpoint.Tests.ps1": "9438919b5d72774bd387592e68a74262e4a0af42f69efde3d06a4aea465a0bf9",
+      "tests/ResearchChunkPending.Tests.ps1": "6325c252ba6466711c89f6cf48d8cc2aaec5e35973be915f11fea62f3a92747e",
+      "tests/ProbeReadBounds.Tests.ps1": "97265d47548390a53be2bba7bcb2e2b793c35efcd709fb2fb5489797deedb55a",
+      "tests/DiscoveryBootstrap.Tests.ps1": "328e58f2452a7154dc7eae59c34ac29ed47d1f455167ee02700138d1cc1d90b1"
+    }
+  },
+  "toolchain": {
+    "os": "Windows",
+    "powershell": "7.6.9",
+    "dotnet": "10.0.14",
+    "pester": "6.2.0",
+    "dependencyInstallation": false,
+    "nativeOrSdkBuild": false
+  },
+  "execution": {
+    "acquisition": "mocked",
+    "nativePersistence": "mocked",
+    "budgetAndJsonPersistence": "real",
+    "networkRequestsSent": false,
+    "hostedWorkflowsRun": false,
+    "initialHarnessConstraints": [
+      "Pester registry/CIM reporting",
+      "AppContainer cannot access private-ACL fixtures"
+    ],
+    "resolution": "Disabled unused reporting; approved outside-AppContainer execution with private synthetic fixtures",
+    "runs": [
+      {
+        "label": "baseline",
+        "passed": 6,
+        "failed": 8,
+        "skipped": 0,
+        "notRun": 30,
+        "failedContainers": 0,
+        "failedTests": [
+          "Inventory wrapper budget for Probe.refuses zero issuance before acquisition even with HTTP allowance remaining",
+          "Inventory wrapper budget for Probe.exhausts a finite issuance allowance before the next acquisition",
+          "Inventory wrapper budget for Probe.retains bounded evidence and does not reissue completed work on resume",
+          "Inventory wrapper budget for Probe.preserves bounded refresh refusal for Probe and frozen resume for ProbeChunk",
+          "Inventory wrapper budget for ProbeChunk.refuses zero issuance before acquisition even with HTTP allowance remaining",
+          "Inventory wrapper budget for ProbeChunk.exhausts a finite issuance allowance before the next acquisition",
+          "Inventory wrapper budget for ProbeChunk.retains bounded evidence and does not reissue completed work on resume",
+          "Inventory wrapper budget for ProbeChunk.preserves bounded refresh refusal for Probe and frozen resume for ProbeChunk"
+        ],
+        "localLogSha256": "d8341a2c7a6e8d4eea35cea323c3e633ef1b41f5966b4ed0584d2b42e20dc234"
+      },
+      {
+        "label": "after",
+        "passed": 14,
+        "failed": 0,
+        "skipped": 0,
+        "notRun": 30,
+        "failedContainers": 0,
+        "failedTests": [],
+        "localLogSha256": "2d48d342331284b78d84497fc2cf99f83fb5bbbd3690fc6b46ac5cb242c2fea5"
+      },
+      {
+        "label": "existing",
+        "passed": 115,
+        "failed": 4,
+        "skipped": 0,
+        "notRun": 0,
+        "failedContainers": 0,
+        "failedTests": [
+          "Unknown read-only preflight request recovery.conservatively charges one unknown inventory request and page then inherits its recovery cap",
+          "Unknown read-only preflight request recovery.permits a normal later run after the explicitly authorized read-only retry completed",
+          "Unknown read-only preflight request recovery.keeps transport failures unknown and blocks another unapproved read-only dispatch",
+          "Unknown read-only preflight request recovery.inherits consumed authorization even when a prior recovery stopped before any new dispatch"
+        ],
+        "localLogSha256": "e5803112fac743f0d73114b041964a5ff60c14b579e198c1682844d75b680090"
+      },
+      {
+        "label": "recovery-before",
+        "passed": 53,
+        "failed": 6,
+        "skipped": 0,
+        "notRun": 0,
+        "failedContainers": 0,
+        "failedTests": [
+          "Unknown read-only preflight request recovery.conservatively charges one unknown inventory request and page then inherits its recovery cap",
+          "Unknown read-only preflight request recovery.preserves the Source uncertainty snapshot and separate writer lock during recovery",
+          "Unknown read-only preflight request recovery.preserves the Inventory uncertainty snapshot and separate writer lock during recovery",
+          "Unknown read-only preflight request recovery.permits a normal later run after the explicitly authorized read-only retry completed",
+          "Unknown read-only preflight request recovery.keeps transport failures unknown and blocks another unapproved read-only dispatch",
+          "Unknown read-only preflight request recovery.inherits consumed authorization even when a prior recovery stopped before any new dispatch"
+        ],
+        "localLogSha256": "a964065e5d2cdc6148d28d05794e4c6ef43efcfc0c2d71a86597547a45ecec57"
+      },
+      {
+        "label": "recovery-after",
+        "passed": 59,
+        "failed": 0,
+        "skipped": 0,
+        "notRun": 0,
+        "failedContainers": 0,
+        "failedTests": [],
+        "localLogSha256": "f046cdb2f32b65b7db7d76adcad14fd77b9ec43d699e5cb7b79120184e9206fe"
+      },
+      {
+        "label": "final-related",
+        "passed": 131,
+        "failed": 0,
+        "skipped": 0,
+        "notRun": 0,
+        "failedContainers": 0,
+        "failedTests": [],
+        "localLogSha256": "3cb246fe0f9703f30411a39b28d39038d9ae42ef5fce11c03d8c60f44d4aeac6"
+      }
+    ]
+  },
+  "review": {
+    "blockingSourceFindingsRemaining": 0,
+    "independentReview": "Both bounded fixes and their proofs reviewed; complete original integration review retained",
+    "concurrency": "Exclusive caller discovery lock remains held while ledger reader is closed",
+    "integrity": "Original ledger fields preserved except RecoveryCount and RecoveryAuthorized",
+    "failClosed": "Publication failure retains old uncertainty and prevents implicit continuation",
+    "workflowFilesChanged": false,
+    "automaticTriggersAdded": false,
+    "historicalReceiptsChanged": false
+  },
+  "qualification": {
+    "sourceAcceptance": true,
+    "finalLinuxSuiteRerun": false,
+    "nativeSuiteRerun": false,
+    "sealerSuiteRerun": false,
+    "operatorWalkthroughRerun": false,
+    "administratorReplayRerun": false,
+    "packageOrRawReceiptBytesIndependentlyVerified": false,
+    "newDistributionQualified": false,
+    "compiledInputsChanged": false,
+    "historicalPackageSource": "58203ecdcee47c4bdaaef0801d0b496d22daa35f",
+    "historicalNativeCompilationSource": "c32cd7b27e98fdeac9f376807999205d99133a38",
+    "requiredForDistribution": "New overlay/source binding and payload hashes for corrected scripts, with appropriate validation",
+    "issue98Or106CompletionClaimed": false
+  }
+}

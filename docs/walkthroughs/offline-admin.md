@@ -20,18 +20,22 @@ python3 examples/offline-admin/replay.py \
   --output-directory /absolute/existing-private-parent/new-offline-admin-run
 ```
 
-The output directory must not exist; its parent must already exist. Use a new private scratch location, never an operational account/state directory. The replay creates a 0700 directory, copies the JSON inputs as 0600 files, and retains actual stdout, stderr, argument/exit receipts and `summary.json`. Repository fixtures can be readable as ordinary source files; native private ingress requires the protected copies. Do not loosen permissions or use links to bypass ingress checks.
+The output directory must not exist; its parent must already exist. Use a new private scratch location, never an operational account/state directory. For a self-contained .NET bundle under a stripped environment, supply a dedicated private `DOTNET_BUNDLE_EXTRACT_BASE_DIR`; otherwise the host may fail before command processing. The replay creates a 0700 directory, copies the JSON inputs as 0600 files, and retains actual stdout, stderr, argument/exit receipts and `summary.json`. Repository fixtures can be readable as ordinary source files; native private ingress requires the protected copies. Do not loosen permissions or use links to bypass ingress checks.
 
-The runner is a small example replay, not a new TokenForge API. It uses explicit file paths, closes child stdin, sets the child PATH to a nonexistent adapter directory and bounds each command to 30 seconds. The selected native commands inspect local files only; their source paths do not call acquisition. PATH isolation is not an OS network sandbox. The runner does not inspect sessions, initialize a store, call an authentication command or read an operator's discovery data. It writes only to the new output directory. An unexpected exit, stderr, status, reason or packet event fails the replay; inspect the saved command and output instead of treating exit 2/3/4 as a runner failure by itself.
+The runner is a small example replay, not a new TokenForge API. It uses explicit file paths, closes child stdin, sets the child PATH to a nonexistent adapter directory and bounds each command to 30 seconds. The selected native commands inspect local files only; their source paths do not call acquisition. PATH isolation is not an OS network sandbox. The runner does not inspect sessions, initialize a store, call an authentication command or read an operator's discovery data. The replay writes its inputs and receipts only to the new output directory; the .NET host may also write extracted libraries and temporary files to the explicitly supplied private scratch directories. An unexpected exit, stderr, status, reason or packet event fails the replay; inspect the saved command and output instead of treating exit 2/3/4 as a runner failure by itself.
 
-For the exact local package used in this candidate, the command was:
+For the final reviewed package used after local integration, the command was (run in a new network namespace with a clean environment):
 
 ```sh
-python3 examples/offline-admin/replay.py \
-  --native-executable /home/nathan/.codex/worktrees/issue98-runtime-integration/TokenForge/.cache/issue98/final-extracted/tokenforge \
-  --source-revision cbea33eca2dfde24f0c92b0385784876510e4ece \
-  --package-manifest-sha256 aa8bfaf14135cc6c5d63b0f9e2fb4b9b05b88cad08d0878735d6c46e0c135dee \
-  --output-directory /tmp/tokenforge-offline-admin-replay-20261025
+# Existing dedicated 0700 parent; tmp/ and bundle/ are private scratch directories.
+unshare -Urn env -i PATH=/usr/bin:/bin LANG=C.UTF-8 \
+  TMPDIR=/home/nathan/.codex/worktrees/issue98-runtime-integration/TokenForge/.cache/offline-admin-final-replay/tmp \
+  DOTNET_BUNDLE_EXTRACT_BASE_DIR=/home/nathan/.codex/worktrees/issue98-runtime-integration/TokenForge/.cache/offline-admin-final-replay/bundle \
+  /usr/bin/python3 -I -B examples/offline-admin/replay.py \
+  --native-executable /home/nathan/.codex/worktrees/issue98-runtime-integration/TokenForge/.cache/issue98/final-package-58203ec/linux-x64/tokenforge \
+  --source-revision 58203ecdcee47c4bdaaef0801d0b496d22daa35f \
+  --package-manifest-sha256 8c550f08b5632f13a48a07558574370bd4375794fe09b3fe9120d72de3efe0a7 \
+  --output-directory /home/nathan/.codex/worktrees/issue98-runtime-integration/TokenForge/.cache/offline-admin-final-replay/run-02
 ```
 
 That local path is an integration artifact, not a distributable prerequisite. If it is unavailable, finish source review and obtain a matching receipt/package from the owning session before claiming replay success. Do not substitute an older package or change runtime pins. After integration into a different baseline, replay with that baseline's reviewed complete package and retain a new receipt.
@@ -106,4 +110,4 @@ For missing, stale or incomparable evidence, preserve the uncertainty and invest
 
 The [validation receipt](../../examples/offline-admin/validation.json) records the exact source, native build source, package/build receipt hashes, executable/runtime identity, fixture hashes and 21 actual command results. The [independent review](../../examples/offline-admin/review.md) records review scope and limits. This is a local guide/example candidate, with no product/runtime/test-baseline edits and no publication, PR mutation, merge or hosted run. It does not close #98 or #106.
 
-Integrate only this guide and `examples/offline-admin/`. The candidate's parent is `cbea33eca2dfde24f0c92b0385784876510e4ece`. The primary session owns runtime/package and baseline decisions. Reuse this receipt only while its inputs/package are unchanged; after integration into a changed source/package, replay the 21-command example with that reviewed package. The existing Admin validation preset may be run by the primary session when runtime integration needs broader contract coverage. This documentation change does not alter that suite or require cross-platform/hosted gates.
+Integrate only this guide and `examples/offline-admin/`. The original candidate's parent was `cbea33eca2dfde24f0c92b0385784876510e4ece`; local cherry-pick `911156e2175be78882a132611d4836214fd80a72` has parent `ccc14d843f53a35d5f15e69a986467f0b7381ce3`. The primary session owns runtime/package and baseline decisions. Reuse this receipt only while its inputs/package are unchanged; after integration into a changed source/package, replay the 21-command example with that reviewed package. The existing Admin validation preset may be run by the primary session when runtime integration needs broader contract coverage. This documentation change does not alter that suite or require cross-platform/hosted gates.

@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 # Pure offline publication/recovery planning. This file performs no Git operation,
 # network request, authentication, filesystem mutation, or authorization decision.
 # Caller-provided hashes and journals establish consistency, never identity or authority.

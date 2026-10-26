@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$StatePath,[Parameter(Mandatory)][string]$NativeExecutablePath,
  [ValidatePattern('^[a-f0-9]{64}$')][string]$CohortId)

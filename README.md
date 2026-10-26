@@ -2,7 +2,7 @@
 
 TokenForge researches Microsoft Entra applications and the permissions available through them. It collects application metadata, tests supported token flows using an authorized account, and records the results for later comparison.
 
-The project provides a PowerShell module and a native CLI. Discovery execution currently requires PowerShell 7.6+; the native CLI supplies SQLite storage and offline reporting.
+The project provides a PowerShell module and a native CLI. The [supported baseline](docs/runtime-baseline.md) is PowerShell 7.6+, .NET 10 and Pester 6.2 for tests; the native CLI supplies SQLite storage and offline reporting.
 
 ## Public health and private workstation work
 

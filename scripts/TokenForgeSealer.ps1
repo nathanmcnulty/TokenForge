@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 # Trusted data-only validation. Import performs no network request or signing.
 . (Join-Path $PSScriptRoot TokenForgePublicationAdapter.ps1)
 . (Join-Path $PSScriptRoot TokenForgeSealerZip.ps1)

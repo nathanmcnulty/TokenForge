@@ -20,6 +20,9 @@ $summary = [ordered]@{
     preset = $Preset
     platform = 'linux'
     version = $version
+    powershell = $PSVersionTable.PSVersion.ToString()
+    dotnetRuntime = [Runtime.InteropServices.RuntimeInformation]::FrameworkDescription
+    pester = $null
     passed = 0
     failed = 0
     skipped = 0
@@ -107,6 +110,7 @@ try {
     }
 
     Import-Module Pester -RequiredVersion 6.2.0 -ErrorAction Stop
+    $summary.pester = (Get-Module Pester).Version.ToString()
     $summary.code = 'Ready'
 } catch {
     $summary.code = 'SetupFailed'

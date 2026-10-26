@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 # Synthetic child-process crash fixture. Every token path is replaced before probing.
 [CmdletBinding()]
 param(

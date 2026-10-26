@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 # No invocation on import. Publish and read-only recovery are separate entry points.
 . (Join-Path $PSScriptRoot TokenForgePublicationAdapter.ps1)
 

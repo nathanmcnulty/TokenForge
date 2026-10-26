@@ -55,7 +55,7 @@ if($rebuilt){
     if($actualFiles.Count -ne $baseline.files.Count){throw 'Rebuilt package file inventory differs.'}
     foreach($relative in $actualFiles){
         if(-not $baseline.files.Contains($relative) -or $baseline.files[$relative] -cnotmatch '^[a-f0-9]{64}$' -or (Get-FileHash -LiteralPath (Join-Path $base $relative)).Hash.ToLowerInvariant() -cne $baseline.files[$relative]){throw 'Rebuilt package bytes changed.'}
-        if($relative -cin @('tokenforge','src/TokenForge/lib/net8.0/TokenForge.Credentials.dll')){continue}
+        if($relative -cin @('tokenforge','src/TokenForge/lib/net10.0/TokenForge.Credentials.dll')){continue}
         # A receipt cannot authorize arbitrary additional package data. Every other
         # file must be an exact tracked source artifact under the build driver's layout.
         $sourceRelative=if($relative -ceq 'README.md'){'docs/native-cli.md'}elseif($relative.StartsWith('examples/',[StringComparison]::Ordinal)){'docs/'+$relative}elseif($relative.StartsWith('src/TokenForge/',[StringComparison]::Ordinal) -or $relative.StartsWith('scripts/',[StringComparison]::Ordinal) -or $relative -ceq 'THIRD-PARTY-NOTICES.md'){$relative}elseif($relative -cnotmatch '/'){ 'docs/'+$relative }else{throw 'Unexpected rebuilt package file.'}
@@ -85,12 +85,12 @@ foreach($name in $baseline.files.Keys){
 }
 # Overlay tracked current PowerShell source only. All compiled inputs and rebuilt
 # bytes (or historical accepted baseline) were checked before creating output.
-$dllBytes=[IO.File]::ReadAllBytes((Join-Path $stage src/TokenForge/lib/net8.0/TokenForge.Credentials.dll))
+$dllBytes=[IO.File]::ReadAllBytes((Join-Path $stage src/TokenForge/lib/net10.0/TokenForge.Credentials.dll))
 # Discard only this task-created staging module, so removed source cannot survive an overlay.
 Remove-Item -LiteralPath (Join-Path $stage src/TokenForge) -Recurse -Force
 Copy-TokenForgePackageSource -SourceRoot $repo -DestinationRoot $stage -Prefix src/TokenForge
-$null=[IO.Directory]::CreateDirectory((Join-Path $stage src/TokenForge/lib/net8.0),[IO.UnixFileMode]448)
-[IO.File]::WriteAllBytes((Join-Path $stage src/TokenForge/lib/net8.0/TokenForge.Credentials.dll),$dllBytes)
+$null=[IO.Directory]::CreateDirectory((Join-Path $stage src/TokenForge/lib/net10.0),[IO.UnixFileMode]448)
+[IO.File]::WriteAllBytes((Join-Path $stage src/TokenForge/lib/net10.0/TokenForge.Credentials.dll),$dllBytes)
 $null=[IO.Directory]::CreateDirectory((Join-Path $stage scripts),[IO.UnixFileMode]448)
 foreach($name in $scriptNames){Copy-Item (Join-Path $PSScriptRoot $name) (Join-Path $stage scripts/$name)}
 $null=[IO.Directory]::CreateDirectory((Join-Path $stage docs),[IO.UnixFileMode]448)

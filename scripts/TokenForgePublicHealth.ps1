@@ -11,8 +11,8 @@ function Initialize-TokenForgeHealthRuntime {
     param([Parameter(Mandatory)][string]$NativeExecutablePath)
     if($PSVersionTable.PSVersion.ToString() -cne '7.6.7' -or -not $IsLinux -or [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -ne 'X64'){throw 'Public health currently requires reviewed PowerShell 7.6.7 on Linux x64.'}
     $exe=[IO.Path]::GetFullPath($NativeExecutablePath)
-    $dll=Join-Path (Split-Path $exe -Parent) 'src/TokenForge/lib/net8.0/TokenForge.Credentials.dll'
-    foreach($entry in @(@($exe,'48f51ba4a7ce275f0d2235437620a04aff8141bf692fbfbb741d3ce157a668a0'),@($dll,'461eaec7702d1850207cdab50423f78db4c47b59b5c211a8b8124df43af83af6'))){
+    $dll=Join-Path (Split-Path $exe -Parent) 'src/TokenForge/lib/net10.0/TokenForge.Credentials.dll'
+    foreach($entry in @(@($exe,'45e144c33fdba3c11298d75d074fcacdb9fb0b65b08e645a34baa74f1f6cea7d'),@($dll,'8754e8c48a9f8d64c32591e4f3a0f0d20eb749257be0d405d86b12d0bf2d0222'))){
         Assert-TokenForgeHealthPath $entry[0]
         if((Get-FileHash -LiteralPath $entry[0] -Algorithm SHA256).Hash.ToLowerInvariant() -cne $entry[1]){throw 'Public health requires the reviewed matching Linux package.'}
     }

@@ -130,10 +130,10 @@ Describe 'Independent public health trust and recovery cases' {
  }
  It 'refuses a substituted base manifest despite unchanged approved executable and DLL' {
   $base=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
-  $dllDir=Join-Path $base src/TokenForge/lib/net8.0
+  $dllDir=Join-Path $base src/TokenForge/lib/net10.0
   $null=[IO.Directory]::CreateDirectory($dllDir,[IO.UnixFileMode]448)
   Copy-Item -LiteralPath $native -Destination (Join-Path $base tokenforge)
-  Copy-Item -LiteralPath (Join-Path (Split-Path $native -Parent) src/TokenForge/lib/net8.0/TokenForge.Credentials.dll) -Destination $dllDir
+  Copy-Item -LiteralPath (Join-Path (Split-Path $native -Parent) src/TokenForge/lib/net10.0/TokenForge.Credentials.dll) -Destination $dllDir
   Write-IndependentJson (Join-Path $base local-package-manifest.json) @{sourceRevision='0a1704d057417e58b92fd5eac8c546541d3f7ec2';nativeInputs=@{};files=@{'private.json'='a'*64}}
   $out=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
   {& "$repo/scripts/New-TokenForgePublicHealthPackage.ps1" -BasePackagePath $base -OutputPath $out -SourceRevision ('0'*40)}|Should -Throw '*accepted receipt*'

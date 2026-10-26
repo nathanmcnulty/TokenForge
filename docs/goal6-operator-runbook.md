@@ -22,7 +22,7 @@ tar -xzf "$archive" -C "$package"
 "$package/tokenforge" --version
 ```
 
-Stop if verification or extraction fails. Compare the extracted package membership and dependency hashes against the trusted receipt. Keep the complete directory together, including adjacent runtime libraries, `src/TokenForge/lib/net8.0/TokenForge.Credentials.dll`, `scripts/`, examples and guides. Native commands are self-contained; the packaged PowerShell adapters require existing PowerShell 7.4+. Ordinary use requires neither a .NET SDK nor Pester. Developer validation uses its separately pinned toolchain and test version.
+Stop if verification or extraction fails. Compare the extracted package membership and dependency hashes against the trusted receipt. Keep the complete directory together, including adjacent runtime libraries, `src/TokenForge/lib/net10.0/TokenForge.Credentials.dll`, `scripts/`, examples and guides. Native commands are self-contained; the packaged PowerShell adapters require existing PowerShell 7.6+. Ordinary use requires neither a .NET SDK nor Pester. Developer validation uses its separately pinned toolchain and test version.
 
 In a fresh PowerShell process, import the extracted module:
 

@@ -43,7 +43,7 @@ in process through `TokenForge.Credentials.dll`; credentials do not cross a subp
 boundary. Fresh candidate planning, browser/passkey login, Memory sessions, and the CLI
 `token get` adapter still use PowerShell. See the [persisted lifecycle validation report](native-profile-lifecycle-validation-2026-10-11.json).
 
-Packages include a BCL-only .NET 8 credential assembly, separate from SQLite evidence storage.
+Packages include a BCL-only .NET 10 credential assembly, separate from SQLite evidence storage.
 A source checkout compiles the same explicit source list once with `Add-Type`; it needs no SDK
 for module import. Both package builders need the .NET SDK and validate that their compiled
 source list matches the module list. A present invalid DLL fails without source fallback.

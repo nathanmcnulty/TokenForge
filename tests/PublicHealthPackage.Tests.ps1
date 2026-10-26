@@ -9,10 +9,10 @@ BeforeAll {
     function New-PackageBuildFixture {
         $root=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
         $package=Join-Path $root build
-        $dllDir=Join-Path $package src/TokenForge/lib/net8.0
+        $dllDir=Join-Path $package src/TokenForge/lib/net10.0
         $null=[IO.Directory]::CreateDirectory($dllDir,[IO.UnixFileMode]448)
         Copy-Item -LiteralPath $native -Destination (Join-Path $package tokenforge)
-        Copy-Item -LiteralPath (Join-Path (Split-Path $native -Parent) src/TokenForge/lib/net8.0/TokenForge.Credentials.dll) -Destination $dllDir
+        Copy-Item -LiteralPath (Join-Path (Split-Path $native -Parent) src/TokenForge/lib/net10.0/TokenForge.Credentials.dll) -Destination $dllDir
         $inputs=[ordered]@{}
         foreach($p in @(& git -C $repo ls-files -- global.json native src/TokenForge/Core scripts/Build-TokenForgeNative.ps1 scripts/Build-TokenForgeCredentials.ps1 scripts/Copy-TokenForgePackageSource.ps1)){$inputs[$p]=(Get-FileHash -LiteralPath (Join-Path $repo $p)).Hash.ToLowerInvariant()}
         $files=[ordered]@{}

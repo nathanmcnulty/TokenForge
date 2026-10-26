@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$NativeExecutable,[Parameter(Mandatory)][string]$Workspace)
 $ErrorActionPreference='Stop'
@@ -8,7 +8,7 @@ $package=Split-Path $NativeExecutable
 $Workspace=[IO.Path]::GetFullPath($Workspace)
 # Create-new private example directory; never inspect existing operator state.
 if(Test-Path -LiteralPath $Workspace){throw 'Workspace must be a new directory.'}
-if(-not (Test-Path -LiteralPath (Join-Path $package 'src/TokenForge/lib/net8.0/TokenForge.Credentials.dll') -PathType Leaf)){throw 'The compiled package runtime is required.'}
+if(-not (Test-Path -LiteralPath (Join-Path $package 'src/TokenForge/lib/net10.0/TokenForge.Credentials.dll') -PathType Leaf)){throw 'The compiled package runtime is required.'}
 Import-Module (Join-Path $package 'src/TokenForge/TokenForge.psd1') -Force
 $null=[TokenForge.Core.V0220.PrivateFiles]::Resolve((Join-Path $Workspace 'placeholder'),$true)
 $count=0

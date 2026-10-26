@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 # Offline saved-evidence candidate contract, adapted from draft #119 e2aab00.
 # Deliberately contains no collection, authentication, approval writer, or publication.
 . (Join-Path $PSScriptRoot 'TokenForgeCiState.ps1')

@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+#Requires -Version 7.6
 # Read-only public verification. The internal operation is also used by the explicit writer entry point.
 . (Join-Path $PSScriptRoot TokenForgeDiscoveryCandidate.ps1)
 . (Join-Path $PSScriptRoot TokenForgePublicationRecovery.ps1)

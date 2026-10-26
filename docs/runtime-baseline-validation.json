@@ -172,7 +172,11 @@
     "sourceVerdict": "No remaining findings at exact candidate",
     "artifactVerdict": "Exact archive membership, source-backed payloads, binary hashes and all 100 compilation inputs independently verified",
     "producerSuitesIndependentlyRerun": false,
-    "finalReceiptAudit": "Recorded in containing review checkpoint after independent inspection"
+    "finalReceiptAudit": {
+      "reviewedDocumentationCheckpoint": "16977166fbbca1a2100783ce73ed04891c8ebeef",
+      "verdict": "No remaining findings",
+      "scope": "Actual completed logs, exact hashes/counts, prior failures, reuse evidence, archives and ancestry independently inspected; no producer suite rerun"
+    }
   },
   "earlierResults": {
     "fullCbea": {

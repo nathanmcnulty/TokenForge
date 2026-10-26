@@ -1,3 +1,9 @@
+# Final pre-merge review — PR #106
+
+Read [the final review handoff for Dot](pr106-dot-final-review.md). The final reviewed walkthrough checkpoint is `7a0417dc17517880156f1dff26e1223b5c4210d5`; its 21-command replay passed against the exact reviewed runtime package from source `58203ecdcee47c4bdaaef0801d0b496d22daa35f`. The containing checkpoint adds handoff documentation only. Nathan authorized the source push and opening the existing PR for review on 2026-10-26; leave it unmerged pending Dot's final review and Nathan's merge authorization. Earlier draft/local-only statements below describe their historical checkpoints. Packages and raw receipts remain local; no hosted compute, authentication, live work, package publication or activation is authorized.
+
+---
+
 # Current runtime integration candidate — issue #98 / PR #106
 
 Exact independently reviewed and full-suite tested candidate: **58203ecdcee47c4bdaaef0801d0b496d22daa35f**. Read [runtime baseline acceptance](runtime-baseline-validation.md), its [exact-source/package receipt](runtime-baseline-validation.json), and [supported baseline/exceptions](runtime-baseline.md). This checkpoint adds documentation only above that candidate; it retains current main `4c986518`, prior runtime draft `b35461a6`, and owning checkpoint `9f6b4f2` without discarding newer functionality.

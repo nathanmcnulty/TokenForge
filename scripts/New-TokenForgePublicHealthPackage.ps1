@@ -10,6 +10,8 @@ $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot TokenForgePublicHealth.ps1)
 . (Join-Path $PSScriptRoot Copy-TokenForgePackageSource.ps1)
 $repo=Split-Path $PSScriptRoot -Parent
+$head=(& git -C $repo rev-parse HEAD).Trim()
+if($LASTEXITCODE -or $SourceRevision -cne $head){throw 'Package source revision must be the owning HEAD.'}
 $rebuilt=$PSCmdlet.ParameterSetName -ceq 'Rebuilt'
 $base=[IO.Path]::GetFullPath($(if($rebuilt){$RebuiltPackagePath}else{$BasePackagePath}))
 Assert-TokenForgeHealthPath $base -Directory
@@ -25,8 +27,6 @@ if($rebuilt){
     $baseline=Get-Content (Join-Path $base local-package-manifest.json) -Raw|ConvertFrom-Json -AsHashtable
     if($baseline.sourceRevision -cne '0a1704d057417e58b92fd5eac8c546541d3f7ec2'){throw 'Unreviewed base package source.'}
 }
-$head=(& git -C $repo rev-parse HEAD).Trim()
-if($LASTEXITCODE -or $SourceRevision -cne $head){throw 'Package source revision must be the owning HEAD.'}
 $scriptNames=@('tokenforge.ps1','Invoke-TokenForgePublicHealth.ps1','Sync-TokenForgePublicHealth.ps1','Test-TokenForgePublicContribution.ps1','TokenForgePublicHealth.ps1','TokenForgePublicHealthSync.ps1')
 $sourcePaths=@(& git -C $repo ls-files -- src/TokenForge)+@($scriptNames|ForEach-Object {'scripts/'+$_})+@('docs/public-metadata-health.md')
 if($LASTEXITCODE -or $sourcePaths.Count -lt 7){throw 'Source inventory is unavailable.'}

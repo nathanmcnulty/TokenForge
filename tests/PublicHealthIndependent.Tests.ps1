@@ -136,7 +136,7 @@ Describe 'Independent public health trust and recovery cases' {
   Copy-Item -LiteralPath (Join-Path (Split-Path $native -Parent) src/TokenForge/lib/net10.0/TokenForge.Credentials.dll) -Destination $dllDir
   Write-IndependentJson (Join-Path $base local-package-manifest.json) @{sourceRevision='0a1704d057417e58b92fd5eac8c546541d3f7ec2';nativeInputs=@{};files=@{'private.json'='a'*64}}
   $out=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
-  {& "$repo/scripts/New-TokenForgePublicHealthPackage.ps1" -BasePackagePath $base -OutputPath $out -SourceRevision ('0'*40)}|Should -Throw '*accepted receipt*'
+  {& "$repo/scripts/New-TokenForgePublicHealthPackage.ps1" -BasePackagePath $base -OutputPath $out -SourceRevision ((& git -C $repo rev-parse HEAD).Trim())}|Should -Throw '*accepted receipt*'
   Test-Path $out|Should -BeFalse
  }
  It 'copies only tracked source through the packaging helper under StrictMode Latest' {

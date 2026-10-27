@@ -79,7 +79,7 @@ try {
         Remove-Module TokenForge -ErrorAction SilentlyContinue
     }
     $testPaths = switch ($Preset) {
-        'PublicHealth' { @('./tests/MicrosoftAppsDiagnostic.Tests.ps1', './tests/PublicHealthFinishingReview.Tests.ps1', './tests/PublicHealthPackage.Tests.ps1', './tests/PublicHealth.Tests.ps1', './tests/PublicHealthSync.Tests.ps1', './tests/PublicHealthIndependent.Tests.ps1', './tests/DiscoveryClaims.Tests.ps1', './tests/ApplicationMetadata.Tests.ps1', './tests/SqliteCatalog.Tests.ps1', './tests/CatalogDownload.Tests.ps1', './tests/WeeklyCli.Tests.ps1') }
+        'PublicHealth' { @('./tests/ApplicationEvidence.Tests.ps1', './tests/MicrosoftAppsDiagnostic.Tests.ps1', './tests/PublicHealthFinishingReview.Tests.ps1', './tests/PublicHealthPackage.Tests.ps1', './tests/PublicHealth.Tests.ps1', './tests/PublicHealthSync.Tests.ps1', './tests/PublicHealthIndependent.Tests.ps1', './tests/DiscoveryClaims.Tests.ps1', './tests/ApplicationMetadata.Tests.ps1', './tests/SqliteCatalog.Tests.ps1', './tests/CatalogDownload.Tests.ps1', './tests/WeeklyCli.Tests.ps1') }
         'Weekly' {
             @('./tests/WeeklyCli.Tests.ps1', './tests/NativeWeekly.Tests.ps1', './tests/CiWeekly.Tests.ps1', './tests/CredentialBootstrap.Tests.ps1')
         }
@@ -87,7 +87,7 @@ try {
         'Refresh' { @('./tests/RefreshPlanning.Tests.ps1', './tests/RefreshGrantDependencies.Tests.ps1', './tests/NativeRefresh.Tests.ps1', './tests/CiEvidenceQueue.Tests.ps1') }
         'Admin' { @('./tests/AdminWorkflows.Tests.ps1', './tests/NativeAdminWorkflows.Tests.ps1') }
         'Changes' { @('./tests/ChangeReports.Tests.ps1', './tests/NativeChangeReports.Tests.ps1') }
-        'Collector' { @('./tests/CollectorSafety.Tests.ps1', './tests/CollectorNativeSafety.Tests.ps1', './tests/OperationBudget.Tests.ps1', './tests/DiscoveryCandidate.Tests.ps1', './tests/DiscoveryCandidateNative.Tests.ps1', './tests/CollectorKill.Tests.ps1') }
+        'Collector' { @('./tests/VmCycle.Tests.ps1', './tests/CollectorSafety.Tests.ps1', './tests/CollectorNativeSafety.Tests.ps1', './tests/OperationBudget.Tests.ps1', './tests/DiscoveryCandidate.Tests.ps1', './tests/DiscoveryCandidateNative.Tests.ps1', './tests/CollectorKill.Tests.ps1') }
         'Discovery' { @('./tests/DiscoveryRun.Tests.ps1', './tests/DiscoveryStatus.Tests.ps1', './tests/DiscoveryReport.Tests.ps1', './tests/DiscoveryBootstrap.Tests.ps1', './tests/InventoryCheckpoint.Tests.ps1', './tests/InventoryShape.Tests.ps1', './tests/ProbeReadBounds.Tests.ps1', './tests/RoleOrigin.Tests.ps1', './tests/ResearchCohort.Tests.ps1', './tests/ResearchChunkPending.Tests.ps1', './tests/PublicPermissions.Tests.ps1', './tests/PermissionIdentifiers.Tests.ps1', './tests/RegistrationResume.Tests.ps1') }
         'Native' {
             $workflow = Get-Content -LiteralPath (Join-Path $repo '.github/workflows/native.yml') -Raw

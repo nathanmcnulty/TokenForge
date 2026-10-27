@@ -20,6 +20,27 @@ function Find-TokenForgeApplicationEvidence {
     )
     # Validate the complete public ledger, including history, before selecting any rows.
     $catalog=Get-TokenForgeApplicationMetadata -Path $Path -PublicOnly -NativeExecutablePath $NativeExecutablePath
+    # The legacy public reader permits absent/null scalar values. This lookup
+    # requires evidence identity and dates even in excluded rows and history.
+    $required={param($value,$fields)
+        foreach($field in $fields){
+            if(-not $value.Contains($field) -or $null -eq $value[$field]){throw 'Public evidence ledger has missing required fields. Details suppressed.'}
+            if($field.EndsWith('At',[StringComparison]::Ordinal)){
+                $stamp=[DateTimeOffset]::MinValue
+                if($value[$field] -isnot [string] -or -not [TokenForge.Core.V0240.TimestampPolicy]::TryParse($value[$field],[ref]$stamp)){throw 'Public evidence ledger has an invalid timestamp. Details suppressed.'}
+            }
+        }
+    }
+    & $required $catalog @('CreatedAt','UpdatedAt')
+    foreach($app in $catalog.Applications.Values){
+        & $required $app @('FirstSeenAt','LastSeenAt')
+        foreach($record in $app.Records.Values){
+            & $required $record @('FirstSeenAt','LastSeenAt','CurrentVersionFirstSeenAt','ContentSha256','PresentInLatestRun')
+            foreach($version in $record.PreviousVersions){& $required $version @('FirstSeenAt','LastSeenAt','ContentSha256')}
+        }
+    }
+    foreach($origin in $catalog.Origins.Values){& $required $origin @('LastObservedAt','LastRunId')}
+    foreach($run in $catalog.Runs){& $required $run @('ObservedAt','RecordedAt')}
     $rows=[Collections.Generic.List[object]]::new()
     $names=@{}
     foreach($app in $catalog.Applications.Values){

@@ -65,6 +65,28 @@ Describe 'Public application evidence lookup' {
   $export|ConvertTo-Json -Depth 10|Set-Content $observed
   (Find-TokenForgeApplicationEvidence $path -ObservationPath $observed -Scope Mail.Read).Freshness|Should -Be FutureDated
  }
+ It 'validates excluded ledger records and history before emitting any row' {
+  $other='22222222-2222-2222-2222-222222222222'
+  $discovery.Applications+=@{AppId=$other;Name='Other';Sources=$discovery.Applications[0].Sources;Grants=@()}
+  $null=Update-TokenForgeApplicationMetadata $path $discovery Discovery
+  $discovery.Applications[1].Name='Changed';$discovery.FetchedAt=[DateTimeOffset]::UtcNow.AddSeconds(1).ToString('o')
+  $null=Update-TokenForgeApplicationMetadata $path $discovery Discovery
+  $original=Get-Content $path -Raw
+  foreach($history in @($false,$true)){
+   foreach($field in @('LastSeenAt','ContentSha256')){
+    foreach($missing in @($false,$true)){
+     $document=$original|ConvertFrom-Json -AsHashtable
+     $record=$document.Applications[$other].Records.Values|Select-Object -First 1
+     $target=if($history){$record.PreviousVersions[0]}else{$record}
+     if($missing){$target.Remove($field)}else{$target[$field]=$null}
+     $document|ConvertTo-Json -Depth 100|Set-Content $path
+     $rows=[Collections.Generic.List[object]]::new()
+     {Find-TokenForgeApplicationEvidence $path -AppId $client|ForEach-Object {$rows.Add($_)}}|Should -Throw '*Details suppressed*'
+     $rows.Count|Should -Be 0
+    }
+   }
+  }
+ }
  It 'rejects public export links including linked ancestor directories' -Skip:$IsWindows {
   $directory=Join-Path $TestDrive public-link
   $null=New-Item -ItemType SymbolicLink -Path $directory -Target (Split-Path $observed -Parent)

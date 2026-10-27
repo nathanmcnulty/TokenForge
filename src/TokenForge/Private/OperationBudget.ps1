@@ -14,11 +14,13 @@ function New-TokenForgeOperationBudget {
         [ValidateRange(0.001,604800)][double]$MaxSeconds=900,
         [ValidateRange(0.001,30)][double]$TransportTimeoutSeconds=30,
         [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None,
-        [string]$LedgerPath
+        [string]$LedgerPath,
+        [Nullable[DateTimeOffset]]$SessionExpiresAt,
+        [string]$StopFilePath
     )
     [pscustomobject]@{
         SchemaVersion=1;StartedAt=[DateTimeOffset]::UtcNow.ToString('o');Timer=[Diagnostics.Stopwatch]::StartNew()
-        MaxSeconds=$MaxSeconds;TransportTimeoutSeconds=$TransportTimeoutSeconds;CancellationToken=$CancellationToken
+        MaxSeconds=$MaxSeconds;TransportTimeoutSeconds=$TransportTimeoutSeconds;CancellationToken=$CancellationToken;SessionExpiresAt=$SessionExpiresAt;StopFilePath=$StopFilePath
         Limits=[ordered]@{IssuanceAttempts=$MaxIssuanceAttempts;BootstrapAttempts=$MaxBootstrapAttempts;BootstrapRequests=$MaxBootstrapRequests;InventoryRequests=$MaxInventoryRequests;InventoryPages=$MaxInventoryPages;SourceRequests=$MaxSourceRequests;TotalRequests=$MaxTotalRequests;TransientRetries=$MaxTransientRetries}
         Counts=[ordered]@{IssuanceAttempts=0;IssuanceRetries=0;BootstrapAttempts=0;BootstrapRequests=0;InventoryRequests=0;InventoryPages=0;SourceRequests=0;IdentityRequests=0;TotalRequests=0;RequestRetries=0;PreflightRequests=0;InFlightOverruns=0;ReservedUnknownRequests=0}
         Cancelled=$false;StopReason=$null;Preflight=$true;IdentityCategory='Identity';LastRequestOverrun=$false
@@ -28,7 +30,7 @@ function New-TokenForgeOperationBudget {
 }
 
 function Stop-TokenForgeOperationBudget {
-    param($Budget,[ValidateSet('DeadlineReached','Cancelled','IssuanceAttempts','BootstrapAttempts','BootstrapRequests','InventoryRequests','InventoryPages','SourceRequests','TotalRequests','TransientRetries')][string]$Reason)
+    param($Budget,[ValidateSet('DeadlineReached','Cancelled','SessionExpired','IssuanceAttempts','BootstrapAttempts','BootstrapRequests','InventoryRequests','InventoryPages','SourceRequests','TotalRequests','TransientRetries')][string]$Reason)
     $Budget.StopReason=$Reason
     Save-TokenForgeBudgetLedger $Budget
     $exception=[InvalidOperationException]::new("Discovery operation budget stopped ($Reason).")
@@ -40,6 +42,8 @@ function Assert-TokenForgeOperationBudget {
     param($Budget=$script:OperationBudget)
     if($null -eq $Budget){return}
     if($Budget.StopReason){Stop-TokenForgeOperationBudget $Budget $Budget.StopReason}
+    if($Budget.StopFilePath -and (Test-Path -LiteralPath (Resolve-TokenForgeVaultPath $Budget.StopFilePath))){Stop-TokenForgeOperationBudget $Budget Cancelled}
+    if($Budget.SessionExpiresAt -and [DateTimeOffset]::UtcNow -ge $Budget.SessionExpiresAt){Stop-TokenForgeOperationBudget $Budget SessionExpired}
     if($Budget.Cancelled -or $Budget.CancellationToken.IsCancellationRequested){Stop-TokenForgeOperationBudget $Budget Cancelled}
     if($Budget.Timer.Elapsed.TotalSeconds -ge $Budget.MaxSeconds){Stop-TokenForgeOperationBudget $Budget DeadlineReached}
 }
@@ -94,6 +98,7 @@ function New-TokenForgeBudgetCancellation {
     Assert-TokenForgeOperationBudget $Budget
     $source=if($Budget){[Threading.CancellationTokenSource]::CreateLinkedTokenSource($Budget.CancellationToken)}else{[Threading.CancellationTokenSource]::new()}
     $seconds=if($Budget){[Math]::Min($Budget.TransportTimeoutSeconds,($Budget.MaxSeconds-$Budget.Timer.Elapsed.TotalSeconds))}else{30}
+    if($Budget -and $Budget.SessionExpiresAt){$seconds=[Math]::Min($seconds,($Budget.SessionExpiresAt-[DateTimeOffset]::UtcNow).TotalSeconds)}
     # Cancellation is scheduled at the remaining deadline, never rounded to a whole second.
     $source.CancelAfter([TimeSpan]::FromSeconds([Math]::Max(0.001,$seconds)))
     return $source
@@ -114,6 +119,7 @@ function Wait-TokenForgeOperationBudget {
     if($Seconds -lt 0 -or $Seconds -gt 300){throw 'Invalid bounded retry delay.'}
     Assert-TokenForgeOperationBudget $Budget
     if($Budget -and $Budget.Timer.Elapsed.TotalSeconds+$Seconds -ge $Budget.MaxSeconds){Stop-TokenForgeOperationBudget $Budget DeadlineReached}
+    if($Budget -and $Budget.SessionExpiresAt -and [DateTimeOffset]::UtcNow.AddSeconds($Seconds) -ge $Budget.SessionExpiresAt){Stop-TokenForgeOperationBudget $Budget SessionExpired}
     # Short waits keep cancellation cooperative even during Retry-After/backoff.
     $remaining=$Seconds
     while($remaining -gt 0){
@@ -282,7 +288,7 @@ function Assert-TokenForgePendingRequestRecovery {
                 if(($value -isnot [double] -and $value -isnot [decimal] -and $value -isnot [int] -and $value -isnot [long]) -or [double]::IsNaN([double]$value) -or [double]::IsInfinity([double]$value) -or $value -lt 0 -or $value -gt 31536000){throw 'Invalid budget timing value.'}
             }
             if($old.Budget.MaxSeconds -le 0 -or $old.Budget.MaxSeconds -gt 604800 -or $old.Budget.TransportTimeoutSeconds -le 0 -or $old.Budget.TransportTimeoutSeconds -gt 30){throw 'Invalid budget timing limits.'}
-            if($null -ne $old.Budget.StopReason -and $old.Budget.StopReason -cnotin @('DeadlineReached','Cancelled','IssuanceAttempts','BootstrapAttempts','BootstrapRequests','InventoryRequests','InventoryPages','SourceRequests','TotalRequests','TransientRetries')){throw 'Invalid budget stop reason.'}
+            if($null -ne $old.Budget.StopReason -and $old.Budget.StopReason -cnotin @('DeadlineReached','Cancelled','SessionExpired','IssuanceAttempts','BootstrapAttempts','BootstrapRequests','InventoryRequests','InventoryPages','SourceRequests','TotalRequests','TransientRetries')){throw 'Invalid budget stop reason.'}
             if($old.RecoveryAuthorized -and ($old.RecoveryCount -ne 1 -or -not $old.PendingRequest)){throw 'Invalid recovery authorization.'}
             foreach($section in @('Counts','Limits')){
                 $expectedKeys=if($section -eq 'Counts'){@($Budget.Counts.Keys)}else{@($Budget.Limits.Keys)}

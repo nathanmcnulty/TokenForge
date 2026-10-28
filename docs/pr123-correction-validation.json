@@ -1,0 +1,267 @@
+{
+  "schemaVersion": 1,
+  "kind": "TokenForgePR123OfflineCorrectionAcceptance",
+  "date": "2026-10-28",
+  "priorPRHead": "6ee17b056e9b3cba3ddc7af29884a4565354481d",
+  "subsequentRemoteDeltaAtStart": false,
+  "correctedRuntimeAndPackageSource": "76efe6e878ed0a1c2d4c9dba36657c6677e8c2d7",
+  "finalWholePRHead": "Pinned in final PR acceptance comment; containing receipt commit changes documentation only",
+  "package": {
+    "sourceRevision": "76efe6e878ed0a1c2d4c9dba36657c6677e8c2d7",
+    "compiledSource": "0eb5e60fe0ecbfc7312e681dc9ce60ffdd5906ea",
+    "credentialCompiledSource": "c32cd7b27e98fdeac9f376807999205d99133a38",
+    "archive": "TokenForge-offline-v1-76efe6e-linux-x64.tar.gz",
+    "sha256": "29a84b5128fd5a885dc3ffdb298dd0eaf2e23b78264bcc4c0dfcb2976126c5f2",
+    "bytes": 33915685,
+    "payloadFiles": 268,
+    "sourceFiles": 265,
+    "nativeInputs": 100,
+    "credentialInputs": 47,
+    "manifestSha256": "093fb116ad5c10575f27105e447419b1a13fb67c144f6b085a3b9a1b07e3189c",
+    "nativeSha256": "aa1ad0d814970379376ee5da6ddf531ccb22b1b738ad65709599ee64c4a2f61b",
+    "credentialSha256": "a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52",
+    "published": false,
+    "stage": ".cache/pr123-correction/package-76efe6e",
+    "manifest": "public-health-package.json",
+    "membershipChange": "None:268members/267payload entries/265source mappings; five existing payload files changed (three Markdown and two production scripts)",
+    "changedPayloads": [
+      "docs/HANDOFF.md",
+      "docs/offline-v1-convergence.md",
+      "docs/vm-operational-cycle.md",
+      "scripts/Invoke-TokenForgeDiscoveryRun.ps1",
+      "src/TokenForge/Public/ApplicationEvidence.ps1"
+    ],
+    "allPayloadBytesVerifiedAfterTests": true
+  },
+  "corrections": {
+    "frozenTerminalStatus": {
+      "terminalExit0": [
+        "Complete",
+        "StructurallyExcluded"
+      ],
+      "allOtherResultsExit1": true,
+      "resultAndReceiptStatusPreserved": true,
+      "inFlightUnknownPrecedencePreserved": true,
+      "tests": "VmCycle27 includesComplete0/StructurallyExcluded0/Failed1 result+receipt assertions and pending-consumption-over-structuralUnknown1"
+    },
+    "completeGrantIdentity": {
+      "scope": "Every grant in every current and historical record, before row construction/filter/output",
+      "requires": "ResourceId exists, is a string parsing as a nonempty GUID",
+      "regressions": "Selected/excluded current/history contexts each test null,empty,malformed,zeroGUID,numeric,object,missing; valid historical grants,metadata-only ResourceId:null and separate anonymous observations retained",
+      "noAcquisitionGuarantee": true
+    },
+    "expiryEvidence": {
+      "source": "76efe6e878ed0a1c2d4c9dba36657c6677e8c2d7",
+      "packageSha256": "29a84b5128fd5a885dc3ffdb298dd0eaf2e23b78264bcc4c0dfcb2976126c5f2",
+      "manifestSha256": "093fb116ad5c10575f27105e447419b1a13fb67c144f6b085a3b9a1b07e3189c",
+      "runnerExitCode": 1,
+      "capturedRunnerScriptExitCode": 1,
+      "harnessExitCode": 0,
+      "status": "SessionExpired",
+      "receiptStatus": "SessionExpired",
+      "counts": {
+        "IssuanceAttempts": 0,
+        "IssuanceRetries": 0,
+        "BootstrapAttempts": 0,
+        "BootstrapRequests": 0,
+        "InventoryRequests": 0,
+        "InventoryPages": 0,
+        "SourceRequests": 0,
+        "IdentityRequests": 0,
+        "TotalRequests": 0,
+        "RequestRetries": 0,
+        "PreflightRequests": 0,
+        "InFlightOverruns": 0,
+        "ReservedUnknownRequests": 0
+      },
+      "zeroRequestsAndIssuance": true,
+      "actualRunnerExitCaptured": true,
+      "separateProcess": true,
+      "stderrEmpty": true,
+      "oldEvidenceCorrection": "Historical offline-v1 receipt now explicitly records harness0 and unknown/unrecorded runner exit with expected1; no claim that the old runner successfully executed. This new process proof records runner1."
+    }
+  },
+  "validation": {
+    "sourceFocused": {
+      "powershell": "7.6.7",
+      "pester": "6.2.0",
+      "passed": 70,
+      "failed": 0,
+      "skipped": 0,
+      "notRun": 0,
+      "failedContainers": 0,
+      "failures": [],
+      "harnessExitCode": 0
+    },
+    "packagedFocused": {
+      "powershell": "7.6.7",
+      "pester": "6.2.0",
+      "passed": 70,
+      "failed": 0,
+      "skipped": 0,
+      "notRun": 0,
+      "failedContainers": 0,
+      "failures": [],
+      "harnessExitCode": 0,
+      "perFile": {
+        "VmCycle": 27,
+        "DiscoveryBootstrap": 9,
+        "ApplicationEvidence": 15,
+        "ApplicationMetadata": 19
+      },
+      "executedTestHashes": {
+        "tests/VmCycle.Tests.ps1": "922523d51822726b9f797c52b1a280b816c2e600ae33b08a44eae4fa076e8e7e",
+        "tests/DiscoveryBootstrap.Tests.ps1": "328e58f2452a7154dc7eae59c34ac29ed47d1f455167ee02700138d1cc1d90b1",
+        "tests/ApplicationEvidence.Tests.ps1": "af20876c5fb3ab3324e05931226c05d46963d24ac34ce30911c6f4406bff213f",
+        "tests/ApplicationMetadata.Tests.ps1": "69b071a372735ecec8966627c10bddb72f91257c859c03e2d64536cd1b166de8"
+      },
+      "scope": "Fresh70 affected checks from extracted archive, synthetic acquisition mocks; not a full suite"
+    },
+    "negativeControl": {
+      "productionSource": "dc6661f09c995c128cfdaafbc337957814b19cf9",
+      "passed": 3,
+      "failed": 6,
+      "skipped": 0,
+      "notRun": 33,
+      "failedContainers": 0,
+      "failures": [
+        "preserves terminal Complete in the result and receipt with exit 0",
+        "preserves terminal StructurallyExcluded in the result and receipt with exit 0",
+        "rejects invalid grant resources in selected current records before filtering/output",
+        "rejects invalid grant resources in excluded current records before filtering/output",
+        "rejects invalid grant resources in selected history before filtering/output",
+        "rejects invalid grant resources in excluded history before filtering/output"
+      ],
+      "harnessExitCode": 1,
+      "explanation": "Old268-memberdc6661f production plus the same new regression tests. Four grant contexts and StructurallyExcluded fail as reported; Complete additionally lacked an explicit script exit setting. The initial control expected5failed/4passed but observed6failed/3passed, so its count assertion also rejected.33intentionally filtered cases; retained unchanged, not rerun to obtain green."
+    },
+    "powershellParser": {
+      "powershell": "7.6.7",
+      "errors": 0,
+      "files": [
+        "scripts/Invoke-TokenForgeDiscoveryRun.ps1",
+        "src/TokenForge/Public/ApplicationEvidence.ps1",
+        "tests/ApplicationEvidence.Tests.ps1",
+        "tests/VmCycle.Tests.ps1"
+      ]
+    },
+    "rawEvidenceSha256": {
+      "focused.ps1": "cfba61e8d42c4f0e6632da1ff9edcf4f7c3dc27bc590d53240696f86fad2e9ea",
+      "focused.log": "8aedac2b4c5379810133f7440dbb3c9f28a7c72c6e2d6ff869ea6bcd66485ba4",
+      "focused.json": "b8ad6b258157c23a730f7aba05931971810fd5c8bb184555e7b0a20ddaacfce5",
+      "before.ps1": "28a9d5c85e0471d453ed939ce8ffba931fbf5cc1e232a4c2e7f2018fbffabaaf",
+      "before.log": "947fc8fbf01b10b586a02e355af7f61cb0d6e99f2d1f3efe6140b07b34e79e5c",
+      "before.json": "e722aaefe233869ca6cf21c296ccbfb0ceb63a53107483430aaf53c642ed5210",
+      "packaged.ps1": "5114bb58d4cd9477961a7fca299fc2b207114c3a94eb97c3da951a16c99a0625",
+      "packaged-tests.log": "72a5b31880cc0aca2b3cebabe9579e2d0ad8776720db058a562b133014bbd354",
+      "packaged-tests.json": "b8ad6b258157c23a730f7aba05931971810fd5c8bb184555e7b0a20ddaacfce5",
+      "expired-child.ps1": "7a54ac653058b7ea6ed1cf3706c393fe6e073a0f363781dd6910f37194460aae",
+      "expiry-proof.ps1": "16c7e8b492dd79540a551cfc91de28bf9d5b38e979ec88ed932e39e2201cb82d",
+      "expiry-proof.json": "65f9ff67be139a91f92c972ac646c0b16d9e3a16a834e1f7b32e53bfcdf05bbb",
+      "expiry-process-exit.json": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "expiry-runner.stdout.json": "979b99326bfa448c1c9245665f98549548a055ff5cc02c2678d6049582e1398f",
+      "expiry-runner.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "expiry-harness.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "expiry-state/vm-cycle.json": "f459d1194a1a842db9e4ad4d8cc2ded5df243133add7388f25bbd830eb51dda0",
+      "expiry-state/captured-runner-exit.json": "c650483a6cb68463e2a98be62372d96de217c90cfbec55b5979eeb43942269fc",
+      "postrun-verification.json": "946fe38ed193951033b2bf8b9d981c8400d4175b7724403ca3bf01327930992d",
+      "parser.json": "7a97a2f9bce29e6a26eda5dab39c3273cc1a37252787d2f0d5565c85335e8a78",
+      "package.py": "9852f2d96fba97d269fe003be5c82cb6b6d47ee700cece935bded2a0a86e6c63"
+    },
+    "broadSuitesRepeated": false,
+    "oldFailuresRetriesAndExclusionsRetained": true
+  },
+  "reuse": {
+    "historical436": {
+      "source": "dc6661f09c995c128cfdaafbc337957814b19cf9",
+      "auditedDirectly": true,
+      "basis": "19whole-file passes343 plusCI24+Weekly35+Diagnostic20+Independent14; overlapping retry/repair counts excluded; initial374/62failed/onecontainer, retry92/1failed and final2cases/12filtered preserved",
+      "claim": "Historical scoped coverage, not a new corrected full-suite pass; do not add70 to436"
+    },
+    "operator33": {
+      "rerun": false,
+      "rawLog": ".cache/convergence/operator.log",
+      "sha256": "5bf253ddfa64e15df7f45621e1e9aae46ded9cf29818f533f944334e5d728ab8",
+      "basis": "Operator script, CLI, external DLL and functions actually exercised unchanged; it does not call either corrected production entry point",
+      "auditedDirectly": true
+    },
+    "nativeCore1157": {
+      "rerun": false,
+      "rawLog": "/home/nathan/.codex/worktrees/issue98-runtime-integration/TokenForge/.cache/issue98/native-core.log",
+      "sha256": "e7ffdc548c3df3dae85f5ca13d603fd1ddb5aee0d710ccddc5915c92f97665a6",
+      "allRelevantCoreTestImplementationCredentialGlobalBuildInputsIdentical": true
+    },
+    "binaryProvenance": {
+      "nativeCompilationSource": "0eb5e60fe0ecbfc7312e681dc9ce60ffdd5906ea",
+      "completeNativeInputsIdentical": 100,
+      "credentialCompilationSource": "c32cd7b27e98fdeac9f376807999205d99133a38",
+      "completeCredentialInputsIdentical": 47,
+      "nativeSha256": "aa1ad0d814970379376ee5da6ddf531ccb22b1b738ad65709599ee64c4a2f61b",
+      "credentialSha256": "a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52",
+      "rebuiltForTheseScriptCorrections": false,
+      "old122ExecutableUsedAsChangedNativeProof": false
+    },
+    "blanketRuntimeByteEquivalenceClaimed": false,
+    "unchangedTestsAndEvidenceNotReexecutedForAnotherGreen": true
+  },
+  "independentReview": {
+    "reviewer": "correction_acceptance (independent read-only Sol reviewer)",
+    "actualArchiveAndRawEvidenceInspected": true,
+    "runtimeVerdict": "No remaining runtime/package blocker for76efe6e; fresh packaged70, actualrunner1/harness0 and all13counters0 verified directly",
+    "archiveAudit": "268safe case-unique regular files,267payload hash/size entries,265source maps and100native/47credential bindings directly checked",
+    "producerSuitesRerunByReviewer": false,
+    "finalWholeCommitAcceptance": "ACCEPT for corrected source/package76efe6e after direct archive/raw-evidence inspection. The final PR123 acceptance comment records the independently accepted exact whole-head SHA and cleanup recommendation; this containing documentation snapshot is not substituted for package source."
+  },
+  "cleanupRecommendation": {
+    "afterOwnerApprovesExactMergeAndCleanup": {
+      "retireAsSupersededPRs": [
+        100,
+        117,
+        118,
+        119,
+        120,
+        121
+      ],
+      "closeSatisfiedOfflineIssue": [
+        114
+      ]
+    },
+    "keepOpenForHostedLiveGates": [
+      113,
+      115,
+      116
+    ],
+    "parkOutsideMilestone": [
+      69,
+      74
+    ],
+    "alreadyAcceptedNotRepeated": [
+      "PR106",
+      "PR122",
+      "issue98"
+    ],
+    "executedMergeOrClosures": false
+  },
+  "limitations": [
+    "Linux x64 offline only; no new full-suite/all-platform claim",
+    "Acquisition and positive collector result tests use synthetic mocked boundaries",
+    "Real expired-session refusal is zero-request proof, not service-side expiry acceptance",
+    "Original436andoperator33 remain explicitly reused scoped evidence",
+    "113requires actual trusted reviewer/approval/ACL/artifact provenance/publication/retry proof",
+    "115requires authenticated VM/provider/reboot/scheduler/publication acceptance",
+    "116requires live completed assessment and worker snapshot transport/publication acceptance",
+    "Goal6 NO-GO custody/controller/service/distribution/signer gates remain;69/74parked"
+  ],
+  "boundaries": {
+    "credentialsOrTokensRead": false,
+    "authentication": false,
+    "tenantMutation": false,
+    "dependencyInstallation": false,
+    "hostedDispatchOrSettings": false,
+    "schedulerActivation": false,
+    "enrollmentRetry": false,
+    "binaryReleaseOrOperationalPublication": false,
+    "mergeOrClosure": false,
+    "localArtifactsAndRawEvidence": ".cache/pr123-correction; previous .cache/convergence receipts preserved"
+  }
+}

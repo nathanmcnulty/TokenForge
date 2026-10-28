@@ -1,3 +1,11 @@
+# PR123 corrected offline-v1 acceptance
+
+Current corrected package/source: `76efe6e878ed0a1c2d4c9dba36657c6677e8c2d7`. Read [the current correction acceptance](offline-v1-convergence.md#current-correction-and-final-acceptance) and [directly audited correction receipt](pr123-correction-validation.json). Both source and packaged affected checks pass 70/0/0; actual expiry runner exits 1  with SessionExpired/zero counters while its harness exits 0. Raw evidence/archive were inspected directly. Retire #100/#117–121 and close #114 only after Nathan approves exact reviewed merge/cleanup; keep #113/#115/#116 open and #69/#74 parked. Earlier handoffs below retain historical source identities and limitations.
+
+# Linux x64 offline-v1 convergence for final review
+
+Read [the acceptance/cleanup plan](offline-v1-convergence.md) and [exact source/package/validation receipt](offline-v1-convergence-validation.json). Runtime source `dc6661f09c995c128cfdaafbc337957814b19cf9`, new CLI compiled at `0eb5e60fe0ecbfc7312e681dc9ce60ffdd5906ea`; package/hash identities remain distinct from accepted #122 history. Targeted coverage:436 distinct passing cases across scoped runs, operator33, real expired-session preflight zero requests. Proposed post-merge cleanup: supersede #100/#117–121, close satisfied #114; keep #113/#115/#116 open and park #69/#74. Dot/Nathan review and approval precede merge/closures. Packages/raw receipts remain local; no credential/live/hosted/scheduler/publication authority is inferred.
+
 # Merged runtime packages - local qualification
 
 Read [the qualification and #98 recommendation](runtime-package-qualification.md) and [sanitized identities/results](runtime-package-qualification.json). Packages bind exact source `a7694cb65d8cfadfe41ba7efbd6d20cdec4effa4` above merged main `ecf16f4fe98e2b29dc444e273fcc08d795a0d915`. Both extracted payloads passed 138 focused checks; operator 33 and administrator 21 passed. Compiled inputs/binaries were reused after equivalence checks. Independent packaging/artifact review found no blocker. Packages/raw receipts remain local. Recommend closing #98 after final PR review/merge; no merge, release, closure, hosted/live work or activation was performed. Earlier handoffs below remain historical.

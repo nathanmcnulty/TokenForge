@@ -1,5 +1,7 @@
 # Architecture and roadmap
 
+Current supported state and remaining gates: [Linux x64 offline-v1 roadmap](goals/01-trustworthy-bounded-collector.md). The detailed backlog below retains historical context; it does not restart the superseded Goal1-only assignment or authorize scheduling/live/hosted operation.
+
 TokenForge separates credential-free planning, identity protocol execution, Graph tenant administration and persisted evidence. The PowerShell 7.6 module and script CLI run on Windows, Linux and macOS; self-contained native CLI packages are available, with native saved-cookie acquisition and advanced system-browser PKCE. Explicit browser and software-passkey profile login run natively; passkey enrollment and implicit passkey login adapters still require PowerShell.
 
 | Layer | Functions | Evidence boundary |

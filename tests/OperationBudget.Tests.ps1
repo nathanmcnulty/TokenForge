@@ -443,3 +443,30 @@ Describe 'Unknown read-only preflight request recovery' {
   (Get-Content $first.LedgerPath -Raw|ConvertFrom-Json).RecoveryAuthorized|Should -BeFalse
  }
 }
+
+Describe 'Optional frozen-cycle request boundaries' {
+ It 'refuses a declared expired session before reserving requests or issuance' {
+  $b=New-TokenForgeOperationBudget -SessionExpiresAt ([DateTimeOffset]::UtcNow.AddSeconds(-1))
+  {Start-TokenForgeBudgetRequest $b}|Should -Throw '*SessionExpired*'
+  $b.Counts.TotalRequests|Should -Be 0
+  $b.Counts.IssuanceAttempts|Should -Be 0
+ }
+ It 'refuses a retry wait crossing the declared session deadline' {
+  $b=New-TokenForgeOperationBudget -SessionExpiresAt ([DateTimeOffset]::UtcNow.AddSeconds(30))
+  {Wait-TokenForgeOperationBudget -Budget $b -Seconds 60}|Should -Throw '*SessionExpired*'
+ }
+ It 'bounds in-flight cancellation to the declared session deadline' {
+  $b=New-TokenForgeOperationBudget -SessionExpiresAt ([DateTimeOffset]::UtcNow.AddMilliseconds(150))
+  $c=New-TokenForgeBudgetCancellation $b
+  try{$c.Token.WaitHandle.WaitOne(1000)|Should -BeTrue}finally{$c.Dispose()}
+ }
+ It 'checks a private stop marker before reserving the next request' {
+  $root=Join-Path $TestDrive cycle-stop
+  $null=[IO.Directory]::CreateDirectory($root,[IO.UnixFileMode]448)
+  $path=Join-Path $root stop.requested
+  [IO.File]::WriteAllText($path,'');[IO.File]::SetUnixFileMode($path,[IO.UnixFileMode]384)
+  $b=New-TokenForgeOperationBudget -StopFilePath $path
+  {Start-TokenForgeBudgetRequest $b}|Should -Throw '*Cancelled*'
+  $b.Counts.TotalRequests|Should -Be 0
+ }
+}

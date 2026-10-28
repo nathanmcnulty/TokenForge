@@ -1,5 +1,7 @@
 # Discovery improvement plan
 
+Current supported state and remaining gates: [Linux x64 offline-v1 roadmap](goals/01-trustworthy-bounded-collector.md). The detailed backlog below retains historical context; it does not restart the superseded Goal1-only assignment or authorize scheduling/live/hosted operation.
+
 This is the engineering backlog for making long discovery runs cheaper, more complete, and easier to operate. It is a plan, not a claim that every feature exists. Keep operational instructions in [Run discovery locally](discovery.md), rather than adding run logs to the README.
 
 ## Starting point

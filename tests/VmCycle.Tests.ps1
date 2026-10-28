@@ -50,6 +50,28 @@ Describe 'Frozen bounded collector cycles' -Skip:(-not $IsLinux) {
   (Get-FileHash (Join-Path $state inventory.json)).Hash|Should -Be $before
   Should -Invoke Invoke-TokenForgeDiscoveryRun -Times 1 -Exactly -ParameterFilter {$OperationBudget -and $OperationBudget.SessionExpiresAt -and $OperationBudget.StopFilePath.EndsWith('stop.requested') -and -not $NewRun -and -not $ResumePaused -and -not $RecoverUnknown}
  }
+ It 'preserves terminal <Outcome> in the result and receipt with exit <ExitCode>' -ForEach @(
+  @{Outcome='Complete';ExitCode=0},@{Outcome='StructurallyExcluded';ExitCode=0},@{Outcome='Failed';ExitCode=1}
+ ) {
+  Mock Invoke-TokenForgeDiscoveryRun {[pscustomobject]@{Status=$Outcome;Reason=$Outcome;Clients=3;CompletedClients=3;PendingClients=0;CredentialOutput=$false}}
+  $result=& $runner @options|ConvertFrom-Json
+  $LASTEXITCODE|Should -Be $ExitCode
+  $result.Status|Should -Be $Outcome
+  $result.Reason|Should -Be $Outcome
+  $receipt=Get-Content (Join-Path $state vm-cycle.json) -Raw|ConvertFrom-Json
+  $receipt.Status|Should -Be $Outcome
+  $receipt.Reason|Should -Be $Outcome
+ }
+ It 'keeps unknown consumption above an otherwise structurally excluded terminal result' {
+  Mock Invoke-TokenForgeDiscoveryRun {
+   $OperationBudget.PendingRequest=$true
+   [pscustomobject]@{Status='StructurallyExcluded';Reason='StructurallyExcluded';Clients=3;CompletedClients=3;PendingClients=0;CredentialOutput=$false}
+  }
+  $result=& $runner @options|ConvertFrom-Json
+  $LASTEXITCODE|Should -Be 1
+  $result.Status|Should -Be InFlightUnknown
+  (Get-Content (Join-Path $state vm-cycle.json) -Raw|ConvertFrom-Json).Status|Should -Be InFlightUnknown
+ }
  It 'refuses <Case> before authentication' -ForEach @(
   @{Case='stale inventory';Change='Stale'},@{Case='future inventory';Change='Future'},@{Case='missing inventory';Change='MissingInventory'},
   @{Case='missing cohort';Change='MissingCohort'},@{Case='conflicting refresh';Change='Refresh'},@{Case='new run';Change='NewRun'},

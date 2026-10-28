@@ -37,6 +37,13 @@ function Find-TokenForgeApplicationEvidence {
         foreach($record in $app.Records.Values){
             & $required $record @('FirstSeenAt','LastSeenAt','CurrentVersionFirstSeenAt','ContentSha256','PresentInLatestRun')
             foreach($version in $record.PreviousVersions){& $required $version @('FirstSeenAt','LastSeenAt','ContentSha256')}
+            foreach($payload in @($record)+@($record.PreviousVersions)){
+                if($payload.Attributes.Contains('Grants')){foreach($grant in $payload.Attributes.Grants){
+                    & $required $grant @('ResourceId')
+                    $resource=[guid]::Empty
+                    if($grant.ResourceId -isnot [string] -or -not [guid]::TryParse($grant.ResourceId,[ref]$resource) -or $resource -eq [guid]::Empty){throw 'Public evidence ledger has an invalid resource identity. Details suppressed.'}
+                }}
+            }
         }
     }
     foreach($origin in $catalog.Origins.Values){& $required $origin @('LastObservedAt','LastRunId')}

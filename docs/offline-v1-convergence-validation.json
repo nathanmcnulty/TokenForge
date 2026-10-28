@@ -305,8 +305,12 @@
           "ReservedUnknownRequests": 0
         }
       },
-      "exitCode": 0,
-      "expectedResult": "SessionExpired; zero requests/issuance; complete final package verified before module load"
+      "expectedResult": "SessionExpired; zero requests/issuance; complete final package verified before module load",
+      "harnessExitCode": 0,
+      "runnerExitCode": null,
+      "expectedRunnerExitCode": 1,
+      "runnerExitCodeRecorded": false,
+      "exitEvidenceCorrection": "Historical harness exited0, but did not capture runner exit. This receipt does not establish successful runner execution. New pr123-correction-validation.json records a separate runner process exiting1 with SessionExpired and zero counters."
     },
     "nativeGuard": {
       "selectionFiles": 21,
@@ -478,5 +482,6 @@
     "issueOrPRClosure": false,
     "binariesAndRawReceipts": "Local .cache/convergence only"
   },
-  "receiptDate": "2026-10-27"
+  "receiptDate": "2026-10-27",
+  "currentAcceptanceSupersededBy": "pr123-correction-validation.json"
 }

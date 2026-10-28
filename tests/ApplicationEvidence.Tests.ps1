@@ -87,6 +87,42 @@ Describe 'Public application evidence lookup' {
    }
   }
  }
+ It 'rejects invalid grant resources in <Location> before filtering/output' -ForEach @(
+  @{Location='selected current records';History=$false;Excluded=$false},
+  @{Location='excluded current records';History=$false;Excluded=$true},
+  @{Location='selected history';History=$true;Excluded=$false},
+  @{Location='excluded history';History=$true;Excluded=$true}
+ ) {
+  $other='22222222-2222-2222-2222-222222222222'
+  $discovery.Applications+=@{AppId=$other;Name='Other';Sources=$discovery.Applications[0].Sources;Grants=@(@{ResourceId=$resource;Scopes=@('User.Read')})}
+  $null=Update-TokenForgeApplicationMetadata $path $discovery Discovery
+  foreach($app in $discovery.Applications){$app.Name+=' changed'}
+  $discovery.FetchedAt=[DateTimeOffset]::UtcNow.AddSeconds(1).ToString('o')
+  $null=Update-TokenForgeApplicationMetadata $path $discovery Discovery
+  $original=Get-Content $path -Raw
+  foreach($bad in @($null,'','invalid','00000000-0000-0000-0000-000000000000',42,@{Unexpected='value'},'missing')){
+   $document=$original|ConvertFrom-Json -AsHashtable
+   $id=if($Excluded){$other}else{$client}
+   $record=$document.Applications[$id].Records.Values|Select-Object -First 1
+   $payload=if($History){$record.PreviousVersions[0]}else{$record}
+   if($bad -ceq 'missing'){$payload.Attributes.Grants[0].Remove('ResourceId')}else{$payload.Attributes.Grants[0].ResourceId=$bad}
+   $document|ConvertTo-Json -Depth 100|Set-Content $path
+   $rows=[Collections.Generic.List[object]]::new()
+   {Find-TokenForgeApplicationEvidence $path -AppId $client|ForEach-Object {$rows.Add($_)}}|Should -Throw '*Details suppressed*'
+   $rows.Count|Should -Be 0
+  }
+ }
+ It 'retains valid grant identities and metadata-only rows with historical records' {
+  $discovery.Applications[0].Name='Changed name'
+  $discovery.FetchedAt=[DateTimeOffset]::UtcNow.AddSeconds(1).ToString('o')
+  $null=Update-TokenForgeApplicationMetadata $path $discovery Discovery
+  $rows=@(Find-TokenForgeApplicationEvidence $path -ObservationPath $observed -AppId $client)
+  $rows.Count|Should -Be 3
+  ($rows|Where-Object EvidenceType -eq PublishedScopeHint).ResourceId|Should -Be $resource
+  ($rows|Where-Object EvidenceType -eq PublishedApplicationMetadata).ResourceId|Should -BeNullOrEmpty
+  ($rows|Where-Object EvidenceType -eq AnonymousTenantTokenObservation).ResourceId|Should -Be $resource
+  @($rows|Where-Object {$_.Disclaimer -notmatch 'do not guarantee'}).Count|Should -Be 0
+ }
  It 'rejects public export links including linked ancestor directories' -Skip:$IsWindows {
   $directory=Join-Path $TestDrive public-link
   $null=New-Item -ItemType SymbolicLink -Path $directory -Target (Split-Path $observed -Parent)

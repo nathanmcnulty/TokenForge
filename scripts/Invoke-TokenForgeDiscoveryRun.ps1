@@ -63,7 +63,7 @@ function Assert-TfFrozenCyclePackage {
 function Save-TfFrozenCycleReceipt($Summary) {
  if(-not $cycle){return}
  # Use only closed vocabulary/numeric fields from the collector. Never copy exception text.
- $allowed=@('Running','Complete','BudgetReached','SessionExpired','Cancelled','Paused','RequestBlocked','TransientExhausted','InFlightUnknown','AccountMismatch','Failed','Pending','InventoryStale','Configuration','Busy')
+ $allowed=@('Running','Complete','StructurallyExcluded','BudgetReached','SessionExpired','Cancelled','Paused','RequestBlocked','TransientExhausted','InFlightUnknown','AccountMismatch','Failed','Pending','InventoryStale','Configuration','Busy')
  if($Summary){
   $status=[string]$Summary.Status
   if($status -cnotin $allowed){throw 'Invalid cycle summary status.'}
@@ -165,7 +165,10 @@ try{
  Save-TfFrozenCycleReceipt $result
  if($cycle -and $cycle.Status -cne $result.Status){$result.Status=$cycle.Status;if($result.PSObject.Properties['Reason']){$result.Reason=$cycle.Reason}}
  $result|ConvertTo-Json -Depth 8 -Compress
- if($result.Status -cne 'Complete'){exit 1}
+ # Both terminal states leave no selected work pending. Uncertainty and all
+ # unfinished/failed states still stop nonzero after receipt precedence applies.
+ if($result.Status -cin @('Complete','StructurallyExcluded')){exit 0}
+ exit 1
 }catch{
  $summary=if($budget){& (Get-Module TokenForge) {param($errorRecord,$stage,$budget) Get-TokenForgeCollectorStopSummary -ErrorRecord $errorRecord -Stage $stage -Budget $budget} $_ $failure $budget}else{[pscustomobject]@{SchemaVersion=1;Status='Failed';Reason='Configuration';Stage='Configuration';CheckpointsRetained=$true;CredentialOutput=$false;Publication='NotAttempted'}}
  if($cycle){

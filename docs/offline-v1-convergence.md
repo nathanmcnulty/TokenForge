@@ -1,5 +1,25 @@
 # Linux x64 offline-v1 convergence
 
+## Current correction and final acceptance
+
+The earlier `dc6661f` qualification below is historical and is superseded for the current PR by corrected runtime/package source **`76efe6e878ed0a1c2d4c9dba36657c6677e8c2d7`** and [the correction receipt](pr123-correction-validation.json). The final PR acceptance comment pins the immutable whole head; its containing receipt commit changes documentation only.
+
+Frozen cycles now preserve terminal `StructurallyExcluded` in returned JSON and `vm-cycle.json`. `Complete` and `StructurallyExcluded` explicitly exit0; unfinished/failed states exit1, with `InFlightUnknown` still taking precedence. All grant resource identities, including excluded current records and history, are validated before filtering/output. Metadata-only rows may still have no resource; anonymous observations remain separate and neither evidence type guarantees acquisition.
+
+The corrected archive is local `.cache/pr123-correction/TokenForge-offline-v1-76efe6e-linux-x64.tar.gz`, **33,915,685 bytes**, SHA-256 **`29a84b5128fd5a885dc3ffdb298dd0eaf2e23b78264bcc4c0dfcb2976126c5f2`**. Its `public-health-package.json` SHA-256 is **`093fb116ad5c10575f27105e447419b1a13fb67c144f6b085a3b9a1b07e3189c`**. Counts stay268 regular members/267 payload entries/265 source maps: five existing payloads changed (three Markdown files and two corrected scripts), with no new package member. Actual archive bytes, safe membership, every hash/size/source mapping and compilation provenance were independently inspected.
+
+No binary rebuild was needed for these script corrections. All100native inputs match compilation source `0eb5e60fe0ecbfc7312e681dc9ce60ffdd5906ea`, retaining CLI hash `aa1ad0d814970379376ee5da6ddf531ccb22b1b738ad65709599ee64c4a2f61b`; all 47 credential inputs match `c32cd7b27e98fdeac9f376807999205d99133a38`, retaining DLL hash `a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52`.
+
+Fresh affected checks passed **70/0/0** in source and **70/0/0** from the actual extracted payload: VmCycle27, DiscoveryBootstrap9, ApplicationEvidence15, ApplicationMetadata19. The same new regressions against old production reproduced six failures (including the old Complete script's unset explicit exit) and three passes, with 33 intentional filter exclusions; its original count guard expected five failures and rejected the additional failure. That diagnostic attempt is preserved. Current checks cover result/receipt/exit handling, genuine failure and uncertainty precedence, null/malformed/missing/empty resource identities in selected/excluded current/history records, and valid evidence separation.
+
+Expiry proof now launches an actual separate PowerShell runner process, captures its script and process exits, stdout/stderr and private receipt, and checks every counter. **Runner exit1 / SessionExpired / all 13 counters at 0 / empty stderr** is an expected refusal, not successful runner execution. The independent asserting harness exits 0 only after verifying that refusal. The old receipt's ambiguous `exitCode:0` is corrected to historical harness0 with no captured runner exit; only the new proof establishes observed runner1.
+
+The reviewer directly audited the original 436 distinct scoped cases, failed attempts/retries/exclusions, 33 operator checks and 1157 native-core reuse. These remain historical/input-equivalent evidence; they were not rerun or added to 70 to create a new all-green full-suite total. The operator script and exercised functions/CLI/DLL are unchanged and do not call either corrected entry point. Two production scripts do change, so blanket equivalence of all runtime files is not claimed. Raw logs, harnesses, before/after controls, archives and private synthetic receipts remain local and directly available to the reviewer.
+
+The independent reviewer accepts the correction source/package and recommends, after owner approval and merge, retiring #100/#117/#118/#119/#120/#121 and closing #114 for accepted offline lookup/planning. Keep #113/#115/#116 open for the external gates below; keep #69/#74 parked. No merge/closures, authentication, credential access, tenant changes, enrollment retry, scheduling, hosted execution/settings or release/publication were performed.
+
+## Historical integration acceptance map
+
 Acceptance map against merged main `744cead6e54e236597cd5e9d6a71c586b0f49c92`. This is the consolidation acceptance map; final source/package identities and actual validation are recorded below and in the sanitized receipt. #106/#122 and issue #98 are accepted history, not repeated assignments.
 
 | Backlog | Retained implementation / missing work | Required evidence and disposition |
@@ -34,7 +54,7 @@ No merge, PR/issue closure, scheduler activation, hosted run/settings change, de
 - **Platform/integration:** Linux x64 offline qualification does not establish Windows/macOS/ARM packages, standalone Secret Service, signing/notarization, fresh operator live/API assurance or production readiness.
 
 
-## Exact source, package and validation
+## Historical source, package and validation at dc6661f
 
 Final runtime/package source is **`dc6661f09c995c128cfdaafbc337957814b19cf9`** on `codex/offline-v1-convergence`, above merged main `744cead6e54e236597cd5e9d6a71c586b0f49c92`. The containing evidence commit changes documentation only. [The sanitized machine receipt](offline-v1-convergence-validation.json) records exact payload/test/log hashes, failed attempts, equivalence and review. Binaries, private synthetic state, packaging recipe and raw receipts remain local under `.cache/convergence/` in the qualification worktree.
 

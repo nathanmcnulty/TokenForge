@@ -210,7 +210,7 @@
     "runtimeVerdict": "No remaining runtime/package blocker for76efe6e; fresh packaged70, actualrunner1/harness0 and all13counters0 verified directly",
     "archiveAudit": "268safe case-unique regular files,267payload hash/size entries,265source maps and100native/47credential bindings directly checked",
     "producerSuitesRerunByReviewer": false,
-    "finalWholeCommitAcceptance": "Pending final committed receipt consistency review"
+    "finalWholeCommitAcceptance": "ACCEPT for corrected source/package76efe6e after direct archive/raw-evidence inspection. The final PR123 acceptance comment records the independently accepted exact whole-head SHA and cleanup recommendation; this containing documentation snapshot is not substituted for package source."
   },
   "cleanupRecommendation": {
     "afterOwnerApprovesExactMergeAndCleanup": {

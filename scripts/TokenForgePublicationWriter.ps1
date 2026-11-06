@@ -51,7 +51,9 @@ function New-TfGitUpdate([string]$Expected,[string]$Proposed,[string]$Ref) {
 
 function Read-TfGitAcknowledgement([byte[]]$Bytes,[string]$Ref) {
  $packets=Read-TfGitPackets $Bytes
- if($packets.Count -ne 3 -or $packets[2] -cne '' -or $packets[0] -cne "unpack ok`n"){throw 'Incomplete Git acknowledgement.'}
+ # Local receive-pack emits one flush; GitHub smart HTTP additionally emits
+ # one outer flush. Neither permits another status packet or arbitrary suffix.
+ if($packets.Count -notin @(3,4) -or $packets[2] -cne '' -or ($packets.Count -eq 4 -and $packets[3] -cne '') -or $packets[0] -cne "unpack ok`n"){throw 'Incomplete Git acknowledgement.'}
  if($packets[1] -ceq ('ok '+$Ref+"`n")){return 'Accepted'}
  if($packets[1] -cmatch ('\Ang '+[regex]::Escape($Ref)+' [^\x00-\x1f\x7f]+\n\z')){return 'Rejected'}
  throw 'Unexpected Git acknowledgement.'

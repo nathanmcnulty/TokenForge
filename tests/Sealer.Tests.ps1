@@ -259,3 +259,51 @@ Describe 'Canonical stored original profile boundaries' {
   {Get-TfSealerCanonicalZipBytes $f.Candidate}|Should -Throw
  }
 }
+
+Describe 'Official stored artifact profile remains a complete-byte contract' {
+ BeforeEach {
+  $f=New-SealerFixture $TestDrive;$options=$f.SealerOptions
+  $official=Join-Path $f.Root official.zip
+  & /usr/bin/python3 -I "$PSScriptRoot/fixtures/publication/MutateSealerZip.py" $f.Candidate $official official-from-directory
+  if($LASTEXITCODE){throw 'Independent official-profile fixture encoder failed.'}
+  [IO.File]::Copy($official,$f.Zip,$true)
+  $f.Server[($f.Api+'/actions/artifacts/30')].digest='sha256:'+(Get-TfCandidateFileHash $f.Zip)
+  $f.Server[($f.Api+'/actions/artifacts/30')].size_in_bytes=(Get-Item $f.Zip).Length
+ }
+ It 'accepts the independently encoded official profile only when selected' {
+  $options.ArchiveProfile='GitHubStoredOriginalZipV2'
+  $r=Get-TokenForgeSealingSubject @options
+  $r.ArchiveProfile|Should -BeExactly GitHubStoredOriginalZipV2
+  $r.CompleteOriginalZipPrivacyValidated|Should -BeTrue
+  (Get-TfCandidateFileHash $r.SubjectPath)|Should -BeExactly (Get-TfCandidateFileHash $f.Zip)
+ }
+ It 'does not silently widen the existing default profile' {
+  {Get-TokenForgeSealingSubject @options}|Should -Throw '*ArchivePrivacy*'
+ }
+ It 'accepts a complete nonalphabetical official archive without normalizing its bytes' {
+  $reversed=Join-Path $f.Root reversed-official.zip
+  & /usr/bin/python3 -I "$PSScriptRoot/fixtures/publication/MutateSealerZip.py" $f.Candidate $reversed official-reversed-from-directory
+  if($LASTEXITCODE){throw 'Independent reordered fixture encoder failed.'}
+  [IO.File]::Copy($reversed,$f.Zip,$true)
+  $f.Server[($f.Api+'/actions/artifacts/30')].digest='sha256:'+(Get-TfCandidateFileHash $f.Zip)
+  $options.ArchiveProfile='GitHubStoredOriginalZipV2'
+  $r=Get-TokenForgeSealingSubject @options
+  (Get-TfCandidateFileHash $r.SubjectPath)|Should -BeExactly (Get-TfCandidateFileHash $f.Zip)
+ }
+ It 'rejects hidden or inconsistent original bytes for <Case>' -ForEach @(
+  @{Case='timestamp'},@{Case='attributes'},@{Case='local-crc'},@{Case='central-crc'},
+  @{Case='descriptor-signature'},@{Case='descriptor-crc'},@{Case='descriptor-size'},
+  @{Case='archive-comment'},@{Case='entry-comment'},@{Case='local-and-central-extra'},
+  @{Case='appended-bytes'},@{Case='gap-before-central-directory'},@{Case='duplicate-record'},@{Case='central-reordered'}
+ ) {
+  $mutated=Join-Path $f.Root changed-official.zip
+  & /usr/bin/python3 -I "$PSScriptRoot/fixtures/publication/MutateSealerZip.py" $f.Zip $mutated $Case
+  if($LASTEXITCODE){throw 'Official-profile mutation failed.'}
+  [IO.File]::Copy($mutated,$f.Zip,$true)
+  $f.Server[($f.Api+'/actions/artifacts/30')].digest='sha256:'+(Get-TfCandidateFileHash $f.Zip)
+  $f.Server[($f.Api+'/actions/artifacts/30')].size_in_bytes=(Get-Item $f.Zip).Length
+  $options.ArchiveProfile='GitHubStoredOriginalZipV2'
+  {Get-TokenForgeSealingSubject @options}|Should -Throw '*no signing performed*'
+  Test-Path $options.OutputDirectory|Should -BeFalse
+ }
+}

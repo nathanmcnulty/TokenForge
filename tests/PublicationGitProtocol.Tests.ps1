@@ -25,6 +25,28 @@ BeforeAll {
  }
 }
 
+Describe 'Bounded local and GitHub smart HTTP report-status framing' {
+ It 'accepts exactly one or two terminal flushes for a complete <Status> report (<Flushes>)' -ForEach @(
+  @{Status='Accepted';Line="ok refs/heads/synthetic`n";Flushes=1},
+  @{Status='Accepted';Line="ok refs/heads/synthetic`n";Flushes=2},
+  @{Status='Rejected';Line="ng refs/heads/synthetic cannot lock ref: expected-old mismatch`n";Flushes=1},
+  @{Status='Rejected';Line="ng refs/heads/synthetic cannot lock ref: expected-old mismatch`n";Flushes=2}
+ ) {
+  $reply=[byte[]]((ConvertTo-TfGitPacket "unpack ok`n")+(ConvertTo-TfGitPacket $Line)+[Text.Encoding]::ASCII.GetBytes(('0000'*$Flushes)))
+  (Read-TfGitAcknowledgement $reply 'refs/heads/synthetic')|Should -BeExactly $Status
+ }
+ It 'rejects extra flushes, status data, truncation and suffixes (<Case>)' -ForEach @(
+  @{Case='ThreeFlushes';Suffix='000000000000'},
+  @{Case='NoFlush';Suffix=''},
+  @{Case='PartialFlush';Suffix='000'},
+  @{Case='Suffix';Suffix='0000junk'},
+  @{Case='ExtraPacket';Suffix="0000000dextra ok`n0000"}
+ ) {
+  $reply=[byte[]]((ConvertTo-TfGitPacket "unpack ok`n")+(ConvertTo-TfGitPacket "ok refs/heads/synthetic`n")+[Text.Encoding]::ASCII.GetBytes($Suffix))
+  {Read-TfGitAcknowledgement $reply 'refs/heads/synthetic'}|Should -Throw
+ }
+}
+
 Describe 'Actual local Git receive-pack exact-old protocol proof' {
  BeforeEach {
   $bare=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))

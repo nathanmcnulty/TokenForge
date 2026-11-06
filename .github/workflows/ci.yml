@@ -9,7 +9,7 @@ on:
       publication_phase:
         description: 'Public fixture diagnostic, signed proof, or reviewed disposable-ref transport test'
         type: choice
-        options: [artifact, seal, publish]
+        options: [artifact, seal, diagnose, publish]
         default: artifact
 permissions:
   contents: read
@@ -40,7 +40,7 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-TokenForge.ps1
   publication_probe:
-    if: ${{ inputs.publication_probe && inputs.publication_phase != 'publish' && github.repository == 'nathanmcnulty/TokenForge' && github.ref == 'refs/heads/codex/issue113-publication-acceptance' }}
+    if: ${{ inputs.publication_probe && (inputs.publication_phase == 'artifact' || inputs.publication_phase == 'seal') && github.repository == 'nathanmcnulty/TokenForge' && github.ref == 'refs/heads/codex/issue113-publication-acceptance' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     permissions:
@@ -78,7 +78,7 @@ jobs:
           retention-days: 7
           overwrite: false
   publication_transport:
-    if: ${{ inputs.publication_probe && inputs.publication_phase == 'publish' && github.repository == 'nathanmcnulty/TokenForge' && github.ref == 'refs/heads/codex/issue113-publication-acceptance' }}
+    if: ${{ inputs.publication_probe && (inputs.publication_phase == 'publish' || inputs.publication_phase == 'diagnose') && github.repository == 'nathanmcnulty/TokenForge' && github.ref == 'refs/heads/codex/issue113-publication-acceptance' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -104,7 +104,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TF_EVIDENCE: ${{ runner.temp }}/tokenforge-synthetic-transport
-        run: ./scripts/Test-TokenForgePublicTransport.ps1 -Evidence $env:TF_EVIDENCE
+          TF_PHASE: ${{ inputs.publication_phase }}
+        run: ./scripts/Test-TokenForgePublicTransport.ps1 -Evidence $env:TF_EVIDENCE -DiagnosticOnly:($env:TF_PHASE -ceq 'diagnose')
       - name: Preserve only synthetic transport results
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -115,6 +116,8 @@ jobs:
             ${{ runner.temp }}/tokenforge-synthetic-transport/verification-checks.json
             ${{ runner.temp }}/tokenforge-synthetic-transport/transport-journal.json
             ${{ runner.temp }}/tokenforge-synthetic-transport/transport-result.json
+            ${{ runner.temp }}/tokenforge-synthetic-transport/wrong-old-reply.bin
+            ${{ runner.temp }}/tokenforge-synthetic-transport/correct-old-reply.bin
           if-no-files-found: warn
           retention-days: 7
           overwrite: false

@@ -1,6 +1,6 @@
 #Requires -Version 7.6
 # Manual synthetic service experiment, not the production authorization entry point.
-param([Parameter(Mandatory)][string]$Evidence)
+param([Parameter(Mandatory)][string]$Evidence,[switch]$DiagnosticOnly)
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 if($env:GITHUB_REPOSITORY -cne 'nathanmcnulty/TokenForge' -or $env:GITHUB_REF -cne 'refs/heads/codex/issue113-publication-acceptance' -or $env:GITHUB_RUN_ID -cnotmatch '\A[1-9][0-9]{0,18}\z'){throw 'Synthetic workflow context required.'}
@@ -34,11 +34,11 @@ function Invoke-CanaryApi([string]$Method,[string]$Route,$Body=$null){
  if($watch.Elapsed.TotalSeconds -ge 120 -or $script:requests -ge 24){throw 'Synthetic API budget exhausted.'}
  $allowedRead=@('','git/ref/heads/main',('git/ref/'+$ref.Substring(5)))
  if($Method -ceq 'GET'){
-  if($Route -cnotin $allowedRead -and $Route -cnotmatch '\Agit/commits/[a-f0-9]{40}\z'){throw 'Read route refused.'}
- }elseif($Method -cne 'POST' -or $Route -cnotin @('git/blobs','git/trees','git/commits','git/refs')){throw 'Write route refused.'}
+  if($Route -cnotin $allowedRead -and $Route -cnotmatch '\Agit/(commits/[a-f0-9]{40}|trees/[a-f0-9]{40}\?recursive=1)\z'){throw 'Read route refused.'}
+ }elseif($Method -cne 'POST' -or $Route -cne 'git/refs'){throw 'Write route refused.'}
  if($Route -ceq 'git/refs' -and $Body.ref -cne $ref){throw 'Only new disposable ref allowed.'}
  $script:requests++
- if($Method -ceq 'POST'){if($script:apiWrites -ge 10){throw 'REST mutation ceiling.'};$script:apiWrites++}
+ if($Method -ceq 'POST'){if($script:apiWrites -ge 1){throw 'REST mutation ceiling.'};$script:apiWrites++}
  $uri='https://api.github.com/repos/nathanmcnulty/TokenForge'+$(if($Route){'/'+$Route})
  $request=[Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::new($Method),$uri)
  $cancel=[Threading.CancellationTokenSource]::new();$cancel.CancelAfter([TimeSpan]::FromSeconds(15))
@@ -78,14 +78,27 @@ try{
  $baseCommit=Invoke-CanaryApi GET ('git/commits/'+$base)
  if($baseCommit.parents.Count -lt 1){throw 'Stale parent required.'}
  $stale=$baseCommit.parents[0].sha
- $entries=@()
- foreach($file in Get-ChildItem -LiteralPath (Join-Path $directory expected) -File|Sort-Object Name){
-  $blob=Invoke-CanaryApi POST 'git/blobs' @{content=[Convert]::ToBase64String([IO.File]::ReadAllBytes($file.FullName));encoding='base64'}
-  $entries+=@{path=('candidates/'+$subject.CandidateHash+'/'+$file.Name);mode='100644';type='blob';sha=$blob.sha}
+ # Reuse the proposal created by the first stopped experiment, verifying every
+ # leaf against main plus the exact signed fixture before creating a fresh ref.
+ $commit=Invoke-CanaryApi GET 'git/commits/20f35ce3f15e8de7fbefeced166335e3ad5b94d4'
+ if($commit.sha -cne '20f35ce3f15e8de7fbefeced166335e3ad5b94d4' -or $commit.parents.Count -ne 1 -or $commit.parents[0].sha -cne $base){throw 'Retained proposal/base mismatch.'}
+ $baseTree=Invoke-CanaryApi GET ('git/trees/'+$baseCommit.tree.sha+'?recursive=1')
+ $proposedTree=Invoke-CanaryApi GET ('git/trees/'+$commit.tree.sha+'?recursive=1')
+ if($baseTree.truncated -or $proposedTree.truncated){throw 'Complete trees required.'}
+ $expected=[Collections.Generic.Dictionary[string,string]]::new([StringComparer]::Ordinal)
+ foreach($entry in $baseTree.tree){if($entry.type -cne 'tree'){$expected.Add($entry.path,($entry.mode+' '+$entry.type+' '+$entry.sha))}}
+ $files=@(Get-ChildItem -LiteralPath (Join-Path $directory expected) -File)
+ if($files.Count -ne 7){throw 'Seven validated fixture members required.'}
+ foreach($file in $files){
+  $data=[IO.File]::ReadAllBytes($file.FullName);$prefix=[Text.Encoding]::ASCII.GetBytes("blob $($data.Length)`0")
+  $sha=[Convert]::ToHexString([Security.Cryptography.SHA1]::HashData([byte[]]($prefix+$data))).ToLowerInvariant()
+  $expected.Add(('candidates/'+$subject.CandidateHash+'/'+$file.Name),('100644 blob '+$sha))
  }
- if($entries.Count -ne 7){throw 'Seven validated fixture members required.'}
- $tree=Invoke-CanaryApi POST 'git/trees' @{base_tree=$baseCommit.tree.sha;tree=$entries}
- $commit=Invoke-CanaryApi POST 'git/commits' @{message='Public synthetic publication transport acceptance (no operational evidence)';tree=$tree.sha;parents=@($base)}
+ $seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+ foreach($entry in $proposedTree.tree){if($entry.type -cne 'tree'){
+  if(-not $seen.Add($entry.path) -or -not $expected.ContainsKey($entry.path) -or $expected[$entry.path] -cne ($entry.mode+' '+$entry.type+' '+$entry.sha)){throw 'Proposal tree mismatch.'}
+ }}
+ if($seen.Count -ne $expected.Count){throw 'Proposal tree membership mismatch.'}
  $created=Invoke-CanaryApi POST 'git/refs' @{ref=$ref;sha=$base}
  if($created.ref -cne $ref -or $created.object.sha -cne $base){throw 'Disposable ref creation binding.'}
  $journal=@{Synthetic=$true;ProductionApprovalEstablished=$false;Ref=$ref;DriverSource=$env:GITHUB_SHA;ProducerSource=$subject.SourceCommit;OriginalArchiveSha256=$subject.OriginalArchiveSha256;CandidateHash=$subject.CandidateHash;Base=$base;Proposed=$commit.sha;Transactions=@()}
@@ -95,6 +108,14 @@ try{
  Assert-TfGitAdvertisement $advertisement $ref $base
  $journal.Transactions+=@{Expected=$stale;State='DispatchStarted'};Save-CanaryIntent $journal
  $reply=Invoke-TfPublicationGitHttp $context POST (New-TfGitUpdate $stale $commit.sha $ref)
+ [IO.File]::WriteAllBytes((Join-Path $directory wrong-old-reply.bin),$reply)
+ if($DiagnosticOnly){
+  $journal.Transactions[0].State='Unknown'
+  $observed=Invoke-CanaryApi GET ('git/ref/'+$ref.Substring(5))
+  $journal.DiagnosticOnly=$true;$journal.Observed=$observed.object.sha;$journal.GitRequests=2;$journal.Posts=1;$journal.ApiRequests=$script:requests;$journal.RestMutationAttempts=$script:apiWrites
+  Save-CanaryIntent $journal
+  return
+ }
  $ack=Read-TfGitAcknowledgement $reply $ref
  $observed=Invoke-CanaryApi GET ('git/ref/'+$ref.Substring(5))
  if($ack -cne 'Rejected' -or $observed.object.sha -cne $base){throw 'Wrong-old must reject completely and leave ref unchanged.'}
@@ -106,6 +127,7 @@ try{
  $record=@{ExpectedParent=$base;ProposedCommit=$commit.sha;State='DispatchStarted';Ack='None';ObservedCommit=$base}
  $journal.Transactions+= $record;Save-CanaryIntent $journal
  $reply=Invoke-TfPublicationGitHttp $context POST (New-TfGitUpdate $base $commit.sha $ref)
+ [IO.File]::WriteAllBytes((Join-Path $directory correct-old-reply.bin),$reply)
  if((Read-TfGitAcknowledgement $reply $ref) -cne 'Accepted'){throw 'Corrected CAS rejected.'}
  # Explicit simulated loss AFTER known server acceptance. This proves GET-only
  # reconciliation, not a real crash or production-journal durability claim.

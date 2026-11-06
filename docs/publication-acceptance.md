@@ -82,8 +82,9 @@ This job has contents-write permission, Actions/attestation read permission and
 no OIDC permission. It calls the existing writer's Git packet, advertisement,
 acknowledgement and HTTP functions directly, without manufacturing a production
 approval verdict. Only a new `tokenforge-publication-canary-<run-id>` ref is
-created. Its tree retains main's existing files and adds the seven public fixture
-members. Neither main nor the production data ref is updated. An existing ref
+created. The proposal commit from the first stopped experiment is reused after
+reading both complete trees and checking that every leaf matches main plus the
+seven signed fixture members. Neither main nor the production data ref is updated. An existing ref
 causes refusal; there is no force update, merge or deletion.
 
 A stale ancestor as expected-old must produce a complete rejection and a fresh
@@ -94,13 +95,22 @@ local acknowledgement and uses GET-only observation to resolve `Unknown` to
 `Applied`. This is not a real network failure, crash test or proof of production
 journal durability. Any ambiguous POST stops the experiment without a resend.
 
-The driver bounds total REST calls to 24, including ten REST mutation attempts
-(seven blobs, one tree, one commit and one new ref). Two further mutation attempts
-are the intentional Git POSTs, for twelve total. Git calls are two per transaction (four
+The initial driver created seven blobs, one tree, one commit and one ref (ten
+REST mutation attempts). Its wrong-old response failed strict parsing; it stopped
+before the corrected transaction. The ref was observed unchanged. That attempt
+is retained as unresolved acknowledgement evidence and is never resent.
+
+The revised driver reuses the proposal and bounds total REST calls to 24,
+including one REST mutation attempt to create a fresh ref. Two further mutation
+attempts are the intentional Git POSTs, for three total. Git calls are two per transaction (four
 total), response bytes to 8 MiB per context, its metadata phase to 120 seconds,
 each Git transaction to 30 seconds and the entire job to five minutes. It never
 installs or downloads a verifier. Its flushed test intent is separate from the
 unchanged production private journal. Retained Actions results contain only
 public synthetic metadata. Production approval remains false throughout.
-The experiment observes the final ref; it does not independently read back the
-commit/tree after writing and is not full production candidate-tree acceptance.
+The diagnostic phase performs only the wrong-old POST, saves its raw reply,
+observes the ref using GET and stops with `Unknown`; it never proceeds to the
+corrected transaction. The new ref is distinct from every previous attempt.
+Both phases save raw Git replies before parsing. The experiment verifies the
+proposal tree before writing and observes the final ref, but does not independently
+read back the tree after writing or establish production candidate acceptance.

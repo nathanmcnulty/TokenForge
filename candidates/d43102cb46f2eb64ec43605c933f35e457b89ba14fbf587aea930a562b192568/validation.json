@@ -1,0 +1,18 @@
+{
+  "SchemaVersion": 1,
+  "SelectedPairs": 2,
+  "StructurallyExcludedPairs": 0,
+  "UnknownMatrixPairs": 1,
+  "PlannedCells": 1,
+  "TerminalCells": 0,
+  "InFlightUnknownCells": 1,
+  "PendingCells": 0,
+  "PausedCells": 0,
+  "RequestBlockedCells": 0,
+  "TransientFailureCells": 0,
+  "ScopeObservations": 0,
+  "FlowObservations": 0,
+  "ReviewStatus": "Pending",
+  "Evidence": "AssessedForOneAccountNotUniversalSupport",
+  "CredentialOutput": false
+}

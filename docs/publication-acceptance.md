@@ -114,3 +114,10 @@ corrected transaction. The new ref is distinct from every previous attempt.
 Both phases save raw Git replies before parsing. The experiment verifies the
 proposal tree before writing and observes the final ref, but does not independently
 read back the tree after writing or establish production candidate acceptance.
+
+The diagnostic isolated the acknowledgement incompatibility: GitHub returned a
+complete `unpack ok` plus wrong-old `ng` report, followed by **two** flush packets.
+Local receive-pack emits one. The writer now permits exactly either form after
+the two required status packets. Extra status data, three flushes, incomplete
+framing and arbitrary suffix bytes remain refused. This changes transport
+compatibility only; a negative report never authorizes a write or a retry.

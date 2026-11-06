@@ -1,5 +1,9 @@
 # Current public metadata health and workstation loop
 
+PR #127 adds an accounted MicrosoftApps adapter. A Linux x64 package replayed retained real public responses into a complete snapshot of 5,467 admissible candidates and 201 conflicts; one malformed documentation row was quarantined and one zero placeholder excluded. Local SQLite import, repeat import, status and nonempty name/ID lookups passed. These results do not establish tenant access or token availability, and they do not prove a fresh hosted schema-2 collection or artifact transfer. See [the exact validation and limitations](microsoftapps-adapter-validation.json) and [the operator guide](public-metadata-health.md). Packages, raw inputs and receipts remain local; dormant jobs remain unchanged. Keep #113, #115 and #116 open for their separate acceptance criteria.
+
+## Earlier hosted trial (historical)
+
 Start with [the operator guide and observed end-to-end result](public-metadata-health.md).
 Main includes #124's synthetic compatibility milestone and #125's dormant-workflow
 shell fix. The public-health path uses ordinary named-run artifact transfer and

@@ -34,6 +34,7 @@ Describe 'Independent finishing review: combined projector contract' {
             $source.lastSuccessAt|Should -BeExactly $old.lastSuccessAt
             $source.sha256|Should -BeExactly $old.sha256
             $source.changed|Should -BeFalse
+            $source.adaptation|Should -BeNullOrEmpty
         }
     }
 }

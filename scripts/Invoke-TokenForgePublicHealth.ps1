@@ -21,7 +21,7 @@ $now=[DateTimeOffset]::UtcNow.ToString('o');$rows=[Collections.Generic.List[obje
 try{
     foreach($name in $script:HealthSources.Keys){
         $old=if($previous){@($previous.Health.sources|Where-Object name -CEQ $name)[0]}else{$null}
-        $row=[ordered]@{name=$name;uri=$script:HealthSources[$name];status='Unavailable';attempts=0;lastSuccessAt=if($old){$old.lastSuccessAt}else{$null};sha256=if($old){$old.sha256}else{$null};candidateCount=if($old){$old.candidateCount}else{0};changed=$false}
+        $row=[ordered]@{name=$name;uri=$script:HealthSources[$name];status='Unavailable';attempts=0;lastSuccessAt=if($old){$old.lastSuccessAt}else{$null};sha256=if($old){$old.sha256}else{$null};candidateCount=if($old){$old.candidateCount}else{0};changed=$false;adaptation=$null}
         for($attempt=0;$attempt -lt 2;$attempt++){
             try{
                 Assert-TokenForgeHealthBudget $budget;$row.attempts++
@@ -33,15 +33,22 @@ try{
             }catch{continue}
             try{
                 $parsed=Read-TokenForgeHealthJson $bytes
-                $count=Assert-TokenForgeHealthSource $name $parsed
                 $sha=Get-TokenForgeHealthHash $bytes
+                $adaptation=$null
+                if($name -ceq 'microsoftApps'){
+                    $converted=ConvertTo-TokenForgeHealthMicrosoftApps $parsed $sha
+                    $adaptation=$converted.Accounting;$parsed=$converted.Records
+                }
+                $count=Assert-TokenForgeHealthSource $name $parsed
+                if($adaptation){$count=$adaptation.rawRecordCount}
                 $row.status='Success';$row.lastSuccessAt=$now;$row.sha256=$sha;$row.candidateCount=$count;$row.changed=(-not $old -or $old.sha256 -cne $sha);$data[$name]=$parsed
+                $row.adaptation=$adaptation
             }catch{if(-not (Test-TokenForgeHealthInputFailure $_.Exception)){throw};$row.status='Invalid'}
             break # Schema errors are not transient; never retry malicious data.
         }
         if($row.status -ceq 'Success'){
             $projection=Invoke-TokenForgeHealthProjection -Data @{$name=$data[$name]} -CatalogPath (Join-Path $stage catalog.tmp) -Now $now
-            if(-not $projection.Valid){$row.status='Invalid';$row.lastSuccessAt=if($old){$old.lastSuccessAt}else{$null};$row.sha256=if($old){$old.sha256}else{$null};$row.candidateCount=if($old){$old.candidateCount}else{0};$row.changed=$false;$data.Remove($name)}
+            if(-not $projection.Valid){$row.status='Invalid';$row.lastSuccessAt=if($old){$old.lastSuccessAt}else{$null};$row.sha256=if($old){$old.sha256}else{$null};$row.candidateCount=if($old){$old.candidateCount}else{0};$row.changed=$false;$row.adaptation=$null;$data.Remove($name)}
         }
         $rows.Add($row)
     }
@@ -56,6 +63,7 @@ try{
             foreach($row in $rows){
                 $old=if($previous){@($previous.Health.sources|Where-Object name -CEQ $row.name)[0]}else{$null}
                 $row.status='Invalid';$row.lastSuccessAt=if($old){$old.lastSuccessAt}else{$null};$row.sha256=if($old){$old.sha256}else{$null};$row.candidateCount=if($old){$old.candidateCount}else{0};$row.changed=$false
+                $row.adaptation=$null
             }
         }
     }
@@ -75,7 +83,7 @@ try{
         $candidateCount=$discovery.Applications.Count;$conflictCount=@($discovery.Applications|Where-Object {$_.MetadataConflicts.Count -gt 0}).Count
     }
     Assert-TokenForgeHealthBudget $budget
-    $health=[ordered]@{schemaVersion=1;kind='TokenForgePublicHealth';collectedAt=$now;lastCompleteAt=if($complete){$now}elseif($previous){$previous.Health.lastCompleteAt}else{$null};complete=$complete;candidateCount=$candidateCount;conflictCount=$conflictCount;sources=@($rows)}
+    $health=[ordered]@{schemaVersion=2;kind='TokenForgePublicHealth';collectedAt=$now;lastCompleteAt=if($complete){$now}elseif($previous){$previous.Health.lastCompleteAt}else{$null};complete=$complete;candidateCount=$candidateCount;conflictCount=$conflictCount;sources=@($rows)}
     $health|ConvertTo-Json -Depth 100|Set-Content -LiteralPath (Join-Path $stage health.json) -Encoding utf8NoBOM
     $files=[ordered]@{}
     foreach($name in @('health.json','metadata.json')){$bytes=Read-TokenForgeHealthBytes (Join-Path $stage $name) $(if($name -eq 'health.json'){$script:HealthLimits.HealthBytes}else{$script:HealthLimits.MetadataBytes});$files[$name]=@{sha256=Get-TokenForgeHealthHash $bytes;bytes=$bytes.Length}}

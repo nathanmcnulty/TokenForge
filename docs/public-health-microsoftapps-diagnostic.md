@@ -1,5 +1,7 @@
 # Bounded MicrosoftApps input diagnostics
 
+Current producer note: the strict raw-input diagnostic below is retained unchanged. The producer now has a separate, accounted MicrosoftApps boundary adaptation; see [consumer adaptation](public-metadata-health.md#microsoftapps-consumer-adaptation). A raw-document diagnostic refusal can therefore coexist with a successful adapted collection. Historical receipts below describe their original checks and are not relabeled as adapted acceptance.
+
 This milestone follows the MicrosoftApps handoff at `ebdaa42fd7021456071b4bd61dfffb785b449740` from owning result `4b95c76f3a7eccf4fafc67d9e76d7563a12e5c74`. The coordinated dependency handoff is pinned at `b7831a35680b5dd917b4d07eaee25f947c2a2f59`, indexed by `61b0536e4090b58fe610e04dcfe3aa6b83fc5b30`; all three task file hashes were checked against its manifest. Private coordination prose and raw responses are not copied into this public checkpoint.
 
 ## Evidence and authority

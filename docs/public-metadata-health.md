@@ -14,7 +14,10 @@ Set-Location $package
 $native = Join-Path $package tokenforge
 $revision = (Get-Content ./public-health-package.json -Raw | ConvertFrom-Json).sourceRevision
 $state = Join-Path $HOME '.local/share/TokenForge/health-state'
-$exchange = Join-Path $state 'exchanges/public-health-001'
+$null = [IO.Directory]::CreateDirectory($state, [IO.UnixFileMode]448) # 0700
+$exchangeRoot = Join-Path $state exchanges
+$null = [IO.Directory]::CreateDirectory($exchangeRoot, [IO.UnixFileMode]448)
+$exchange = Join-Path $exchangeRoot 'public-health-001'
 ```
 
 Run the bounded collection after authorizing public network access, then import,

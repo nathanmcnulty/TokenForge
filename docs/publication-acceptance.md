@@ -94,9 +94,13 @@ local acknowledgement and uses GET-only observation to resolve `Unknown` to
 `Applied`. This is not a real network failure, crash test or proof of production
 journal durability. Any ambiguous POST stops the experiment without a resend.
 
-The driver bounds metadata calls to 24, Git calls to two per transaction (four
+The driver bounds total REST calls to 24, including ten REST mutation attempts
+(seven blobs, one tree, one commit and one new ref). Two further mutation attempts
+are the intentional Git POSTs, for twelve total. Git calls are two per transaction (four
 total), response bytes to 8 MiB per context, its metadata phase to 120 seconds,
 each Git transaction to 30 seconds and the entire job to five minutes. It never
 installs or downloads a verifier. Its flushed test intent is separate from the
 unchanged production private journal. Retained Actions results contain only
 public synthetic metadata. Production approval remains false throughout.
+The experiment observes the final ref; it does not independently read back the
+commit/tree after writing and is not full production candidate-tree acceptance.

@@ -26,7 +26,7 @@ foreach($file in $imports.Keys){
 }
 $token=ConvertTo-SecureString $env:GH_TOKEN -AsPlainText -Force
 Remove-Item Env:GH_TOKEN
-$script:requests=0;$script:bytes=0L;$watch=[Diagnostics.Stopwatch]::StartNew()
+$script:requests=0;$script:apiWrites=0;$script:bytes=0L;$watch=[Diagnostics.Stopwatch]::StartNew()
 $handler=[Net.Http.HttpClientHandler]::new();$handler.AllowAutoRedirect=$false;$handler.UseCookies=$false;$handler.UseProxy=$false
 $client=[Net.Http.HttpClient]::new($handler);$client.Timeout=[TimeSpan]::FromSeconds(15)
 $ref='refs/heads/tokenforge-publication-canary-'+$env:GITHUB_RUN_ID
@@ -38,6 +38,7 @@ function Invoke-CanaryApi([string]$Method,[string]$Route,$Body=$null){
  }elseif($Method -cne 'POST' -or $Route -cnotin @('git/blobs','git/trees','git/commits','git/refs')){throw 'Write route refused.'}
  if($Route -ceq 'git/refs' -and $Body.ref -cne $ref){throw 'Only new disposable ref allowed.'}
  $script:requests++
+ if($Method -ceq 'POST'){if($script:apiWrites -ge 10){throw 'REST mutation ceiling.'};$script:apiWrites++}
  $uri='https://api.github.com/repos/nathanmcnulty/TokenForge'+$(if($Route){'/'+$Route})
  $request=[Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::new($Method),$uri)
  $cancel=[Threading.CancellationTokenSource]::new();$cancel.CancelAfter([TimeSpan]::FromSeconds(15))
@@ -114,6 +115,7 @@ try{
  if($record.State -cne 'Applied'){throw 'Read-only observation failed.'}
  Save-CanaryIntent $journal
  $journal.ApiRequests=$script:requests;$journal.GitRequests=4;$journal.Posts=2
+ $journal.RestMutationAttempts=$script:apiWrites;$journal.TotalMutationAttempts=$script:apiWrites+2
  $journal.SimulatedAcknowledgementLoss=$true;$journal.RecoveryPosts=0;$journal.ProductionCrashRecoveryProven=$false
  $journal|ConvertTo-Json -Depth 12|Set-Content -LiteralPath (Join-Path $directory transport-result.json)
 }finally{$client.Dispose();$token.Dispose()}

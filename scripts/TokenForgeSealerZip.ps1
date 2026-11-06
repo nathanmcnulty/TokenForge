@@ -1,11 +1,19 @@
 #Requires -Version 7.6
 # CanonicalStoredOriginalZipV1: validation reconstruction only. Never substitute
 # these bytes for the original service artifact or silently change its identity.
+# Explicit V2 permits only the official uploader's bounded seven-name order;
+# every other byte remains derived from validated payloads and fixed metadata.
 function Get-TfSealerCanonicalZipBytes([string]$CandidatePath,
- [ValidateSet('CanonicalStoredOriginalZipV1','GitHubStoredOriginalZipV2')][string]$Profile='CanonicalStoredOriginalZipV1') {
+ [ValidateSet('CanonicalStoredOriginalZipV1','GitHubStoredOriginalZipV2')][string]$Profile='CanonicalStoredOriginalZipV1',
+ [string[]]$EntryOrder) {
  if(-not $IsLinux){throw 'Canonical ZIP profile supports Linux only.'}
  Assert-TfCandidateUnlinked $CandidatePath
  $names=@('coverage.json','flows.json','manifest.json','recipe.json','review.md','scopes.json','validation.json')
+ if($EntryOrder){
+  if($EntryOrder.Count -ne 7 -or @($EntryOrder|Where-Object {$_ -cnotin $names}).Count -or @($EntryOrder|Select-Object -Unique).Count -ne 7){throw 'ZIP entry permutation.'}
+  if($Profile -ceq 'CanonicalStoredOriginalZipV1' -and ($EntryOrder -join '|') -cne ($names -join '|')){throw 'Canonical ZIP order.'}
+  $names=$EntryOrder
+ }
  $entries=@(Get-ChildItem -LiteralPath $CandidatePath -Force)
  if($entries.Count -ne 7 -or @($entries|Where-Object {$_.PSIsContainer -or $_.Name -cnotin $names}).Count){throw 'Canonical ZIP file set.'}
  $memory=[IO.MemoryStream]::new();$zip=$null;$total=0L
@@ -66,13 +74,25 @@ function Get-TfSealerCanonicalZipBytes([string]$CandidatePath,
 
 function Assert-TfSealerCompleteOriginalZip([string]$Archive,[string]$CandidatePath,
  [ValidateSet('CanonicalStoredOriginalZipV1','GitHubStoredOriginalZipV2')][string]$Profile='CanonicalStoredOriginalZipV1') {
- $expected=Get-TfSealerCanonicalZipBytes $CandidatePath -Profile $Profile
  $path=[TokenForge.Core.V0220.PrivateFiles]::Resolve($Archive,$false)
  $input=[IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None)
  try{
-  if($input.Length -ne $expected.Length -or $input.Length -gt 8MB){throw 'Unsupported original ZIP representation.'}
+  if($input.Length -lt 1 -or $input.Length -gt 8MB){throw 'Unsupported original ZIP representation.'}
   $actual=[byte[]]::new($input.Length);$input.ReadExactly($actual,0,$actual.Length)
-  if($input.ReadByte() -ne -1 -or -not [Linq.Enumerable]::SequenceEqual[byte]($actual,$expected)){throw 'Unsupported original ZIP representation.'}
+  if($input.ReadByte() -ne -1){throw 'Original ZIP changed during reading.'}
  }finally{$input.Dispose()}
+ $order=$null
+ if($Profile -ceq 'GitHubStoredOriginalZipV2'){
+  $memory=[IO.MemoryStream]::new($actual,$false);$zip=$null
+  try{
+   $zip=[IO.Compression.ZipArchive]::new($memory,[IO.Compression.ZipArchiveMode]::Read,$true)
+   if($zip.Entries.Count -ne 7){throw 'Original ZIP entry count.'}
+   $order=@($zip.Entries|ForEach-Object FullName)
+  }finally{if($zip){$zip.Dispose()};$memory.Dispose()}
+ }
+ # Only the bounded seven-name permutation is variable. Rebuilding all records
+ # in that order also rejects mismatched local order/offsets and hidden bytes.
+ $expected=Get-TfSealerCanonicalZipBytes $CandidatePath -Profile $Profile -EntryOrder $order
+ if(-not [Linq.Enumerable]::SequenceEqual[byte]($actual,$expected)){throw 'Unsupported original ZIP representation.'}
  $Profile
 }

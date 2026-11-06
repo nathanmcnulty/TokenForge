@@ -1,11 +1,13 @@
 """Stage the checked-in empty-observation fixture; never read operational state."""
 import hashlib
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
 import re
 import sys
+import zipfile
 
 
 def stage(output, source, run_id, attempt):
@@ -53,13 +55,16 @@ def verify_archive(archive, expected_directory, source, run_id, attempt):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     actual = archive.read_bytes()
-    expected = module.canonical_from_directory(expected_directory, official=True)
+    with zipfile.ZipFile(io.BytesIO(actual)) as container:
+        order = [entry.filename for entry in container.infolist()]
+    expected = module.canonical_from_directory(expected_directory, official=True, order=order)
     if actual != expected:
         raise ValueError("original archive differs from complete public fixture profile")
     return {"SchemaVersion": 1, "SyntheticFixtureOnly": True,
             "OriginalArchiveSha256": hashlib.sha256(actual).hexdigest(),
             "CandidateHash": hashlib.sha256((Path(expected_directory) / "manifest.json").read_bytes()).hexdigest(),
             "Bytes": len(actual), "ArchiveProfile": "GitHubStoredOriginalZipV2",
+            "EntryOrder": order,
             "CompleteOriginalBytesValidated": True, "ProductionApprovalEstablished": False}
 
 

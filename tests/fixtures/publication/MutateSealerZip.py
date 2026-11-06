@@ -14,9 +14,13 @@ warnings.filterwarnings("ignore", message="Duplicate name:", category=UserWarnin
 MARKER = b"SYNTHETIC_METADATA_MARKER"
 
 
-def canonical_from_directory(directory, official=False):
+def canonical_from_directory(directory, official=False, order=None):
     """Independent reference encoder; does not call the production formatter."""
     names = ("coverage.json", "flows.json", "manifest.json", "recipe.json", "review.md", "scopes.json", "validation.json")
+    if order is not None:
+        if len(order) != 7 or set(order) != set(names):
+            raise ValueError("seven-name permutation required")
+        names = tuple(order)
     result = bytearray()
     records = []
     for name in names:
@@ -73,6 +77,16 @@ def mutate(raw, case):
     if end < 0:
         raise ValueError("fixture EOCD")
     central = struct.unpack_from("<I", raw, end + 16)[0]
+    if case == "central-reordered":
+        records = []
+        pos = central
+        while pos < end:
+            if raw[pos:pos + 4] != b"PK\x01\x02":
+                raise ValueError("fixture central directory")
+            length = 46 + sum(struct.unpack_from("<HHH", raw, pos + 28))
+            records.append(raw[pos:pos + length])
+            pos += length
+        return raw[:central] + b"".join(reversed(records)) + raw[end:]
     patches = {"local-crc": 14, "central-crc": central + 16,
                "local-size": 18, "central-size": central + 20,
                "local-name": 30, "central-name": central + 46,
@@ -122,6 +136,8 @@ def mutate(raw, case):
 
 if __name__ == "__main__":
     source, target, case = sys.argv[1:]
-    value = canonical_from_directory(source, official=(case == "official-from-directory")) if case in ("canonical-from-directory", "official-from-directory") else mutate(Path(source).read_bytes(), case)
+    modes = ("canonical-from-directory", "official-from-directory", "official-reversed-from-directory")
+    reverse = ["validation.json", "scopes.json", "review.md", "recipe.json", "manifest.json", "flows.json", "coverage.json"]
+    value = canonical_from_directory(source, official=(case != "canonical-from-directory"), order=reverse if case == "official-reversed-from-directory" else None) if case in modes else mutate(Path(source).read_bytes(), case)
     with open(target, "xb") as output:
         output.write(value)

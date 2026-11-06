@@ -16,11 +16,16 @@ bytes. No candidate code is executed.
 ## Official stored ZIP profile
 
 `GitHubStoredOriginalZipV2` supports the pinned official artifact uploader with
-compression level zero, sorted seven-file membership, fixed ZIP-epoch timestamps
+compression level zero, a fixed seven-name set, fixed ZIP-epoch timestamps
 and regular `0600` files. It accounts for the uploader's stored entries and signed
 data descriptors, including their CRCs/sizes and exact central-directory fields.
 All headers, payloads, offsets and end records must match. Extra fields, comments,
-trailing bytes, altered metadata, duplicates and reordered entries are refused.
+trailing bytes, altered metadata and duplicates are refused. The official uploader
+can vary entry order. V2 accepts only a permutation of the seven fixed names and
+reconstructs both local and central records in that same order. Inconsistent order
+or offsets are refused, and the validated order is recorded. This permits at most
+5,040 structural orders (about 12.3 bits of choice); it is not a claim of zero
+covert-channel capacity or production privacy approval. V1 stays fixed-order.
 
 Validation reconstructs expected bytes only for comparison. The downloaded
 service archive is retained and hashed unchanged; that original digest is the

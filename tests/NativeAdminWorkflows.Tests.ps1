@@ -48,6 +48,24 @@ Describe 'Native Goal 3 shared administrator consumers' -Skip:(-not $nativeAvail
   $s=Invoke-AdminNative @('evidence','--acquisition-path',$ap)
   ($s|ConvertTo-Json -Depth 64 -Compress)|Should -Be ((ConvertTo-TokenForgeToolEvidence $m)|ConvertTo-Json -Depth 64 -Compress)
  }
+ It 'validates ARM proof routing natively without a session or PowerShell fallback (<Mismatch>)' -ForEach @(@{Mismatch=$false},@{Mismatch=$true}) {
+  $arm='797f4846-ba00-4fd7-ba43-dac1f8f63013'
+  $requirements.Tools[0].ResourceId=if($Mismatch){$graph}else{$arm}
+  $requirements.Tools[0].Scopes=@('user_impersonation');$requirements.Tools[0].Operations=@('ArmSubscriptionsV1')
+  $resource=[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson(($inventory.Applications[-1]|ConvertTo-Json -Depth 20 -Compress))
+  $resource.AppId=$arm;$resource.DelegatedScopeDefinitions=@(@{Id='44444444-4444-4444-4444-444444444444';Value='user_impersonation';Enabled=$true})
+  $inventory.Applications+=@($resource)
+  $armRequirements=Join-Path $root arm-requirements.json;$armInventory=Join-Path $root arm-inventory.json
+  Write-AdminFile $armRequirements $requirements;Write-AdminFile $armInventory $inventory
+  $args=@('acquire','--profile-path',$pp,'--requirements-path',$armRequirements,'--inventory-path',$armInventory,'--tool','read-profile','--operation-check')
+  if($Mismatch){$null=Invoke-AdminNative $args 1 -Invalid}
+  else{
+   $m=Invoke-AdminNative $args 4
+   $m.Reason|Should -Be ExistingSilentSessionRequired
+   $m.Context.ResourceId|Should -Be $arm
+   $m.BootstrapAttempts|Should -Be 0;$m.FinalAttempts|Should -Be 0;$m.ApiProofPerformed|Should -BeFalse
+  }
+ }
  It 'blocks an unsupported route before reading stdin even when explicitly selected' {
   $requirements.Tools[0].Protocol='OAuth2V1Implicit';Remove-Item $rp;Write-AdminFile $rp $requirements
   $m=Invoke-AdminNative @('acquire','--profile-path',$pp,'--requirements-path',$rp,'--inventory-path',$ip,'--tool','read-profile','--cookie-stdin') 4

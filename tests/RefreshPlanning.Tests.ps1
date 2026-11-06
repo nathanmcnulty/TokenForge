@@ -198,7 +198,7 @@ Describe 'Goal 4 bounded strict acquisition with synthetic HTTP' {
    [TokenForge.Core.V0180.OAuthHttpResponse]::new(200,$null,(@{access_token=$jwt;token_type='Bearer';scope=$scope;expires_in=1800}|ConvertTo-Json -Compress))
   }
   $identity=[Func[Security.SecureString,string]]{param($token)$script:rfPrincipal}
-  $proof=[Func[Security.SecureString,TokenForge.Core.ProfileApiCheck]]{param($token)[TokenForge.Core.ProfileApiCheck]::new(200,$true)}
+  $proof=[Func[Security.SecureString,TokenForge.Core.ProfileApiCheck]]{param($token)if($script:rfFault -eq 'ApiUnknown'){return [TokenForge.Core.ProfileApiCheck]::new($null,$false,'TransportFailureDetailsSuppressed')};[TokenForge.Core.ProfileApiCheck]::new(200,$true)}
   $cookie=ConvertTo-SecureString synthetic-cookie -AsPlainText -Force
   function Invoke-RefreshAdapter([bool]$ApprovedProof=$false) {Read-RefreshJson ([TokenForge.Core.AdminWorkflows]::AcquireRefresh($json,$root,$id,$cookie,'ESTSAUTH',[Threading.CancellationToken]::None,$http,$identity,$proof,$ApprovedProof))}
  }
@@ -215,6 +215,25 @@ Describe 'Goal 4 bounded strict acquisition with synthetic HTTP' {
   $script:rfFault='Transport';$r=Invoke-RefreshAdapter;$r.Run.InFlightUnknownCount|Should -BeGreaterThan 0;$r.Run.CompletedCount|Should -Be 0
   $p=Plan-Refresh $i ([DateTimeOffset]::UtcNow);$json=$p|ConvertTo-Json -Depth 100 -Compress
   {Invoke-RefreshAdapter}|Should -Throw
+  {[TokenForge.Core.AdminWorkflows]::AdvanceRefreshRun($json,$root)}|Should -Throw
+ }
+ It 'keeps an unobserved API response charged and unknown without reacquisition or plan reset' {
+  $i.Requirements.Tools[0].Operations=@('GraphMeV1')
+  $p=Plan-Refresh $i ([DateTimeOffset]::UtcNow);$json=$p|ConvertTo-Json -Depth 100 -Compress;$id=$p.Candidates[0].RequestId
+  $script:rfFault='ApiUnknown';$r=Invoke-RefreshAdapter $true
+  $r.Acquisition.IssuanceSucceeded|Should -BeTrue
+  $r.Run.InFlightUnknownCount|Should -Be 1
+  $r.Run.CompletedCount|Should -Be 0
+  $r.Run.IssuanceAttempts|Should -Be 2
+  $r.Run.TotalRequests|Should -Be 6
+  $calls=$script:rfHttpCalls
+  $again=Invoke-RefreshAdapter $true
+  $again.Run.InFlightUnknownCount|Should -Be 1
+  $again.Run.IssuanceAttempts|Should -Be 2
+  $again.Run.TotalRequests|Should -Be 6
+  $again.Run.CompletedCount|Should -Be 0
+  $script:rfHttpCalls|Should -Be $calls
+  $p=Plan-Refresh $i ([DateTimeOffset]::UtcNow);$json=$p|ConvertTo-Json -Depth 100 -Compress
   {[TokenForge.Core.AdminWorkflows]::AdvanceRefreshRun($json,$root)}|Should -Throw
  }
  It 'revalidates actual issued scope ceilings on every acquisition' {

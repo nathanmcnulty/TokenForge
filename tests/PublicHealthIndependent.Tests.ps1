@@ -154,3 +154,28 @@ Describe 'Independent public health trust and recovery cases' {
   [IO.File]::ReadAllText((Join-Path $destination src/TokenForge/public.ps1))|Should -BeExactly '# reviewed fixture'
  }
 }
+Describe 'Independently qualified runtime pairs' {
+ BeforeEach {
+  $pairRoot=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
+  $null=[IO.Directory]::CreateDirectory((Join-Path $pairRoot src/TokenForge/lib/net10.0),[IO.UnixFileMode]448)
+  [IO.File]::WriteAllText((Join-Path $pairRoot tokenforge),'synthetic executable')
+  [IO.File]::WriteAllText((Join-Path $pairRoot src/TokenForge/lib/net10.0/TokenForge.Credentials.dll),'synthetic library')
+  # Exercise only the pin gate. Synthetic bytes must never be loaded/executed.
+  Mock Add-Type {}
+  Mock Import-Module {}
+  Mock Get-FileHash {
+   [pscustomobject]@{Hash=$(if($LiteralPath.EndsWith('.dll')){$script:pairLibrary}else{$script:pairNative})}
+  }
+ }
+ It 'accepts only whole qualified pairs, including both historical pairs (<Case>)' -ForEach @(
+  @{Case='historical runtime';Native='42773ca3e048d5d29dd3edf488ca33ace5116d47afdd4513fa8df95b24a3047e';Library='a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52';Accepted=$true},
+  @{Case='offline-v1';Native='aa1ad0d814970379376ee5da6ddf531ccb22b1b738ad65709599ee64c4a2f61b';Library='a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52';Accepted=$true},
+  @{Case='ARM build';Native='d76e2ebbedde15e9fd962d3977f02516cf731cfacda55d72ef3ab7f145bf7dc8';Library='77ce122e7d7bde9b3bd6dccbd6539eec8f80cabae274b5c304c87d19dc3e5837';Accepted=$true},
+  @{Case='old executable new library';Native='aa1ad0d814970379376ee5da6ddf531ccb22b1b738ad65709599ee64c4a2f61b';Library='77ce122e7d7bde9b3bd6dccbd6539eec8f80cabae274b5c304c87d19dc3e5837';Accepted=$false},
+  @{Case='new executable old library';Native='d76e2ebbedde15e9fd962d3977f02516cf731cfacda55d72ef3ab7f145bf7dc8';Library='a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52';Accepted=$false}
+ ) {
+  $script:pairNative=$Native;$script:pairLibrary=$Library
+  if($Accepted){ {Initialize-TokenForgeHealthRuntime (Join-Path $pairRoot tokenforge)}|Should -Not -Throw }
+  else{ {Initialize-TokenForgeHealthRuntime (Join-Path $pairRoot tokenforge)}|Should -Throw '*qualified executable/library pair*' }
+ }
+}

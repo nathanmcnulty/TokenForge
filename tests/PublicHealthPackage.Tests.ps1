@@ -1,3 +1,4 @@
+BeforeDiscovery {$hasAcceptedFixture=[bool]($env:TOKENFORGE_TEST_ACCEPTED_PACKAGE -and (Test-Path (Join-Path $env:TOKENFORGE_TEST_ACCEPTED_PACKAGE 'public-health-package.json') -PathType Leaf))}
 BeforeAll {
     $repo=Split-Path $PSScriptRoot -Parent
     $native=$env:TOKENFORGE_TEST_NATIVE
@@ -24,16 +25,12 @@ BeforeAll {
     function Invoke-PackageFixture($Fixture){& "$repo/scripts/New-TokenForgePublicHealthPackage.ps1" -RebuiltPackagePath $Fixture.Package -BuildReceiptPath $Fixture.ReceiptPath -OutputPath $Fixture.Output -SourceRevision $head}
 }
 Describe 'Rebuilt public health package source custody' {
-    It 'reuses the accepted offline-v1 package with distinct compilation provenance and current script bytes' {
-        $package=Split-Path $native -Parent
+    It 'rejects the previously accepted package after compilation inputs change' -Skip:(-not $hasAcceptedFixture) {
+        $package=$env:TOKENFORGE_TEST_ACCEPTED_PACKAGE
+        (Get-FileHash (Join-Path $package public-health-package.json)).Hash.ToLowerInvariant()|Should -BeExactly '093fb116ad5c10575f27105e447419b1a13fb67c144f6b085a3b9a1b07e3189c'
         $out=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
-        $result=& "$repo/scripts/New-TokenForgePublicHealthPackage.ps1" -AcceptedPackagePath $package -OutputPath $out -SourceRevision $head|ConvertFrom-Json -AsHashtable
-        $result.nativeBuild|Should -BeExactly ReusedAcceptedInputs
-        $result.nativeSource|Should -BeExactly '0eb5e60fe0ecbfc7312e681dc9ce60ffdd5906ea'
-        $result.credentialInputsVerified|Should -Be 47
-        (Get-FileHash (Join-Path $out linux-x64/scripts/tokenforge.ps1)).Hash|Should -BeExactly (Get-FileHash "$repo/scripts/tokenforge.ps1").Hash
-        (Get-FileHash (Join-Path $out linux-x64/scripts/TokenForgePublicHealthSync.ps1)).Hash|Should -BeExactly (Get-FileHash "$repo/scripts/TokenForgePublicHealthSync.ps1").Hash
-        (Get-FileHash (Join-Path $out linux-x64/tokenforge)).Hash|Should -BeExactly (Get-FileHash $native).Hash
+        {& "$repo/scripts/New-TokenForgePublicHealthPackage.ps1" -AcceptedPackagePath $package -OutputPath $out -SourceRevision $head}|Should -Throw '*compilation inputs changed*'
+        Test-Path $out|Should -BeFalse
     }
     It 'rejects an unpinned accepted-package manifest before creating output' {
         $root=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'));$null=[IO.Directory]::CreateDirectory($root,[IO.UnixFileMode]448)

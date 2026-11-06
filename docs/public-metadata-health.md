@@ -2,40 +2,51 @@
 
 This lane refreshes public application/resource candidates and imports their evidence into a workstation catalog. It does not sign in, inspect private tenant inventory, issue tokens, grant consent, or start account research. Public catalog claims do not prove ownership, consent, issuance or API acceptance. Goal 6's original-ZIP interoperability experiment remains parked behind its existing refusal gates.
 
-The implementation currently supports the reviewed Linux x64 package and PowerShell 7.6.7. It verifies the rebuilt native executable and package core-library hashes before loading the matching source module; collection neither builds nor installs a replacement. The finishing package records the complete native build-input inventory against its exact owning source revision instead of reusing the earlier unchanged-native baseline. The final checkpoint receipt records the exact source/package revisions and validation results. Local fixture checks and fake GitHub responses do not establish hosted interoperability.
+The supported runtime is PowerShell 7.6.7 on Linux x64. Entry points verify the accepted native executable and core-library hashes; collection never builds or installs a replacement. Package source and compilation source are recorded separately. `New-TokenForgePublicHealthPackage.ps1 -AcceptedPackagePath` can refresh source over the accepted offline-v1 package only after verifying its pinned manifest, every payload, and both complete compilation-input inventories. No native rebuild is implied. This flow uses ordinary artifact transfer and local SQLite independently of the older publication research.
 
 ## Local loop
 
-Run from the owning source checkout. In an unpacked public-health runtime package, use its `scripts/tokenforge.ps1` and set `$native` to the absolute path of its `tokenforge` executable instead. The following PowerShell variables select the existing reviewed package and private local state; choose an unused exchange output path for every collection. Do not point an exchange output at private state.
+Use an unpacked, verified package and its own scripts. Select an unused exchange path for every collection. The manifest revision identifies the code actually executed; do not substitute an unrelated checkout's HEAD. Source-checkout use requires independently checking its executed files against that package.
 
 ```powershell
-$native = (Resolve-Path .cache/goal6/accepted-package/linux-x64/tokenforge).Path
-$revision = (git rev-parse HEAD).Trim()
+$package = (Resolve-Path ./linux-x64).Path # unpacked reviewed package
+Set-Location $package
+$native = Join-Path $package tokenforge
+$revision = (Get-Content ./public-health-package.json -Raw | ConvertFrom-Json).sourceRevision
 $state = Join-Path $HOME '.local/share/TokenForge/health-state'
-$exchange = Join-Path $PWD 'public-health-exchange-001'
+$null = [IO.Directory]::CreateDirectory($state, [IO.UnixFileMode]448) # 0700
+$exchangeRoot = Join-Path $state exchanges
+$null = [IO.Directory]::CreateDirectory($exchangeRoot, [IO.UnixFileMode]448)
+$exchange = Join-Path $exchangeRoot 'public-health-001'
 ```
 
-Start offline with the checked-in public-source fixtures:
+Run the bounded collection after authorizing public network access, then import,
+inspect status and look up saved applications. For offline source-checkout use,
+add `-FixturePath tests/fixtures/public-health` to collection instead.
 
 ```powershell
 pwsh -NoProfile scripts/tokenforge.ps1 health collect `
-  -FixturePath tests/fixtures/public-health `
-  -OutputPath $exchange -SourceRevision $revision -NativeExecutablePath $native -Json
+  -OutputPath $exchange -SourceRevision $revision -NativeExecutablePath $native -MaxSeconds 180 -Json
 
 pwsh -NoProfile scripts/tokenforge.ps1 health sync `
   -ExchangePath $exchange -StatePath $state -NativeExecutablePath $native -Json
 
 pwsh -NoProfile scripts/tokenforge.ps1 health status `
   -StatePath $state -NativeExecutablePath $native -Json
+
+pwsh -NoProfile scripts/tokenforge.ps1 health lookup `
+  -StatePath $state -NativeExecutablePath $native -Name 'Office' -Limit 20 -Json
 ```
 
-For a subsequently authorized public collection, omit `-FixturePath`. That performs anonymous HTTPS GETs to the fixed sources below. It does not infer account or GitHub credentials. Pass `-PreviousExchangePath` with the preceding validated exchange to preserve public history and meaningful empty-snapshot transitions. Keep immutable exchanges locally; artifact retention is not a backup.
+For an authorized real public collection, omit `-FixturePath` and use a new output path. Add `-MaxSeconds 180` for a smaller cooperative deadline (maximum 600 seconds). Collection uses at most six anonymous HTTPS requests to the three fixed sources, with no account or GitHub credential inference. Pass `-PreviousExchangePath` with the preceding validated exchange to preserve public history and meaningful empty-snapshot transitions. Keep immutable exchanges locally; artifact retention is not a backup. Checked-in test fixtures are source-checkout examples and are not required for a real packaged run.
 
 ```powershell
 # Run only when public network collection has been authorized.
+$previous = $exchange
+$exchange = Join-Path $exchangeRoot 'public-health-002'
 pwsh -NoProfile scripts/tokenforge.ps1 health collect `
-  -OutputPath ./public-health-exchange-002 -PreviousExchangePath $exchange `
-  -SourceRevision $revision -NativeExecutablePath $native -Json
+  -OutputPath $exchange -PreviousExchangePath $previous `
+  -SourceRevision $revision -NativeExecutablePath $native -MaxSeconds 180 -Json
 ```
 
 The producer returns collection completeness separately from exchange completion, import completion and operational publication. An incomplete collection can produce a valid exchange; inspect its health summary rather than treating file creation as complete collection.
@@ -74,6 +85,10 @@ Validated exchange members are staged under `public-health-receipts/<manifest-sh
 
 Status reads bounded saved receipts without projecting the full SQLite history or fetching anything. It separates transfer, import and collection states, retains the original `lastCompleteAt`, reports stale collection after 48 hours, and flags a collection-history gap when complete observations are over 14 days apart. A gap remains visible; fetching a later snapshot does not invent the missing observations. `pendingDeepWork=Unassessed_ExistingPlansPreserved` is an explicit limit: the health loop does not calculate or run an account-specific research plan. Publication remains `NotRequested`.
 
+Status also reports the latest exchange's three source statuses and last-success dates. These never advance the overall last-complete time. Legacy receipts have an empty `sources` list until a new exchange is imported. `catalog=Present_NotVerified` means only that the SQLite file exists; saved completion is not a fresh database integrity check. A deleted catalog reports `Missing`.
+
+`health lookup` searches current saved Discovery records by literal, case-insensitive name or exact `-AppId`. It ignores Inventory-only records and never substitutes tenant names for Discovery names. Because ordinary local discovery shares that catalog namespace, output is explicitly `PrivateWorkstationOutput` / `SavedDiscoveryMetadata`, not certified public-health provenance or publishable evidence. Scope hints remain metadata with token availability `Unverified`. Name searches use the existing bounded full-current-catalog export (128 MiB/60-second native limit); `-Limit` caps returned rows at 1–100, while exact AppId uses the native selector. Lookup performs no authentication, token check or write. An initial incomplete exchange can legitimately return zero matches; it never invents a complete catalog from the successful sources alone.
+
 Use existing SQLite-aware maintenance/backup commands for private backups. Do not copy a live database/WAL as an ordinary file or commit private state, receipts, profiles or downloaded diagnostics into this public repository.
 
 ## Named GitHub transfer, after approval
@@ -109,12 +124,110 @@ pwsh -NoProfile scripts/tokenforge.ps1 health contribution `
 
 Use the existing `DiscoverySourceClaims` shape (`SourceName`, public `Location`, `Evidence`, and supported attributes). The report retains source references, conflicts and the input hash, labels the result `Quarantined`, and lists ownership, consent, issuance and API acceptance as proof still needed. An optional supplied exchange supports claim comparison; a match does not promote the contribution to tenant/account proof. Review tool changes and metadata claims before admitting them to trusted source.
 
-## Proposed hosted trial remains blocked
+## Dormant hosted workflow and separate approval
 
-The workflow is a proposed template outside active `.github/workflows`, not an enabled job. Its target is one Linux job, no matrix, 600 seconds total and 480 seconds for collection, pinned standard actions, normal artifact tooling, read-only repository permissions, explicit three-file upload and a 14-day artifact-retention request. There are no Entra secrets, identity-token permission, repository data writes, custom artifact-service adapter or settings controller in this lane.
+`.github/workflows/public-metadata-health.yml` is registered as workflow `395612174`; its only job remains unconditionally `if: false` and it has no schedule. PR #125 corrected its Bash/PowerShell shell syntax. The delivery pins now select the approved code-only `public-health-e2e-1d6617e` prerelease below; executed module/health source must still match checkout bytes before a future run. Its target is one Linux job, no matrix, 600 seconds total and 480 seconds for collection, pinned standard actions, normal artifact tooling, read-only repository permissions, explicit three-file upload and a 14-day artifact-retention request. There are no Entra secrets, identity-token permission, repository data writes, custom artifact-service adapter or settings controller in this lane.
 
 Before a trial, review the exact source and matching package's public delivery, supported runner/runtime versions, default-branch/workflow registration change, permissions and relevant existing automation. Then obtain explicit approval for one bounded public-only hosted manual job and its public three-file output. Existing approval to push sanitized source does not authorize hosted execution, credentials, operational publication, workflow registration, merge or activation. Do not re-enable the old credentialed discovery workflow.
 
 A proposed stop procedure is to cancel the named trial, disable its workflow, retain already downloaded private evidence and report incomplete work. No such setting change has been performed here. A daily schedule is a later decision after a successful approved trial; it is not enabled or guaranteed by offline acceptance.
 
 The decision-ready manual-trial proposal is in `public-metadata-health-manual-trial.md`. Offline acceptance does not establish fresh upstream completeness, hosted artifact interoperability or Goal 6 production completion.
+
+## Observed end-to-end result
+
+The current reconciliation reused the accepted offline-v1 binaries after all 267
+payloads, 265 source mappings and complete 100 CLI / 47 credential compilation
+inputs were checked. Operator additions are source overlays, not native rebuilds.
+The older hosted producer at `04e89350b74e1a600c233aa43572a80a6f3ea642` also
+matches all 93 executed module/health source paths in its retained package from
+`c7d0b255612280e05605eca2e9ccfb44d5d68e18`; all 166 old payloads were verified.
+
+One fresh credential-free local collection used three requests in 48.71 seconds
+(180-second/six-request ceiling): ROADtools and resources succeeded; MicrosoftApps
+remained Invalid. A separate single-request current-input diagnostic reproduced
+`ApplicationIdentity` at zero-based row 2230 of 4459: a valid GUID prefix plus two
+extra characters including non-ASCII whitespace. It is the same malformed value
+as the prior diagnostic, not proof of the historical hosted response's exact cause.
+No trimming, repair or row dropping was performed. The resulting exchange is
+valid but incomplete, with null last-complete date and zero catalog applications.
+
+After anonymous artifact download was refused, Nathan explicitly approved one
+read-only transfer using the existing GitHub sign-in. The normal named-run sync
+validated run `40161542664`, attempt 1, workflow `395612174`, and artifact
+`12586302492`. The retained original ZIP is 1472 bytes, SHA256
+`944b5ac4d1632f72b423c7abde37c7d86e07e2855b8be01b5a06474774129618`, with exactly
+the three public exchange members. The existing four-GET/180-second transfer cap
+was enforced; the implementation does not persist the actual request count.
+No new hosted job or package publication was needed.
+
+Both real exchanges imported successfully into a private workstation. Local
+repeat import left SQLite bytes unchanged and preserved the newer source dates.
+Real lookup truthfully returns zero matches. A separate explicitly synthetic
+packaged collect/import/name-lookup walkthrough returned three fixture matches;
+those are not live catalog coverage. Focused import/recovery tests retain older
+evidence, last-success, locks, pending-import replay, private origins and frozen
+plans. Raw inputs, artifact ZIP, receipts and test reports remain local.
+
+Fresh complete application results still require a valid MicrosoftApps source or
+a previously accepted complete exchange. Any future hosted activation still
+requires approval; the completed trial and code-package publication are recorded
+below. #113, #115 and
+#116 remain open; this practical flow does not satisfy their production acceptance
+by implication.
+
+## Fresh current-package runner-to-workstation trial
+
+After explicit approval, the existing archive from package source
+`1d6617e6f724fc27fc6e7e64b3ea3dbd407b7168` was published as the single asset in
+[the code-only prerelease](https://github.com/nathanmcnulty/TokenForge/releases/tag/public-health-e2e-1d6617e).
+`TokenForge-public-health-linux-x64.tar.gz` is 33,936,560 bytes, SHA256
+`3e396f3486b9671ba5a71b6afd53a0e7a869fcb466e428beea30df596923446f`.
+The uploaded asset API digest/size matched. No historical asset was replaced or
+marked latest, no native binary was rebuilt, and no private evidence was released.
+
+One manual [run 42266672386](https://github.com/nathanmcnulty/TokenForge/actions/runs/42266672386)
+at workflow source `6ab34622928b500f068984f75153b17c5fc2a9d8`, attempt 1, passed.
+The job verified PowerShell 7.6.7/Linux x64, the package source/hash and all 94
+executed module/health source files against checkout. Its sole permission was
+contents-read. Source GETs: three, 34.453 seconds. ROADtools (506 candidates) and
+resources (1753) succeeded; MicrosoftApps was Invalid after one attempt. The
+precise hosted refusal cause is not recorded; the earlier private current-input
+diagnosis is separate evidence. Collection remains incomplete, with zero catalog
+candidates and null last-complete date. Job/upload success does not change that.
+
+The normal receiver transferred artifact `13526823949` from that named run:
+1467 bytes, SHA256
+`309876960dc29a1698b9117bb1257ee5648298fbffe8db421c061547c6cd3c64`, exactly
+`manifest.json` (795 bytes), `health.json` (1304) and `metadata.json` (227).
+It independently checked run/repository/workflow/source/attempt, all member
+hashes/schema and exchange context, then imported into the private workstation.
+The four-GET/180-second receiver cap applied with no retry; actual transfer request
+count is not separately persisted. Authorization was supplied explicitly from the
+approved existing GitHub sign-in, never to the artifact-service redirect.
+
+For that named run, after explicitly authorizing an existing read credential:
+
+```powershell
+# $approvedReadToken is an explicitly supplied SecureString; never log/store it.
+& ./scripts/tokenforge.ps1 health sync `
+  -Repository nathanmcnulty/TokenForge -RepositoryId 1402673320 `
+  -WorkflowId 395612174 -RunId 42266672386 `
+  -SourceRevision 6ab34622928b500f068984f75153b17c5fc2a9d8 `
+  -SourceBranch codex/public-health-current-trial `
+  -StatePath $state -NativeExecutablePath $native -GitHubToken $approvedReadToken -Json
+```
+
+The imported files match the retained ZIP byte for byte. Local repeat import used
+zero network requests and preserved SQLite SHA256 exactly. Status reports
+transfer/import Complete, collection Incomplete, stale true, null lastCompleteAt
+and the successful sources' new dates. Real name and AppId lookup each return
+zero; three nonempty fixture matches remain separately labeled synthetic proof.
+The artifact's requested retention is 14 days; local immutable receipts preserve
+import evidence after service expiry.
+
+Independent review directly inspected the API records, real ZIP, immutable
+exchange, job log and repeat/status/lookup receipts. No repeated live operation
+or local suite was needed. The trial branch was re-quarantined after completion;
+default-branch job guards, repository settings, permissions, old credentialed
+workflows and schedules were not changed. #113/#115/#116 remain open.

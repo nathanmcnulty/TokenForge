@@ -1,3 +1,30 @@
+# Current public metadata health and workstation loop
+
+Start with [the operator guide and observed end-to-end result](public-metadata-health.md).
+Main includes #124's synthetic compatibility milestone and #125's dormant-workflow
+shell fix. The public-health path uses ordinary named-run artifact transfer and
+local SQLite; older Goal6 publication research is not a prerequisite.
+
+The current source adds private workstation name/AppId lookup, per-source saved
+status and accepted-binary source-overlay packaging. An approved fresh hosted
+collection at `6ab34622928b500f068984f75153b17c5fc2a9d8`, run `42266672386`, passed
+using the exact published code-only package from source `1d6617e6f724fc27fc6e7e64b3ea3dbd407b7168`.
+Normal named-run transfer/import and local repeat were exercised against its real
+three-file artifact `13526823949`. Earlier local and retained-run evidence remains
+historical. All real collections remain incomplete because MicrosoftApps is
+invalid; no complete fresh catalog or live nonempty lookup is claimed. The
+precise hosted refusal cause is not proven by the source-status receipt.
+
+Repeated local import preserved SQLite bytes, and a separate synthetic packaged
+lookup demonstrates nonempty results. The accepted code package was explicitly
+approved for public prerelease publication; raw source inputs, ZIP/import receipts,
+private catalog and lookup output stay local. The completed trial job is again
+quarantined. No schedule, old credentialed workflow, permission/protection change,
+merge or private evidence publication occurred. Keep #113/#115/#116 open for their
+actual remaining acceptance criteria.
+
+Earlier handoffs below describe historical revisions and approval states.
+
 # PR123 corrected offline-v1 acceptance
 
 Current corrected package/source: `76efe6e878ed0a1c2d4c9dba36657c6677e8c2d7`. Read [the current correction acceptance](offline-v1-convergence.md#current-correction-and-final-acceptance) and [directly audited correction receipt](pr123-correction-validation.json). Both source and packaged affected checks pass 70/0/0; actual expiry runner exits 1  with SessionExpired/zero counters while its harness exits 0. Raw evidence/archive were inspected directly. Retire #100/#117–121 and close #114 only after Nathan approves exact reviewed merge/cleanup; keep #113/#115/#116 open and #69/#74 parked. Earlier handoffs below retain historical source identities and limitations.

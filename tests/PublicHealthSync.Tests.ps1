@@ -45,6 +45,61 @@ Describe 'Workstation public health sync actual entry points' {
   $catalog.Applications[$id].Records.Count|Should -Be 2
   (Get-FileHash $plan).Hash|Should -BeExactly $planHash
  }
+ It 'looks up saved public names in a mixed catalog without returning private names or origins' {
+  $exchange=New-SyncExchange $root -Name 'Public Example'
+  $null=Import-TokenForgePublicHealthExchange $exchange $state $native
+  $snapshot=@{CapturedAt='2026-01-01T00:00:00Z';TenantFingerprint=('b'*64);Applications=@(
+   @{AppId=$id;Name='Private Name';Ownership='Unverified';PublicClient=$false;Foci=0;Grants=@();Sources=@()},
+   @{AppId='22222222-2222-2222-2222-222222222222';Name='Private Only';Ownership='Unverified';PublicClient=$false;Foci=0;Grants=@();Sources=@()})}
+  $null=Update-TokenForgeApplicationMetadata (Join-Path $state applications.sqlite) $snapshot Inventory -NativeExecutablePath $native
+  $before=(Get-FileHash (Join-Path $state applications.sqlite)).Hash
+  $result=& "$repo/scripts/tokenforge.ps1" health lookup -StatePath $state -NativeExecutablePath $native -Name 'example' -Limit 1 -Json|ConvertFrom-Json
+  $result.Count|Should -Be 1;$result.Matches[0].Name|Should -BeExactly 'Public Example'
+  $result.Matches[0].TokenAvailability|Should -BeExactly Unverified
+  (Find-TokenForgePublicHealthApplication $state $native -Name 'Private').Count|Should -Be 0
+  (Find-TokenForgePublicHealthApplication $state $native -AppId $id).Count|Should -Be 1
+  (Find-TokenForgePublicHealthApplication $state $native -AppId '22222222-2222-2222-2222-222222222222').Count|Should -Be 0
+  ($result|ConvertTo-Json -Depth 10)|Should -Not -Match 'Private Name|Private Only|TenantFingerprint'
+  (Get-FileHash (Join-Path $state applications.sqlite)).Hash|Should -BeExactly $before
+ }
+ It 'shows per-source last-success while retaining the complete catalog date after a partial import' {
+  $complete=New-SyncExchange $root;$null=Import-TokenForgePublicHealthExchange $complete $state $native
+  $old=Get-TokenForgePublicHealthStatus $state
+  $partial=New-SyncExchange $root -Partial -Previous $complete
+  $null=Import-TokenForgePublicHealthExchange $partial $state $native
+  $status=Get-TokenForgePublicHealthStatus $state
+  $status.collection|Should -BeExactly Incomplete;$status.lastCompleteAt|Should -BeExactly $old.lastCompleteAt
+  $status.catalog|Should -BeExactly Present_NotVerified;$status.sources.Count|Should -Be 3
+  $resource=@($status.sources|Where-Object name -CEQ resources)[0]
+  $resource.status|Should -BeExactly Unavailable
+  $resource.lastSuccessAt|Should -BeExactly @($old.sources|Where-Object name -CEQ resources)[0].lastSuccessAt
+  $null=Import-TokenForgePublicHealthExchange $complete $state $native
+  (Get-TokenForgePublicHealthStatus $state).sources|ConvertTo-Json -Depth 8|Should -BeExactly ($status.sources|ConvertTo-Json -Depth 8)
+ }
+ It 'labels local Discovery-only metadata as private and accepts optional fields with bounded literal matching' {
+  $null=Resolve-TokenForgeHealthPrivateFile (Join-Path $state '.state') -CreateDirectory
+  $document=@{FetchedAt='2026-01-01T00:00:00Z';SourceSnapshots=@();Applications=@(
+   @{AppId=$id;Name='Local [private] Discovery';Sources=@()},
+   @{AppId='22222222-2222-2222-2222-222222222222';Name='Another local Discovery';Sources=@()})}
+  $null=Update-TokenForgeApplicationMetadata (Join-Path $state applications.sqlite) $document Discovery -NativeExecutablePath $native
+  $result=Find-TokenForgePublicHealthApplication $state $native -Limit 1
+  $result.Count|Should -Be 1;$result.Truncated|Should -BeTrue
+  $result.DataClassification|Should -BeExactly PrivateWorkstationOutput
+  $result.PublicHealthProvenanceEstablished|Should -BeFalse
+  $row=(Find-TokenForgePublicHealthApplication $state $native -Name '[private]').Matches[0]
+  $row.Name|Should -BeExactly 'Local [private] Discovery';$row.Evidence|Should -BeExactly SavedDiscoveryMetadata
+  $row.PublicClient|Should -BeNullOrEmpty;$row.Foci|Should -BeNullOrEmpty;$row.MetadataScopeHints|Should -BeNullOrEmpty
+ }
+ It 'distinguishes a missing catalog from saved completion and accepts legacy status receipts' {
+  $exchange=New-SyncExchange $root;$null=Import-TokenForgePublicHealthExchange $exchange $state $native
+  $index=Join-Path $state public-health-status.json
+  $saved=Get-Content $index -Raw|ConvertFrom-Json -AsHashtable;$saved.Remove('sources')
+  Write-TokenForgeHealthPrivateJson $index $saved
+  Remove-Item (Join-Path $state applications.sqlite)
+  $status=Get-TokenForgePublicHealthStatus $state
+  $status.import|Should -BeExactly Complete;$status.catalog|Should -BeExactly Missing;$status.sources.Count|Should -Be 0
+  {Find-TokenForgePublicHealthApplication $state $native}|Should -Throw '*No workstation catalog*'
+ }
  It 'retains complete date and values on partial collection and honors explicit empty tombstones' {
   $complete=New-SyncExchange $root;$null=Import-TokenForgePublicHealthExchange $complete $state $native
   $before=Get-TokenForgePublicHealthStatus $state

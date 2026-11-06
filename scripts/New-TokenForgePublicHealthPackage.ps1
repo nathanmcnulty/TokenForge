@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory,ParameterSetName='Historical')][string]$BasePackagePath,
+    [Parameter(Mandatory,ParameterSetName='Accepted')][string]$AcceptedPackagePath,
     [Parameter(Mandatory,ParameterSetName='Rebuilt')][string]$RebuiltPackagePath,
     [Parameter(Mandatory,ParameterSetName='Rebuilt')][string]$BuildReceiptPath,
     [Parameter(Mandatory)][string]$OutputPath,
@@ -13,9 +14,46 @@ $repo=Split-Path $PSScriptRoot -Parent
 $head=(& git -C $repo rev-parse HEAD).Trim()
 if($LASTEXITCODE -or $SourceRevision -cne $head){throw 'Package source revision must be the owning HEAD.'}
 $rebuilt=$PSCmdlet.ParameterSetName -ceq 'Rebuilt'
-$base=[IO.Path]::GetFullPath($(if($rebuilt){$RebuiltPackagePath}else{$BasePackagePath}))
+$accepted=$PSCmdlet.ParameterSetName -ceq 'Accepted'
+$base=[IO.Path]::GetFullPath($(if($rebuilt){$RebuiltPackagePath}elseif($accepted){$AcceptedPackagePath}else{$BasePackagePath}))
 Assert-TokenForgeHealthPath $base -Directory
-if($rebuilt){
+if($accepted){
+    $manifestPath=Join-Path $base public-health-package.json;Assert-TokenForgeHealthPath $manifestPath
+    if((Get-FileHash $manifestPath).Hash.ToLowerInvariant() -cne '093fb116ad5c10575f27105e447419b1a13fb67c144f6b085a3b9a1b07e3189c'){throw 'Accepted package manifest differs from the reviewed receipt.'}
+    $baseline=Get-Content $manifestPath -Raw|ConvertFrom-Json -AsHashtable
+    $acceptedSource=$baseline.sourceRevision
+    $acceptedSources=$baseline.sourceFiles
+    $inputSets=@(
+        @{Fields='compilationInputs';Revision=$baseline.compiledSource;Paths=@('global.json','native','src/TokenForge/Core','scripts/Build-TokenForgeNative.ps1','scripts/Build-TokenForgeCredentials.ps1','scripts/Copy-TokenForgePackageSource.ps1')},
+        @{Fields='credentialInputs';Revision=$baseline.credentialCompiledSource;Paths=@('global.json','native/TokenForge.Credentials','src/TokenForge/Core','scripts/Build-TokenForgeCredentials.ps1')})
+    foreach($set in $inputSets){
+        $paths=@(& git -C $repo ls-tree -r --name-only $SourceRevision -- @($set.Paths))
+        if($LASTEXITCODE -or @(Compare-Object @($baseline[$set.Fields].Keys) $paths).Count){throw 'Accepted compilation inventory differs.'}
+        foreach($relative in $paths){
+            $expected=$baseline[$set.Fields][$relative]
+            $current=(& git -C $repo rev-parse ($SourceRevision+':'+$relative)).Trim()
+            $compiled=(& git -C $repo rev-parse ($set.Revision+':'+$relative)).Trim()
+            $working=(& git -C $repo hash-object --no-filters -- (Join-Path $repo $relative)).Trim()
+            if($LASTEXITCODE -or $current -cne $expected -or $compiled -cne $expected -or $working -cne $expected){throw 'Accepted compilation inputs changed; rebuild and review required.'}
+        }
+    }
+    $actual=@(Get-ChildItem $base -Recurse -Force|ForEach-Object {Assert-TokenForgeHealthPath $_.FullName -Directory:$_.PSIsContainer;if(-not $_.PSIsContainer){[IO.Path]::GetRelativePath($base,$_.FullName)}})
+    if(@(Compare-Object @(@($baseline.files.Keys)+'public-health-package.json') $actual).Count){throw 'Accepted payload inventory differs.'}
+    $payload=[ordered]@{}
+    foreach($relative in $baseline.files.Keys){
+        $path=Join-Path $base $relative;$info=$baseline.files[$relative]
+        if((Get-Item $path).Length -ne $info.bytes -or (Get-FileHash $path).Hash.ToLowerInvariant() -cne $info.sha256){throw 'Accepted payload bytes changed.'}
+        $payload[$relative]=$info.sha256
+        if($acceptedSources.Contains($relative)){
+            $source=Join-Path $repo $acceptedSources[$relative];Assert-TokenForgeHealthPath $source
+            $expected=(& git -C $repo rev-parse ($SourceRevision+':'+$acceptedSources[$relative])).Trim()
+            $working=(& git -C $repo hash-object --no-filters -- $source).Trim()
+            if($LASTEXITCODE -or $expected -cne $working){throw 'Accepted source overlay differs from owning HEAD.'}
+        }
+    }
+    $baseline.files=$payload;$baseline.nativeInputs=$baseline.compilationInputs
+    Initialize-TokenForgeHealthRuntime (Join-Path $base tokenforge)
+}elseif($rebuilt){
     Assert-TokenForgeHealthPath $BuildReceiptPath
     $receiptSha=(Get-FileHash -LiteralPath $BuildReceiptPath).Hash.ToLowerInvariant()
     $baseline=Get-Content -LiteralPath $BuildReceiptPath -Raw|ConvertFrom-Json -AsHashtable
@@ -37,7 +75,9 @@ foreach($relative in $sourcePaths){
 }
 $packagingDriverSha256='475ce7f727c264b021acdcc00baeca1a459be0e2c687fddc2fceeb22be7c94b5'
 $packagingCopySha256='ddab6812fb9853c0d057131fb785dad5f2bd14436d66dd67fbb08a621a29a4c8'
-if($rebuilt){
+if($accepted){
+    # Complete compilation and payload equivalence was checked above. No build.
+}elseif($rebuilt){
     # This receipt is local build evidence, not a signature or an authorization.
     # Require the complete tracked compilation/build inventory, never a caller-selected subset.
     $nativePaths=@(& git -C $repo ls-files -- global.json native src/TokenForge/Core scripts/Build-TokenForgeNative.ps1 scripts/Build-TokenForgeCredentials.ps1 scripts/Copy-TokenForgePackageSource.ps1)
@@ -88,6 +128,7 @@ $stage=New-TokenForgeHealthPrivateDirectory (Join-Path $root linux-x64)
 foreach($name in $baseline.files.Keys){
     $source=Join-Path $base $name;Assert-TokenForgeHealthPath $source
     if((Get-FileHash $source).Hash.ToLowerInvariant() -cne $baseline.files[$name]){throw 'Base package bytes changed.'}
+    if($accepted -and $acceptedSources.Contains($name)){$source=Join-Path $repo $acceptedSources[$name]}
     $dest=Join-Path $stage $name;$null=[IO.Directory]::CreateDirectory((Split-Path $dest -Parent),[IO.UnixFileMode]448)
     Copy-Item -LiteralPath $source -Destination $dest
 }
@@ -112,7 +153,8 @@ foreach($item in Get-ChildItem $stage -Recurse -Force){
     $files[$relative]=@{sha256=(Get-FileHash $item.FullName).Hash.ToLowerInvariant();bytes=$item.Length}
 }
 $provenance=[ordered]@{nativeSource=$baseline.sourceRevision;nativeInputsVerified=$baseline.nativeInputs.Count}
-if($rebuilt){$provenance.buildReceiptSha256=$receiptSha;$provenance.nativeBuild='RebuiltExactSource';$provenance.sdk=$baseline.sdk}
+if($accepted){$provenance.nativeSource=$baseline.compiledSource;$provenance.credentialCompiledSource=$baseline.credentialCompiledSource;$provenance.acceptedPackageSource=$acceptedSource;$provenance.acceptedManifestSha256='093fb116ad5c10575f27105e447419b1a13fb67c144f6b085a3b9a1b07e3189c';$provenance.nativeBuild='ReusedAcceptedInputs';$provenance.credentialInputsVerified=$baseline.credentialInputs.Count}
+elseif($rebuilt){$provenance.buildReceiptSha256=$receiptSha;$provenance.nativeBuild='RebuiltExactSource';$provenance.sdk=$baseline.sdk}
 else{$provenance.unchangedBaselineInputs=$baseline.nativeInputs.Count-2;$provenance.reviewedPackagingDriverSha256=$packagingDriverSha256;$provenance.reviewedPackagingCopySha256=$packagingCopySha256}
 $manifest=[ordered]@{schemaVersion=1;kind='TokenForgePublicHealthLinuxPackage';sourceRevision=$SourceRevision;files=$files;operationalPublication=$false}
 foreach($key in $provenance.Keys){$manifest[$key]=$provenance[$key]}

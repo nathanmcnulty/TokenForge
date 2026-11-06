@@ -7,7 +7,7 @@ $repo=Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot Copy-TokenForgePackageSource.ps1)
 $destination=Join-Path $OutputPath $Runtime
 if(Test-Path $destination){Remove-Item $destination -Recurse -Force}
-$restoreArguments=if($NoRestore){@('--no-restore')}else{@()}
+[string[]]$restoreArguments=if($NoRestore){'--no-restore'}else{@()}
 & $Dotnet publish (Join-Path $repo 'native/TokenForge.Cli/TokenForge.Cli.csproj') --configuration Release --runtime $Runtime --self-contained true --output $destination '-p:RestoreLockedMode=true' '-p:IncludeNativeLibrariesForSelfExtract=true' '-p:EnableCompressionInSingleFile=true' '-p:DebugType=None' '-p:DebugSymbols=false' --nologo @restoreArguments
 if($LASTEXITCODE){throw 'Native publish failed.'}
 $null=New-Item -ItemType Directory (Join-Path $destination src),(Join-Path $destination scripts) -Force

@@ -8,7 +8,7 @@ $names=Get-Content (Join-Path $repo 'src/TokenForge/Core/CredentialSources.json'
 $xml=[xml](Get-Content $project -Raw)
 $compiled=@($xml.Project.ItemGroup.Compile|ForEach-Object {[IO.Path]::GetFileName($_.Include)})
 if(@(Compare-Object $names $compiled).Count){throw 'Credential project and source bootstrap disagree.'}
-$restoreArguments=if($NoRestore){@('--no-restore')}else{@()}
+[string[]]$restoreArguments=if($NoRestore){'--no-restore'}else{@()}
 & $Dotnet build $project --configuration Release '-p:RestoreLockedMode=true' '-p:DebugType=None' '-p:DebugSymbols=false' --nologo @restoreArguments
 if($LASTEXITCODE){throw 'Credential runtime build failed.'}
 $null=New-Item -ItemType Directory $OutputPath -Force

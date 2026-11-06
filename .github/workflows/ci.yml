@@ -1,10 +1,16 @@
 name: PowerShell validation
 on:
   workflow_dispatch:
+    inputs:
+      publication_probe:
+        description: 'Synthetic public artifact compatibility probe; no collection or publication'
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
   test:
+    if: ${{ !inputs.publication_probe }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -28,3 +34,39 @@ jobs:
       - name: Validate module and run offline tests
         shell: pwsh
         run: ./scripts/Test-TokenForge.ps1
+  publication_probe:
+    if: ${{ inputs.publication_probe && github.repository == 'nathanmcnulty/TokenForge' && github.ref == 'refs/heads/codex/issue113-publication-acceptance' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Record existing tools and create only the public synthetic fixture
+        env:
+          TF_CANARY_DIRECTORY: ${{ runner.temp }}/tokenforge-public-canary
+        run: |
+          python3 --version
+          if command -v gh >/dev/null; then
+            gh --version
+            sha256sum "$(command -v gh)"
+            if gh attestation verify --help >/dev/null 2>&1; then
+              echo 'AttestationVerifierAvailable=true'
+            else
+              echo 'AttestationVerifierAvailable=false'
+            fi
+          else
+            echo 'GitHubCliAvailable=false'
+          fi
+          python3 -I scripts/New-TokenForgePublicCanary.py "$TF_CANARY_DIRECTORY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        id: candidate
+        with:
+          name: tokenforge-synthetic-public-canary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/tokenforge-public-canary/*
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: false

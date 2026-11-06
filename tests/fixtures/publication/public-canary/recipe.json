@@ -1,0 +1,17 @@
+{
+  "SchemaVersion": 1,
+  "ExploreAllFlows": true,
+  "MaxRedirects": 1,
+  "Protocols": [
+    "OAuth2V2Pkce"
+  ],
+  "Pairs": [
+    {
+      "ResourceId": "00000003-0000-0000-c000-000000000000",
+      "Cells": [],
+      "ClientId": "11111111-1111-1111-1111-111111111111",
+      "Excluded": false,
+      "MatrixKnown": false
+    }
+  ]
+}

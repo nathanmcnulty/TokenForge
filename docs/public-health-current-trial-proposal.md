@@ -81,9 +81,12 @@ Named-run transfer has its existing four-GET/180-second ceiling, one attempt and
 no retries. Local repeat import performs no network request or recollection.
 Release/dispatch operations are one prerelease, one code-asset upload and one
 dispatch, followed by bounded observation of that same run; they are not hidden
-inside the receiver's four-request count. Observe at most 24 times at 30-second
-intervals, allowing two minutes of queue time plus the ten-minute job. Cancel the
-named run if it is still nonterminal at that bound, without redispatching. Stop on an identity/digest mismatch,
+inside the receiver's four-request count. Observe at most 24 times, approximately
+30 seconds apart, with a hard wall-clock cutoff twelve minutes after dispatch
+acknowledgement, including queue time. Stop earlier on a terminal result or the
+observation-count limit. If still nonterminal at either limit, cancel the named
+run once and make at most one additional status read to confirm cancellation;
+never redispatch. Stop on an identity/digest mismatch,
 unexpected access requirement, unapproved output, ambiguity, exhausted bound or
 failed job. Cancel the named run if needed; preserve partial local evidence.
 Do not retry publication, dispatch or transfer without a new decision.

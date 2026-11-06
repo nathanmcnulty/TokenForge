@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
  [Parameter(Position=0,Mandatory)][ValidateSet('profile','login','logout','status','doctor','token','scopes','graph','research','health')][string]$Command,
- [Parameter(Position=1)][ValidateSet('create','forget-key','show','get','explain','permissions','connect','disconnect','report','export-flows','backup','weekly','collect','sync','status','contribution')][string]$Operation,
+ [Parameter(Position=1)][ValidateSet('create','forget-key','show','get','explain','permissions','connect','disconnect','report','export-flows','backup','weekly','collect','sync','status','lookup','contribution')][string]$Operation,
  [ValidatePattern('^[a-z][a-z0-9_-]{0,63}$')][string]$Profile='default',
  [string]$SnapshotPath,[string]$BackupDirectory,[string]$Root,[string]$Tenant,[string]$StatePath,[string]$ExportPath,[string]$FlowPath,[string]$MetadataPath,[string]$NativeExecutablePath,[switch]$SummaryOnly,
  [ValidatePattern('^[a-f0-9]{64}$')][string]$TenantFingerprint,[ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,
@@ -11,6 +11,8 @@ param(
  [securestring]$VaultPassword,[securestring]$EstsAuth,
  [string]$ExchangePath,[string]$OutputPath,[string]$FixturePath,[string]$PreviousExchangePath,[string]$SourceRevision,[string]$ContributionPath,
  [string]$Repository,[string]$RepositoryId,[string]$WorkflowId,[string]$RunId,[string]$SourceBranch,[securestring]$GitHubToken,
+ [ValidateLength(1,256)][string]$Name,[guid]$AppId=[guid]::Empty,[ValidateRange(1,100)][int]$Limit=20,
+ [ValidateRange(0.01,600)][double]$MaxSeconds=600,
  [string]$PasskeyPath,[string]$XdrModulePath,[ValidateLength(0,320)][string]$LoginHint,[switch]$Browser,[switch]$Interactive,
  [guid]$BootstrapClientId='038ddad9-5bbe-4f64-b0cd-12434d1e633b',
  [ValidateRange(0,8760)][int]$MaxAdditionalScopes=0,[ValidateRange(0,8760)][int]$MaxBootstrapAdditionalScopes=0,
@@ -24,7 +26,7 @@ if($Command -eq 'health'){
  $options=@{NativeExecutablePath=$NativeExecutablePath}
  switch($Operation){
   collect {
-   $options.OutputPath=$OutputPath;$options.SourceRevision=$SourceRevision
+   $options.OutputPath=$OutputPath;$options.SourceRevision=$SourceRevision;$options.MaxSeconds=$MaxSeconds
    if($FixturePath){$options.FixturePath=$FixturePath};if($PreviousExchangePath){$options.PreviousExchangePath=$PreviousExchangePath}
    $healthResult=& (Join-Path $PSScriptRoot 'Invoke-TokenForgePublicHealth.ps1') @options|ConvertFrom-Json
   }
@@ -35,8 +37,14 @@ if($Command -eq 'health'){
    $healthResult=& (Join-Path $PSScriptRoot 'Sync-TokenForgePublicHealth.ps1') @options
   }
   status {$options.StatePath=$StatePath;$options.Status=$true;$healthResult=& (Join-Path $PSScriptRoot 'Sync-TokenForgePublicHealth.ps1') @options}
+  lookup {
+   . (Join-Path $PSScriptRoot 'TokenForgePublicHealth.ps1')
+   . (Join-Path $PSScriptRoot 'TokenForgePublicHealthSync.ps1')
+   $options.StatePath=$StatePath;$options.AppId=$AppId;$options.Limit=$Limit;if($Name){$options.Name=$Name}
+   $healthResult=Find-TokenForgePublicHealthApplication @options
+  }
   contribution {$options.InputPath=$ContributionPath;if($ExchangePath){$options.ExchangePath=$ExchangePath};$healthResult=& (Join-Path $PSScriptRoot 'Test-TokenForgePublicContribution.ps1') @options|ConvertFrom-Json}
-  default {throw 'Use health collect, sync, status or contribution.'}
+  default {throw 'Use health collect, sync, status, lookup or contribution.'}
  }
  if($Json){$healthResult|ConvertTo-Json -Depth 100}else{$healthResult}
  return

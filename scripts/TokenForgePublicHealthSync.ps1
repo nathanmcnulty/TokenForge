@@ -46,7 +46,35 @@ function Get-TokenForgePublicHealthStatus {
  }
  $pending=Join-Path $root 'public-health-pending.json'
  if([IO.File]::Exists($pending)){$state.import='RecoveryRequired'}
+ if(-not $state.Contains('sources')){$state.sources=@()}
+ $state.catalog=if([IO.File]::Exists((Join-Path $root applications.sqlite))){'Present_NotVerified'}else{'Missing'}
  return $state
+}
+function Find-TokenForgePublicHealthApplication {
+ [CmdletBinding()]
+ param([Parameter(Mandatory)][string]$StatePath,[Parameter(Mandatory)][string]$NativeExecutablePath,
+  [ValidateLength(1,256)][string]$Name,[guid]$AppId=[guid]::Empty,[ValidateRange(1,100)][int]$Limit=20)
+ Initialize-TokenForgeHealthSyncModule $NativeExecutablePath
+ $path=Resolve-TokenForgeHealthPrivateFile (Join-Path $StatePath applications.sqlite)
+ if(-not [IO.File]::Exists($path)){throw 'No workstation catalog exists; import a validated exchange first.'}
+ # This is a private workstation read, not the all-public exchange validator.
+ # Never fall back to tenant/inventory names or merge private-origin attributes.
+ # Discovery itself may include local imports: this output stays private and
+ # does not certify a record as coming from the public-health exchange.
+ $catalog=Get-TokenForgeApplicationMetadata -Path $path -CurrentOnly -AppId $AppId -NativeExecutablePath $NativeExecutablePath
+ $matches=[Collections.Generic.List[object]]::new();$truncated=$false
+ foreach($app in $catalog.Applications.Values|Sort-Object AppId){
+  if(-not $app.Records.Contains('Discovery///')){continue}
+  $record=$app.Records['Discovery///'];$attributes=$record.Attributes
+  $label=if($attributes.Contains('Name')){[string]$attributes.Name}else{''}
+  if($Name -and $label.IndexOf($Name,[StringComparison]::OrdinalIgnoreCase) -lt 0){continue}
+  if($matches.Count -ge $Limit){$truncated=$true;break}
+  $matches.Add([pscustomobject]@{AppId=$app.AppId;Name=$label;PresentInLatestSource=$record.PresentInLatestRun;
+   LastSeenAt=$record.LastSeenAt;PublicClient=$(if($attributes.Contains('PublicClient')){$attributes.PublicClient}else{$null});
+   Foci=$(if($attributes.Contains('Foci')){$attributes.Foci}else{$null});
+   MetadataScopeHints=$(if($attributes.Contains('Grants')){@($attributes.Grants)}else{@()});Evidence='SavedDiscoveryMetadata';TokenAvailability='Unverified'})
+ }
+ [pscustomobject]@{Kind='TokenForgePublicHealthLookup';DataClassification='PrivateWorkstationOutput';PublicHealthProvenanceEstablished=$false;Matches=$matches.ToArray();Count=$matches.Count;Limit=$Limit;Truncated=$truncated}
 }
 function Import-TokenForgePublicHealthExchange {
  [CmdletBinding()]
@@ -123,7 +151,7 @@ function Complete-TokenForgeHealthPending {
  $receiptPath=Join-Path (Split-Path $stage -Parent) import.json
  if(-not [IO.File]::Exists($receiptPath)){Write-TokenForgeHealthPrivateJson $receiptPath $receipt -Immutable}
  if($isLatest){
-  $status=[ordered]@{schemaVersion=1;transfer='Complete';import='Complete';collection=$(if($health.complete){'Complete'}else{'Incomplete'});lastCollectedAt=$health.collectedAt;lastCompleteAt=$complete;stale=$false;collectionHistoryGap=$gap;candidateCount=$health.candidateCount;conflictCount=$health.conflictCount;pendingDeepWork='Unassessed_ExistingPlansPreserved';publication='NotRequested';exchangeId=$ExchangeId}
+  $status=[ordered]@{schemaVersion=1;transfer='Complete';import='Complete';collection=$(if($health.complete){'Complete'}else{'Incomplete'});lastCollectedAt=$health.collectedAt;lastCompleteAt=$complete;stale=$false;collectionHistoryGap=$gap;candidateCount=$health.candidateCount;conflictCount=$health.conflictCount;pendingDeepWork='Unassessed_ExistingPlansPreserved';publication='NotRequested';exchangeId=$ExchangeId;sources=@($health.sources)}
   Write-TokenForgeHealthPrivateJson (Join-Path $Root public-health-status.json) $status
  }elseif($complete -cne $old.lastCompleteAt -or $gap -ne $old.collectionHistoryGap){
   $old.lastCompleteAt=$complete;$old.collectionHistoryGap=$gap;$old.import='Complete'

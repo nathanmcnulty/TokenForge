@@ -1,4 +1,4 @@
-# Proposal only, outside .github/workflows. No scheduler or active job.
+# Registered manual workflow, deliberately dormant. No scheduler or active job.
 name: Public metadata health
 on:
   workflow_dispatch:
@@ -63,7 +63,7 @@ jobs:
             if (-not $packageManifest.files.ContainsKey($path) -or (Get-FileHash $path).Hash.ToLowerInvariant() -cne $packageManifest.files[$path].sha256) { throw 'Package/source mismatch.' }
           }
           # Public runner context, not a secret or an independently signed claim.
-          $context=@{repository=$env:GITHUB_REPOSITORY;repositoryId=$env:GITHUB_REPOSITORY_ID;workflowId='WORKFLOW_ID_PENDING_REGISTRATION';runId=$env:GITHUB_RUN_ID;attempt=$env:GITHUB_RUN_ATTEMPT;event=$env:GITHUB_EVENT_NAME;headSha=$env:GITHUB_SHA;headBranch=$env:GITHUB_REF_NAME}
+          $context=@{repository=$env:GITHUB_REPOSITORY;repositoryId=$env:GITHUB_REPOSITORY_ID;workflowId='395612174';runId=$env:GITHUB_RUN_ID;attempt=$env:GITHUB_RUN_ATTEMPT;event=$env:GITHUB_EVENT_NAME;headSha=$env:GITHUB_SHA;headBranch=$env:GITHUB_REF_NAME}
           $context|ConvertTo-Json|Set-Content "$env:RUNNER_TEMP/health-context.json"
           @{image=$env:ImageVersion;os=$env:RUNNER_OS;arch=$env:RUNNER_ARCH;pwsh=$PSVersionTable.PSVersion.ToString();package=$env:TF_PACKAGE_SHA256;source=$env:GITHUB_SHA}|ConvertTo-Json -Compress
           & "$package/scripts/Invoke-TokenForgePublicHealth.ps1" -OutputPath "$env:RUNNER_TEMP/public-health" -NativeExecutablePath "$package/tokenforge" -SourceRevision $env:GITHUB_SHA -ContextPath "$env:RUNNER_TEMP/health-context.json" -MaxSeconds 480

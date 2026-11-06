@@ -2,34 +2,40 @@
 
 This lane refreshes public application/resource candidates and imports their evidence into a workstation catalog. It does not sign in, inspect private tenant inventory, issue tokens, grant consent, or start account research. Public catalog claims do not prove ownership, consent, issuance or API acceptance. Goal 6's original-ZIP interoperability experiment remains parked behind its existing refusal gates.
 
-The implementation currently supports the reviewed Linux x64 package and PowerShell 7.6.7. It verifies the rebuilt native executable and package core-library hashes before loading the matching source module; collection neither builds nor installs a replacement. The finishing package records the complete native build-input inventory against its exact owning source revision instead of reusing the earlier unchanged-native baseline. The final checkpoint receipt records the exact source/package revisions and validation results. Local fixture checks and fake GitHub responses do not establish hosted interoperability.
+The supported runtime is PowerShell 7.6.7 on Linux x64. Entry points verify the accepted native executable and core-library hashes; collection never builds or installs a replacement. Package source and compilation source are recorded separately. `New-TokenForgePublicHealthPackage.ps1 -AcceptedPackagePath` can refresh source over the accepted offline-v1 package only after verifying its pinned manifest, every payload, and both complete compilation-input inventories. No native rebuild is implied. This flow uses ordinary artifact transfer and local SQLite independently of the older publication research.
 
 ## Local loop
 
-Run from the owning source checkout. In an unpacked public-health runtime package, use its `scripts/tokenforge.ps1` and set `$native` to the absolute path of its `tokenforge` executable instead. The following PowerShell variables select the existing reviewed package and private local state; choose an unused exchange output path for every collection. Do not point an exchange output at private state.
+Use an unpacked, verified package and its own scripts. Select an unused exchange path for every collection. The manifest revision identifies the code actually executed; do not substitute an unrelated checkout's HEAD. Source-checkout use requires independently checking its executed files against that package.
 
 ```powershell
-$native = (Resolve-Path .cache/goal6/accepted-package/linux-x64/tokenforge).Path
-$revision = (git rev-parse HEAD).Trim()
+$package = (Resolve-Path ./linux-x64).Path # unpacked reviewed package
+Set-Location $package
+$native = Join-Path $package tokenforge
+$revision = (Get-Content ./public-health-package.json -Raw | ConvertFrom-Json).sourceRevision
 $state = Join-Path $HOME '.local/share/TokenForge/health-state'
-$exchange = Join-Path $PWD 'public-health-exchange-001'
+$exchange = Join-Path $state 'exchanges/public-health-001'
 ```
 
-Start offline with the checked-in public-source fixtures:
+Run the bounded collection after authorizing public network access, then import,
+inspect status and look up saved applications. For offline source-checkout use,
+add `-FixturePath tests/fixtures/public-health` to collection instead.
 
 ```powershell
 pwsh -NoProfile scripts/tokenforge.ps1 health collect `
-  -FixturePath tests/fixtures/public-health `
-  -OutputPath $exchange -SourceRevision $revision -NativeExecutablePath $native -Json
+  -OutputPath $exchange -SourceRevision $revision -NativeExecutablePath $native -MaxSeconds 180 -Json
 
 pwsh -NoProfile scripts/tokenforge.ps1 health sync `
   -ExchangePath $exchange -StatePath $state -NativeExecutablePath $native -Json
 
 pwsh -NoProfile scripts/tokenforge.ps1 health status `
   -StatePath $state -NativeExecutablePath $native -Json
+
+pwsh -NoProfile scripts/tokenforge.ps1 health lookup `
+  -StatePath $state -NativeExecutablePath $native -Name 'Office' -Limit 20 -Json
 ```
 
-For a subsequently authorized public collection, omit `-FixturePath`. That performs anonymous HTTPS GETs to the fixed sources below. It does not infer account or GitHub credentials. Pass `-PreviousExchangePath` with the preceding validated exchange to preserve public history and meaningful empty-snapshot transitions. Keep immutable exchanges locally; artifact retention is not a backup.
+For an authorized real public collection, omit `-FixturePath` and use a new output path. Add `-MaxSeconds 180` for a smaller cooperative deadline (maximum 600 seconds). Collection uses at most six anonymous HTTPS requests to the three fixed sources, with no account or GitHub credential inference. Pass `-PreviousExchangePath` with the preceding validated exchange to preserve public history and meaningful empty-snapshot transitions. Keep immutable exchanges locally; artifact retention is not a backup. Checked-in test fixtures are source-checkout examples and are not required for a real packaged run.
 
 ```powershell
 # Run only when public network collection has been authorized.
@@ -74,6 +80,10 @@ Validated exchange members are staged under `public-health-receipts/<manifest-sh
 
 Status reads bounded saved receipts without projecting the full SQLite history or fetching anything. It separates transfer, import and collection states, retains the original `lastCompleteAt`, reports stale collection after 48 hours, and flags a collection-history gap when complete observations are over 14 days apart. A gap remains visible; fetching a later snapshot does not invent the missing observations. `pendingDeepWork=Unassessed_ExistingPlansPreserved` is an explicit limit: the health loop does not calculate or run an account-specific research plan. Publication remains `NotRequested`.
 
+Status also reports the latest exchange's three source statuses and last-success dates. These never advance the overall last-complete time. Legacy receipts have an empty `sources` list until a new exchange is imported. `catalog=Present_NotVerified` means only that the SQLite file exists; saved completion is not a fresh database integrity check. A deleted catalog reports `Missing`.
+
+`health lookup` searches current saved Discovery records by literal, case-insensitive name or exact `-AppId`. It ignores Inventory-only records and never substitutes tenant names for Discovery names. Because ordinary local discovery shares that catalog namespace, output is explicitly `PrivateWorkstationOutput` / `SavedDiscoveryMetadata`, not certified public-health provenance or publishable evidence. Scope hints remain metadata with token availability `Unverified`. Name searches use the existing bounded full-current-catalog export (128 MiB/60-second native limit); `-Limit` caps returned rows at 1–100, while exact AppId uses the native selector. Lookup performs no authentication, token check or write. An initial incomplete exchange can legitimately return zero matches; it never invents a complete catalog from the successful sources alone.
+
 Use existing SQLite-aware maintenance/backup commands for private backups. Do not copy a live database/WAL as an ordinary file or commit private state, receipts, profiles or downloaded diagnostics into this public repository.
 
 ## Named GitHub transfer, after approval
@@ -109,9 +119,9 @@ pwsh -NoProfile scripts/tokenforge.ps1 health contribution `
 
 Use the existing `DiscoverySourceClaims` shape (`SourceName`, public `Location`, `Evidence`, and supported attributes). The report retains source references, conflicts and the input hash, labels the result `Quarantined`, and lists ownership, consent, issuance and API acceptance as proof still needed. An optional supplied exchange supports claim comparison; a match does not promote the contribution to tenant/account proof. Review tool changes and metadata claims before admitting them to trusted source.
 
-## Proposed hosted trial remains blocked
+## Dormant hosted workflow and separate approval
 
-The workflow is a proposed template outside active `.github/workflows`, not an enabled job. Its target is one Linux job, no matrix, 600 seconds total and 480 seconds for collection, pinned standard actions, normal artifact tooling, read-only repository permissions, explicit three-file upload and a 14-day artifact-retention request. There are no Entra secrets, identity-token permission, repository data writes, custom artifact-service adapter or settings controller in this lane.
+`.github/workflows/public-metadata-health.yml` is registered as workflow `395612174`; its only job remains unconditionally `if: false` and it has no schedule. PR #125 corrected its Bash/PowerShell shell syntax. Its existing delivery pins describe an older package and must be reconciled with the selected source before any new hosted execution. Its target is one Linux job, no matrix, 600 seconds total and 480 seconds for collection, pinned standard actions, normal artifact tooling, read-only repository permissions, explicit three-file upload and a 14-day artifact-retention request. There are no Entra secrets, identity-token permission, repository data writes, custom artifact-service adapter or settings controller in this lane.
 
 Before a trial, review the exact source and matching package's public delivery, supported runner/runtime versions, default-branch/workflow registration change, permissions and relevant existing automation. Then obtain explicit approval for one bounded public-only hosted manual job and its public three-file output. Existing approval to push sanitized source does not authorize hosted execution, credentials, operational publication, workflow registration, merge or activation. Do not re-enable the old credentialed discovery workflow.
 

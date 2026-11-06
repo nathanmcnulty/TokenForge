@@ -24,6 +24,24 @@ BeforeAll {
     function Invoke-PackageFixture($Fixture){& "$repo/scripts/New-TokenForgePublicHealthPackage.ps1" -RebuiltPackagePath $Fixture.Package -BuildReceiptPath $Fixture.ReceiptPath -OutputPath $Fixture.Output -SourceRevision $head}
 }
 Describe 'Rebuilt public health package source custody' {
+    It 'reuses the accepted offline-v1 package with distinct compilation provenance and current script bytes' {
+        $package=Split-Path $native -Parent
+        $out=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
+        $result=& "$repo/scripts/New-TokenForgePublicHealthPackage.ps1" -AcceptedPackagePath $package -OutputPath $out -SourceRevision $head|ConvertFrom-Json -AsHashtable
+        $result.nativeBuild|Should -BeExactly ReusedAcceptedInputs
+        $result.nativeSource|Should -BeExactly '0eb5e60fe0ecbfc7312e681dc9ce60ffdd5906ea'
+        $result.credentialInputsVerified|Should -Be 47
+        (Get-FileHash (Join-Path $out linux-x64/scripts/tokenforge.ps1)).Hash|Should -BeExactly (Get-FileHash "$repo/scripts/tokenforge.ps1").Hash
+        (Get-FileHash (Join-Path $out linux-x64/scripts/TokenForgePublicHealthSync.ps1)).Hash|Should -BeExactly (Get-FileHash "$repo/scripts/TokenForgePublicHealthSync.ps1").Hash
+        (Get-FileHash (Join-Path $out linux-x64/tokenforge)).Hash|Should -BeExactly (Get-FileHash $native).Hash
+    }
+    It 'rejects an unpinned accepted-package manifest before creating output' {
+        $root=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'));$null=[IO.Directory]::CreateDirectory($root,[IO.UnixFileMode]448)
+        [IO.File]::WriteAllText((Join-Path $root public-health-package.json),'{}')
+        $out=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
+        {& "$repo/scripts/New-TokenForgePublicHealthPackage.ps1" -AcceptedPackagePath $root -OutputPath $out -SourceRevision $head}|Should -Throw '*reviewed receipt*'
+        Test-Path $out|Should -BeFalse
+    }
     It 'allows a prior compilation commit only with identical complete native input blobs' {
         $f=New-PackageBuildFixture
         $built=(& git -C $repo log -1 --format=%H -- global.json native src/TokenForge/Core scripts/Build-TokenForgeNative.ps1 scripts/Build-TokenForgeCredentials.ps1 scripts/Copy-TokenForgePackageSource.ps1).Trim()

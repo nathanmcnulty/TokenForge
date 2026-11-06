@@ -126,7 +126,7 @@ Use the existing `DiscoverySourceClaims` shape (`SourceName`, public `Location`,
 
 ## Dormant hosted workflow and separate approval
 
-`.github/workflows/public-metadata-health.yml` is registered as workflow `395612174`; its only job remains unconditionally `if: false` and it has no schedule. PR #125 corrected its Bash/PowerShell shell syntax. Its existing delivery pins describe an older package and must be reconciled with the selected source before any new hosted execution. Its target is one Linux job, no matrix, 600 seconds total and 480 seconds for collection, pinned standard actions, normal artifact tooling, read-only repository permissions, explicit three-file upload and a 14-day artifact-retention request. There are no Entra secrets, identity-token permission, repository data writes, custom artifact-service adapter or settings controller in this lane.
+`.github/workflows/public-metadata-health.yml` is registered as workflow `395612174`; its only job remains unconditionally `if: false` and it has no schedule. PR #125 corrected its Bash/PowerShell shell syntax. The delivery pins now select the approved code-only `public-health-e2e-1d6617e` prerelease below; executed module/health source must still match checkout bytes before a future run. Its target is one Linux job, no matrix, 600 seconds total and 480 seconds for collection, pinned standard actions, normal artifact tooling, read-only repository permissions, explicit three-file upload and a 14-day artifact-retention request. There are no Entra secrets, identity-token permission, repository data writes, custom artifact-service adapter or settings controller in this lane.
 
 Before a trial, review the exact source and matching package's public delivery, supported runner/runtime versions, default-branch/workflow registration change, permissions and relevant existing automation. Then obtain explicit approval for one bounded public-only hosted manual job and its public three-file output. Existing approval to push sanitized source does not authorize hosted execution, credentials, operational publication, workflow registration, merge or activation. Do not re-enable the old credentialed discovery workflow.
 
@@ -170,7 +170,64 @@ evidence, last-success, locks, pending-import replay, private origins and frozen
 plans. Raw inputs, artifact ZIP, receipts and test reports remain local.
 
 Fresh complete application results still require a valid MicrosoftApps source or
-a previously accepted complete exchange. The dormant hosted delivery pins still
-need separate source/package review before any future activation. #113, #115 and
+a previously accepted complete exchange. Any future hosted activation still
+requires approval; the completed trial and code-package publication are recorded
+below. #113, #115 and
 #116 remain open; this practical flow does not satisfy their production acceptance
 by implication.
+
+## Fresh current-package runner-to-workstation trial
+
+After explicit approval, the existing archive from package source
+`1d6617e6f724fc27fc6e7e64b3ea3dbd407b7168` was published as the single asset in
+[the code-only prerelease](https://github.com/nathanmcnulty/TokenForge/releases/tag/public-health-e2e-1d6617e).
+`TokenForge-public-health-linux-x64.tar.gz` is 33,936,560 bytes, SHA256
+`3e396f3486b9671ba5a71b6afd53a0e7a869fcb466e428beea30df596923446f`.
+The uploaded asset API digest/size matched. No historical asset was replaced or
+marked latest, no native binary was rebuilt, and no private evidence was released.
+
+One manual [run 42266672386](https://github.com/nathanmcnulty/TokenForge/actions/runs/42266672386)
+at workflow source `6ab34622928b500f068984f75153b17c5fc2a9d8`, attempt 1, passed.
+The job verified PowerShell 7.6.7/Linux x64, the package source/hash and all 94
+executed module/health source files against checkout. Its sole permission was
+contents-read. Source GETs: three, 34.453 seconds. ROADtools (506 candidates) and
+resources (1753) succeeded; MicrosoftApps was Invalid after one attempt. The
+precise hosted refusal cause is not recorded; the earlier private current-input
+diagnosis is separate evidence. Collection remains incomplete, with zero catalog
+candidates and null last-complete date. Job/upload success does not change that.
+
+The normal receiver transferred artifact `13526823949` from that named run:
+1467 bytes, SHA256
+`309876960dc29a1698b9117bb1257ee5648298fbffe8db421c061547c6cd3c64`, exactly
+`manifest.json` (795 bytes), `health.json` (1304) and `metadata.json` (227).
+It independently checked run/repository/workflow/source/attempt, all member
+hashes/schema and exchange context, then imported into the private workstation.
+The four-GET/180-second receiver cap applied with no retry; actual transfer request
+count is not separately persisted. Authorization was supplied explicitly from the
+approved existing GitHub sign-in, never to the artifact-service redirect.
+
+For that named run, after explicitly authorizing an existing read credential:
+
+```powershell
+# $approvedReadToken is an explicitly supplied SecureString; never log/store it.
+& ./scripts/tokenforge.ps1 health sync `
+  -Repository nathanmcnulty/TokenForge -RepositoryId 1402673320 `
+  -WorkflowId 395612174 -RunId 42266672386 `
+  -SourceRevision 6ab34622928b500f068984f75153b17c5fc2a9d8 `
+  -SourceBranch codex/public-health-current-trial `
+  -StatePath $state -NativeExecutablePath $native -GitHubToken $approvedReadToken -Json
+```
+
+The imported files match the retained ZIP byte for byte. Local repeat import used
+zero network requests and preserved SQLite SHA256 exactly. Status reports
+transfer/import Complete, collection Incomplete, stale true, null lastCompleteAt
+and the successful sources' new dates. Real name and AppId lookup each return
+zero; three nonempty fixture matches remain separately labeled synthetic proof.
+The artifact's requested retention is 14 days; local immutable receipts preserve
+import evidence after service expiry.
+
+Independent review directly inspected the API records, real ZIP, immutable
+exchange, job log and repeat/status/lookup receipts. No repeated live operation
+or local suite was needed. The trial branch was re-quarantined after completion;
+default-branch job guards, repository settings, permissions, old credentialed
+workflows and schedules were not changed. #113/#115/#116 remain open.

@@ -6,15 +6,22 @@ shell fix. The public-health path uses ordinary named-run artifact transfer and
 local SQLite; older Goal6 publication research is not a prerequisite.
 
 The current source adds private workstation name/AppId lookup, per-source saved
-status and accepted-binary source-overlay packaging. A fresh anonymous collection
-and an explicitly approved read-only transfer/import of retained run `40161542664`
-were exercised. Both real collections remain incomplete because MicrosoftApps
-is invalid; no complete fresh catalog or live nonempty lookup is claimed.
-Repeated local import is idempotent, and a separate synthetic packaged lookup
-demonstrates nonempty results. Preserve the raw receipts locally and the original
-historical outcomes below. No new hosted dispatch, schedule, credentialed workflow,
-permission change, package publication or private evidence publication occurred.
-Keep #113/#115/#116 open for their actual remaining acceptance criteria.
+status and accepted-binary source-overlay packaging. An approved fresh hosted
+collection at `6ab34622928b500f068984f75153b17c5fc2a9d8`, run `42266672386`, passed
+using the exact published code-only package from source `1d6617e6f724fc27fc6e7e64b3ea3dbd407b7168`.
+Normal named-run transfer/import and local repeat were exercised against its real
+three-file artifact `13526823949`. Earlier local and retained-run evidence remains
+historical. All real collections remain incomplete because MicrosoftApps is
+invalid; no complete fresh catalog or live nonempty lookup is claimed. The
+precise hosted refusal cause is not proven by the source-status receipt.
+
+Repeated local import preserved SQLite bytes, and a separate synthetic packaged
+lookup demonstrates nonempty results. The accepted code package was explicitly
+approved for public prerelease publication; raw source inputs, ZIP/import receipts,
+private catalog and lookup output stay local. The completed trial job is again
+quarantined. No schedule, old credentialed workflow, permission/protection change,
+merge or private evidence publication occurred. Keep #113/#115/#116 open for their
+actual remaining acceptance criteria.
 
 Earlier handoffs below describe historical revisions and approval states.
 

@@ -1,4 +1,4 @@
-# Registered manual workflow, deliberately dormant. No scheduler or active job.
+# Completed manual trial; another hosted run requires a new reviewed activation.
 name: Public metadata health
 on:
   workflow_dispatch:
@@ -36,10 +36,10 @@ jobs:
       - name: Verify reviewed public package and collect metadata
         shell: bash
         env:
-          # Exact delivery URL/hash must be reviewed before enabling this template.
-          # No package has been published by this milestone.
-          TF_PACKAGE_URL: https://github.com/nathanmcnulty/TokenForge/releases/download/public-health-offline-20261024/TokenForge-public-health-linux-x64.tar.gz
-          TF_PACKAGE_SHA256: 2b92b0d0662809f3aeaf4992935cc38323c78d8223430b5f58eb9216156ef3e8
+          # Approved code-only prerelease; keep its source and archive digest pinned.
+          TF_PACKAGE_URL: https://github.com/nathanmcnulty/TokenForge/releases/download/public-health-e2e-1d6617e/TokenForge-public-health-linux-x64.tar.gz
+          TF_PACKAGE_SHA256: 3e396f3486b9671ba5a71b6afd53a0e7a869fcb466e428beea30df596923446f
+          TF_PACKAGE_SOURCE: 1d6617e6f724fc27fc6e7e64b3ea3dbd407b7168
         run: |
           set -euo pipefail
           umask 077
@@ -54,6 +54,7 @@ jobs:
           & tar -xzf "$env:RUNNER_TEMP/health-package.tar.gz" -C $package
           if ($LASTEXITCODE) { throw 'Reviewed package extraction failed.' }
           $packageManifest=Get-Content "$package/public-health-package.json" -Raw|ConvertFrom-Json -AsHashtable
+          if ($packageManifest.sourceRevision -cne $env:TF_PACKAGE_SOURCE) { throw 'Unexpected package source revision.' }
           # The archive hash covers this manifest. Bind all current module source and
           # health entry points to checkout bytes, while compiled payload pins are
           # enforced independently by Initialize-TokenForgeHealthRuntime.
@@ -65,7 +66,7 @@ jobs:
           # Public runner context, not a secret or an independently signed claim.
           $context=@{repository=$env:GITHUB_REPOSITORY;repositoryId=$env:GITHUB_REPOSITORY_ID;workflowId='395612174';runId=$env:GITHUB_RUN_ID;attempt=$env:GITHUB_RUN_ATTEMPT;event=$env:GITHUB_EVENT_NAME;headSha=$env:GITHUB_SHA;headBranch=$env:GITHUB_REF_NAME}
           $context|ConvertTo-Json|Set-Content "$env:RUNNER_TEMP/health-context.json"
-          @{image=$env:ImageVersion;os=$env:RUNNER_OS;arch=$env:RUNNER_ARCH;pwsh=$PSVersionTable.PSVersion.ToString();package=$env:TF_PACKAGE_SHA256;source=$env:GITHUB_SHA}|ConvertTo-Json -Compress
+          @{image=$env:ImageVersion;os=$env:RUNNER_OS;arch=$env:RUNNER_ARCH;pwsh=$PSVersionTable.PSVersion.ToString();package=$env:TF_PACKAGE_SHA256;packageSource=$packageManifest.sourceRevision;source=$env:GITHUB_SHA}|ConvertTo-Json -Compress
           & "$package/scripts/Invoke-TokenForgePublicHealth.ps1" -OutputPath "$env:RUNNER_TEMP/public-health" -NativeExecutablePath "$package/tokenforge" -SourceRevision $env:GITHUB_SHA -ContextPath "$env:RUNNER_TEMP/health-context.json" -MaxSeconds 480
           TOKENFORGE_POWERSHELL
           "$RUNNER_TEMP/health-runtime/pwsh" -NoLogo -NoProfile -NonInteractive -File "$RUNNER_TEMP/collect-health.ps1"

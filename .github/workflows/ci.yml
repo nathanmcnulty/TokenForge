@@ -78,7 +78,9 @@ jobs:
           retention-days: 7
           overwrite: false
   publication_transport:
-    if: ${{ inputs.publication_probe && (inputs.publication_phase == 'publish' || inputs.publication_phase == 'diagnose') && github.repository == 'nathanmcnulty/TokenForge' && github.ref == 'refs/heads/codex/issue113-publication-acceptance' }}
+    # Completed one-time acceptance. A new reviewed source change is required
+    # before another write-capable synthetic experiment can execute.
+    if: ${{ false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:

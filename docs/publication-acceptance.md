@@ -121,3 +121,45 @@ Local receive-pack emits one. The writer now permits exactly either form after
 the two required status packets. Extra status data, three flushes, incomplete
 framing and arbitrary suffix bytes remain refused. This changes transport
 compatibility only; a negative report never authorizes a write or a retry.
+
+## Accepted result and retained limitations
+
+[The sanitized result record](publication-acceptance-results.json) distinguishes
+producer source, executed code source, original artifact, payload hashes/sizes,
+proposal commit and transport proof. It retains both actual failures and the
+diagnostic outcome; this is not a new all-green full-suite run.
+
+At code commit `ea4bd357edb4554356eeb57aaca28eaaec0c630e`, manual run
+[42168365911](https://github.com/nathanmcnulty/TokenForge/actions/runs/42168365911)
+passed. Its raw wrong-old report is `Rejected`; a fresh GET confirmed main's base
+still held on the new canary ref. A distinct corrected transaction using the
+same retained candidate/proposal received `Accepted`. Explicitly simulated local
+acknowledgement loss was resolved by GET-only observation to `Applied`, with zero
+recovery POSTs. Actual usage was nine REST requests (one ref creation) and four
+Git requests (two POSTs). The previous failed and diagnostic refs were untouched.
+CI was restored to `disabled_manually` after the tests. The final PR additionally
+quarantines the write-capable transport job with an unconditional `if: false`;
+another write experiment requires a new reviewed source change. Historical
+manual phase names remain for traceability and cannot bypass this quarantine.
+
+The affected protocol/writer/recovery checks passed 112/112 after the correction;
+six certificate-binding unit methods passed separately. The 121 ZIP/sealer/policy
+checks are reused from `7b6e622...`: their relevant source, tests, fixtures and
+native inputs are unchanged. No native binary was rebuilt, no new runtime package
+was produced, and no Windows/macOS or other architecture result is implied.
+
+Independent review directly inspected the original service archive and retained
+signed proof, verified every archive byte/payload against producer source, and
+reviewed the verified certificate bindings. It independently replayed the actual
+GitHub response through the fixed parser. This is reviewed genuine hosted crypto
+evidence, not a second independent cryptographic verification execution.
+
+Keep #113 and #115 open. The production writer still requires its real configured
+reviewer/approval identities, protected-main binding and publication permission
+acceptance. No such actors are fabricated, no agent review is relabeled as an
+authenticated human approval, and quarantined production workflows stay disabled.
+This PR establishes actual artifact/signature and synthetic Git transport
+compatibility before merge; it does not establish operational publication,
+production crash recovery, post-write tree readback or every #115 requirement.
+Private VM evidence remains local. There is no operational-evidence publication,
+merge, issue closure, permission change or scheduler activation.

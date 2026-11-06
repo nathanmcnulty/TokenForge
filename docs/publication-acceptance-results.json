@@ -1,0 +1,145 @@
+{
+  "SchemaVersion": 1,
+  "Kind": "SanitizedSyntheticPublicationAcceptance",
+  "SyntheticOnly": true,
+  "BaseCommit": "43eade769050ad1837c3d715740ec77a7de1aef5",
+  "ProducerCommit": "7b6e62223944d99edde3b648749125247578e559",
+  "ProducerRunId": "42166462125",
+  "ProducerAttempt": "1",
+  "ArtifactId": "13479301224",
+  "OriginalArchiveSha256": "47e533aa04a2683affa3ba709bd03441c26081c172664d99e7e41b905b89be08",
+  "OriginalArchiveBytes": 4312,
+  "Payload": [
+    {
+      "Path": "coverage.json",
+      "Bytes": 151,
+      "Sha256": "b7ab8891f2a6ce13310dd2731b5caaf7e512b3bdd5930fb617d119cd4f4c74ea"
+    },
+    {
+      "Path": "flows.json",
+      "Bytes": 187,
+      "Sha256": "f1bc8faac89910f880306ced65b72081e2bf29d1e7e4dde3b36caf2d8fb4e0ca"
+    },
+    {
+      "Path": "manifest.json",
+      "Bytes": 1280,
+      "Sha256": "d43102cb46f2eb64ec43605c933f35e457b89ba14fbf587aea930a562b192568"
+    },
+    {
+      "Path": "recipe.json",
+      "Bytes": 622,
+      "Sha256": "cc43d58b8d21df3122513ec99c03feb637d3efe454fa16d35026c0b3f9561e66"
+    },
+    {
+      "Path": "review.md",
+      "Bytes": 636,
+      "Sha256": "b2da92388990a70c62ef203e609110f0ae662f42ba79ff811ad1c817dccce9f7"
+    },
+    {
+      "Path": "scopes.json",
+      "Bytes": 160,
+      "Sha256": "892b6bf64dd2a1320c4a7a3a0258b201a0b7cf56f47d0ccf79785413bd16ab04"
+    },
+    {
+      "Path": "validation.json",
+      "Bytes": 446,
+      "Sha256": "2c0e8fa62a4aa3e1bd9a384f02d965c7fb070e62104e29336f1856864756c5cb"
+    }
+  ],
+  "ProposalCommit": "20f35ce3f15e8de7fbefeced166335e3ad5b94d4",
+  "VerifierSha256": "b768184570b12536be4ac1528893f6340d1c6a7b40b56ad45bca9cd0e87ad34d",
+  "TrustRootSha256": "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c",
+  "HostedRuns": [
+    {
+      "Id": "42162870826",
+      "Result": "Success",
+      "Meaning": "Initial tool/artifact diagnostic"
+    },
+    {
+      "Id": "42165567733",
+      "Result": "Failure",
+      "Meaning": "ZIP entry order rejected before signing; retained"
+    },
+    {
+      "Id": "42166462125",
+      "Result": "Success",
+      "Meaning": "Original ZIP validation, genuine signing, offline positive and tampered negative"
+    },
+    {
+      "Id": "42167701048",
+      "Result": "Failure",
+      "Meaning": "First wrong-old reply not retained; acknowledgement remains unresolved; GET showed unchanged ref; never resent"
+    },
+    {
+      "Id": "42168096200",
+      "Result": "Success",
+      "Meaning": "Diagnostic captured two terminal flushes; journal deliberately remains Unknown; GET unchanged; no corrected POST"
+    },
+    {
+      "Id": "42168365911",
+      "Result": "Success",
+      "Meaning": "Fresh-ref complete rejection then distinct corrected CAS; simulated acknowledgement loss and GET-only observation"
+    }
+  ],
+  "FinalTransport": {
+    "RunId": "42168365911",
+    "ArtifactId": "13479907866",
+    "ProofZipSha256": "7242515fb37ab25735812e31200ef0f677e25c7a815aee07daf8e967070ce380",
+    "ProofZipBytes": 3154,
+    "RestRequests": 9,
+    "RestMutationAttempts": 1,
+    "GitRequests": 4,
+    "GitPosts": 2,
+    "RecoveryPosts": 0,
+    "WrongOldStatus": "Rejected",
+    "CorrectedServerAck": "Accepted",
+    "SimulatedLocalAckStatus": "Unknown",
+    "ObservedStatus": "Applied",
+    "ProductionCrashRecoveryProven": false
+  },
+  "LocalChecks": {
+    "AffectedGitProtocolWriterRecovery": {
+      "Passed": 112,
+      "Failed": 0,
+      "Skipped": 0,
+      "Status": "New check after framing correction"
+    },
+    "ZipSealerPolicyReleaseGuards": {
+      "Passed": 121,
+      "Failed": 0,
+      "Status": "Reused from 7b6e622; relevant source/tests/fixtures/native inputs unchanged"
+    },
+    "CertificateBindingUnitMethods": {
+      "Passed": 6,
+      "Failed": 0,
+      "Status": "New offline synthetic checks; not a cryptographic verifier substitute"
+    },
+    "FullSuiteRerun": false,
+    "NativeRebuild": false,
+    "NewRuntimePackageProduced": false
+  },
+  "FinalCodeFileSha256": {
+    "scripts/TokenForgeSealer.ps1": "21dacd39e5b24eb8432f2af1e2653b782aa39b28a07f674d8a5288192e594ece",
+    "scripts/TokenForgeSealerZip.ps1": "301912c0cbde14e73652c632048034dd96fddcfcc6ab7266f44b2fbf33839148",
+    "scripts/TokenForgePublicationWriter.ps1": "2060684345f3252ea1ccc925c764e1e1db1cab2ee54053b40d8dcc499eef995e",
+    "scripts/New-TokenForgePublicCanary.py": "126349b79e2942d604d33f3315adedaf77f06acc99c7438bf36c99858756bdc7",
+    "scripts/Verify-TokenForgePublicCanary.py": "6081fc6d4b8a8277c62bff4e41cccf43db37cf4e18529fd100864c87957a52f8",
+    "scripts/Verify-TokenForgeCanaryAttestation.py": "b7f2021317ced19d200e606d147f29fba5dec0b771cc37c1ea03e1cb852cc91e",
+    "scripts/Test-TokenForgePublicTransport.ps1": "6b173a00705381f459595772acbe7025aaac6a274a1db1c04882e1b9ff986e97",
+    ".github/workflows/ci.yml": "62f9602648d2bb9167d30a2687e7781f3d73fccc80cb84b36fce97de60d45f54"
+  },
+  "Boundaries": {
+    "LinuxX64Only": true,
+    "ProductionApprovalEstablished": false,
+    "ProductionDataRefWritten": false,
+    "PrivateOperationalEvidencePublished": false,
+    "TenantAuthenticationPerformed": false,
+    "IssuesClosed": false,
+    "Merged": false,
+    "CiWorkflowRestored": "disabled_manually",
+    "Issue113ReadyToClose": false,
+    "Issue115ReadyToClose": false
+  },
+  "ExecutedCodeCommit": "ea4bd357edb4554356eeb57aaca28eaaec0c630e",
+  "FinalWorkflowDifference": "Completed transport job unconditionally quarantined with if:false; no new hosted run needed for this disabling-only change"
+}

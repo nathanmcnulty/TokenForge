@@ -31,6 +31,8 @@ Compared with the older 267-payload/265-mapping package, the fresh build omits 1
 
 There are **205 distinct passing cases** in this qualification: 38 new/changed cases and 167 existing cases executed for affected components. Overlapping reruns are not added to that total. This is not a new full-suite run.
 
+After reconciling #116's final-runtime requirement, one additional existing native Weekly/report case passed against this actual extracted package: **206 distinct passes in total** (38 new/changed, 168 existing). The Weekly component sources are unchanged, but the newly built binary pair differs, so this targeted check supplies current-package evidence rather than claiming whole-binary equivalence to a historical build. The other six Weekly cases were not rerun.
+
 | Receipt group | Actual result and boundary |
 | --- | --- |
 | Admin/refresh source | 152 passed, including existing admin, refresh and grant validation cases; later ARM coverage finishes at 18/18 |
@@ -40,6 +42,7 @@ There are **205 distinct passing cases** in this qualification: 38 new/changed c
 | Actual compiled runtime | 16/16 passed against the new executable and explicitly loaded credential DLL (13 native admin, three native refresh) |
 | Extracted package | 35/35 affected cases passed against byte-verified extracted payload and compiled DLL, with no compile fallback; 81 unrelated cases not run |
 | Packaging guards | 12/12 passed, including actual historical-package compilation-input refusal; one unavailable older baseline case not run |
+| Additional extracted-package Weekly report | One passed, six not run: native execution with PowerShell absent from PATH matched the frozen recipe PlanId and two-resource pair count, reported no credential output and left the recipe bytes/directory unchanged |
 
 The manifest SHA beginning `093` identifies the actual accepted historical fixture used for the refusal test. The unavailable older `0a17` fixture is neither counted as passed nor claimed as reused. Test harnesses contain selected tests/fixtures added alongside a byte-verified extracted payload; these additions are not represented as archive members.
 

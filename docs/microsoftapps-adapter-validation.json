@@ -1,0 +1,191 @@
+{
+  "kind": "TokenForgeMicrosoftAppsAdapterLocalValidation",
+  "schemaVersion": 1,
+  "implementationCommit": "74c964090de105a8d9c0d84e66d3e74db2001a10",
+  "baseCommit": "cb3ee63897a4ddb7ac421921761bfd07c67134a9",
+  "platform": "Linux x64",
+  "powershellVersion": "7.6.7",
+  "pesterVersion": "6.2.0",
+  "powershellExecutableSha256": "873de21f04b6a0269c220f9c8396ff5cd639e8deb058a32cc26df54b69bbff8d",
+  "publicInputAcquisition": {
+    "requests": 3,
+    "retries": 0,
+    "authentication": false,
+    "sources": [
+      {
+        "sha256": "4785005674c88780d0c055b4a5820ee6e8bca6a74a93df5885ea7c25a2d02b0e",
+        "uri": "https://raw.githubusercontent.com/dirkjanm/ROADtools/master/roadtx/roadtools/roadtx/firstpartyscopes.json",
+        "name": "roadtools",
+        "retrievedAt": "2026-11-06T20:02:07.8877071+00:00",
+        "bytes": 2850287
+      },
+      {
+        "sha256": "40c9e8663d8685cd2770a7a1bd1ad3e514b2acdb4db4aec174af959353409aa1",
+        "uri": "https://raw.githubusercontent.com/merill/microsoft-info/main/_info/MicrosoftApps.json",
+        "name": "microsoftApps",
+        "retrievedAt": "2026-11-06T20:02:08.4414396+00:00",
+        "bytes": 842541
+      },
+      {
+        "sha256": "a20ea8fadb3668f86c1e352697b6b456c5928684c5e820543b5d5cc59ea82bb7",
+        "uri": "https://raw.githubusercontent.com/f-bader/entrascopes.com/main/resources.json",
+        "name": "resources",
+        "retrievedAt": "2026-11-06T20:02:08.8646140+00:00",
+        "bytes": 230402
+      }
+    ]
+  },
+  "package": {
+    "source": "74c964090de105a8d9c0d84e66d3e74db2001a10",
+    "archiveSha256": "df4bd51e045c56b2cfe25f6013c80abca09998a044c6d9211fc4ac8f1c7bc900",
+    "archiveBytes": 33938707,
+    "archiveMembers": 285,
+    "regularFiles": 268,
+    "payloadEntries": 267,
+    "sourceMappings": 265,
+    "manifestSha256": "92dae55fb6cce79288681c970a56011e8b294e8282c0b558bfd4d47814bd49e0",
+    "nativeSha256": "aa1ad0d814970379376ee5da6ddf531ccb22b1b738ad65709599ee64c4a2f61b",
+    "credentialSha256": "a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52",
+    "nativeCompilationSource": "0eb5e60fe0ecbfc7312e681dc9ce60ffdd5906ea",
+    "credentialCompilationSource": "c32cd7b27e98fdeac9f376807999205d99133a38",
+    "nativeInputs": 100,
+    "credentialInputs": 47,
+    "completeCompilationEquivalence": true,
+    "archiveSafety": true,
+    "payloadHashSizeAndSourceMatches": true,
+    "rebuilt": false,
+    "published": false,
+    "archiveMembershipExplanation": "285 tar entries comprise 268 regular files and 17 directories. The regular files comprise 267 payload entries plus the manifest; 265 payloads map to source. Directory entries do not add payloads."
+  },
+  "packagedReplay": {
+    "inputMode": "RetainedRealPublicResponses_NotSynthetic",
+    "collection": {
+      "CollectionComplete": true,
+      "ExchangeComplete": true,
+      "ImportComplete": false,
+      "OperationalPublication": false,
+      "CandidateCount": 5467,
+      "ConflictCount": 201,
+      "Requests": 0,
+      "ElapsedSeconds": 143.226
+    },
+    "sources": [
+      {
+        "name": "roadtools",
+        "uri": "https://raw.githubusercontent.com/dirkjanm/ROADtools/master/roadtx/roadtools/roadtx/firstpartyscopes.json",
+        "status": "Success",
+        "attempts": 1,
+        "lastSuccessAt": "2026-11-06T20:07:25.0479061+00:00",
+        "sha256": "4785005674c88780d0c055b4a5820ee6e8bca6a74a93df5885ea7c25a2d02b0e",
+        "candidateCount": 506,
+        "changed": true,
+        "adaptation": null
+      },
+      {
+        "name": "microsoftApps",
+        "uri": "https://raw.githubusercontent.com/merill/microsoft-info/main/_info/MicrosoftApps.json",
+        "status": "Success",
+        "attempts": 1,
+        "lastSuccessAt": "2026-11-06T20:07:25.0479061+00:00",
+        "sha256": "40c9e8663d8685cd2770a7a1bd1ad3e514b2acdb4db4aec174af959353409aa1",
+        "candidateCount": 4462,
+        "changed": true,
+        "adaptation": {
+          "policy": "MicrosoftAppsEntraDocsV1",
+          "inputSha256": "40c9e8663d8685cd2770a7a1bd1ad3e514b2acdb4db4aec174af959353409aa1",
+          "rawRecordCount": 4462,
+          "admittedRecordCount": 4460,
+          "normalizedRecordCount": 17,
+          "zeroIdPlaceholderCount": 1,
+          "quarantinedRecordCount": 1,
+          "quarantine": [
+            {
+              "index": 2230,
+              "reason": "ApplicationIdentity",
+              "recordSha256": "642a35288f00dd666fc2e7a9dbdbe1a86e5231335d9c2177874fe49cf4734152"
+            }
+          ]
+        }
+      },
+      {
+        "name": "resources",
+        "uri": "https://raw.githubusercontent.com/f-bader/entrascopes.com/main/resources.json",
+        "status": "Success",
+        "attempts": 1,
+        "lastSuccessAt": "2026-11-06T20:07:25.0479061+00:00",
+        "sha256": "a20ea8fadb3668f86c1e352697b6b456c5928684c5e820543b5d5cc59ea82bb7",
+        "candidateCount": 1753,
+        "changed": true,
+        "adaptation": null
+      }
+    ],
+    "metadataBytes": 20900062,
+    "metadataSha256": "05fdb8dcd18200fd62574630b29932d5174f9c7bb4cf528b71c636988aa92df9",
+    "manifestSha256": "23fc0903321c8a8995584df34d7f8cbf21ba9c2ecac1d6e27e12f60b07783d68"
+  },
+  "workstationWalkthrough": {
+    "collectionComplete": true,
+    "importComplete": true,
+    "repeatImportComplete": true,
+    "repeatDatabaseByteIdentical": true,
+    "applications": 5467,
+    "runs": 1,
+    "presentDiscovery": 5467,
+    "nameLookupMatches": 20,
+    "nameLookupTruncated": true,
+    "idLookupMatches": 1,
+    "tokenAvailability": "Unverified",
+    "statusPublication": "NotRequested",
+    "operationalEvidencePublication": "NotAttempted"
+  },
+  "catalogMembership": {
+    "expectedCandidates": 5467,
+    "actualCandidates": 5467,
+    "missing": 0,
+    "unexpected": 0,
+    "exactIdentitySetMatch": true
+  },
+  "validation": {
+    "distinctCurrentPassingCases": 137,
+    "adapterCases": 32,
+    "compatibilityCases": 93,
+    "packageCurrentPassingCases": 12,
+    "historicalReusedCases": 1,
+    "currentPackageSetupFailureRetained": "Historical-baseline refusal case could not execute without TOKENFORGE_TEST_BASE_PACKAGE; retained in current package XML, not counted as a pass.",
+    "reusedHistoricalCase": "Refuses the historical baseline once native compilation inputs changed",
+    "reuseBasis": "Successful retained prior case; package builder, test and all relevant native/build inputs are byte-equivalent to 3db69e6e25e16342ffb31c1cfa27753546b43e31. Historical refusal precedes runtime initialization.",
+    "reusedHistoricalReceiptSha256": "8cc2045612e351a0efcc09b74967526bd7060923163cdb90aa3e825c43112e99",
+    "receiptSha256": {
+      "adapter-initial.xml": "ac7b7ef7459d1315c733f89c5bc4b4d3cc3340a53b2cb81c9c766a26a1d8f7e4",
+      "adapter-reviewed.xml": "026eb6ac9fd71cd382a690cebf4aaff579bfcaae844733588cc98c7875815696",
+      "compatibility-initial.xml": "84b15b763c145e3dde1a43643b05e17f9e833e981a4d0b947a0c55db2c2fedf5",
+      "package-tests.xml": "f330c2c4a967ca17b2d3a0a10bd5ad697732fde196ecacea7e8aca1762a91145"
+    },
+    "newAllGreenFullSuiteRun": false,
+    "exploratoryRunExcludedFromFinalAcceptance": "Uncommitted source-exchange was exploratory; its base revision label is not final implementation identity. Acceptance uses the exact-source extracted archive only.",
+    "finalCandidatePassingCases": 45,
+    "sameSessionEquivalentCompatibilityCasesRetained": 92,
+    "sameSessionReuseBasis": "After the scalar policy/reason fix, all 32 adapter cases and the modified combined-rollback case were rerun. The other 92 already-passing compatibility cases use valid scalar accounting values; their paths and inputs are equivalent. Twelve package checks ran after commit. Counts are distinct, not summed reruns."
+  },
+  "independentReview": {
+    "reviewer": "Independent Sol agent",
+    "sourceAndArchiveAccepted": true,
+    "finalWalkthroughReview": "Accepted",
+    "resolvedFinding": "Require string types for accounting policy/reason; array-shape regressions pass.",
+    "recommendation": "Proceed with the focused PR; no unresolved findings."
+  },
+  "limitations": [
+    "Only local Linux x64 qualified. No hosted execution or new service artifact transfer.",
+    "Complete means fully accounted admitted public candidates; one malformed EntraDocs row excluded, not repaired. No all-applications or tenant-access guarantee.",
+    "GUID dictionary rows remain descriptive candidates, not proof of app kind, ownership, consent, issuance or API acceptance.",
+    "Health schema 2 requires updated producer/workstation scripts; exact legacy schema 1 remains readable.",
+    "Dormant hosted workflow and delivery pins unchanged. Package and raw receipts remain local; no release package published."
+  ],
+  "issueDisposition": {
+    "113": "Open",
+    "115": "Open",
+    "116": "Open"
+  },
+  "operationalEvidencePublication": "NotAttempted",
+  "merged": false
+}

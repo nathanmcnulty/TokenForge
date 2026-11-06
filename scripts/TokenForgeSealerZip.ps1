@@ -1,7 +1,8 @@
 #Requires -Version 7.6
 # CanonicalStoredOriginalZipV1: validation reconstruction only. Never substitute
 # these bytes for the original service artifact or silently change its identity.
-function Get-TfSealerCanonicalZipBytes([string]$CandidatePath) {
+function Get-TfSealerCanonicalZipBytes([string]$CandidatePath,
+ [ValidateSet('CanonicalStoredOriginalZipV1','GitHubStoredOriginalZipV2')][string]$Profile='CanonicalStoredOriginalZipV1') {
  if(-not $IsLinux){throw 'Canonical ZIP profile supports Linux only.'}
  Assert-TfCandidateUnlinked $CandidatePath
  $names=@('coverage.json','flows.json','manifest.json','recipe.json','review.md','scopes.json','validation.json')
@@ -37,17 +38,20 @@ function Get-TfSealerCanonicalZipBytes([string]$CandidatePath) {
   function Write-U16([uint16]$Value){$writer.Write($Value)}
   function Write-U32([uint32]$Value){$writer.Write($Value)}
   try{
+   $official=$Profile -ceq 'GitHubStoredOriginalZipV2'
    foreach($record in $records){
     $record.Offset=[uint32]$memory.Position
-    Write-U32 0x04034b50;Write-U16 20;Write-U16 2048;Write-U16 0;Write-U16 0;Write-U16 33
-    Write-U32 $record.Crc;Write-U32 $record.Bytes.Length;Write-U32 $record.Bytes.Length
+    Write-U32 0x04034b50;Write-U16 20;Write-U16 $(if($official){8}else{2048});Write-U16 0;Write-U16 0;Write-U16 33
+    if($official){Write-U32 0;Write-U32 0;Write-U32 0}
+    else{Write-U32 $record.Crc;Write-U32 $record.Bytes.Length;Write-U32 $record.Bytes.Length}
     Write-U16 $record.Name.Length;Write-U16 0;$writer.Write([byte[]]$record.Name);$writer.Write([byte[]]$record.Bytes)
+    if($official){Write-U32 0x08074b50;Write-U32 $record.Crc;Write-U32 $record.Bytes.Length;Write-U32 $record.Bytes.Length}
    }
    $central=[uint32]$memory.Position
    foreach($record in $records){
-    Write-U32 0x02014b50;Write-U16 788;Write-U16 20;Write-U16 2048;Write-U16 0;Write-U16 0;Write-U16 33
+    Write-U32 0x02014b50;Write-U16 $(if($official){813}else{788});Write-U16 20;Write-U16 $(if($official){8}else{2048});Write-U16 0;Write-U16 0;Write-U16 33
     Write-U32 $record.Crc;Write-U32 $record.Bytes.Length;Write-U32 $record.Bytes.Length
-    Write-U16 $record.Name.Length;Write-U16 0;Write-U16 0;Write-U16 0;Write-U16 0;Write-U32 0;Write-U32 $record.Offset
+    Write-U16 $record.Name.Length;Write-U16 0;Write-U16 0;Write-U16 0;Write-U16 0;Write-U32 $(if($official){0x81800020L}else{0});Write-U32 $record.Offset
     $writer.Write([byte[]]$record.Name)
    }
    $centralSize=[uint32]($memory.Position-$central)
@@ -60,8 +64,9 @@ function Get-TfSealerCanonicalZipBytes([string]$CandidatePath) {
  }finally{if($zip){$zip.Dispose()};$memory.Dispose()}
 }
 
-function Assert-TfSealerCompleteOriginalZip([string]$Archive,[string]$CandidatePath) {
- $expected=Get-TfSealerCanonicalZipBytes $CandidatePath
+function Assert-TfSealerCompleteOriginalZip([string]$Archive,[string]$CandidatePath,
+ [ValidateSet('CanonicalStoredOriginalZipV1','GitHubStoredOriginalZipV2')][string]$Profile='CanonicalStoredOriginalZipV1') {
+ $expected=Get-TfSealerCanonicalZipBytes $CandidatePath -Profile $Profile
  $path=[TokenForge.Core.V0220.PrivateFiles]::Resolve($Archive,$false)
  $input=[IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None)
  try{
@@ -69,5 +74,5 @@ function Assert-TfSealerCompleteOriginalZip([string]$Archive,[string]$CandidateP
   $actual=[byte[]]::new($input.Length);$input.ReadExactly($actual,0,$actual.Length)
   if($input.ReadByte() -ne -1 -or -not [Linq.Enumerable]::SequenceEqual[byte]($actual,$expected)){throw 'Unsupported original ZIP representation.'}
  }finally{$input.Dispose()}
- 'CanonicalStoredOriginalZipV1'
+ $Profile
 }

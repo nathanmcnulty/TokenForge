@@ -80,6 +80,7 @@ function Get-TokenForgeSealingSubject {
   [Parameter(Mandatory)]$Invocation,
   [Parameter(Mandatory)][ValidatePattern('^[1-9][0-9]{0,18}$')][string]$ArtifactId,
   [Parameter(Mandatory)][string]$OutputDirectory,
+  [ValidateSet('CanonicalStoredOriginalZipV1','GitHubStoredOriginalZipV2')][string]$ArchiveProfile='CanonicalStoredOriginalZipV1',
   [Parameter(Mandatory,ParameterSetName='Live')][securestring]$AccessToken,
   [Parameter(Mandatory,ParameterSetName='Synthetic')][switch]$Synthetic,
   [Parameter(Mandatory,ParameterSetName='Synthetic')][scriptblock]$ReadFixture,
@@ -114,7 +115,7 @@ function Get-TokenForgeSealingSubject {
   $manifest=Assert-TfDiscoveryCandidate $extracted $candidateHash
   if($manifest.SourceCommit -cne $Invocation.SourceCommit -or $manifest.ProducerRunId -cne $Invocation.RunId -or $manifest.ProducerAttempt -cne $Invocation.RunAttempt){throw 'Candidate caller binding mismatch.'}
   $stage='ArchivePrivacy'
-  $archiveProfile=Assert-TfSealerCompleteOriginalZip $archive $extracted
+  $archiveProfile=Assert-TfSealerCompleteOriginalZip $archive $extracted -Profile $ArchiveProfile
   Test-TfPublicationBudget $context
   $stage='FinalOrigin'
   $finalArtifact=Invoke-TfPublicationHttp $context ($context.Api+'/actions/artifacts/'+$ArtifactId)

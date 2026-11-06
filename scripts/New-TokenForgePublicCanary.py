@@ -1,5 +1,6 @@
 """Stage the checked-in empty-observation fixture; never read operational state."""
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -35,8 +36,38 @@ def stage(output, source, run_id, attempt):
     with (output / "manifest.json").open("x") as stream:
         json.dump(manifest, stream, indent=2)
         stream.write("\n")
+    # The official artifact ZIP must not carry arbitrary producer timestamps/modes.
+    for path in output.iterdir():
+        path.chmod(0o600)
+        os.utime(path, (315532800, 315532800))  # 1980-01-01 UTC, ZIP epoch.
+
+
+def verify_archive(archive, expected_directory, source, run_id, attempt):
+    """Fixture-only oracle: compare ALL original bytes, not extracted membership."""
+    archive = Path(archive)
+    if archive.is_symlink() or not archive.is_file() or not 0 < archive.stat().st_size <= 8 * 1024 * 1024:
+        raise ValueError("bounded regular original archive required")
+    stage(expected_directory, source, run_id, attempt)
+    oracle = Path(__file__).resolve().parent.parent / "tests/fixtures/publication/MutateSealerZip.py"
+    spec = importlib.util.spec_from_file_location("zip_oracle", oracle)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    actual = archive.read_bytes()
+    expected = module.canonical_from_directory(expected_directory, official=True)
+    if actual != expected:
+        raise ValueError("original archive differs from complete public fixture profile")
+    return {"SchemaVersion": 1, "SyntheticFixtureOnly": True,
+            "OriginalArchiveSha256": hashlib.sha256(actual).hexdigest(),
+            "CandidateHash": hashlib.sha256((Path(expected_directory) / "manifest.json").read_bytes()).hexdigest(),
+            "Bytes": len(actual), "ArchiveProfile": "GitHubStoredOriginalZipV2",
+            "CompleteOriginalBytesValidated": True, "ProductionApprovalEstablished": False}
 
 
 if __name__ == "__main__":
-    stage(sys.argv[1], os.environ["GITHUB_SHA"], os.environ["GITHUB_RUN_ID"],
-          os.environ["GITHUB_RUN_ATTEMPT"])
+    context = (os.environ["GITHUB_SHA"], os.environ["GITHUB_RUN_ID"], os.environ["GITHUB_RUN_ATTEMPT"])
+    if len(sys.argv) == 4 and sys.argv[1] == "--verify-archive":
+        print(json.dumps(verify_archive(sys.argv[2], sys.argv[3], *context)))
+    elif len(sys.argv) == 2:
+        stage(sys.argv[1], *context)
+    else:
+        raise ValueError("expected new staging directory, or --verify-archive archive new-directory")

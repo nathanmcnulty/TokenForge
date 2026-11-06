@@ -6,6 +6,11 @@ on:
         description: 'Synthetic public artifact compatibility probe; no collection or publication'
         type: boolean
         default: false
+      publication_phase:
+        description: 'Public fixture diagnostic or signed premerge compatibility proof'
+        type: choice
+        options: [artifact, seal]
+        default: artifact
 permissions:
   contents: read
 jobs:
@@ -40,6 +45,8 @@ jobs:
     timeout-minutes: 3
     permissions:
       contents: read
+    outputs:
+      artifact_id: ${{ steps.candidate.outputs.artifact-id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -68,5 +75,55 @@ jobs:
           path: ${{ runner.temp }}/tokenforge-public-canary/*
           compression-level: 0
           if-no-files-found: error
+          retention-days: 7
+          overwrite: false
+  publication_seal:
+    needs: publication_probe
+    if: ${{ inputs.publication_probe && inputs.publication_phase == 'seal' && github.repository == 'nathanmcnulty/TokenForge' && github.ref == 'refs/heads/codex/issue113-publication-acceptance' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate actual service ZIP bytes against the public fixture
+        id: validate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TF_ARTIFACT_ID: ${{ needs.publication_probe.outputs.artifact_id }}
+          TF_EVIDENCE: ${{ runner.temp }}/tokenforge-synthetic-seal
+        run: python3 -I scripts/Verify-TokenForgePublicCanary.py "$TF_ARTIFACT_ID" "$TF_EVIDENCE"
+      - name: Attest only the validated original service archive
+        id: attest
+        uses: actions/attest-build-provenance@9d57eef8c06cd9d6b433effeeb7a6a77b3ff94ad
+        with:
+          subject-path: ${{ runner.temp }}/tokenforge-synthetic-seal/candidate.zip
+          push-to-registry: false
+          create-storage-record: false
+          show-summary: false
+      - name: Verify genuine signature and exact source bindings; reject tampered bytes
+        env:
+          TF_BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+          TF_EVIDENCE: ${{ runner.temp }}/tokenforge-synthetic-seal
+        run: python3 -I scripts/Verify-TokenForgeCanaryAttestation.py "$TF_EVIDENCE" "$TF_BUNDLE"
+      - name: Preserve only public synthetic proof artifacts
+        if: ${{ always() && steps.validate.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tokenforge-synthetic-sealing-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/tokenforge-synthetic-seal/candidate.zip
+            ${{ runner.temp }}/tokenforge-synthetic-seal/subject.json
+            ${{ runner.temp }}/tokenforge-synthetic-seal/bundle.jsonl
+            ${{ runner.temp }}/tokenforge-synthetic-seal/verification.json
+            ${{ runner.temp }}/tokenforge-synthetic-seal/verification.log
+            ${{ runner.temp }}/tokenforge-synthetic-seal/verification-checks.json
+            ${{ runner.temp }}/tokenforge-synthetic-seal/tampered-verification.log
+          if-no-files-found: warn
           retention-days: 7
           overwrite: false

@@ -1,6 +1,6 @@
 {
   "SchemaVersion": 1,
   "Profile": "CanonicalStoredOriginalZipV1",
-  "SealerSha256": "dff05745028c1b5fbae3af478e484663bea8f27a9a1e0355206026f57f637258",
-  "ZipHelperSha256": "9f121b793c056312dad75d3042293d26a2c854a798b10cee0bd1cb082b25b70c"
+  "SealerSha256": "21dacd39e5b24eb8432f2af1e2653b782aa39b28a07f674d8a5288192e594ece",
+  "ZipHelperSha256": "52ed8fda5f41cfd5ff430bf8d0d08cd13dd1ec4cd132da28edb155f18b6b569c"
 }

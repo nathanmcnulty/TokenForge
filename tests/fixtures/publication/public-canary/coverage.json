@@ -1,6 +1,11 @@
 {
   "Pairs": [
     {
+      "CellOutcomes": [
+        "InFlightUnknown"
+      ]
+    },
+    {
       "CellOutcomes": []
     }
   ],

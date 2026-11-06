@@ -1,7 +1,8 @@
 # Public synthetic canary
 
 `public-canary/` contains the existing publication fixture's seven-file candidate:
-an invented client, empty observations and an unknown matrix. It contains no
+invented clients, empty observations, one in-flight unknown cell and one unknown
+matrix. It deliberately represents incomplete worker coverage. It contains no
 collector output, account/tenant metadata, permission inventory or credentials.
 The repeated evidence hashes are invented fixture values, not live receipts.
 

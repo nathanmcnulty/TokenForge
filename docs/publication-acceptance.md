@@ -65,3 +65,38 @@ authenticated approval actors. A local agent review is useful independent code
 review; it is not relabeled as those GitHub identities. No repository access,
 branch protection, production data ref, merge or issue state is changed by the
 artifact/signature probe.
+
+## Disposable-ref transport test
+
+The separate manual `publish` phase is deliberately limited to the previously
+reviewed synthetic archive: producer source
+`7b6e62223944d99edde3b648749125247578e559`, run `42166462125`, attempt `1`,
+artifact `13479301224`, original SHA-256
+`47e533aa04a2683affa3ba709bd03441c26081c172664d99e7e41b905b89be08`, candidate
+`d43102cb46f2eb64ec43605c933f35e457b89ba14fbf587aea930a562b192568`.
+It revalidates the actual API artifact, complete ZIP and genuine signed bundle
+before writing. The newer transport driver's source is recorded separately from
+the producer source. It cannot substitute an operational candidate or recollect.
+
+This job has contents-write permission, Actions/attestation read permission and
+no OIDC permission. It calls the existing writer's Git packet, advertisement,
+acknowledgement and HTTP functions directly, without manufacturing a production
+approval verdict. Only a new `tokenforge-publication-canary-<run-id>` ref is
+created. Its tree retains main's existing files and adds the seven public fixture
+members. Neither main nor the production data ref is updated. An existing ref
+causes refusal; there is no force update, merge or deletion.
+
+A stale ancestor as expected-old must produce a complete rejection and a fresh
+GET must show the unchanged ref. Only then does a distinct transaction attempt
+the correct expected-old with the identical candidate and proposed commit.
+After a known accepted response, the driver explicitly simulates loss of its
+local acknowledgement and uses GET-only observation to resolve `Unknown` to
+`Applied`. This is not a real network failure, crash test or proof of production
+journal durability. Any ambiguous POST stops the experiment without a resend.
+
+The driver bounds metadata calls to 24, Git calls to two per transaction (four
+total), response bytes to 8 MiB per context, its metadata phase to 120 seconds,
+each Git transaction to 30 seconds and the entire job to five minutes. It never
+installs or downloads a verifier. Its flushed test intent is separate from the
+unchanged production private journal. Retained Actions results contain only
+public synthetic metadata. Production approval remains false throughout.

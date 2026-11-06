@@ -24,12 +24,16 @@ def api(route):
     return json.loads(result.stdout)
 
 
-def verify(artifact_id, output):
+def verify(artifact_id, output, source=None, run_id=None, attempt=None):
     if not re.fullmatch(r"[1-9][0-9]{0,18}", artifact_id):
         raise ValueError("numeric artifact identity required")
     if os.environ["GITHUB_REPOSITORY"] != REPOSITORY or os.environ["GITHUB_REF"] != f"refs/heads/{BRANCH}":
         raise ValueError("only the explicitly approved synthetic branch is supported")
-    source, run_id, attempt = (os.environ[k] for k in ("GITHUB_SHA", "GITHUB_RUN_ID", "GITHUB_RUN_ATTEMPT"))
+    source = source or os.environ["GITHUB_SHA"]
+    run_id = run_id or os.environ["GITHUB_RUN_ID"]
+    attempt = attempt or os.environ["GITHUB_RUN_ATTEMPT"]
+    if not re.fullmatch(r"[a-f0-9]{40}", source) or any(not re.fullmatch(r"[1-9][0-9]{0,18}", n) for n in (run_id, attempt)):
+        raise ValueError("exact producer context required")
     run = api(f"actions/runs/{run_id}")
     if (run["head_sha"] != source or str(run["run_attempt"]) != attempt
             or run["repository"]["id"] != REPOSITORY_ID or run["head_repository"]["id"] != REPOSITORY_ID
@@ -80,4 +84,6 @@ def verify(artifact_id, output):
 
 
 if __name__ == "__main__":
-    print(json.dumps(verify(sys.argv[1], sys.argv[2])))
+    if len(sys.argv) not in (3, 6):
+        raise ValueError("expected artifact/output and optional exact producer source/run/attempt")
+    print(json.dumps(verify(*sys.argv[1:])))

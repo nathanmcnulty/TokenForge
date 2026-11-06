@@ -3,13 +3,13 @@ on:
   workflow_dispatch:
     inputs:
       publication_probe:
-        description: 'Synthetic public artifact compatibility probe; no collection or publication'
+        description: 'Public synthetic service test; publish phase writes only a new disposable ref'
         type: boolean
         default: false
       publication_phase:
-        description: 'Public fixture diagnostic or signed premerge compatibility proof'
+        description: 'Public fixture diagnostic, signed proof, or reviewed disposable-ref transport test'
         type: choice
-        options: [artifact, seal]
+        options: [artifact, seal, publish]
         default: artifact
 permissions:
   contents: read
@@ -40,7 +40,7 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-TokenForge.ps1
   publication_probe:
-    if: ${{ inputs.publication_probe && github.repository == 'nathanmcnulty/TokenForge' && github.ref == 'refs/heads/codex/issue113-publication-acceptance' }}
+    if: ${{ inputs.publication_probe && inputs.publication_phase != 'publish' && github.repository == 'nathanmcnulty/TokenForge' && github.ref == 'refs/heads/codex/issue113-publication-acceptance' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     permissions:
@@ -75,6 +75,47 @@ jobs:
           path: ${{ runner.temp }}/tokenforge-public-canary/*
           compression-level: 0
           if-no-files-found: error
+          retention-days: 7
+          overwrite: false
+  publication_transport:
+    if: ${{ inputs.publication_probe && inputs.publication_phase == 'publish' && github.repository == 'nathanmcnulty/TokenForge' && github.ref == 'refs/heads/codex/issue113-publication-acceptance' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Revalidate the independently reviewed signed public candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TF_EVIDENCE: ${{ runner.temp }}/tokenforge-synthetic-transport
+        run: |
+          python3 -I scripts/Verify-TokenForgePublicCanary.py 13479301224 "$TF_EVIDENCE" 7b6e62223944d99edde3b648749125247578e559 42166462125 1
+          cd "$TF_EVIDENCE"
+          gh attestation download candidate.zip --repo nathanmcnulty/TokenForge --limit 1
+          cd "$GITHUB_WORKSPACE"
+          python3 -I scripts/Verify-TokenForgeCanaryAttestation.py "$TF_EVIDENCE" "$TF_EVIDENCE/sha256:47e533aa04a2683affa3ba709bd03441c26081c172664d99e7e41b905b89be08.jsonl" 7b6e62223944d99edde3b648749125247578e559
+      - name: Test compare-and-swap and GET-only reconciliation on a new disposable ref
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TF_EVIDENCE: ${{ runner.temp }}/tokenforge-synthetic-transport
+        run: ./scripts/Test-TokenForgePublicTransport.ps1 -Evidence $env:TF_EVIDENCE
+      - name: Preserve only synthetic transport results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tokenforge-synthetic-transport-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/tokenforge-synthetic-transport/subject.json
+            ${{ runner.temp }}/tokenforge-synthetic-transport/verification-checks.json
+            ${{ runner.temp }}/tokenforge-synthetic-transport/transport-journal.json
+            ${{ runner.temp }}/tokenforge-synthetic-transport/transport-result.json
+          if-no-files-found: warn
           retention-days: 7
           overwrite: false
   publication_seal:

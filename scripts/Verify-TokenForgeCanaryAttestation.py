@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import pwd
+import re
 import shutil
 import subprocess
 import sys
@@ -26,7 +27,33 @@ def copy_bound(source, target, maximum, expected=None, executable=False):
     return digest
 
 
-def verify(directory, bundle):
+def validate_result(data, subject, source):
+    if not isinstance(data, list) or len(data) != 1:
+        raise ValueError("one verified statement required")
+    result = data[0]["verificationResult"]
+    certificate = result["signature"]["certificate"]
+    expected = {
+        "issuer": "https://token.actions.githubusercontent.com",
+        "sourceRepositoryURI": "https://github.com/nathanmcnulty/TokenForge",
+        "sourceRepositoryIdentifier": "1402673320",
+        "sourceRepositoryDigest": source,
+        "sourceRepositoryRef": "refs/heads/codex/issue113-publication-acceptance",
+        "buildSignerURI": "https://github.com/nathanmcnulty/TokenForge/.github/workflows/ci.yml@refs/heads/codex/issue113-publication-acceptance",
+        "buildSignerDigest": source,
+        "runnerEnvironment": "github-hosted",
+        "runInvocationURI": f"https://github.com/nathanmcnulty/TokenForge/actions/runs/{subject['ProducerRunId']}/attempts/{subject['ProducerAttempt']}",
+    }
+    if any(str(certificate.get(k)) != v for k, v in expected.items()):
+        raise ValueError("verified certificate producer/source binding mismatch")
+    subjects = result["statement"]["subject"]
+    if len(subjects) != 1 or subjects[0]["digest"] != {"sha256": subject["OriginalArchiveSha256"]}:
+        raise ValueError("verified subject mismatch")
+    if not any(t.get("type") in ("Tlog", "TimestampAuthority") for t in result.get("verifiedTimestamps", [])):
+        raise ValueError("witnessed verification timestamp required")
+    return expected
+
+
+def verify(directory, bundle, source=None):
     if sys.platform != "linux" or os.environ["GITHUB_REPOSITORY"] != "nathanmcnulty/TokenForge" or os.environ["GITHUB_REF"] != "refs/heads/codex/issue113-publication-acceptance":
         raise ValueError("approved Linux synthetic context required")
     directory = Path(directory)
@@ -42,7 +69,9 @@ def verify(directory, bundle):
     copy_bound(directory / "candidate.zip", scratch / "candidate.zip", 8 * 1024 * 1024,
                subject["OriginalArchiveSha256"])
     copy_bound(directory / "tampered.zip", scratch / "tampered.zip", 8 * 1024 * 1024)
-    source = os.environ["GITHUB_SHA"]
+    source = source or os.environ["GITHUB_SHA"]
+    if not re.fullmatch(r"[a-f0-9]{40}", source) or subject["SourceCommit"] != source:
+        raise ValueError("exact approved producer source required")
     user = pwd.getpwuid(os.getuid()).pw_name
     # Root creates only an ephemeral network namespace, then drops to the runner.
     # No sysctl/policy change or installation is needed. The verifier gets no token,
@@ -68,13 +97,18 @@ def verify(directory, bundle):
         (directory / (label + ".log")).write_bytes(result.stderr)
         if (expected == 0 and result.returncode != 0) or (expected is None and result.returncode != 1):
             raise ValueError("signature verification outcome mismatch")
+        if expected == 0:
+            bindings = validate_result(json.loads(result.stdout), subject, source)
         results.append({"Archive": name, "ActualExitCode": result.returncode})
     report = {"Synthetic": True, "OfflineNetworkNamespace": True, "CredentialFreeVerifier": True,
               "VerifierSha256": VERIFIER_SHA256, "TrustRootSha256": ROOT_SHA256,
+              "VerifiedCertificateBindings": bindings,
               "Checks": results, "ProductionApprovalEstablished": False}
     (directory / "verification-checks.json").write_text(json.dumps(report, indent=2) + "\n")
     return report
 
 
 if __name__ == "__main__":
-    print(json.dumps(verify(sys.argv[1], sys.argv[2])))
+    if len(sys.argv) not in (3, 4):
+        raise ValueError("expected evidence/bundle and optional approved producer source")
+    print(json.dumps(verify(*sys.argv[1:])))

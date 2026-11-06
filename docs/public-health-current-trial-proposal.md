@@ -1,9 +1,20 @@
 # Current-package public metadata trial: approval proposal
 
-Status: prepared offline, **not approved for publication or execution**. PR #126
-remains at its reviewed source; main and its dormant jobs remain unchanged. This
-proposal fills the remaining fresh runner-to-workstation coverage gap. It does
-not repeat the already accepted local/import/package regression suites.
+Status: **approved and executed** at source
+`6ab34622928b500f068984f75153b17c5fc2a9d8`, run `42266672386`, attempt 1.
+The code-only prerelease was published with the exact approved digest. The single
+job succeeded; three source GETs took 34.453 seconds, producing a valid incomplete
+exchange. Artifact `13526823949` (1467 bytes, SHA256
+`309876960dc29a1698b9117bb1257ee5648298fbffe8db421c061547c6cd3c64`)
+was transferred and imported through the normal receiver. Local repeat import
+left SQLite bytes unchanged; real name/ID lookup each returned zero. MicrosoftApps
+remained Invalid; a complete fresh catalog and its precise hosted refusal cause
+are not proven. Raw inputs/receipts remain private and the prior 69 scoped checks
+were reused. The completed trial job is now quarantined with `if: false`.
+
+The original approved proposal follows for traceability. It is not permission for
+another publication or dispatch. Main, settings and permissions were unchanged;
+PR #126 remains unmerged and #113/#115/#116 remain open.
 
 ## Exact inputs and destination
 

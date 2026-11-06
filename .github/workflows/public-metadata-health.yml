@@ -1,4 +1,4 @@
-# One branch-specific manual trial candidate. Not approved for execution yet.
+# Completed manual trial; another hosted run requires a new reviewed activation.
 name: Public metadata health
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   health:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'nathanmcnulty/TokenForge' && github.ref == 'refs/heads/codex/public-health-current-trial' && github.run_attempt == 1 }}
+    if: ${{ false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

@@ -5,7 +5,7 @@ $script:HealthSources=[ordered]@{
     microsoftApps='https://raw.githubusercontent.com/merill/microsoft-info/main/_info/MicrosoftApps.json'
     resources='https://raw.githubusercontent.com/f-bader/entrascopes.com/main/resources.json'
 }
-$script:HealthLimits=@{SourceBytes=8388608;SourceRecords=10000;CatalogRecords=30000;MetadataBytes=67108864;HealthBytes=65536;ManifestBytes=16384}
+$script:HealthLimits=@{SourceBytes=8388608;SourceRecords=10000;CatalogRecords=30000;MetadataBytes=67108864;HealthBytes=65536;ManifestBytes=16384;QuarantinedRecords=128}
 
 function Initialize-TokenForgeHealthRuntime {
     param([Parameter(Mandatory)][string]$NativeExecutablePath)
@@ -142,6 +142,72 @@ function Assert-TokenForgeHealthSource {
     return $Data.Count
 }
 
+function ConvertTo-TokenForgeHealthMicrosoftApps {
+    param($Data,[string]$InputSha256)
+    if($Data -isnot [array] -or $Data.Count -gt $script:HealthLimits.SourceRecords){throw [IO.InvalidDataException]::new('Invalid MicrosoftApps source array.')}
+    $admitted=[Collections.Generic.List[object]]::new();$quarantine=[Collections.Generic.List[object]]::new()
+    $seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    $normalized=0;$placeholders=0
+    for($index=0;$index -lt $Data.Count;$index++){
+        $row=$Data[$index]
+        # Validate ALL fields before classifying an ID. Exclusion cannot hide
+        # schema drift, private text or malformed owner hints.
+        Assert-TokenForgeHealthKeys $row @('AppId','AppDisplayName','AppOwnerOrganizationId','Source')
+        Assert-TokenForgeHealthText $row.AppDisplayName;Assert-TokenForgeHealthText $row.Source -Maximum 128
+        if($null -ne $row.AppOwnerOrganizationId){
+            if($row.AppOwnerOrganizationId -isnot [string]){throw [IO.InvalidDataException]::new('Invalid public owner hint.')}
+            if($row.AppOwnerOrganizationId.Length){Assert-TokenForgeHealthPublishedGuid $row.AppOwnerOrganizationId}
+        }
+        Assert-TokenForgeHealthText $row.AppId -Maximum 128
+        $id=$row.AppId
+        if($row.Source -ceq 'EntraDocs'){
+            # The general known-GUID dictionary is descriptive, not an app
+            # registry. Only surrounding whitespace/case may be normalized;
+            # arbitrary suffixes are never removed or guessed into identities.
+            $id=$id.Trim()
+            try{Assert-TokenForgeHealthPublishedGuid $id -AllowEmpty}
+            catch{
+                if(-not (Test-TokenForgeHealthInputFailure $_.Exception)){throw}
+                if($quarantine.Count -ge $script:HealthLimits.QuarantinedRecords){throw [IO.InvalidDataException]::new('MicrosoftApps quarantine limit exceeded.')}
+                $recordBytes=[Text.UTF8Encoding]::new($false,$true).GetBytes((ConvertTo-Json -InputObject $row -Depth 5 -Compress))
+                $quarantine.Add([ordered]@{index=$index;reason='ApplicationIdentity';recordSha256=Get-TokenForgeHealthHash $recordBytes})
+                continue
+            }
+        }else{Assert-TokenForgeHealthPublishedGuid $id -AllowEmpty}
+        $id=$id.ToLowerInvariant()
+        if(-not $seen.Add($id+'/'+$row.Source)){throw [IO.InvalidDataException]::new('Duplicate public source identity.')}
+        if($id -ceq '00000000-0000-0000-0000-000000000000'){$placeholders++;continue}
+        if($id -cne $row.AppId){$normalized++}
+        $admitted.Add([ordered]@{AppId=$id;AppDisplayName=$row.AppDisplayName;AppOwnerOrganizationId=$row.AppOwnerOrganizationId;Source=$row.Source})
+    }
+    # This canonical contract remains unchanged. No quarantined record reaches
+    # claims, metadata, tenant inventory, request planning or token acquisition.
+    $records=$admitted.ToArray()
+    $null=Assert-TokenForgeHealthSource microsoftApps $records
+    $accounting=[ordered]@{
+        policy='MicrosoftAppsEntraDocsV1';inputSha256=$InputSha256;rawRecordCount=$Data.Count
+        admittedRecordCount=$records.Count;normalizedRecordCount=$normalized
+        zeroIdPlaceholderCount=$placeholders;quarantinedRecordCount=$quarantine.Count;quarantine=$quarantine.ToArray()
+    }
+    Assert-TokenForgeHealthMicrosoftAppsAccounting $accounting $InputSha256 $Data.Count
+    return [pscustomobject]@{Records=$records;Accounting=$accounting}
+}
+
+function Assert-TokenForgeHealthMicrosoftAppsAccounting {
+    param($Value,[string]$InputSha256,[int]$RawRecordCount)
+    Assert-TokenForgeHealthKeys $Value @('policy','inputSha256','rawRecordCount','admittedRecordCount','normalizedRecordCount','zeroIdPlaceholderCount','quarantinedRecordCount','quarantine')
+    if($Value.policy -isnot [string] -or $Value.policy -cne 'MicrosoftAppsEntraDocsV1' -or $Value.inputSha256 -isnot [string] -or $Value.inputSha256 -cnotmatch '^[a-f0-9]{64}$' -or $Value.inputSha256 -cne $InputSha256){throw [IO.InvalidDataException]::new('Invalid MicrosoftApps accounting identity.')}
+    foreach($field in @('rawRecordCount','admittedRecordCount','normalizedRecordCount','zeroIdPlaceholderCount','quarantinedRecordCount')){Assert-TokenForgeHealthCount $Value[$field] $script:HealthLimits.SourceRecords}
+    if($Value.rawRecordCount -ne $RawRecordCount -or $Value.rawRecordCount -ne ($Value.admittedRecordCount+$Value.zeroIdPlaceholderCount+$Value.quarantinedRecordCount) -or $Value.normalizedRecordCount -gt $Value.admittedRecordCount -or $Value.quarantinedRecordCount -gt $script:HealthLimits.QuarantinedRecords -or $Value.quarantine -isnot [array] -or $Value.quarantine.Count -ne $Value.quarantinedRecordCount){throw [IO.InvalidDataException]::new('Inconsistent MicrosoftApps accounting.')}
+    $last=-1
+    foreach($record in $Value.quarantine){
+        Assert-TokenForgeHealthKeys $record @('index','reason','recordSha256')
+        Assert-TokenForgeHealthCount $record.index $script:HealthLimits.SourceRecords
+        if($record.index -le $last -or $record.index -ge $RawRecordCount -or $record.reason -isnot [string] -or $record.reason -cne 'ApplicationIdentity' -or $record.recordSha256 -isnot [string] -or $record.recordSha256 -cnotmatch '^[a-f0-9]{64}$'){throw [IO.InvalidDataException]::new('Invalid MicrosoftApps quarantine record.')}
+        $last=$record.index
+    }
+}
+
 function New-TokenForgeHealthBudget {
     param([ValidateRange(0.01,600)][double]$MaxSeconds=600,[ValidateRange(1,10)][int]$MaxRequests=6)
     [pscustomobject]@{Timer=[Diagnostics.Stopwatch]::StartNew();MaxSeconds=$MaxSeconds;MaxRequests=$MaxRequests;Requests=0}
@@ -199,17 +265,23 @@ function Read-TokenForgeHealthExchange {
     }
     $health=Read-TokenForgeHealthJson (Read-TokenForgeHealthBytes (Join-Path $Path health.json) $script:HealthLimits.HealthBytes)
     Assert-TokenForgeHealthKeys $health @('schemaVersion','kind','collectedAt','lastCompleteAt','complete','candidateCount','conflictCount','sources')
-    if($health.schemaVersion -ne 1 -or $health.kind -cne 'TokenForgePublicHealth' -or $health.collectedAt -cne $manifest.collectedAt -or $health.complete -isnot [bool] -or $health.sources -isnot [array] -or $health.sources.Count -ne 3){throw 'Invalid health summary.'}
+    if($health.schemaVersion -notin @(1,2) -or $health.kind -cne 'TokenForgePublicHealth' -or $health.collectedAt -cne $manifest.collectedAt -or $health.complete -isnot [bool] -or $health.sources -isnot [array] -or $health.sources.Count -ne 3){throw 'Invalid health summary.'}
     Assert-TokenForgeHealthDate $health.lastCompleteAt -Nullable
     if($health.lastCompleteAt -and [DateTimeOffset]$health.lastCompleteAt -gt [DateTimeOffset]$health.collectedAt){throw 'Future complete health snapshot.'}
     foreach($field in @('candidateCount','conflictCount')){Assert-TokenForgeHealthCount $health[$field] $script:HealthLimits.CatalogRecords}
     $seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
     foreach($source in $health.sources){
-        Assert-TokenForgeHealthKeys $source @('name','uri','status','attempts','lastSuccessAt','sha256','candidateCount','changed')
+        $keys=@('name','uri','status','attempts','lastSuccessAt','sha256','candidateCount','changed')
+        if($health.schemaVersion -eq 2){$keys+= 'adaptation'}
+        Assert-TokenForgeHealthKeys $source $keys
         if($source.name -cnotin @($script:HealthSources.Keys) -or -not $seen.Add($source.name) -or $source.uri -cne $script:HealthSources[$source.name] -or $source.status -cnotin @('Success','Unavailable','Invalid') -or $source.changed -isnot [bool]){throw 'Invalid health source.'}
         Assert-TokenForgeHealthCount $source.attempts 2;Assert-TokenForgeHealthCount $source.candidateCount $script:HealthLimits.SourceRecords;Assert-TokenForgeHealthDate $source.lastSuccessAt -Nullable
         if($null -ne $source.sha256 -and ($source.sha256 -isnot [string] -or $source.sha256 -cnotmatch '^[a-f0-9]{64}$')){throw 'Invalid source hash.'}
         if($source.status -ceq 'Success' -and ($source.lastSuccessAt -cne $health.collectedAt -or -not $source.sha256 -or $source.attempts -lt 1)){throw 'Invalid successful source observation.'}
+        if($health.schemaVersion -eq 2){
+            if($source.name -ceq 'microsoftApps' -and $source.status -ceq 'Success'){Assert-TokenForgeHealthMicrosoftAppsAccounting $source.adaptation $source.sha256 $source.candidateCount}
+            elseif($null -ne $source.adaptation){throw 'Unexpected source adaptation accounting.'}
+        }
         if($source.lastSuccessAt -and [DateTimeOffset]$source.lastSuccessAt -gt [DateTimeOffset]$health.collectedAt){throw 'Future source observation.'}
     }
     if($health.complete -ne (@($health.sources|Where-Object status -CNE Success).Count -eq 0) -or $health.complete -and $health.lastCompleteAt -cne $health.collectedAt){throw 'Inconsistent collection completeness.'}

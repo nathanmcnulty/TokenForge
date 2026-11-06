@@ -1,3 +1,23 @@
+# Current public metadata health and workstation loop
+
+Start with [the operator guide and observed end-to-end result](public-metadata-health.md).
+Main includes #124's synthetic compatibility milestone and #125's dormant-workflow
+shell fix. The public-health path uses ordinary named-run artifact transfer and
+local SQLite; older Goal6 publication research is not a prerequisite.
+
+The current source adds private workstation name/AppId lookup, per-source saved
+status and accepted-binary source-overlay packaging. A fresh anonymous collection
+and an explicitly approved read-only transfer/import of retained run `40161542664`
+were exercised. Both real collections remain incomplete because MicrosoftApps
+is invalid; no complete fresh catalog or live nonempty lookup is claimed.
+Repeated local import is idempotent, and a separate synthetic packaged lookup
+demonstrates nonempty results. Preserve the raw receipts locally and the original
+historical outcomes below. No new hosted dispatch, schedule, credentialed workflow,
+permission change, package publication or private evidence publication occurred.
+Keep #113/#115/#116 open for their actual remaining acceptance criteria.
+
+Earlier handoffs below describe historical revisions and approval states.
+
 # PR123 corrected offline-v1 acceptance
 
 Current corrected package/source: `76efe6e878ed0a1c2d4c9dba36657c6677e8c2d7`. Read [the current correction acceptance](offline-v1-convergence.md#current-correction-and-final-acceptance) and [directly audited correction receipt](pr123-correction-validation.json). Both source and packaged affected checks pass 70/0/0; actual expiry runner exits 1  with SessionExpired/zero counters while its harness exits 0. Raw evidence/archive were inspected directly. Retire #100/#117–121 and close #114 only after Nathan approves exact reviewed merge/cleanup; keep #113/#115/#116 open and #69/#74 parked. Earlier handoffs below retain historical source identities and limitations.

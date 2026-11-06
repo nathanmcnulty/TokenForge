@@ -42,9 +42,11 @@ For an authorized real public collection, omit `-FixturePath` and use a new outp
 
 ```powershell
 # Run only when public network collection has been authorized.
+$previous = $exchange
+$exchange = Join-Path $exchangeRoot 'public-health-002'
 pwsh -NoProfile scripts/tokenforge.ps1 health collect `
-  -OutputPath ./public-health-exchange-002 -PreviousExchangePath $exchange `
-  -SourceRevision $revision -NativeExecutablePath $native -Json
+  -OutputPath $exchange -PreviousExchangePath $previous `
+  -SourceRevision $revision -NativeExecutablePath $native -MaxSeconds 180 -Json
 ```
 
 The producer returns collection completeness separately from exchange completion, import completion and operational publication. An incomplete collection can produce a valid exchange; inspect its health summary rather than treating file creation as complete collection.
@@ -131,3 +133,44 @@ Before a trial, review the exact source and matching package's public delivery, 
 A proposed stop procedure is to cancel the named trial, disable its workflow, retain already downloaded private evidence and report incomplete work. No such setting change has been performed here. A daily schedule is a later decision after a successful approved trial; it is not enabled or guaranteed by offline acceptance.
 
 The decision-ready manual-trial proposal is in `public-metadata-health-manual-trial.md`. Offline acceptance does not establish fresh upstream completeness, hosted artifact interoperability or Goal 6 production completion.
+
+## Observed end-to-end result
+
+The current reconciliation reused the accepted offline-v1 binaries after all 267
+payloads, 265 source mappings and complete 100 CLI / 47 credential compilation
+inputs were checked. Operator additions are source overlays, not native rebuilds.
+The older hosted producer at `04e89350b74e1a600c233aa43572a80a6f3ea642` also
+matches all 93 executed module/health source paths in its retained package from
+`c7d0b255612280e05605eca2e9ccfb44d5d68e18`; all 166 old payloads were verified.
+
+One fresh credential-free local collection used three requests in 48.71 seconds
+(180-second/six-request ceiling): ROADtools and resources succeeded; MicrosoftApps
+remained Invalid. A separate single-request current-input diagnostic reproduced
+`ApplicationIdentity` at zero-based row 2230 of 4459: a valid GUID prefix plus two
+extra characters including non-ASCII whitespace. It is the same malformed value
+as the prior diagnostic, not proof of the historical hosted response's exact cause.
+No trimming, repair or row dropping was performed. The resulting exchange is
+valid but incomplete, with null last-complete date and zero catalog applications.
+
+After anonymous artifact download was refused, Nathan explicitly approved one
+read-only transfer using the existing GitHub sign-in. The normal named-run sync
+validated run `40161542664`, attempt 1, workflow `395612174`, and artifact
+`12586302492`. The retained original ZIP is 1472 bytes, SHA256
+`944b5ac4d1632f72b423c7abde37c7d86e07e2855b8be01b5a06474774129618`, with exactly
+the three public exchange members. The existing four-GET/180-second transfer cap
+was enforced; the implementation does not persist the actual request count.
+No new hosted job or package publication was needed.
+
+Both real exchanges imported successfully into a private workstation. Local
+repeat import left SQLite bytes unchanged and preserved the newer source dates.
+Real lookup truthfully returns zero matches. A separate explicitly synthetic
+packaged collect/import/name-lookup walkthrough returned three fixture matches;
+those are not live catalog coverage. Focused import/recovery tests retain older
+evidence, last-success, locks, pending-import replay, private origins and frozen
+plans. Raw inputs, artifact ZIP, receipts and test reports remain local.
+
+Fresh complete application results still require a valid MicrosoftApps source or
+a previously accepted complete exchange. The dormant hosted delivery pins still
+need separate source/package review before any future activation. #113, #115 and
+#116 remain open; this practical flow does not satisfy their production acceptance
+by implication.

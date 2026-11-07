@@ -6,7 +6,8 @@ function Get-TokenForgeRefreshPlan {
 }
 function ConvertTo-TokenForgeRefreshHistory {
  [CmdletBinding()]param([Parameter(Mandatory)][string]$PlanJson,[Parameter(Mandatory)][string]$SnapshotJson,[string]$HistoryJson)
- [TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([TokenForge.Core.AdminWorkflows]::CaptureRefreshEvidence($PlanJson,$SnapshotJson,$HistoryJson))
+ $history=if($PSBoundParameters.ContainsKey('HistoryJson')){$HistoryJson}else{[NullString]::Value}
+ [TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson([TokenForge.Core.AdminWorkflows]::CaptureRefreshEvidence($PlanJson,$SnapshotJson,$history))
 }
 function Get-TokenForgeRefreshStatus {
  [CmdletBinding()]param([Parameter(Mandatory)][string]$PlanJson,[Parameter(Mandatory)][string]$StatePath)
@@ -18,7 +19,10 @@ function Export-TokenForgeRefreshHistory {
  [CmdletBinding()]param([Parameter(Mandatory)][string]$PlanJson,[Parameter(Mandatory)][string]$StatePath,[string]$HistoryJson)
  if(-not(Test-Path -LiteralPath $StatePath -PathType Leaf)){throw 'Saved refresh state is required.'}
  $run=[TokenForge.Core.AdminWorkflows]::OpenRefreshRun($PlanJson,$StatePath)
- try{[TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson($run.ProjectHistory($HistoryJson))}finally{$run.Dispose()}
+ try{
+  $history=if($PSBoundParameters.ContainsKey('HistoryJson')){$HistoryJson}else{[NullString]::Value}
+  [TokenForge.Core.DiscoverySourceClaims]::ReadMetadataJson($run.ProjectHistory($history))
+ }finally{$run.Dispose()}
 }
 function Invoke-TokenForgeRefresh {
  [CmdletBinding()]param([Parameter(Mandatory)][string]$PlanJson,[Parameter(Mandatory)][string]$AccountStateDirectory,[securestring]$EstsAuth,[ValidateSet('ESTSAUTH','ESTSAUTHPERSISTENT')][string]$CookieName='ESTSAUTH',[Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None,[switch]$OperationCheck)

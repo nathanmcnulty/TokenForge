@@ -66,7 +66,7 @@ public static partial class AdminWorkflows
             catch { run.CompleteFailedIssuance(issuance); throw; }
         }
         string Identity(SecureString token) { int sequence = run.Reserve(requestId, "IdentityGet"); try { string identity = identityAdapter == null ? ProfileTokenApi.ReadIdentity(token, deadline.Token) : identityAdapter(token); run.Complete(sequence, 200); return identity; } catch { run.Complete(sequence, outcomeKnown: false); throw; } }
-        ProfileApiCheck Proof(SecureString token) { int sequence = run.Reserve(requestId, "ApiGet"); try { var proof = proofAdapter == null ? ProfileTokenApi.Check(token, Graph, new Uri("https://graph.microsoft.com/v1.0/me?$select=id"), deadline.Token) : proofAdapter(token); run.Complete(sequence, proof.Status); return proof; } catch { run.Complete(sequence, outcomeKnown: false); throw; } }
+        ProfileApiCheck Proof(SecureString token) { var definition=ReadOnlyOperation(ToolOperation(tool)); int sequence = run.Reserve(requestId, "ApiGet"); try { var proof = proofAdapter == null ? ProfileTokenApi.Check(token, definition.Resource, new Uri(definition.Uri), deadline.Token) : proofAdapter(token); run.Complete(sequence, proof.Status, outcomeKnown: proof.Status.HasValue); return proof; } catch { run.Complete(sequence, outcomeKnown: false); throw; } }
         using var acquisition = Acquire(profile.ToJsonString(), Obj(input["Requirements"]).ToJsonString(), Obj(input["Inventory"]).ToJsonString(), Text(tool["Id"]), cookie, cookieName, Text(Obj(descriptor["Client"])["AppId"]), ApplicationCatalogPolicy.Hash(Text(descriptor["CallbackUri"])), performOperationCheck, execute: Execute, readIdentity: Identity, checkOperation: Proof, cancellation: deadline.Token);
         var status = Parse(run.Status()); if (Int(status["InFlightUnknownCount"]) == 0) run.SaveEvidence(requestId, AcquisitionEvidence(acquisition.ToJson()));
         return new JsonObject { ["Format"] = "TokenForgeRefreshAttempt", ["SchemaVersion"] = 1, ["Acquisition"] = Parse(acquisition.ToJson()), ["Run"] = Parse(run.Status()) }.ToJsonString();
@@ -176,7 +176,7 @@ public static partial class AdminWorkflows
             ChangeReports.ValidateSnapshot(snapshot.ToJsonString()); var row = Candidate(id); var descriptor = Obj(row["CompatibilityDescriptor"]); var context = RefreshContext(descriptor);
             foreach (var collection in Arr(snapshot["Collections"]).Select(Obj))
             {
-                if (Text(collection["Privacy"]) != "Private" || (Text(collection["EvidenceType"]) == "IssuedScopes" ? !ExactContext(Obj(collection["Context"]), context) : Text(collection["EvidenceType"]) != "ApiAcceptance" || !OperationContext(Obj(collection["Context"]), context, Obj(descriptor["Profile"]), Obj(descriptor["Tool"]), "GraphMeV1"))) throw Invalid();
+                if (Text(collection["Privacy"]) != "Private" || (Text(collection["EvidenceType"]) == "IssuedScopes" ? !ExactContext(Obj(collection["Context"]), context) : Text(collection["EvidenceType"]) != "ApiAcceptance" || !OperationContext(Obj(collection["Context"]), context, Obj(descriptor["Profile"]), Obj(descriptor["Tool"]), ToolOperation(Obj(descriptor["Tool"]))))) throw Invalid();
                 foreach (var record in Arr(collection["Records"]).Select(Obj))
                 {
                     if (Date(record["ObservedAt"]) < Date(state["StartedAt"]) || Date(record["ObservedAt"]) > DateTimeOffset.UtcNow.AddMinutes(5)) throw Invalid();
@@ -196,7 +196,8 @@ public static partial class AdminWorkflows
         internal bool CanAdvance() => Events.Select(Obj).All(e => Terminals.Select(Obj).Any(t => Equal(t["RequestId"], e["RequestId"])));
         public string ProjectHistory(string? historyJson = null)
         {
-            if (disposed) throw Invalid(); string history = historyJson ?? CreateRefreshHistory();
+            if (disposed) throw Invalid(); var input = Obj(plan["FrozenInput"]);
+            string history = ValidateRefreshHistory(historyJson == null ? Obj(input["History"]) : Parse(historyJson), RefreshEvidenceIndex(Obj(input["Snapshot"]))).ToJsonString();
             foreach (var terminal in Terminals.Select(Obj)) history = CaptureRefreshEvidence(plan.ToJsonString(), Obj(terminal["Snapshot"]).ToJsonString(), history);
             return history;
         }

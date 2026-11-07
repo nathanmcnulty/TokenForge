@@ -55,12 +55,12 @@ public static partial class AdminWorkflows
             var request=new ScopePlanning.RequestRow(Text(plan["ClientId"]),Text(tool["ResourceId"]),Text(tool["ResourceId"]),Values(tool["Scopes"]),Values(Obj(plan["Context"])["RequestedScopes"]),Text(plan["CallbackUri"]),Text(profile["Tenant"]),Text(tool["CallbackClass"])=="Spa","OAuth2V2Pkce","StrictApprovedExplicitRequest","VerifiedTenantInventory",null);
             metadata["FinalAttempts"]=1;final=Execute(request);ValidateIssued(final,request,profile,int.MaxValue);Describe(final,request,"Final");ValidateIssued(final,request,profile,Int(profile["MaxAdditionalScopes"]));deadline.Token.ThrowIfCancellationRequested();metadata["IssuanceSucceeded"]=true;
             if(performOperationCheck){
-                phase="Api";metadata["ApiProofPerformed"]=true;
-                var proofContext=Obj(plan["Context"]).DeepClone().AsObject();proofContext["OperationFingerprint"]=ApplicationCatalogPolicy.Hash("GraphMeV1");proofContext["Method"]="GET";proofContext["ApiVersion"]="v1.0";proofContext["ApprovalFingerprint"]=Approval(profile,tool,"GraphMeV1");metadata["ApiComparisonContext"]=proofContext;
-                metadata["ApiCheck"]=new JsonObject{["Operation"]="GraphMeV1",["Method"]="GET",["ApiVersion"]="v1.0",["Status"]=null,["Accepted"]=false,["Evidence"]="SelectedReadOnlyOperationOnly"};
-                var proof=checkOperation==null?ProfileTokenApi.Check(final.AccessToken,Graph,new Uri("https://graph.microsoft.com/v1.0/me?$select=id"),deadline.Token):checkOperation(final.AccessToken);deadline.Token.ThrowIfCancellationRequested();
+                phase="Api";metadata["ApiProofPerformed"]=true;var operation=ToolOperation(tool);var definition=ReadOnlyOperation(operation);
+                var proofContext=Obj(plan["Context"]).DeepClone().AsObject();proofContext["OperationFingerprint"]=ApplicationCatalogPolicy.Hash(operation);proofContext["Method"]="GET";proofContext["ApiVersion"]=definition.ApiVersion;proofContext["ApprovalFingerprint"]=Approval(profile,tool,operation);metadata["ApiComparisonContext"]=proofContext;
+                metadata["ApiCheck"]=new JsonObject{["Operation"]=operation,["Method"]="GET",["ApiVersion"]=definition.ApiVersion,["Status"]=null,["Accepted"]=false,["Evidence"]="SelectedReadOnlyOperationOnly"};
+                var proof=checkOperation==null?ProfileTokenApi.Check(final.AccessToken,definition.Resource,new Uri(definition.Uri),deadline.Token):checkOperation(final.AccessToken);deadline.Token.ThrowIfCancellationRequested();
                 if(proof==null || proof.Status is <100 or >599 || proof.Accepted!=(proof.Status is >=200 and <=299))throw Invalid();
-                metadata["ApiCheck"]=new JsonObject{["Operation"]="GraphMeV1",["Method"]="GET",["ApiVersion"]="v1.0",["Status"]=proof.Status,["Accepted"]=proof.Accepted,["Evidence"]="SelectedReadOnlyOperationOnly"};
+                metadata["ApiCheck"]=new JsonObject{["Operation"]=operation,["Method"]="GET",["ApiVersion"]=definition.ApiVersion,["Status"]=proof.Status,["Accepted"]=proof.Accepted,["Evidence"]="SelectedReadOnlyOperationOnly"};
                 if(!proof.Accepted){metadata["Reason"]="SelectedApiDeniedOrUnavailable";final.Dispose();final=null;return new StrictAdminAcquisitionResult(metadata);}
                 ValidateIssued(final,request,profile,Int(profile["MaxAdditionalScopes"]));
             }

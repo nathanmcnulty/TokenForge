@@ -12,13 +12,23 @@ function Initialize-TokenForgeHealthRuntime {
     if($PSVersionTable.PSVersion.ToString() -cne '7.6.7' -or -not $IsLinux -or [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -ne 'X64'){throw 'Public health currently requires reviewed PowerShell 7.6.7 on Linux x64.'}
     $exe=[IO.Path]::GetFullPath($NativeExecutablePath)
     $dll=Join-Path (Split-Path $exe -Parent) 'src/TokenForge/lib/net10.0/TokenForge.Credentials.dll'
-    # Retain the accepted runtime and the source-reviewed offline-v1 CLI build.
-    # Both use the identical independently pinned BCL credential assembly.
-    foreach($entry in @(@($exe,@('42773ca3e048d5d29dd3edf488ca33ace5116d47afdd4513fa8df95b24a3047e','aa1ad0d814970379376ee5da6ddf531ccb22b1b738ad65709599ee64c4a2f61b')),@($dll,@('a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52')))){
-        Assert-TokenForgeHealthPath $entry[0]
-        if((Get-FileHash -LiteralPath $entry[0] -Algorithm SHA256).Hash.ToLowerInvariant() -cnotin $entry[1]){throw 'Public health requires the reviewed matching Linux package.'}
-    }
-    if(-not ('TokenForge.Core.CredentialRuntime' -as [type])){Add-Type -Path $dll}
+    # Approved executable/library PAIRS; independently valid files are not
+    # permission to combine runtimes that were never qualified together.
+    Assert-TokenForgeHealthPath $exe;Assert-TokenForgeHealthPath $dll
+    $identity=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()+':'+(Get-FileHash -LiteralPath $dll -Algorithm SHA256).Hash.ToLowerInvariant()
+    $approved=@(
+        '42773ca3e048d5d29dd3edf488ca33ace5116d47afdd4513fa8df95b24a3047e:a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52',
+        'aa1ad0d814970379376ee5da6ddf531ccb22b1b738ad65709599ee64c4a2f61b:a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52',
+        'd76e2ebbedde15e9fd962d3977f02516cf731cfacda55d72ef3ab7f145bf7dc8:77ce122e7d7bde9b3bd6dccbd6539eec8f80cabae274b5c304c87d19dc3e5837',
+        '21e1f3c5b8005fae99dae2290d9bfdee8a080402c1346175f3ad80712efc79b1:14a12d434306eace18ca14195ef682c92ea9c79e7ceb3b16f0c0707c4006c789'
+    )
+    if($identity -cnotin $approved){throw 'Public health requires the reviewed matching Linux package (qualified executable/library pair).'}
+    . (Join-Path $PSScriptRoot '../src/TokenForge/Core/Assert-CredentialAssembly.ps1')
+    $expectedDllSha256=$identity.Split(':')[1]
+    $marker='TokenForge.Core.CredentialRuntime' -as [type]
+    if($marker){Assert-TokenForgeCredentialAssembly -Assembly $marker.Assembly -DllPath $dll -ExpectedSha256 $expectedDllSha256}
+    else{try{Add-Type -Path $dll -ErrorAction Stop}catch{throw 'TokenForge credential runtime loading failed. Start a fresh PowerShell process and use the complete reviewed package.'}}
+    Assert-TokenForgeCredentialAssembly -Assembly ([TokenForge.Core.CredentialRuntime].Assembly) -DllPath $dll -ExpectedSha256 $expectedDllSha256
     Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1') -Force -ErrorAction Stop
 }
 

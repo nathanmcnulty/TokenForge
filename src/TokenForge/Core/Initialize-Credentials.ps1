@@ -6,12 +6,14 @@
   'TokenForge.Core.V0220.PrivateFiles','TokenForge.Core.V0220.VaultFileTransaction','TokenForge.Core.V0200.ProfilePolicy',
   'TokenForge.Core.V0190.VaultEnvelope','TokenForge.Core.V0100.TokenPolicy','TokenForge.Core.V0110.PlatformVaultKey','TokenForge.Core.V0180.OAuthTransport')
  $dll=Join-Path $PSScriptRoot '../lib/net10.0/TokenForge.Credentials.dll'
+ . (Join-Path $PSScriptRoot 'Assert-CredentialAssembly.ps1')
+ $dllSha256=$null
  if(Test-Path -LiteralPath $dll){
-  try{$identity=[Reflection.AssemblyName]::GetAssemblyName($dll);if($identity.Name -cne 'TokenForge.Credentials' -or $identity.Version.ToString() -cne ($expectedVersion+'.0')){throw 'Identity mismatch.'}}
+  try{$identity=[Reflection.AssemblyName]::GetAssemblyName($dll);if($identity.Name -cne 'TokenForge.Credentials' -or $identity.Version.ToString() -cne ($expectedVersion+'.0')){throw 'Identity mismatch.'};$dllSha256=(Get-FileHash -LiteralPath $dll -Algorithm SHA256).Hash.ToLowerInvariant()}
   catch{throw 'Bundled TokenForge credential runtime is invalid. Reinstall the package; source fallback is disabled for an existing DLL.'}
  }
  $marker='TokenForge.Core.CredentialRuntime' -as [type]
- if($marker -and (Test-Path -LiteralPath $dll) -and $marker.Assembly.GetName().Name -cne 'TokenForge.Credentials'){throw 'A source-compiled credential runtime is already loaded. Start a fresh PowerShell process to use the packaged DLL.'}
+ if($marker -and $dllSha256){Assert-TokenForgeCredentialAssembly -Assembly $marker.Assembly -DllPath $dll -ExpectedSha256 $dllSha256}
  if(-not $marker){
   if(@($types|Where-Object {$_ -as [type]}).Count){throw 'An incompatible TokenForge credential runtime is already loaded. Start a fresh PowerShell process.'}
   if(Test-Path -LiteralPath $dll){
@@ -25,6 +27,7 @@
   }
   $marker='TokenForge.Core.CredentialRuntime' -as [type]
  }
+ if($marker -and $dllSha256){Assert-TokenForgeCredentialAssembly -Assembly $marker.Assembly -DllPath $dll -ExpectedSha256 $dllSha256}
  if(-not $marker -or $marker::Version -cne $expectedVersion -or @($types|Where-Object {$t=$_ -as [type];-not $t -or $t.Assembly -ne $marker.Assembly}).Count){
   throw 'An incompatible TokenForge credential runtime is already loaded. Start a fresh PowerShell process.'
  }

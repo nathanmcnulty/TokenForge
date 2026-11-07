@@ -149,6 +149,32 @@ Describe 'Goal 4 durable request accounting' {
   $r=[TokenForge.Core.AdminWorkflows]::OpenRefreshRun($planJson,$path)
   try{$status=Read-RefreshJson $r.Status();$status.CompletedCount|Should -Be 1;{$r.Reserve($id,'FinalIssuance')}|Should -Throw;$h=Read-RefreshJson $r.ProjectHistory();$h.Entries.Count|Should -Be 1;$h2=Read-RefreshJson $r.ProjectHistory(($h|ConvertTo-Json -Depth 100 -Compress));$h2.Entries.Count|Should -Be 1;(Read-RefreshJson $r.Status()).IssuanceAttempts|Should -Be 2}finally{$r.Dispose()}
  }
+ It 'validates explicit history before projecting a zero-terminal journal (<History>)' -ForEach @(
+  @{History=''},@{History='not-json'},@{History='{}'},@{History='{"Format":"TokenForgeRefreshHistory","SchemaVersion":1,"Snapshots":[],"Entries":[],"Cookie":"synthetic-forbidden"}'}
+ ) {
+  $r=[TokenForge.Core.AdminWorkflows]::OpenRefreshRun($planJson,$path)
+  try{$before=(Get-FileHash $path).Hash;(Read-RefreshJson $r.Status()).CompletedCount|Should -Be 0;{$r.ProjectHistory($History)}|Should -Throw;(Read-RefreshJson $r.Status()).TotalRequests|Should -Be 0;(Get-FileHash $path).Hash|Should -BeExactly $before}finally{$r.Dispose()}
+  {Export-TokenForgeRefreshHistory -PlanJson $planJson -StatePath $path -HistoryJson $History}|Should -Throw
+ }
+ It 'accepts explicitly valid empty history with zero terminal records' {
+  $r=[TokenForge.Core.AdminWorkflows]::OpenRefreshRun($planJson,$path)
+  try{$history=Read-RefreshJson ($r.ProjectHistory([TokenForge.Core.AdminWorkflows]::CreateRefreshHistory()));$history.Entries.Count|Should -Be 0;$history.Snapshots.Count|Should -Be 0;(Read-RefreshJson $r.Status()).TotalRequests|Should -Be 0}finally{$r.Dispose()}
+ }
+ It 'validates and preserves supplied and frozen history with zero terminal records' {
+  $snapshot=New-RefreshObservation $p -At ([DateTimeOffset]::UtcNow)
+  $history=Read-RefreshJson ([TokenForge.Core.AdminWorkflows]::CaptureRefreshEvidence($planJson,($snapshot|ConvertTo-Json -Depth 100 -Compress)))
+  $i.History=$history;$i.Snapshot=$snapshot;$next=Plan-Refresh $i ([DateTimeOffset]::UtcNow)
+  $r=[TokenForge.Core.AdminWorkflows]::OpenRefreshRun(($next|ConvertTo-Json -Depth 100 -Compress),$path)
+  try{
+   (Read-RefreshJson $r.Status()).CompletedCount|Should -Be 0
+   foreach($value in @($r.ProjectHistory(),$r.ProjectHistory(($history|ConvertTo-Json -Depth 100 -Compress)))){
+    [TokenForge.Core.ChangeReports]::FingerprintJson($value)|Should -BeExactly ([TokenForge.Core.ChangeReports]::FingerprintJson(($history|ConvertTo-Json -Depth 100 -Compress)))
+   }
+   (Read-RefreshJson $r.Status()).TotalRequests|Should -Be 0
+  }finally{$r.Dispose()}
+  $projected=Export-TokenForgeRefreshHistory -PlanJson ($next|ConvertTo-Json -Depth 100 -Compress) -StatePath $path -HistoryJson ($history|ConvertTo-Json -Depth 100 -Compress)
+  [TokenForge.Core.ChangeReports]::FingerprintJson(($projected|ConvertTo-Json -Depth 100 -Compress))|Should -BeExactly ([TokenForge.Core.ChangeReports]::FingerprintJson(($history|ConvertTo-Json -Depth 100 -Compress)))
+ }
  It 'rejects a second writer and full journal tampering' {
   $r=[TokenForge.Core.AdminWorkflows]::OpenRefreshRun($planJson,$path)
   try{ {[TokenForge.Core.AdminWorkflows]::OpenRefreshRun($planJson,$path)}|Should -Throw }finally{$r.Dispose()}
@@ -198,7 +224,7 @@ Describe 'Goal 4 bounded strict acquisition with synthetic HTTP' {
    [TokenForge.Core.V0180.OAuthHttpResponse]::new(200,$null,(@{access_token=$jwt;token_type='Bearer';scope=$scope;expires_in=1800}|ConvertTo-Json -Compress))
   }
   $identity=[Func[Security.SecureString,string]]{param($token)$script:rfPrincipal}
-  $proof=[Func[Security.SecureString,TokenForge.Core.ProfileApiCheck]]{param($token)[TokenForge.Core.ProfileApiCheck]::new(200,$true)}
+  $proof=[Func[Security.SecureString,TokenForge.Core.ProfileApiCheck]]{param($token)if($script:rfFault -eq 'ApiUnknown'){return [TokenForge.Core.ProfileApiCheck]::new($null,$false,'TransportFailureDetailsSuppressed')};[TokenForge.Core.ProfileApiCheck]::new(200,$true)}
   $cookie=ConvertTo-SecureString synthetic-cookie -AsPlainText -Force
   function Invoke-RefreshAdapter([bool]$ApprovedProof=$false) {Read-RefreshJson ([TokenForge.Core.AdminWorkflows]::AcquireRefresh($json,$root,$id,$cookie,'ESTSAUTH',[Threading.CancellationToken]::None,$http,$identity,$proof,$ApprovedProof))}
  }
@@ -215,6 +241,25 @@ Describe 'Goal 4 bounded strict acquisition with synthetic HTTP' {
   $script:rfFault='Transport';$r=Invoke-RefreshAdapter;$r.Run.InFlightUnknownCount|Should -BeGreaterThan 0;$r.Run.CompletedCount|Should -Be 0
   $p=Plan-Refresh $i ([DateTimeOffset]::UtcNow);$json=$p|ConvertTo-Json -Depth 100 -Compress
   {Invoke-RefreshAdapter}|Should -Throw
+  {[TokenForge.Core.AdminWorkflows]::AdvanceRefreshRun($json,$root)}|Should -Throw
+ }
+ It 'keeps an unobserved API response charged and unknown without reacquisition or plan reset' {
+  $i.Requirements.Tools[0].Operations=@('GraphMeV1')
+  $p=Plan-Refresh $i ([DateTimeOffset]::UtcNow);$json=$p|ConvertTo-Json -Depth 100 -Compress;$id=$p.Candidates[0].RequestId
+  $script:rfFault='ApiUnknown';$r=Invoke-RefreshAdapter $true
+  $r.Acquisition.IssuanceSucceeded|Should -BeTrue
+  $r.Run.InFlightUnknownCount|Should -Be 1
+  $r.Run.CompletedCount|Should -Be 0
+  $r.Run.IssuanceAttempts|Should -Be 2
+  $r.Run.TotalRequests|Should -Be 6
+  $calls=$script:rfHttpCalls
+  $again=Invoke-RefreshAdapter $true
+  $again.Run.InFlightUnknownCount|Should -Be 1
+  $again.Run.IssuanceAttempts|Should -Be 2
+  $again.Run.TotalRequests|Should -Be 6
+  $again.Run.CompletedCount|Should -Be 0
+  $script:rfHttpCalls|Should -Be $calls
+  $p=Plan-Refresh $i ([DateTimeOffset]::UtcNow);$json=$p|ConvertTo-Json -Depth 100 -Compress
   {[TokenForge.Core.AdminWorkflows]::AdvanceRefreshRun($json,$root)}|Should -Throw
  }
  It 'revalidates actual issued scope ceilings on every acquisition' {

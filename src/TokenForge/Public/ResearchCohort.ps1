@@ -5,6 +5,7 @@ function New-TokenForgeResearchCohort {
     [CmdletBinding(SupportsShouldProcess,ConfirmImpact='Low')]
     param([Parameter(Mandatory)]$Inventory,[Parameter(Mandatory)][string]$DatabasePath,
         [ValidatePattern('^[a-f0-9]{64}$')][string]$PrincipalFingerprint,[guid[]]$ClientId,[switch]$GraphOnly,
+        [object[]]$Plan,[string]$RunManifestPath,
         [ValidateRange(1,1000)][int]$BatchSize=25,[ValidateRange(1,1000)][int]$MaxRedirects=8,[switch]$ExploreAllFlows,
         [ValidateSet('OAuth2V2Pkce','OAuth2V2Implicit','OAuth2V1Implicit')][string[]]$Protocols=@('OAuth2V2Pkce','OAuth2V2Implicit','OAuth2V1Implicit'),
         [string]$Tenant='organizations',[string]$NativeExecutablePath)
@@ -12,11 +13,34 @@ function New-TokenForgeResearchCohort {
     $principal=if($PrincipalFingerprint){$PrincipalFingerprint}else{$Inventory.PrincipalFingerprint}
     if(-not $principal){throw 'A cohort principal fingerprint is required.'}
     $pairs=@(Get-TokenForgeProbePlan -Inventory $Inventory -ClientId $ClientId -GraphOnly:$GraphOnly -PrincipalFingerprint $principal|ForEach-Object {@{ClientId=$_.ClientId;ResourceId=$_.ResourceId}})
+    if($PSBoundParameters.ContainsKey('Plan')){
+        if($null -eq $Plan -or -not $Plan.Count -or $Plan.Count -gt 1000){throw 'Explicit cohort selection must contain between 1 and 1000 eligible pairs.'}
+        $eligible=@{};foreach($pair in $pairs){$eligible["$($pair.ClientId)/$($pair.ResourceId)"]=$true}
+        $selected=@{}
+        foreach($pair in $Plan){
+            $fields=Select-TokenForgePlanningFields $pair @('ClientId','ResourceId')
+            $client=[guid]::Empty;$resource=[guid]::Empty
+            if($fields.ClientId -isnot [string] -or $fields.ResourceId -isnot [string] -or -not [guid]::TryParse($fields.ClientId,[ref]$client) -or -not [guid]::TryParse($fields.ResourceId,[ref]$resource) -or $client -eq [guid]::Empty -or $resource -eq [guid]::Empty -or -not $eligible.ContainsKey("$client/$resource")){throw 'Explicit cohort selection contains an ineligible client/resource pair.'}
+            $selected["$client/$resource"]=@{ClientId=$client.ToString();ResourceId=$resource.ToString()}
+        }
+        $pairs=@($selected.Values|Sort-Object ClientId,ResourceId)
+    }
     if(-not $pairs.Count){throw 'No eligible client/resource pairs were selected for the cohort.'}
+    if($RunManifestPath){
+        $DatabasePath=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($DatabasePath)
+        $RunManifestPath=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($RunManifestPath)
+        $expected=Join-Path (Split-Path $DatabasePath -Parent) 'discovery-run.json'
+        if((Split-Path $DatabasePath -Leaf) -cne 'scopes.sqlite' -or $RunManifestPath -cne $expected -or (Test-Path -LiteralPath $RunManifestPath)){throw 'Choose a new cohort state directory; the run manifest must be beside its scope database and cannot be replaced.'}
+    }
     $inventoryHash=Get-TokenForgeFingerprint (ConvertTo-Json -InputObject @($Inventory.Applications|Sort-Object {[string]$_.AppId}) -Depth 32 -Compress)
     $document=@{Format='TokenForgeResearchCohort';SchemaVersion=1;CreatedAt=[DateTimeOffset]::UtcNow.ToString('o');TenantFingerprint=$Inventory.TenantFingerprint;PrincipalFingerprint=$principal;CatalogHash=$Inventory.DiscoveryCatalogHash;InventoryHash=$inventoryHash;Authority=$Tenant;Protocols=@($Protocols|Select-Object -Unique);MaxRedirects=$MaxRedirects;ExploreAllFlows=[bool]$ExploreAllFlows;Pairs=$pairs}
     if(-not $PSCmdlet.ShouldProcess($DatabasePath,'Create a frozen research cohort')){return}
     $created=Invoke-TokenForgeNativeEvidence $DatabasePath cohort -Domain evidence -Document $document -BatchSize $BatchSize -NativeExecutablePath $NativeExecutablePath
+    if($RunManifestPath){
+        # Preparation only: create an immutable runner binding, never authenticate or collect.
+        $file=Open-TokenForgeVaultFile (Resolve-TokenForgeVaultPath $RunManifestPath -CreateDirectory) -Create
+        try{$bytes=[Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @{SchemaVersion=1;CohortId=$created.PlanId} -Compress));$file.Write($bytes);$file.Flush($true)}finally{$file.Dispose()}
+    }
     Get-TokenForgeResearchCohort $DatabasePath $created.PlanId -NativeExecutablePath $NativeExecutablePath
 }
 

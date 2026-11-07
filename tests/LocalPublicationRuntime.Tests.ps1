@@ -4,7 +4,8 @@ BeforeAll {
  . (Join-Path $package scripts/TokenForgeLocalPublication.ps1)
  . (Join-Path $package scripts/TokenForgePublicHealth.ps1)
  Initialize-TokenForgeHealthRuntime (Join-Path $package tokenforge)
- $runtimePath=Join-Path $TestDrive runtime.json
+ $custody=Join-Path $TestDrive runtime-custody;$null=[IO.Directory]::CreateDirectory($custody,[IO.UnixFileMode]448)
+ $runtimePath=Join-Path $custody runtime.json
  $inventory=New-TokenForgeLocalPublicationRuntimeInventory -OutputPath $runtimePath
  $doc=Read-TfLocalDocument $runtimePath 4MB
  $manifest=Read-TfLocalDocument (Join-Path $package public-health-package.json) 1MB
@@ -23,11 +24,13 @@ Describe 'Actual extracted publisher assets' {
   }
  }
  It 'detects changed publisher bytes using an isolated private copy' {
-  $copy=Join-Path $TestDrive tamper-package
+  $copy=Join-Path $custody tamper-package
   Copy-Item -LiteralPath $package -Destination $copy -Recurse
+  [IO.File]::SetUnixFileMode($copy,[IO.UnixFileMode]448)
+  foreach($item in Get-ChildItem -LiteralPath $copy -Recurse -Force){[IO.File]::SetUnixFileMode($item.FullName,[IO.UnixFileMode]$(if($item.PSIsContainer -or $item.Name -ceq 'tokenforge'){448}else{384}))}
   try{
    . (Join-Path $copy scripts/TokenForgeLocalPublication.ps1)
-   $copyInventory=New-TokenForgeLocalPublicationRuntimeInventory -OutputPath (Join-Path $TestDrive copy-runtime.json)
+   $copyInventory=New-TokenForgeLocalPublicationRuntimeInventory -OutputPath (Join-Path $custody copy-runtime.json)
    $copyDoc=Read-TfLocalDocument $copyInventory.Path 4MB
    $copyPolicy=@{RuntimeInventorySha256=$copyInventory.Sha256;PackageManifestSha256=$policy.PackageManifestSha256;SourceCommit=$policy.SourceCommit}
    {Assert-TfLocalRuntimeInventory $copyDoc $copyPolicy}|Should -Not -Throw

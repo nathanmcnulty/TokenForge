@@ -100,4 +100,16 @@ if($again.Git.ProposedCommit -cne $CommitSha){exit 2}
   $f.DraftOptions.RecoveryUntil=$f.DraftOptions.CreatedAt.AddHours(25)
   {New-TokenForgeLocalPublicationApprovalDraft @draftOptions} | Should -Throw '*Approval draft bounds*'
  }
+ It 'refuses changed retained evidence and selection bytes before reuse or initial packet creation' {
+  foreach($name in @('evidence-manifest.json','selection.json')){
+   $path=Join-Path $f.PacketPath ('private-evidence/'+$name);$bytes=[IO.File]::ReadAllBytes($path)
+   try{[IO.File]::WriteAllBytes($path,[byte[]]($bytes+[Text.Encoding]::UTF8.GetBytes(' ')));{Read-TfLocalPacket $f.PacketPath $f.PacketSha256}|Should -Throw '*Retained evidence or selection changed*'}finally{[IO.File]::WriteAllBytes($path,$bytes)}
+  }
+  $fresh=New-LocalPublicationFixture $TestDrive -NoPacket
+  foreach($path in @($fresh.EvidenceManifestPath,$fresh.SelectionPath)){
+   $bytes=[IO.File]::ReadAllBytes($path)
+   try{[IO.File]::WriteAllBytes($path,[byte[]]($bytes+[Text.Encoding]::UTF8.GetBytes(' ')));$options=$fresh.Options;{New-TokenForgeLocalPublicationPacket @options}|Should -Throw '*Original evidence or selection bytes*';Test-Path $fresh.PacketPath|Should -BeFalse}finally{[IO.File]::WriteAllBytes($path,$bytes)}
+  }
+ }
+
 }

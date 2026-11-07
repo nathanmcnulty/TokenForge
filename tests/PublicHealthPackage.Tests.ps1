@@ -29,7 +29,7 @@ Describe 'Rebuilt public health package source custody' {
         $package=$env:TOKENFORGE_TEST_ACCEPTED_PACKAGE
         (Get-FileHash (Join-Path $package public-health-package.json)).Hash.ToLowerInvariant()|Should -BeExactly '093fb116ad5c10575f27105e447419b1a13fb67c144f6b085a3b9a1b07e3189c'
         $out=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
-        {& "$repo/scripts/New-TokenForgePublicHealthPackage.ps1" -AcceptedPackagePath $package -OutputPath $out -SourceRevision $head}|Should -Throw '*compilation inputs changed*'
+        {& "$repo/scripts/New-TokenForgePublicHealthPackage.ps1" -AcceptedPackagePath $package -OutputPath $out -SourceRevision $head}|Should -Throw '*compilation inventory differs*'
         Test-Path $out|Should -BeFalse
     }
     It 'rejects an unpinned accepted-package manifest before creating output' {

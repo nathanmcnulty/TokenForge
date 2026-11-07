@@ -15,4 +15,19 @@ Describe 'Goal 4 native and PowerShell offline contracts' -Skip:(-not $hasNative
   $out=& $env:TOKENFORGE_TEST_NATIVE refresh plan --input-path $bad --json 2>&1;$LASTEXITCODE|Should -Be 1;($out -join "`n")|Should -Not -Match 'synthetic-secret'
   $null=& $env:TOKENFORGE_TEST_NATIVE refresh plan --input-path $bad --input-path $bad --json 2>&1;$LASTEXITCODE|Should -Be 1
  }
+ It 'validates history for a native zero-terminal projection (<Case>)' -ForEach @(
+  @{Case='Malformed';Valid=$false},@{Case='Wrong schema';Valid=$false},@{Case='Empty valid';Valid=$true},@{Case='Saved valid';Valid=$true}
+ ) {
+  $i=New-WarmRefreshInput;$plan=Plan-Refresh $i;$json=$plan|ConvertTo-Json -Depth 100 -Compress
+  $planPath=Join-Path $root plan.json;$statePath=Join-Path $root run.json;$historyPath=Join-Path $root history.json
+  [IO.File]::WriteAllText($planPath,$json);[IO.File]::SetUnixFileMode($planPath,[IO.UnixFileMode]384)
+  $run=[TokenForge.Core.AdminWorkflows]::OpenRefreshRun($json,$statePath);$run.Dispose()
+  $history=switch($Case){'Malformed'{'not-json'};'Wrong schema'{'{}'};'Empty valid'{[TokenForge.Core.AdminWorkflows]::CreateRefreshHistory()};'Saved valid'{$i.History|ConvertTo-Json -Depth 100 -Compress}}
+  [IO.File]::WriteAllText($historyPath,$history);[IO.File]::SetUnixFileMode($historyPath,[IO.UnixFileMode]384)
+  $before=(Get-FileHash $statePath).Hash
+  $out=& $env:TOKENFORGE_TEST_NATIVE refresh project --plan-path $planPath --state-path $statePath --history-path $historyPath --json 2>&1
+  if($Valid){$LASTEXITCODE|Should -Be 0;[TokenForge.Core.ChangeReports]::FingerprintJson(($out -join "`n"))|Should -BeExactly ([TokenForge.Core.ChangeReports]::FingerprintJson($history))}
+  else{$LASTEXITCODE|Should -Be 1;($out -join "`n")|Should -Match 'OperationFailed'}
+  (Get-FileHash $statePath).Hash|Should -BeExactly $before
+ }
 }

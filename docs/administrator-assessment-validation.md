@@ -1,5 +1,7 @@
 # Administrator assessment: offline qualification
 
+The later [PR #128 runtime/history correction](pr128-runtime-identity-correction.md) records its rebuilt binaries and focused qualification separately. The identities and results below remain the original historical record.
+
 This record qualifies the Linux x64 implementation, not live Graph/ARM acceptance. The public catalog adapter is already merged in #127; its checks are retained in `microsoftapps-adapter-validation.json` and are not counted again here. Package binaries, test XML, build logs, inventories and operational receipts remain local. No authentication, tenant request, hosted job, schedule or package publication was performed for this qualification.
 
 ## Exact identities

@@ -196,7 +196,8 @@ public static partial class AdminWorkflows
         internal bool CanAdvance() => Events.Select(Obj).All(e => Terminals.Select(Obj).Any(t => Equal(t["RequestId"], e["RequestId"])));
         public string ProjectHistory(string? historyJson = null)
         {
-            if (disposed) throw Invalid(); string history = historyJson ?? Obj(Obj(plan["FrozenInput"])["History"]).ToJsonString();
+            if (disposed) throw Invalid(); var input = Obj(plan["FrozenInput"]);
+            string history = ValidateRefreshHistory(historyJson == null ? Obj(input["History"]) : Parse(historyJson), RefreshEvidenceIndex(Obj(input["Snapshot"]))).ToJsonString();
             foreach (var terminal in Terminals.Select(Obj)) history = CaptureRefreshEvidence(plan.ToJsonString(), Obj(terminal["Snapshot"]).ToJsonString(), history);
             return history;
         }

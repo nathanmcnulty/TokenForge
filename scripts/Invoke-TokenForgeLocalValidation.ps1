@@ -81,7 +81,7 @@ try {
     $testPaths = switch ($Preset) {
         'PublicHealth' { @('./tests/MicrosoftAppsAdapter.Tests.ps1', './tests/ApplicationEvidence.Tests.ps1', './tests/MicrosoftAppsDiagnostic.Tests.ps1', './tests/PublicHealthFinishingReview.Tests.ps1', './tests/PublicHealthPackage.Tests.ps1', './tests/PublicHealth.Tests.ps1', './tests/PublicHealthSync.Tests.ps1', './tests/PublicHealthIndependent.Tests.ps1', './tests/DiscoveryClaims.Tests.ps1', './tests/ApplicationMetadata.Tests.ps1', './tests/SqliteCatalog.Tests.ps1', './tests/CatalogDownload.Tests.ps1', './tests/WeeklyCli.Tests.ps1') }
         'Weekly' {
-            @('./tests/WeeklyCli.Tests.ps1', './tests/NativeWeekly.Tests.ps1', './tests/CiWeekly.Tests.ps1', './tests/CredentialBootstrap.Tests.ps1')
+            @('./tests/WeeklyCli.Tests.ps1', './tests/NativeWeekly.Tests.ps1', './tests/CiWeekly.Tests.ps1', './tests/CredentialBootstrap.Tests.ps1', './tests/RuntimeAssemblyIdentity.Tests.ps1')
         }
         'Lab' { @('./tests/CallbackExperiment.Tests.ps1', './tests/ScopeCandidates.Tests.ps1', './tests/NativeScopePlanning.Tests.ps1') }
         'Refresh' { @('./tests/RefreshPlanning.Tests.ps1', './tests/RefreshGrantDependencies.Tests.ps1', './tests/NativeRefresh.Tests.ps1', './tests/CiEvidenceQueue.Tests.ps1') }

@@ -149,6 +149,32 @@ Describe 'Goal 4 durable request accounting' {
   $r=[TokenForge.Core.AdminWorkflows]::OpenRefreshRun($planJson,$path)
   try{$status=Read-RefreshJson $r.Status();$status.CompletedCount|Should -Be 1;{$r.Reserve($id,'FinalIssuance')}|Should -Throw;$h=Read-RefreshJson $r.ProjectHistory();$h.Entries.Count|Should -Be 1;$h2=Read-RefreshJson $r.ProjectHistory(($h|ConvertTo-Json -Depth 100 -Compress));$h2.Entries.Count|Should -Be 1;(Read-RefreshJson $r.Status()).IssuanceAttempts|Should -Be 2}finally{$r.Dispose()}
  }
+ It 'validates explicit history before projecting a zero-terminal journal (<History>)' -ForEach @(
+  @{History=''},@{History='not-json'},@{History='{}'},@{History='{"Format":"TokenForgeRefreshHistory","SchemaVersion":1,"Snapshots":[],"Entries":[],"Cookie":"synthetic-forbidden"}'}
+ ) {
+  $r=[TokenForge.Core.AdminWorkflows]::OpenRefreshRun($planJson,$path)
+  try{$before=(Get-FileHash $path).Hash;(Read-RefreshJson $r.Status()).CompletedCount|Should -Be 0;{$r.ProjectHistory($History)}|Should -Throw;(Read-RefreshJson $r.Status()).TotalRequests|Should -Be 0;(Get-FileHash $path).Hash|Should -BeExactly $before}finally{$r.Dispose()}
+  {Export-TokenForgeRefreshHistory -PlanJson $planJson -StatePath $path -HistoryJson $History}|Should -Throw
+ }
+ It 'accepts explicitly valid empty history with zero terminal records' {
+  $r=[TokenForge.Core.AdminWorkflows]::OpenRefreshRun($planJson,$path)
+  try{$history=Read-RefreshJson ($r.ProjectHistory([TokenForge.Core.AdminWorkflows]::CreateRefreshHistory()));$history.Entries.Count|Should -Be 0;$history.Snapshots.Count|Should -Be 0;(Read-RefreshJson $r.Status()).TotalRequests|Should -Be 0}finally{$r.Dispose()}
+ }
+ It 'validates and preserves supplied and frozen history with zero terminal records' {
+  $snapshot=New-RefreshObservation $p -At ([DateTimeOffset]::UtcNow)
+  $history=Read-RefreshJson ([TokenForge.Core.AdminWorkflows]::CaptureRefreshEvidence($planJson,($snapshot|ConvertTo-Json -Depth 100 -Compress)))
+  $i.History=$history;$i.Snapshot=$snapshot;$next=Plan-Refresh $i ([DateTimeOffset]::UtcNow)
+  $r=[TokenForge.Core.AdminWorkflows]::OpenRefreshRun(($next|ConvertTo-Json -Depth 100 -Compress),$path)
+  try{
+   (Read-RefreshJson $r.Status()).CompletedCount|Should -Be 0
+   foreach($value in @($r.ProjectHistory(),$r.ProjectHistory(($history|ConvertTo-Json -Depth 100 -Compress)))){
+    [TokenForge.Core.ChangeReports]::FingerprintJson($value)|Should -BeExactly ([TokenForge.Core.ChangeReports]::FingerprintJson(($history|ConvertTo-Json -Depth 100 -Compress)))
+   }
+   (Read-RefreshJson $r.Status()).TotalRequests|Should -Be 0
+  }finally{$r.Dispose()}
+  $projected=Export-TokenForgeRefreshHistory -PlanJson ($next|ConvertTo-Json -Depth 100 -Compress) -StatePath $path -HistoryJson ($history|ConvertTo-Json -Depth 100 -Compress)
+  [TokenForge.Core.ChangeReports]::FingerprintJson(($projected|ConvertTo-Json -Depth 100 -Compress))|Should -BeExactly ([TokenForge.Core.ChangeReports]::FingerprintJson(($history|ConvertTo-Json -Depth 100 -Compress)))
+ }
  It 'rejects a second writer and full journal tampering' {
   $r=[TokenForge.Core.AdminWorkflows]::OpenRefreshRun($planJson,$path)
   try{ {[TokenForge.Core.AdminWorkflows]::OpenRefreshRun($planJson,$path)}|Should -Throw }finally{$r.Dispose()}

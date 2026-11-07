@@ -22,7 +22,12 @@ function Initialize-TokenForgeHealthRuntime {
         'd76e2ebbedde15e9fd962d3977f02516cf731cfacda55d72ef3ab7f145bf7dc8:77ce122e7d7bde9b3bd6dccbd6539eec8f80cabae274b5c304c87d19dc3e5837'
     )
     if($identity -cnotin $approved){throw 'Public health requires the reviewed matching Linux package (qualified executable/library pair).'}
-    if(-not ('TokenForge.Core.CredentialRuntime' -as [type])){Add-Type -Path $dll}
+    . (Join-Path $PSScriptRoot '../src/TokenForge/Core/Assert-CredentialAssembly.ps1')
+    $expectedDllSha256=$identity.Split(':')[1]
+    $marker='TokenForge.Core.CredentialRuntime' -as [type]
+    if($marker){Assert-TokenForgeCredentialAssembly -Assembly $marker.Assembly -DllPath $dll -ExpectedSha256 $expectedDllSha256}
+    else{try{Add-Type -Path $dll -ErrorAction Stop}catch{throw 'TokenForge credential runtime loading failed. Start a fresh PowerShell process and use the complete reviewed package.'}}
+    Assert-TokenForgeCredentialAssembly -Assembly ([TokenForge.Core.CredentialRuntime].Assembly) -DllPath $dll -ExpectedSha256 $expectedDllSha256
     Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1') -Force -ErrorAction Stop
 }
 

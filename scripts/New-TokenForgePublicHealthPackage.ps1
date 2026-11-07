@@ -65,8 +65,8 @@ if($accepted){
     $baseline=Get-Content (Join-Path $base local-package-manifest.json) -Raw|ConvertFrom-Json -AsHashtable
     if($baseline.sourceRevision -cne '0a1704d057417e58b92fd5eac8c546541d3f7ec2'){throw 'Unreviewed base package source.'}
 }
-$scriptNames=@('tokenforge.ps1','Invoke-TokenForgePublicHealth.ps1','Sync-TokenForgePublicHealth.ps1','Test-TokenForgePublicContribution.ps1','TokenForgePublicHealth.ps1','TokenForgePublicHealthSync.ps1')
-$sourcePaths=@(& git -C $repo ls-files -- src/TokenForge)+@($scriptNames|ForEach-Object {'scripts/'+$_})+@('docs/public-metadata-health.md')
+$scriptNames=@('tokenforge.ps1','Invoke-TokenForgePublicHealth.ps1','Sync-TokenForgePublicHealth.ps1','Test-TokenForgePublicContribution.ps1','TokenForgePublicHealth.ps1','TokenForgePublicHealthSync.ps1','TokenForgeDiscoveryCandidate.ps1','TokenForgeCiState.ps1','TokenForgeCiEvidenceQueue.ps1','TokenForgePublicPermissions.ps1','TokenForgePublicationRecovery.ps1','TokenForgePublicationAdapter.ps1','TokenForgePublicationWriter.ps1','TokenForgeLocalPublication.ps1','TokenForgeLocalPublicationGit.ps1','TokenForgeLocalPublicationTransport.ps1')
+$sourcePaths=@(& git -C $repo ls-files -- src/TokenForge)+@($scriptNames|ForEach-Object {'scripts/'+$_})+@('docs/public-metadata-health.md','docs/sole-administrator-publication-operator.md','docs/sole-administrator-publication-decision.md','docs/goal6-deployment-trust-decision.md')
 if($LASTEXITCODE -or $sourcePaths.Count -lt 7){throw 'Source inventory is unavailable.'}
 foreach($relative in $sourcePaths){
     $expected=(& git -C $repo rev-parse ($SourceRevision+':'+$relative)).Trim()
@@ -143,20 +143,26 @@ $null=[IO.Directory]::CreateDirectory((Join-Path $stage src/TokenForge/lib/net10
 $null=[IO.Directory]::CreateDirectory((Join-Path $stage scripts),[IO.UnixFileMode]448)
 foreach($name in $scriptNames){Copy-Item (Join-Path $PSScriptRoot $name) (Join-Path $stage scripts/$name)}
 $null=[IO.Directory]::CreateDirectory((Join-Path $stage docs),[IO.UnixFileMode]448)
-Copy-Item (Join-Path $repo docs/public-metadata-health.md) (Join-Path $stage docs/public-metadata-health.md)
-$files=[ordered]@{}
+foreach($name in @('public-metadata-health.md','sole-administrator-publication-operator.md','sole-administrator-publication-decision.md','goal6-deployment-trust-decision.md')){Copy-Item (Join-Path $repo ('docs/'+$name)) (Join-Path $stage ('docs/'+$name))}
+$files=[ordered]@{};$sourceFiles=[ordered]@{}
 foreach($item in Get-ChildItem $stage -Recurse -Force){
     if($item.PSIsContainer){[IO.File]::SetUnixFileMode($item.FullName,[IO.UnixFileMode]448);continue}
     Assert-TokenForgeHealthPath $item.FullName
     $relative=[IO.Path]::GetRelativePath($stage,$item.FullName)
     [IO.File]::SetUnixFileMode($item.FullName,([IO.UnixFileMode]$(if($relative -ceq 'tokenforge'){448}else{384})))
     $files[$relative]=@{sha256=(Get-FileHash $item.FullName).Hash.ToLowerInvariant();bytes=$item.Length}
+    if($relative -cnotin @('tokenforge','src/TokenForge/lib/net10.0/TokenForge.Credentials.dll')){
+        $mapping=if($relative -ceq 'README.md'){'docs/native-cli.md'}elseif($relative.StartsWith('examples/',[StringComparison]::Ordinal)){'docs/'+$relative}elseif($relative.StartsWith('src/TokenForge/',[StringComparison]::Ordinal) -or $relative.StartsWith('scripts/',[StringComparison]::Ordinal) -or $relative.StartsWith('docs/',[StringComparison]::Ordinal) -or $relative -ceq 'THIRD-PARTY-NOTICES.md'){$relative}else{'docs/'+$relative}
+        $expected=(& git -C $repo rev-parse ($SourceRevision+':'+$mapping) 2>$null)
+        if($LASTEXITCODE -or (& git -C $repo hash-object --no-filters -- $item.FullName).Trim() -cne $expected.Trim()){throw 'Output payload lacks an exact owning-source mapping.'}
+        $sourceFiles[$relative]=$mapping
+    }
 }
-$provenance=[ordered]@{nativeSource=$baseline.sourceRevision;nativeInputsVerified=$baseline.nativeInputs.Count}
+$provenance=[ordered]@{nativeSource=$baseline.sourceRevision;nativeInputsVerified=$baseline.nativeInputs.Count;assemblyOperation='SourceOverlayOnly';buildPerformed=$false}
 if($accepted){$provenance.nativeSource=$baseline.compiledSource;$provenance.credentialCompiledSource=$baseline.credentialCompiledSource;$provenance.acceptedPackageSource=$acceptedSource;$provenance.acceptedManifestSha256='093fb116ad5c10575f27105e447419b1a13fb67c144f6b085a3b9a1b07e3189c';$provenance.nativeBuild='ReusedAcceptedInputs';$provenance.credentialInputsVerified=$baseline.credentialInputs.Count}
 elseif($rebuilt){$provenance.buildReceiptSha256=$receiptSha;$provenance.nativeBuild='RebuiltExactSource';$provenance.sdk=$baseline.sdk}
 else{$provenance.unchangedBaselineInputs=$baseline.nativeInputs.Count-2;$provenance.reviewedPackagingDriverSha256=$packagingDriverSha256;$provenance.reviewedPackagingCopySha256=$packagingCopySha256}
-$manifest=[ordered]@{schemaVersion=1;kind='TokenForgePublicHealthLinuxPackage';sourceRevision=$SourceRevision;files=$files;operationalPublication=$false}
+$manifest=[ordered]@{schemaVersion=1;kind='TokenForgePublicHealthLinuxPackage';sourceRevision=$SourceRevision;files=$files;sourceFiles=$sourceFiles;operationalPublication=$false}
 foreach($key in $provenance.Keys){$manifest[$key]=$provenance[$key]}
 $manifest|ConvertTo-Json -Depth 20|Set-Content (Join-Path $stage public-health-package.json) -Encoding utf8NoBOM
 [IO.File]::SetUnixFileMode((Join-Path $stage public-health-package.json),[IO.UnixFileMode]384)

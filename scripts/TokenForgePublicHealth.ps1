@@ -19,7 +19,8 @@ function Initialize-TokenForgeHealthRuntime {
     $approved=@(
         '42773ca3e048d5d29dd3edf488ca33ace5116d47afdd4513fa8df95b24a3047e:a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52',
         'aa1ad0d814970379376ee5da6ddf531ccb22b1b738ad65709599ee64c4a2f61b:a96664feb04f767cd48360a706292e2577e36472a1b27ac282c6e67899fa1a52',
-        'd76e2ebbedde15e9fd962d3977f02516cf731cfacda55d72ef3ab7f145bf7dc8:77ce122e7d7bde9b3bd6dccbd6539eec8f80cabae274b5c304c87d19dc3e5837'
+        'd76e2ebbedde15e9fd962d3977f02516cf731cfacda55d72ef3ab7f145bf7dc8:77ce122e7d7bde9b3bd6dccbd6539eec8f80cabae274b5c304c87d19dc3e5837',
+        '21e1f3c5b8005fae99dae2290d9bfdee8a080402c1346175f3ad80712efc79b1:14a12d434306eace18ca14195ef682c92ea9c79e7ceb3b16f0c0707c4006c789'
     )
     if($identity -cnotin $approved){throw 'Public health requires the reviewed matching Linux package (qualified executable/library pair).'}
     . (Join-Path $PSScriptRoot '../src/TokenForge/Core/Assert-CredentialAssembly.ps1')

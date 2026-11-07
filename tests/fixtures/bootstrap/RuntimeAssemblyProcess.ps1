@@ -19,7 +19,11 @@ $src=Join-Path $Root src;$null=New-Item -ItemType Directory $src
 Move-Item $moduleRoot (Join-Path $src TokenForge);$moduleRoot=Join-Path $src TokenForge;$dll=Join-Path $moduleRoot lib/net10.0/TokenForge.Credentials.dll
 if($Case -match 'OldThenNew'){Add-Type -Path $oldDll}
 elseif($Case -match 'NewThenOld'){Add-Type -Path $newDll}
-elseif($Case -match 'SourceThenNew'){. (Join-Path $Source src/TokenForge/Core/Initialize-Credentials.ps1)}
+elseif($Case -match 'SourceThenNew'){
+ $core=Join-Path $Source src/TokenForge/Core
+ $names=Get-Content (Join-Path $core CredentialSources.json) -Raw|ConvertFrom-Json
+ Add-Type -Path @($names|ForEach-Object {Join-Path $core $_}) -CompilerOptions '/nullable:enable'
+}
 elseif($Case -match 'IdenticalCopy'){$copy=Join-Path $Root same.dll;Copy-Item $newDll $copy;Add-Type -Path $copy}
 elseif($Case -match 'Replacement'){
  Copy-Item $oldDll $dll;Add-Type -Path $dll

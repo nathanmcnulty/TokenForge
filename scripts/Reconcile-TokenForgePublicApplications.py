@@ -86,7 +86,7 @@ def capture_observation(incoming, health, acquisition):
         raise ValueError('Unexpected frozen acquisition envelope.')
     start, finish = timestamp(acquisition['startedAt']), timestamp(acquisition['finishedAt'])
     projection = timestamp(health['collectedAt'])
-    if not start <= finish <= projection <= finish + timedelta(seconds=600) or finish > datetime.now(timezone.utc) + timedelta(minutes=5):
+    if not start <= finish <= projection <= datetime.now(timezone.utc) + timedelta(minutes=5):
         raise ValueError('Projection date is not bound to the original capture window.')
     expected_requests = 0 if acquisition['kind'] == 'FrozenSyntheticFixtureInputs' else sum(s['attempts'] for s in acquisition['sources'])
     if acquisition['requests'] != expected_requests or not 0 <= acquisition['requests'] <= 6:

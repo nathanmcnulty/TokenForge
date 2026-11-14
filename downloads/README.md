@@ -8,8 +8,12 @@ The first snapshot contains 5,455 applications and is about 1.8 MB compressed, c
 
 Snapshots are generated explicitly; they are not a rolling latest download. Inspect `CatalogUpdatedAt` and `SourceCommit`, or use the [current readable catalog](../applications.json). Public metadata and scope observations do not establish complete token-flow coverage or universal consent.
 
-## Current reviewed snapshot
+## Historical reviewed snapshot
 
 [Download 5470 metadata identifiers](applications-367800fbbec592511415422ec4e3f27ce370ec60.json.gz) · [Manifest](applications-367800fbbec592511415422ec4e3f27ce370ec60.manifest.json) · [Classification changes](applications-367800fbbec592511415422ec4e3f27ce370ec60.changes.md).
 
 The source ledger preserves historical IDs, observations and versions. Fifteen additions retain their actual evidence strength: nine documentation-only and six single-source Graph claims; none is a verified application. Earlier downloads remain immutable.
+
+## Current reviewed snapshot
+
+[Download](applications-53d3c52efa10287470047158c8d39eeef4fc9b5b.json.gz) · [Manifest](applications-53d3c52efa10287470047158c8d39eeef4fc9b5b.manifest.json) · [Classification changes](applications-53d3c52efa10287470047158c8d39eeef4fc9b5b.changes.md). Public metadata identifiers retain their recorded evidence strength; they are not verified apps.

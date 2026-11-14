@@ -213,6 +213,24 @@ class RoutineRefreshTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'capture window'):
             m.adapter.capture_observation(incoming, health, acquisition)
 
+    def test_edited_cached_result_cannot_claim_publishable(self):
+        baseline = self.prepare_refresh()
+        def reconcile(root, output, native, pwsh):
+            output.mkdir()
+            m.write(output / 'receipt.json', {'synthetic': True})
+            return {'counts': {'additions': 0, 'contentChanges': 0, 'removals': 0}}
+        with patch.object(m, 'assert_job', return_value={'sourceRevision': '1' * 40}), \
+             patch.object(m, 'acquire'), patch.object(m.adapter, 'reconcile', side_effect=reconcile), \
+             patch.object(m, 'release') as release:
+            result = m.refresh(baseline, '2' * 40, self.root, Path('fake-native'), Path('fake-pwsh'), offline=True)
+            result['status'] = 'CandidatePrepared'
+            result['publishable'] = True
+            m.write(self.root / 'result.json', result)
+            with self.assertRaisesRegex(ValueError, 'receipt changed'):
+                m.refresh(baseline, '2' * 40, self.root, Path('fake-native'), Path('fake-pwsh'), offline=True)
+            release.assert_not_called()
+        self.assertFalse((self.root / 'release').exists())
+
     def test_no_change_does_not_create_release(self):
         baseline = self.prepare_refresh()
         def reconcile(root, output, native, pwsh):

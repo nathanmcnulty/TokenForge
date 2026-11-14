@@ -8,7 +8,7 @@ Reconcile into a **copy of the published ledger; do not replace it with collecto
 - discovery-data: `9b08e26a0a871289c1983e02cf516fbed11d7615`.
 - Published applications blob: `94b4e7dcef8f7a01cbf9198c8302a593dbfbbd06`; SHA-256 `a77104a55b37bdd4f57c3df23d3bcec1afcd503b0f2b60a31fe0b7a1b6457b6f`.
 - Published download manifest: `downloads/applications-94b4e7dcef8f7a01cbf9198c8302a593dbfbbd06.manifest.json`. Its source, compressed and compact-content hashes all verified. Compact content SHA-256 `17554fc3134ef468b7912a442bb21806fb0bbe5c4584a32e6182e411680405e5` differs from formatted source bytes by design; parsed documents match.
-- Adapter SHA-256: `32abd6e926674bb41971b7504c9e29652b729dabd1cc77ff96fdeffb37471b81`. This content hash identifies the validated adapter separately from the pinned main and accepted compiled runtime; later tooling-only commits do not retag the retained data candidate.
+- Adapter SHA-256 used for the retained candidate: `32abd6e926674bb41971b7504c9e29652b729dabd1cc77ff96fdeffb37471b81`. This content hash identifies the original adapter separately from the pinned main and accepted compiled runtime; the later overlap-selector correction changes the tooling source hash but does not retag the retained data candidate.
 
 The accepted PowerShell 7.6.7 Linux x64 runtime and native executable/library pair were available. Ninety-one executed module/collector source files matched the retained accepted package; the existing download exporter was separately pinned to current main. Runtime hashes and complete executed-file inventory are in `runtime-equivalence.json`. No replacement runtime, build or dependency installation was used.
 
@@ -53,6 +53,32 @@ Classifications are conservative public-source descriptions:
 
 Independent corroboration requires application-identity claims from at least two distinct approved source locations. Documentation/resource-only claims cannot supply that proof; Graph and GitHub labels inside one MicrosoftApps file are not independent sources. Even corroborated public metadata is not tenant resolution, ownership, consent, issuance or API-access proof. The 1,046 existing permission-ID overlaps (1,047 definitions) are retained as a classification signal, **never a deletion list**. Unknown and conflicting identities remain visibly unresolved.
 
+## Preparing a matching permission-overlap report offline
+
+The adapter selects the report whose `Catalog.ContentSha256` equals `manifest.ContentSha256` in the pinned baseline manifest. It requires exactly one match; a missing or ambiguous match stops reconciliation. Older reports remain in place and are ignored unless their content hash matches. Do not rewrite a report or add files to an already pinned baseline: prepare a new report before creating that baseline's `baseline-pin.json`, then include the report's size and SHA-256 in the pin.
+
+For this retained baseline, the pinned Graph definitions are `baseline/api-definitions/graph/b9a67f126ee562c9ff20645f8a4fb6c0928d0a7a.json`. Use the existing comparator and the accepted local native/runtime paths. The staged output should be outside the frozen baseline until its content hash is checked:
+
+```bash
+export TF_REPO=/absolute/path/to/TokenForge
+export TF_RECONCILIATION_ROOT=/absolute/path/to/retained-reconciliation
+export TF_NATIVE=/absolute/path/to/accepted-package/tokenforge
+export TF_PWSH=/absolute/path/to/powershell-7.6.7/pwsh
+export TF_OVERLAP_STAGED=/absolute/path/to/staged/permission-overlap.json
+"$TF_PWSH" -NoProfile -NonInteractive -Command '
+$baseline = "$env:TF_RECONCILIATION_ROOT/baseline"
+$pin = Get-Content -LiteralPath "$env:TF_RECONCILIATION_ROOT/baseline-pin.json" -Raw | ConvertFrom-Json
+$report = & "$env:TF_REPO/scripts/Compare-TokenForgePermissionIdentifiers.ps1" `
+  -CatalogPath "$baseline/applications.json" `
+  -PermissionSnapshotPath "$baseline/api-definitions/graph/b9a67f126ee562c9ff20645f8a4fb6c0928d0a7a.json" `
+  -NativeExecutablePath "$env:TF_NATIVE" -IncludeMatches
+if ($report.Catalog.ContentSha256 -cne $pin.manifest.ContentSha256) { throw "Comparator output does not match the pinned baseline manifest." }
+$report | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $env:TF_OVERLAP_STAGED -Encoding utf8NoBOM
+'
+```
+
+The comparator reads the already pinned Graph definitions and catalog locally; it does not fetch Graph data or authenticate. Its `Catalog.ContentSha256` is the validated compact catalog content hash used by the download manifest, not the SHA-256 of the formatted `applications.json` bytes. After verifying the staged report's `Catalog.ContentSha256`, add it under a new distinct filename before pinning the new baseline. Keep prior reports unchanged. The comparator's permission overlap remains classification-only and is never a deletion list.
+
 ## Luna's one-command verification
 
 Run from the worktree in a fresh output directory. It uses only frozen inputs and existing local runtimes; no network or authentication occurs. The optional reuse flag below verifies and reuses the two successful fixture outputs from the initial independent attempt rather than repeating them. Omit that flag for a completely new fixture execution.
@@ -80,12 +106,13 @@ Pass/fail checklist (the verifier exits nonzero on failure):
 - Invalid member/hash input cannot promote an output candidate.
 - Capture/projection date binding rejects false freshening and leaves the original frozen exchange untouched.
 - Duplicate JSON identities are refused before filtering or selection.
+- A current overlap report is selected by the pinned manifest content hash when historical reports coexist; zero and duplicate matches fail clearly.
 - Documentation and same-source Graph/GitHub labels remain distinct from independently corroborated claims.
-- Frozen real-input replay matches the final candidate, diff and existing public gzip export byte for byte.
+- Frozen real-input replay matches the final candidate and existing public gzip export byte for byte. The diff matches every prior field and byte after normalizing its `adapterSha256` binding; the replayed diff records the corrected adapter's new source hash, so the full diff file cannot remain byte-identical to the prior receipt.
 - Every original baseline file and all scope exports remain unchanged.
 
 The initial independent verifier stopped at a **test setup** error: copied fixture files retained mode 0400 and could not be mutated for negative tests. Only task-created copies were made writable; successful fixture/replay receipts and original logs were retained. The successful fixture/replay receipts remain in `luna-verification-01`; the second command used `--reuse-fixture-from` to verify them before continuing. `verification.json` records the combined checks, not a fresh execution of every fixture. Preliminary reconciliation attempts remain local and superseded by `candidate-final`; none is silently relabeled as final evidence.
 
 Checkpoint files preserve fixture, captured responses, validated collection, and reconciliation phases. A quota interruption must resume from retained files/process state, not reacquire public inputs or reset a running operation. Incomplete/empty inputs retain baseline bytes, and invalid input never receives a completed candidate receipt. No application-universe completeness is claimed. This guide describes local evidence generation. Candidate publication, merges and workflow activation require separate authorization; publishing this tooling source does not publish the data candidate.
 
-Independent acceptance: Luna completed 9/9 combined checks with zero verification network requests. Sol independently inspected the final artifacts, all 73 baseline paths, the 64 preserved historical runs plus one new run, dates/history multiplicities and source hashes. Both accepted the local candidate for review; no publication approval is implied.
+Independent acceptance: Luna's retained historical run completed 9/9 checks with zero verification network requests. The selector regressions add three checks to the current verifier (12 total), which also replays the retained frozen inputs. Sol independently inspected the original final artifacts, all 73 baseline paths, the 64 preserved historical runs plus one new run, dates/history multiplicities and source hashes. These local checks do not authorize data publication.

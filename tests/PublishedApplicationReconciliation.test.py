@@ -11,6 +11,7 @@ import shutil
 import subprocess
 
 REPO = Path(__file__).resolve().parents[1]
+REUSED_FIXTURE_ADAPTER_SHA256 = '32abd6e926674bb41971b7504c9e29652b729dabd1cc77ff96fdeffb37471b81'
 spec = importlib.util.spec_from_file_location('reconcile', REPO / 'scripts/Reconcile-TokenForgePublicApplications.py')
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
@@ -85,6 +86,38 @@ def verify(root, expected, work, native, pwsh, reuse=None):
     results = []
     def passed(name):
         results.append({'check': name, 'passed': True})
+    selector = work / 'overlap-selector'
+    expected_content = 'b' * 64
+    coexist = selector / 'coexist/identifier-overlaps'
+    coexist.mkdir(parents=True)
+    old_report = coexist / '00-historical.json'
+    current_report = coexist / '99-current.json'
+    write(old_report, {'Catalog': {'ContentSha256': 'a' * 64}, 'Matches': [], 'Counts': {}})
+    write(current_report, {'Catalog': {'ContentSha256': expected_content}, 'Matches': [], 'Counts': {}})
+    old_bytes = old_report.read_bytes()
+    selected_path, selected = m.select_permission_overlap(coexist.parent, expected_content)
+    assert selected_path == current_report and selected['Catalog']['ContentSha256'] == expected_content
+    assert old_report.read_bytes() == old_bytes
+    passed('Pinned ContentSha256 selects the current report alongside an intact historical report')
+    no_match = selector / 'no-match/identifier-overlaps'
+    no_match.mkdir(parents=True)
+    write(no_match / 'historical.json', {'Catalog': {'ContentSha256': 'a' * 64}, 'Matches': [], 'Counts': {}})
+    try:
+        m.select_permission_overlap(no_match.parent, expected_content)
+        raise AssertionError('Missing matching permission-overlap report accepted')
+    except ValueError as exc:
+        assert 'No identifier-overlaps report matches' in str(exc) and expected_content in str(exc)
+    passed('Missing ContentSha256 match fails with an explicit error')
+    duplicate = selector / 'duplicates/identifier-overlaps'
+    duplicate.mkdir(parents=True)
+    write(duplicate / 'one.json', {'Catalog': {'ContentSha256': expected_content}, 'Matches': [], 'Counts': {}})
+    write(duplicate / 'two.json', {'Catalog': {'ContentSha256': expected_content}, 'Matches': [], 'Counts': {}})
+    try:
+        m.select_permission_overlap(duplicate.parent, expected_content)
+        raise AssertionError('Ambiguous permission-overlap reports accepted')
+    except ValueError as exc:
+        assert '2 identifier-overlaps reports match' in str(exc) and 'one.json' in str(exc) and 'two.json' in str(exc)
+    passed('Duplicate ContentSha256 matches fail with an explicit ambiguity error')
     if reuse:
         f = reuse / 'fixture-input'
         a, b = [m.read(reuse / name / 'receipt.json') for name in ('fixture-first', 'fixture-replay')]
@@ -92,7 +125,7 @@ def verify(root, expected, work, native, pwsh, reuse=None):
             prior = reuse / name
             assert m.digest((prior / 'discovery-data/applications.json').read_bytes()) == receipt['candidateSha256']
             assert m.digest((prior / 'diff.json').read_bytes()) == receipt['diffSha256']
-            assert m.read(prior / 'diff.json')['bindings']['adapterSha256'] == m.digest((REPO / 'scripts/Reconcile-TokenForgePublicApplications.py').read_bytes())
+            assert m.read(prior / 'diff.json')['bindings']['adapterSha256'] == REUSED_FIXTURE_ADAPTER_SHA256
     else:
         f = fixture(root, work, native, pwsh)
         a = m.reconcile(f, work / 'fixture-first', native, pwsh)
@@ -156,14 +189,25 @@ def verify(root, expected, work, native, pwsh, reuse=None):
     replay = m.reconcile(root, work / 'real-replay', native, pwsh)
     reference = m.read(expected / 'receipt.json')
     assert replay['candidateSha256'] == reference['candidateSha256']
-    assert replay['diffSha256'] == reference['diffSha256']
     assert replay['publicDownloadSha256'] == reference['publicDownloadSha256']
+    reference_diff = m.read(expected / 'diff.json')
+    replay_diff = m.read(work / 'real-replay/diff.json')
+    assert replay_diff['bindings']['adapterSha256'] == m.digest((REPO / 'scripts/Reconcile-TokenForgePublicApplications.py').read_bytes())
+    diff_source_binding_changed = reference_diff['bindings']['adapterSha256'] != replay_diff['bindings']['adapterSha256']
+    replay_diff['bindings']['adapterSha256'] = reference_diff['bindings']['adapterSha256']
+    assert m.encoded(replay_diff) == (expected / 'diff.json').read_bytes()
     assert all(replay['counts'][k] == 0 for k in ('removals', 'duplicateApplicationIds', 'duplicateRunIds', 'duplicateExactHistoricalVersions'))
-    passed('Frozen real-input replay matches candidate, diff and existing public gzip export; zero duplicates/removals')
+    passed('Frozen real-input replay matches candidate/gzip byte-for-byte and diff except the updated adapter source hash; zero duplicates/removals')
     for file, item in m.read(root / 'baseline-pin.json')['files'].items():
         assert m.digest((root / 'baseline' / file).read_bytes()) == item['sha256']
     passed('Original published baseline and scope exports remain unchanged')
     summary = {'passed': len(results), 'failed': 0, 'checks': results, 'replay': replay,
+               'replayComparison': {'candidateByteIdentical': replay['candidateSha256'] == reference['candidateSha256'],
+                                    'gzipByteIdentical': replay['publicDownloadSha256'] == reference['publicDownloadSha256'],
+                                    'diffAllOtherFieldsIdentical': True,
+                                    'diffSourceBindingChanged': diff_source_binding_changed,
+                                    'retainedDiffSha256': reference['diffSha256'],
+                                    'replayedDiffSha256': replay['diffSha256']},
                'authentication': False, 'networkRequests': 0, 'publication': 'NotAttempted'}
     write(work / 'verification.json', summary)
     print(json.dumps(summary, indent=2))

@@ -57,6 +57,23 @@ def classification(record):
     return 'UnresolvedMixedCandidate'
 
 
+def select_permission_overlap(baseline, content_sha256):
+    matches = []
+    for path in sorted((baseline / 'identifier-overlaps').glob('*.json')):
+        report = read(regular(path))
+        catalog = report.get('Catalog') if isinstance(report, dict) else None
+        if isinstance(catalog, dict) and catalog.get('ContentSha256') == content_sha256:
+            matches.append((path, report))
+    if not matches:
+        raise ValueError('No identifier-overlaps report matches the pinned baseline manifest ContentSha256 ' +
+                         str(content_sha256) + '.')
+    if len(matches) != 1:
+        names = ', '.join(path.name for path, _ in matches)
+        raise ValueError(str(len(matches)) + ' identifier-overlaps reports match the pinned baseline manifest ' +
+                         'ContentSha256 ' + str(content_sha256) + ': ' + names)
+    return matches[0]
+
+
 def timestamp(value):
     result = datetime.fromisoformat(value.replace('Z', '+00:00'))
     if result.utcoffset() != timedelta(0):
@@ -175,10 +192,7 @@ def reconcile(root, output, native, pwsh):
                 raise ValueError('Health observation differs from retained raw input.')
     if health['complete'] and not acquisition['complete']:
         raise ValueError('Incomplete acquisition cannot claim completeness.')
-    overlap_path = next((baseline / 'identifier-overlaps').glob('*.json'))
-    overlap = read(overlap_path)
-    if overlap['Catalog']['ContentSha256'] != pin['manifest']['ContentSha256']:
-        raise ValueError('Permission-overlap report is not bound to this baseline.')
+    overlap_path, overlap = select_permission_overlap(baseline, pin['manifest']['ContentSha256'])
     before = read(baseline / 'applications.json')
     output.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     stage = Path(tempfile.mkdtemp(prefix='.reconcile-', dir=output.parent))

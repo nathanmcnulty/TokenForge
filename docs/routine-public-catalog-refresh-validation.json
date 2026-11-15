@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "toolingExecutionCommit": "01703d1a0b7270ed819af314755c514c604e788b",
+  "sourceHashes": {
+    "scripts/Refresh-TokenForgePublicCatalog.py": "e666ddb36616267c2e645854f49ceb4b5c5ddecff5096ef79f2e50ce58503488",
+    "scripts/Reconcile-TokenForgePublicApplications.py": "e5dba28cffaddc7cc09c542ad27299f2d49ae797b8d22f61a20ba1bc19331e54"
+  },
+  "baselineCommit": "be10da62595013477c13c3a693a257f6da22be1d",
+  "candidateReleaseCommit": "6fcd8e91969c74069bc7bf6e415401b724974f6a",
+  "candidateManifest": {
+    "Applications": 5470,
+    "CatalogSchemaVersion": 2,
+    "CatalogUpdatedAt": "2026-11-14T23:31:14.0566984+00:00",
+    "CompressedBytes": 1796110,
+    "CompressedSha256": "6cbe2ef81111ffdcb7fbc03e2643684d46200ded0f674a5654bee56576c634e7",
+    "ContentSha256": "2d3d76229d4112fd26955d60af0915d86dac9aad56ef5d7d081ee17c513c7c2c",
+    "Evidence": "PublicSourceMetadataNotCompletedTokenDiscovery",
+    "File": "applications-53d3c52efa10287470047158c8d39eeef4fc9b5b.json.gz",
+    "Format": "TokenForgeCatalogSnapshot",
+    "SchemaVersion": 1,
+    "SourceCommit": "f2954ce28a8896c7dc0e3e1cfb7e66d8eee1ce9b",
+    "SourceGitBlob": "53d3c52efa10287470047158c8d39eeef4fc9b5b",
+    "SourcePath": "applications.json",
+    "SourceSha256": "930413f4bef996dfa2b4dc6257ddabc77896de9a443d0ad693aea47e1510910b",
+    "UncompressedBytes": 19754934
+  },
+  "reconciliationDiffSha256": "49c364d2a3323f9e440b54306691a7a1a8a6fe7246a581a44bb91e43f8bda80b",
+  "actualAnonymousAcquisition": {
+    "requests": 3,
+    "retries": 0,
+    "sourceFiles": 3,
+    "seconds": 4.005,
+    "authentication": false
+  },
+  "replay": {
+    "candidateDiffGzipByteIdentical": true,
+    "additionalHTTP": 0,
+    "fullReleaseCommitAndTreeByteIdentical": true
+  },
+  "focusedOfflineTests": {
+    "passed": 15,
+    "failed": 0,
+    "testSha256": "13e61736e51af04f8d18a5330eeccd3176d0736ec6b63c313f41dbf80e94aedc",
+    "coverage": "Recovery/uncertain dispatch, deadline/accounting edits, raw/inventory/result tampering, moved/dirty baseline, partial input refusal, no-change, delayed observation timestamps"
+  },
+  "integration": {
+    "syntheticChangedRelease": "Two identical local release commits and trees using existing native comparator",
+    "noChange": "Full wrapper/native integration with imported historical frozen public payload fixture returns NoChange without release; synthetic journal timing, zero additional HTTP",
+    "retainedFailure": "First imported fixture shifted normalization time by10ms and native import refused; original logs retained. Corrected fixture preserves original normalization boundary. No production code change was needed."
+  },
+  "counts": {
+    "additions": 0,
+    "baseline": 5470,
+    "candidate": 5470,
+    "contentChanges": 1,
+    "duplicateApplicationIds": 0,
+    "duplicateExactHistoricalVersions": 0,
+    "duplicateRunIds": 0,
+    "multipleSourceClaimIds": 1673,
+    "notObservedRetained": 0,
+    "observedAdmissibleCandidates": 5470,
+    "quarantinedRows": 1,
+    "removals": 0,
+    "reobservedUnchangedContent": 5469,
+    "sourceDisagreements": 201,
+    "unresolvedClassificationIds": 5403
+  },
+  "independentReview": {
+    "source": "Accepted exact source hashes after two findings repaired",
+    "actualRelease": "Accepted direct inspection of release objects, manifest/gzip, history and classifications",
+    "replay": "Accepted direct byte comparison of actual ledger, diff, gzip and receipt"
+  },
+  "reuse": "Existing Linux native/credential pair, PowerShell7.6.7 and92 unchanged executed module/validator files; no rebuild or broad suite",
+  "limitations": [
+    "Linux x64 only",
+    "Frozen replay is not fresh collection",
+    "Local seals check consistency under trusted private host custody, not coordinated malicious journal rewriting",
+    "No hosted publication or operational acceptance claimed; issues113 and116 remain separate"
+  ],
+  "publication": "NotAttempted",
+  "originalCandidateReleaseCommit": "62089bda395d2faf145e76ec72aa79bbe638ae9a",
+  "correction131": {
+    "newChecks": [
+      "Acquisition seal verified before any fetch",
+      "Missing frozen exchange refuses saved-inventory regeneration",
+      "Lexical dotdot work-directory alias inside baseline refuses before initialization"
+    ],
+    "rebuild": "Sealed original capture and previously qualified reconciliation reused; adapter/binaries unchanged; zero new requests",
+    "onlyChangedReleasePayload": "downloads/README.md",
+    "currentSnapshot": "New bundle53d3c52efa10287470047158c8d39eeef4fc9b5b; prior links retained under historical heading",
+    "historicalReplay": "Previous ledger/diff/gzip and complete release replay results retained, not relabeled as new execution",
+    "originalExecutedSupervisorSha256": "f15af6cf10671ab1dfa52628a90d2aeee63d5a6bc497f52c33a1821d790c14c5",
+    "independentAcceptance": "Corrected source hashes and15/15 tests accepted; direct81-path release comparison found only index differs, immutable manifest/source/gzip verified"
+  }
+}

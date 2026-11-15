@@ -23,7 +23,7 @@
   },
   "IndependentReview": "Final source and private artifacts accepted after repairs to ambiguous mappings, public/directory evidence separation, principal context, immutable input validation and requested/observed event distinction",
   "ReusedInputs": "Existing approved Linux x64 runtime and binary pair; no compiled changes or rebuild; historical live proofs remain separate from later offline qualification",
-  "Unproven": "Complete current sign-in coverage: approved read-only attempt stopped; private checkpoint remains partial. Original operational receipts retained locally.",
+  "Unproven": "Complete current sign-in coverage: bounded resume reached its absolute operation deadline, retaining partial progress and one uncertain charged read. No full-window or actual token-expiry proof is claimed.",
   "Limitations": [
     "Supplied private evidence is source-bound local custody, not independently signed attestation",
     "Only Linux local checks performed",
@@ -37,6 +37,15 @@
     "SyntheticProof": "Real JSON parsing under America/Anchorage reproduced a nine-hour shift and in-window rejection; regression now preserves UTC",
     "LiveAttributionLimit": "Approved read-only attempt stopped during first-page processing; exact live exception/event was not retained, so this defect is not claimed as proven attribution for that specific stop",
     "Review": "Independent source review and31 focused tests accepted",
-    "LiveCoverage": "Partial; source fix qualified offline; no additional authentication or tenant requests after stop"
+    "LiveCoverage": "The correction was independently qualified offline, then exercised by the explicitly approved read-only resume; current-window coverage remains partial."
+  },
+  "BoundedLiveValidation": {
+    "SourceCommit": "8fd0d4f5fae9081641a6d3743eae192e9f228a58",
+    "Status": "PartialAccepted",
+    "Outcome": "Approved read-only resume progressed through committed pages, then stopped at its absolute operation deadline. All four event types were observed.",
+    "Accounting": "Prior charges and the final uncertain canceled GET remain retained and charged; no implicit retry, reset, time extension or further authentication",
+    "IndependentReview": "Actual terminal receipts, cumulative accounting, frozen inputs, normalized checkpoint summary and private report directly inspected and accepted as partial only",
+    "Privacy": "Tenant-derived counts, identifiers, raw events and operational receipts remain local",
+    "Remaining": "Complete requested-window coverage is unproven; additional live work exceeds the spent session authorization"
   }
 }

@@ -183,6 +183,43 @@ class RoutineRefreshTests(unittest.TestCase):
         self.assertFalse((self.root / 'result.json').exists())
         self.assertFalse((self.root / 'release').exists())
 
+    def test_acquisition_seal_checked_before_any_fetch(self):
+        baseline = self.prepare_refresh()
+        m.write(self.root / 'acquisition-seal.json', {'sha256': m.adapter.digest((self.root / 'acquisition.json').read_bytes())})
+        state = m.adapter.read(self.root / 'acquisition.json')
+        state['sources'] = []
+        state['requests'] = 0
+        state['complete'] = False
+        m.write(self.root / 'acquisition.json', state)
+        with patch.object(m, 'assert_job', return_value={}), patch.object(m, 'acquire') as fetch, patch.object(m, 'ps') as dispatch:
+            with self.assertRaisesRegex(ValueError, 'acquisition evidence changed'):
+                m.refresh(baseline, '2' * 40, self.root, Path('fake-native'), Path('fake-pwsh'))
+            fetch.assert_not_called()
+            dispatch.assert_not_called()
+        self.assertFalse((self.root / 'result.json').exists())
+
+    def test_missing_exchange_cannot_replace_saved_inventory(self):
+        baseline = self.prepare_refresh()
+        original = (self.root / 'exchange-inventory.json').read_bytes()
+        (self.root / 'public-exchange/health.json').unlink()
+        (self.root / 'public-exchange').rmdir()
+        with patch.object(m, 'assert_job', return_value={}), patch.object(m, 'acquire'), patch.object(m, 'ps') as collector:
+            with self.assertRaisesRegex(ValueError, 'Frozen exchange is missing'):
+                m.refresh(baseline, '2' * 40, self.root, Path('fake-native'), Path('fake-pwsh'), offline=True)
+            collector.assert_not_called()
+        self.assertEqual((self.root / 'exchange-inventory.json').read_bytes(), original)
+        self.assertFalse((self.root / 'result.json').exists())
+
+    def test_dotdot_work_alias_inside_baseline_refused_before_initialization(self):
+        baseline = Path(self.temp.name) / 'baseline'
+        baseline.mkdir()
+        alias = baseline / '..' / 'baseline' / 'new-work'
+        with patch.object(m, 'initialize') as initialize:
+            with self.assertRaisesRegex(ValueError, 'overlapping'):
+                m.refresh(baseline, '2' * 40, alias, Path('fake-native'), Path('fake-pwsh'))
+            initialize.assert_not_called()
+        self.assertEqual(list(baseline.iterdir()), [])
+
     def test_delayed_projection_keeps_capture_date_and_frozen_input(self):
         now = datetime.now(timezone.utc)
         start = (now - timedelta(hours=2)).isoformat()

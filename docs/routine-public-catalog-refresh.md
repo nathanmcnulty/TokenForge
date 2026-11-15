@@ -24,3 +24,5 @@ For a meaningful change, review the readable additions/changes/uncertainty summa
 Only approved release paths may be published. Exclude raw responses, acquisition journals, exchange files, SQLite databases, private paths and test evidence. Verify final remote index/manifest/gzip bytes after any separately approved publication, and reconcile uncertain outcomes before retrying.
 
 The acquisition ceiling is six requests within one 180-second operation, with 30-second per-request waits and 8 MiB per source. This command currently performs one dispatch per source and refuses automatic retry after uncertain or failed dispatch. No request limit or deadline is reset by restarting the command.
+
+Completed acquisition seals are checked before any possible request. If a frozen exchange is missing while its inventory remains, restore the exact retained exchange or investigate; the command refuses to regenerate it. Work-directory aliases resolving inside the baseline are rejected before initialization. New releases move the single **Current reviewed snapshot** pointer to the new bundle and keep previous snapshot links as historical.

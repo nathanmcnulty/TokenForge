@@ -270,7 +270,8 @@ def release(root, baseline, native, pwsh, counts):
               ' quarantined rows. Source claims and conflicting attributes remain in the ledger. Permission overlap never supplies a deletion rule.', '']
     (target / 'downloads' / (name + '.changes.md')).write_text('\n'.join(lines))
     index = target / 'downloads/README.md'
-    index.write_text(index.read_text() + '\n## Reviewed candidate ' + blob + '\n\n[Download](' + name + '.json.gz) · [Manifest](' + name + '.manifest.json) · [Classification changes](' + name + '.changes.md). Public metadata identifiers retain their recorded evidence strength; they are not verified apps.\n')
+    historical_index = index.read_text().replace('## Current reviewed snapshot', '## Historical reviewed snapshot')
+    index.write_text(historical_index + '\n## Current reviewed snapshot\n\n[Download](' + name + '.json.gz) · [Manifest](' + name + '.manifest.json) · [Classification changes](' + name + '.changes.md). Public metadata identifiers retain their recorded evidence strength; they are not verified apps.\n')
     comparator = root / 'compare.ps1'
     comparator.write_text(COMPARE)
     report = target / 'identifier-overlaps' / ('graph-b9a67f126ee5-catalog-' + blob[:12] + '.json')
@@ -285,8 +286,11 @@ def release(root, baseline, native, pwsh, counts):
 
 
 def refresh(baseline, expected, root, native, pwsh, offline=False, replay_output=None):
-    baseline, root, native, pwsh = [p.absolute() for p in (baseline, root, native, pwsh)]
-    if any(q.is_symlink() for p in (baseline, root, native, pwsh) for q in (p, *p.parents)) or root.is_relative_to(baseline) or baseline.is_relative_to(root) or root.is_relative_to(REPO):
+    paths = (baseline, root, native, pwsh)
+    if any(q.is_symlink() for p in paths for q in (p, *p.parents)):
+        raise ValueError('Linked paths or overlapping baseline/work directories refused.')
+    baseline, root, native, pwsh = [Path(os.path.abspath(p)) for p in paths]
+    if root.is_relative_to(baseline) or baseline.is_relative_to(root) or root.is_relative_to(REPO):
         raise ValueError('Linked paths or overlapping baseline/work directories refused.')
     if not root.exists():
         initialize(root, baseline, expected, native, pwsh)
@@ -294,6 +298,9 @@ def refresh(baseline, expected, root, native, pwsh, offline=False, replay_output
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         job = assert_job(root, baseline, expected, native, pwsh)
         state = adapter.read(root / 'acquisition.json')
+        seal = root / 'acquisition-seal.json'
+        if seal.exists() and adapter.read(adapter.regular(seal)) != {'sha256': adapter.digest((root / 'acquisition.json').read_bytes())}:
+            raise ValueError('Completed acquisition evidence changed.')
         acquire(root, state, pwsh, offline)
         if not state['complete']:
             raise ValueError('Incomplete input cannot produce a publishable candidate.')
@@ -306,6 +313,8 @@ def refresh(baseline, expected, root, native, pwsh, offline=False, replay_output
             write(seal, {'sha256': capture_hash})
         exchange = root / 'public-exchange'
         if not exchange.exists():
+            if (root / 'exchange-inventory.json').exists():
+                raise ValueError('Frozen exchange is missing; saved inventory cannot be replaced.')
             ps(pwsh, REPO / 'scripts/Invoke-TokenForgePublicHealth.ps1',
                ['-OutputPath', exchange, '-NativeExecutablePath', native, '-SourceRevision', job['sourceRevision'],
                 '-FixturePath', root / 'raw-public-inputs', '-MaxSeconds', '180'], root / 'collector')

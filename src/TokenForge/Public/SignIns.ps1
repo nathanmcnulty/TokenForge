@@ -57,7 +57,17 @@ function Get-TokenForgeSignInApplications {
                 $resourceObject=ConvertTo-TokenForgeSignInGuid ([string]$row['resourceServicePrincipalId'])
                 $types=@($row['signInEventTypes']|Where-Object {$_ -cin @('interactiveUser','nonInteractiveUser','servicePrincipal','managedIdentity')}|Sort-Object -Unique)
                 $observedAt=[DateTimeOffset]::MinValue
-                $hasObservedAt=[DateTimeOffset]::TryParse([string]$row['createdDateTime'],[ref]$observedAt)
+                $timestamp=$row['createdDateTime'];$hasObservedAt=$false
+                # ConvertFrom-Json can materialize ISO dates as DateTime. A string
+                # cast drops Kind and reparses UTC using the host's local offset.
+                if($timestamp -is [DateTimeOffset]){$observedAt=$timestamp;$hasObservedAt=$true}
+                elseif($timestamp -is [DateTime]){
+                    if($timestamp.Kind -eq [DateTimeKind]::Unspecified){throw 'Sign-in event timestamp has no timezone context.'}
+                    $observedAt=[DateTimeOffset]::new($timestamp);$hasObservedAt=$true
+                }elseif($null -ne $timestamp){
+                    if($timestamp -isnot [string] -or $timestamp -cnotmatch '(?:Z|[+-][0-9]{2}:[0-9]{2})\z' -or -not [DateTimeOffset]::TryParse($timestamp,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::None,[ref]$observedAt)){throw 'Sign-in event timestamp has no valid timezone context.'}
+                    $hasObservedAt=$true
+                }
                 if($hasObservedAt -and ($observedAt -lt $Since -or $observedAt -gt $Until)){throw 'Sign-in event timestamp is outside requested coverage.'}
                 foreach($type in $types){
                     if(-not $eventCoverage.Contains($type)){continue}

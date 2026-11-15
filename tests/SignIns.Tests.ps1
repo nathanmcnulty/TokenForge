@@ -218,3 +218,43 @@ Describe 'Sign-in directory evidence boundaries' {
   $saved.Payload.Requests|Should -Be 1
  }
 }
+Describe 'Sign-in timestamp kind preservation' {
+ BeforeEach {
+  $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@()}
+  $since=[DateTimeOffset]'2026-11-01T23:00:00Z';$until=[DateTimeOffset]'2026-11-02T00:00:00Z'
+ }
+ It 'preserves a real ConvertFrom-Json UTC DateTime near the requested window end' {
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {
+   ('{"value":[{"appId":"11111111-1111-1111-1111-111111111111","createdDateTime":"2026-11-01T23:30:00Z","signInEventTypes":["interactiveUser"]}]}'|ConvertFrom-Json -AsHashtable)
+  }
+  $r=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until
+  $r.Enumeration|Should -Be Complete
+  $r.Coverage.ByEventType.interactiveUser.FirstObservedAt|Should -Be '2026-11-01T23:30:00.0000000+00:00'
+  $r.Coverage.ByEventType.interactiveUser.TimestampedRecordCount|Should -Be 1
+ }
+ It 'preserves typed DateTimeOffset and explicit offset strings as the same UTC instant' -TestCases @(
+  @{Stamp=[DateTimeOffset]'2026-11-01T14:30:00-09:00'},
+  @{Stamp='2026-11-01T14:30:00-09:00'},
+  @{Stamp='2026-11-01T23:30:00Z'},
+  @{Stamp=([DateTime]'2026-11-01T23:30:00Z').ToLocalTime()}
+ ) {
+  param($Stamp)
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@(@{appId=$id;createdDateTime=$Stamp;signInEventTypes=@('interactiveUser')})}}
+  $r=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until
+  $r.Coverage.ByEventType.interactiveUser.LastObservedAt|Should -Be '2026-11-01T23:30:00.0000000+00:00'
+ }
+ It 'refuses out-of-window typed dates without changing the fixed window' {
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {
+   ('{"value":[{"appId":"11111111-1111-1111-1111-111111111111","createdDateTime":"2026-11-02T00:30:00Z","signInEventTypes":["interactiveUser"]}]}'|ConvertFrom-Json -AsHashtable)
+  }
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until}|Should -Throw '*outside requested coverage*'
+ }
+ It 'refuses unspecified DateTime and timezone-free strings instead of assuming the host timezone' -TestCases @(
+  @{Stamp=[DateTime]::SpecifyKind([DateTime]'2026-11-01T23:30:00',[DateTimeKind]::Unspecified)},
+  @{Stamp='2026-11-01T23:30:00'}
+ ) {
+  param($Stamp)
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@(@{appId=$id;createdDateTime=$Stamp;signInEventTypes=@('interactiveUser')})}}
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until}|Should -Throw '*timezone context*'
+ }
+}

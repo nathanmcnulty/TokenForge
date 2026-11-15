@@ -1,0 +1,32 @@
+{
+  "SchemaVersion": 1,
+  "BaseCommit": "e7c491bc4c5f5752610a1ebc184653160edbc8aa",
+  "PublishedBaselineCommit": "be10da62595013477c13c3a693a257f6da22be1d",
+  "SourceHashes": {
+    "scripts/New-TokenForgeFirstPartyInventory.py": "3ff4cbb2043f26c95a53bcd614f6fdf6d449828d681d1c877936b390c79923d8",
+    "src/TokenForge/Public/SignIns.ps1": "41f25470d5d247604baf6ec0cc9a3ac9ee88b53c5c92ddd69c7731fc617fde33",
+    "src/TokenForge/Private/SignIns.ps1": "2bdc3caa146d77cdc252881016b9e2c63990fdc5415c9d615f4ed04917a7ce07",
+    "src/TokenForge/Public/Tenant.ps1": "d147725aad0f94b020b1f93dba9054707f27ed507fa9cbf6b174976574b715c8",
+    "tests/FirstPartyInventory.test.py": "18561bfac65fc51b199b998fbf7fcd129904aa389c85b6def7395cf49c69e318",
+    "tests/SignIns.Tests.ps1": "c4a731b720da461bdc9e54e97d9bc3b7c0c4f63350827cc0d469bcc00a54912c",
+    "tests/Inventory.Tests.ps1": "105ba2e0050fb9f3d8d5be46a9577271e15b52747cc86683abb2603522a6c017"
+  },
+  "OfflineChecks": {
+    "PesterPassed": 83,
+    "PesterFailed": 0,
+    "PythonFixturePassed": 20,
+    "PythonFixtureFailed": 0,
+    "PrivateIntegration": "Report and replay byte-identical for all three outputs; reviewed directly under private custody",
+    "ReferenceFacts": "Three positive typed public references checked against retained raw-document hashes",
+    "Privacy": "No raw-event/token/user/IP fields in private projection; tenant-derived reports and counts excluded from this source publication"
+  },
+  "IndependentReview": "Final source and private artifacts accepted after repairs to ambiguous mappings, public/directory evidence separation, principal context, immutable input validation and requested/observed event distinction",
+  "ReusedInputs": "Existing approved Linux x64 runtime and binary pair; no compiled changes or rebuild; historical live proofs remain separate from later offline qualification",
+  "Unproven": "Current tenant retention coverage and live backfill; no new sign-in or tenant request occurred",
+  "Limitations": [
+    "Supplied private evidence is source-bound local custody, not independently signed attestation",
+    "Only Linux local checks performed",
+    "Reference facts are partial; missing identifiers remain unresolved"
+  ],
+  "Publication": "No catalog publication or merge"
+}

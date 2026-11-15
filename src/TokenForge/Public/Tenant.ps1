@@ -3,11 +3,13 @@ function Get-TokenForgeTenantInventory {
     .SYNOPSIS
     Enumerate tenant Microsoft-owned service principals and configured delegated grants.
     .DESCRIPTION
-    Returns public app IDs and tenant/user fingerprints, never raw object or principal IDs.
+    Returns public app IDs and tenant/user fingerprints by default. IncludeDirectoryObjects
+    retains a private service-principal object mapping for offline resolution; never publish it.
     Published owner information is kept separate from ownership verified through Graph.
     #>
     [CmdletBinding()]
-    param([Parameter(Mandatory)][securestring]$GraphToken, [Parameter(Mandatory)]$Discovery, [switch]$SkipGrants)
+    param([Parameter(Mandatory)][securestring]$GraphToken, [Parameter(Mandatory)]$Discovery, [switch]$SkipGrants,
+        [switch]$IncludeDirectoryObjects)
     $payload = ConvertFrom-TokenForgeJwtPayload -AccessToken $GraphToken
     if (-not $payload -or -not $payload['tid']) { throw 'A readable Graph token with a tenant claim is required to namespace tenant evidence.' }
     $tenantFingerprint = Get-TokenForgeFingerprint -Value ([string]$payload['tid'])
@@ -95,9 +97,19 @@ function Get-TokenForgeTenantInventory {
         TotalTenantServicePrincipalCount = @($all).Count
         VerifiedMicrosoftServicePrincipalCount = @($all | Where-Object { $_['appOwnerOrganizationId'] -in $script:MicrosoftOwnerTenants }).Count
         GrantEnumeration = $grantStatus; Applications = @($apps | Sort-Object AppId); TenantGrants = $grants
+        # Opt-in private mapping only. Object IDs never become application IDs.
+        DirectoryObjects = @(if($IncludeDirectoryObjects){foreach($sp in $all){
+            [pscustomobject]@{
+                AppId=[string]$sp['appId'];ServicePrincipalObjectId=[string]$sp['id']
+                Ownership=if($sp['appOwnerOrganizationId'] -in $script:MicrosoftOwnerTenants){'VerifiedMicrosoftOwner'}else{'DirectoryObservedOwnerNotVerifiedMicrosoft'}
+                ServicePrincipalType=[string]$sp['servicePrincipalType']
+                IdentifierUris=@($sp['servicePrincipalNames']|Where-Object {$_ -is [string] -and $_}|Sort-Object -Unique -CaseSensitive)
+                Evidence='PrivateDirectoryObjectMapping'
+            }
+        }})
         DiscoveryCatalogHash = $Discovery.CatalogContentSha256
         # Receipt describes the unchanged queries and local visible-edge projection; no additional request.
-        EvidenceCoverage = [pscustomobject]@{SchemaVersion=1;InventoryQueryFingerprint=(Get-TokenForgeFingerprint ($inventoryQuery+'|projection/v1|'+($script:MicrosoftOwnerTenants -join ',')));GrantQueryFingerprint=(Get-TokenForgeFingerprint ($grantQuery+'|aggregate-visible-Microsoft-edges/v1|'+($script:MicrosoftOwnerTenants -join ',')))}
+        EvidenceCoverage = [pscustomobject]@{SchemaVersion=1;InventoryQueryFingerprint=(Get-TokenForgeFingerprint ($inventoryQuery+$(if($IncludeDirectoryObjects){'|private-object-map/v2|'}else{'|projection/v1|'})+($script:MicrosoftOwnerTenants -join ',')));GrantQueryFingerprint=(Get-TokenForgeFingerprint ($grantQuery+'|aggregate-visible-Microsoft-edges/v1|'+($script:MicrosoftOwnerTenants -join ',')))}
     }
 }
 

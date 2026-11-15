@@ -120,3 +120,101 @@ Describe 'Bounded sign-in protocol summaries' {
   {Update-TokenForgeApplicationMetadata "$TestDrive/protocols.json" $r SignIns}|Should -Throw '*summary value*'
  }
 }
+Describe 'Private client and resource discovery with bounded resume' {
+ BeforeEach {
+  $since=[DateTimeOffset]'2026-11-01T00:00:00Z';$until=[DateTimeOffset]'2026-11-02T00:00:00Z'
+  $resourceApp='00000003-0000-0000-c000-000000000000';$resourceObject='33333333-3333-3333-3333-333333333333'
+  $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@();DirectoryObjects=@([pscustomobject]@{AppId=$resourceApp;ServicePrincipalObjectId=$resourceObject;IdentifierUris=@('https://graph.microsoft.com/')})}
+ }
+ It 'discovers typed resource references across all four event types without promoting sign-in success to API proof' {
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {
+   @{value=@(foreach($type in @('interactiveUser','nonInteractiveUser','servicePrincipal','managedIdentity')){
+    @{appId=$id;servicePrincipalId='44444444-4444-4444-4444-444444444444';resourceId='https://graph.microsoft.com/';resourceServicePrincipalId=$resourceObject;createdDateTime='2026-11-01T12:00:00Z';signInEventTypes=@($type);status=@{errorCode=0};userPrincipalName='private-upn';ipAddress='private-ip';accessToken='private-token'}
+   })}
+  }
+  $r=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until
+  $r.Resources.Count|Should -Be 1
+  $r.Resources[0].Resolution|Should -Be DirectoryMatched
+  $r.Resources[0].ResolvedAppId|Should -Be $resourceApp
+  $r.Resources[0].ResourceServicePrincipalObjectId|Should -Be $resourceObject
+  $r.Resources[0].SignInResourceId|Should -Be 'https://graph.microsoft.com/'
+  $r.Resources[0].SignInCount|Should -Be 4
+  $r.TokenAudiences.Count|Should -Be 0
+  $r.Coverage.ByEventType.managedIdentity.RecordCount|Should -Be 1
+  $r.Coverage.ByEventType.managedIdentity.FirstObservedAt|Should -Be '2026-11-01T12:00:00.0000000+00:00'
+  $r.Coverage.RetentionAvailability|Should -Be 'Unknown_NotEstablishedByQueryCompletion'
+  ($r.IdentifierObservations|Where-Object Field -eq servicePrincipalId).Value|Should -Be '44444444-4444-4444-4444-444444444444'
+  ($r|ConvertTo-Json -Depth 20)|Should -Not -Match 'private-upn|private-ip|private-token|accessToken|userPrincipalName|ipAddress'
+ }
+ It 'keeps contradictory directory matches ambiguous and does not assign either app' {
+  $inventory.DirectoryObjects+= [pscustomobject]@{AppId=$id;ServicePrincipalObjectId='55555555-5555-5555-5555-555555555555';IdentifierUris=@()}
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@(@{appId=$id;resourceId=$id;resourceServicePrincipalId=$resourceObject})}}
+  $r=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until
+  $r.Resources[0].Resolution|Should -Be Ambiguous
+  $r.Resources[0].ResolvedAppId|Should -BeNullOrEmpty
+  $r.Resources[0].CandidateAppIds.Count|Should -Be 2
+ }
+ It 'retains resource-only discovery when the client ID is malformed, with absence still unresolved' {
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@(@{appId='bad';resourceId='99999999-9999-9999-9999-999999999999';signInEventTypes=@('managedIdentity')})}}
+  $r=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until
+  $r.Applications.Count|Should -Be 0;$r.InvalidAppIdCount|Should -Be 1
+  $r.Resources[0].Resolution|Should -Be Unresolved
+  $r.Coverage.ByEventType.managedIdentity.RecordCount|Should -Be 1
+ }
+ It 'resumes after a partial page failure without replaying committed counts and keeps the charged failed request' {
+  $checkpoint=Join-Path (Join-Path $TestDrive resume-private) summary.json
+  $script:signInResumeFailure=$true
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {
+   param($Uri)
+   if($Uri.Query -eq '?page=2'){
+    if($script:signInResumeFailure){$script:signInResumeFailure=$false;throw 'Synthetic interrupted GET'}
+    return @{value=@(@{appId=$id;resourceServicePrincipalId=$resourceObject})}
+   }
+   @{value=@(@{appId=$id;resourceId='https://graph.microsoft.com/';userPrincipalName='private-upn'});'@odata.nextLink'='https://graph.microsoft.com/beta/auditLogs/signIns?page=2'}
+  }
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -MaxPages 3 -CheckpointPath $checkpoint}|Should -Throw '*interrupted*'
+  $partial=Get-Content $checkpoint -Raw|ConvertFrom-Json
+  $partial.Payload.Enumeration|Should -Be Partial
+  $partial.Payload.Records|Should -Be 1
+  $partial.Payload.Requests|Should -Be 2
+  $r=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -MaxPages 3 -CheckpointPath $checkpoint
+  $r.Enumeration|Should -Be Complete;$r.PageCount|Should -Be 2;$r.RequestCount|Should -Be 3;$r.RecordCount|Should -Be 2
+  $r.Applications[0].SignInCount|Should -Be 2
+  $captured=$r.CapturedAt
+  $again=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -MaxPages 3 -CheckpointPath $checkpoint
+  $again.CapturedAt|Should -Be $captured
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -ParameterFilter {$Uri.Query -ne '?page=2'}
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 3
+  (Get-Content $checkpoint -Raw)|Should -Not -Match 'private-upn|userPrincipalName|GraphToken|synthetic'
+ }
+ It 'rejects an edited checkpoint and a changed window before a Graph call' {
+  $checkpoint=Join-Path (Join-Path $TestDrive tamper-private) summary.json
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@()}}
+  $null=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -CheckpointPath $checkpoint
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since.AddHours(1) -Until $until -CheckpointPath $checkpoint}|Should -Throw '*binding*'
+  $saved=Get-Content $checkpoint -Raw|ConvertFrom-Json -AsHashtable
+  $saved.Payload.Next='https://evil.test/'
+  $saved|ConvertTo-Json -Depth 100|Set-Content $checkpoint
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -CheckpointPath $checkpoint}|Should -Throw '*integrity*'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1
+ }
+}
+Describe 'Sign-in directory evidence boundaries' {
+ It 'does not resolve a published candidate as a directory app merely by an equal GUID' {
+  $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@([pscustomobject]@{AppId=$id;Registration='Missing';Ownership='Unverified';IdentifierUris=@('https://example.test/api')});DirectoryObjects=@()}
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@(@{appId=$id;resourceId=$id})}}
+  $r=Get-TokenForgeSignInApplications $token $inventory
+  $r.Resources[0].Resolution|Should -Be Unresolved
+  $r.Resources[0].ResolvedAppId|Should -BeNullOrEmpty
+ }
+ It 'rejects out-of-window events without committing a partial page as complete' {
+  $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@()}
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@(@{appId=$id;createdDateTime='2026-10-01T00:00:00Z';signInEventTypes=@('interactiveUser')})}}
+  $checkpoint=Join-Path (Join-Path $TestDrive outside-private) summary.json
+  {Get-TokenForgeSignInApplications $token $inventory -Since ([DateTimeOffset]'2026-11-01T00:00:00Z') -Until ([DateTimeOffset]'2026-11-02T00:00:00Z') -CheckpointPath $checkpoint}|Should -Throw '*outside requested coverage*'
+  $saved=Get-Content $checkpoint -Raw|ConvertFrom-Json
+  $saved.Payload.Enumeration|Should -Be Partial
+  $saved.Payload.Records|Should -Be 0
+  $saved.Payload.Requests|Should -Be 1
+ }
+}

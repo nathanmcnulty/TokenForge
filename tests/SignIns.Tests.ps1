@@ -258,3 +258,58 @@ Describe 'Sign-in timestamp kind preservation' {
   {Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until}|Should -Throw '*timezone context*'
  }
 }
+
+Describe 'Expired sign-in cursor recovery preserves distinct aggregates' {
+ It 'charges HTTP410 without completing or replaying pages, then recomputes only in a fresh checkpoint' {
+  $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@();DirectoryObjects=@()}
+  $since=[DateTimeOffset]'2026-11-01T00:00:00Z';$until=[DateTimeOffset]'2026-11-02T00:00:00Z'
+  $oldCheckpoint=Join-Path (Join-Path $TestDrive expired-cursor-private) summary.json
+  $freshCheckpoint=Join-Path (Join-Path $TestDrive fresh-cursor-private) summary.json
+  $script:expiredCursorPhase='InitialPartial'
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {
+   param($Uri)
+   if($Uri.Query -eq '?page=expired'){
+    if($script:expiredCursorPhase -eq 'InitialPartial'){throw 'Synthetic interrupted page request'}
+    throw 'Graph request failed (HTTP 410); response details suppressed.'
+   }
+   if($script:expiredCursorPhase -eq 'FreshQuery'){
+    return @{value=@(
+     @{appId=$id;createdDateTime='2026-11-01T12:00:00Z';signInEventTypes=@('interactiveUser')},
+     @{appId=$id;createdDateTime='2026-11-01T13:00:00Z';signInEventTypes=@('nonInteractiveUser')}
+    )}
+   }
+   @{value=@(@{appId=$id;createdDateTime='2026-11-01T12:00:00Z';signInEventTypes=@('interactiveUser')});'@odata.nextLink'='https://graph.microsoft.com/beta/auditLogs/signIns?page=expired'}
+  }
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -MaxPages 5 -CheckpointPath $oldCheckpoint}|Should -Throw '*interrupted*'
+  $beforeExpiry=Get-Content $oldCheckpoint -Raw|ConvertFrom-Json
+  $beforeExpiry.Payload.Enumeration|Should -Be Partial
+  $beforeExpiry.Payload.Pages|Should -Be 1
+  $beforeExpiry.Payload.Records|Should -Be 1
+  $beforeExpiry.Payload.Requests|Should -Be 2
+
+  $script:expiredCursorPhase='ExpiredCursor'
+  $expiredResult=$null
+  {$expiredResult=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -MaxPages 5 -CheckpointPath $oldCheckpoint}|Should -Throw '*HTTP 410*'
+  $expiredResult|Should -BeNullOrEmpty
+  $afterExpiry=Get-Content $oldCheckpoint -Raw|ConvertFrom-Json
+  $afterExpiry.Payload.Enumeration|Should -Be Partial
+  $afterExpiry.Payload.Pages|Should -Be 1
+  $afterExpiry.Payload.Records|Should -Be 1
+  $afterExpiry.Payload.Requests|Should -Be 3
+  $afterExpiry.Payload.Next|Should -Be 'https://graph.microsoft.com/beta/auditLogs/signIns?page=expired'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -ParameterFilter {$Uri.Query -ne '?page=expired'}
+  $oldBytes=[Convert]::ToBase64String([IO.File]::ReadAllBytes($oldCheckpoint))
+
+  $script:expiredCursorPhase='FreshQuery'
+  $fresh=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -MaxPages 5 -CheckpointPath $freshCheckpoint
+  $fresh.Enumeration|Should -Be Complete
+  $fresh.RecordCount|Should -Be 2
+  $fresh.PageCount|Should -Be 1
+  $fresh.RequestCount|Should -Be 1
+  $fresh.Applications[0].SignInCount|Should -Be 2
+  $fresh.Coverage.ByEventType.interactiveUser.RecordCount|Should -Be 1
+  $fresh.Coverage.ByEventType.nonInteractiveUser.RecordCount|Should -Be 1
+  [Convert]::ToBase64String([IO.File]::ReadAllBytes($oldCheckpoint))|Should -BeExactly $oldBytes
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 4
+ }
+}

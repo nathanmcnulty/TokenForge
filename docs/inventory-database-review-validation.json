@@ -1,0 +1,34 @@
+{
+  "SchemaVersion": 1,
+  "BaseSourceCommit": "28487ba4f7c3dd2926c92162640a41451b8539dd",
+  "GeneratorSha256": "572a1cd3d6004da05f56e5768a0cc0e0989f3560e6ff51b6031d5fa64f52edeb",
+  "FixtureSha256": "335eedaf8b50f085042c5af9cfca7ed5daf64ebe09426d3e007024cc569b008d",
+  "PublishedDataBaseline": "be10da62595013477c13c3a693a257f6da22be1d",
+  "ReusedLocalPublicRelease": "6fcd8e91969c74069bc7bf6e415401b724974f6a",
+  "LatestMerillSha256": "81f9c620a6e798b95ae2a356f01cdfe56dbf0499470be928b7c882c9625ebe51",
+  "InventoryEraMerillSha256": "639df4125260c10ce78983caa7f059baf425f4b5ccca96319850542f63047f31",
+  "FocusedTests": {"Passed": 22, "Failed": 0},
+  "Integration": {
+    "CandidateFiles": 82,
+    "ReusedPreparedFilesUnchanged": 81,
+    "ChangedPathsFromPublishedBaseline": 7,
+    "BaselinePathsUnchanged": 75,
+    "Removals": 0,
+    "PublicOnlyReplayByteIdentical": true,
+    "SyntheticPrivateMutationPublicOutputUnchanged": true,
+    "HistoricalIdsRunsVersionsAndDatesPreserved": true
+  },
+  "IndependentReview": "Three findings repaired: current version versus record lifetime dates, final copied/source-tree pin checks, and explicit failed-output marking with completion receipt last. Final source/artifacts accepted; final replay receipt inspection recorded separately.",
+  "Reuse": "Qualified public reconciliation, gzip/manifest/overlap/index bytes and existing native/runtime validation reused by complete input/byte equivalence; retained private inventory remains bound to its historical execution. No rebuild or broad suite.",
+  "Privacy": "Public proposal generated only from pinned public inputs. Private decisions, tenant-derived counts/identifiers and receipt bindings remain local. Synthetic fixtures are labeled separately from retained real evidence.",
+  "Limits": [
+    "Sidecar is a proposed additive data format; current reader/CLI does not consume it",
+    "Public-source metadata is not Microsoft ownership, consent, token or API-access proof",
+    "Positive reference facts are partial; conflicts and unresolved cases remain",
+    "Consistency under trusted local custody is not signed attestation or general DLP",
+    "Only local Linux checks; no new live validation"
+  ],
+  "Collection": "NotAttempted",
+  "Authentication": "NotAttempted",
+  "CatalogPublication": "NotAttempted"
+}

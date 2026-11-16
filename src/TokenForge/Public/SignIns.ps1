@@ -18,7 +18,11 @@ function Get-TokenForgeSignInApplications {
     if(-not $EventTypes.Count){throw 'Select at least one sign-in event type.'}
     $claims=Get-TokenForgeTokenClaims -AccessToken $GraphToken
     if(-not $claims.TenantFingerprint -or $claims.TenantFingerprint -ne $Inventory.TenantFingerprint){throw 'Graph token tenant does not match inventory.'}
-    $filter="createdDateTime ge $($Since.UtcDateTime.ToString('yyyy-MM-ddTHH:mm:ssZ')) and createdDateTime le $($Until.UtcDateTime.ToString('yyyy-MM-ddTHH:mm:ssZ')) and signInEventTypes/any(t: $((@($EventTypes|Sort-Object -Unique|ForEach-Object {"t eq '$_'"})) -join ' or '))"
+    # Match row validation and the checkpoint's exact window. Optional fractions
+    # preserve the existing filter and checkpoint binding for whole-second bounds.
+    $utcFormat="yyyy-MM-dd'T'HH:mm:ss.FFFFFFF'Z'"
+    $culture=[Globalization.CultureInfo]::InvariantCulture
+    $filter="createdDateTime ge $($Since.UtcDateTime.ToString($utcFormat,$culture)) and createdDateTime le $($Until.UtcDateTime.ToString($utcFormat,$culture)) and signInEventTypes/any(t: $((@($EventTypes|Sort-Object -Unique|ForEach-Object {"t eq '$_'"})) -join ' or '))"
     $next='https://graph.microsoft.com/beta/auditLogs/signIns?$select=appId,resourceId,authenticationProtocol,clientAppUsed,signInEventTypes,authenticationMethodsUsed,clientCredentialType,incomingTokenType,status,servicePrincipalId,resourceServicePrincipalId,createdDateTime&$top=1000&$filter='+[uri]::EscapeDataString($filter)
     $allowedProtocols=@(Get-TokenForgeSignInSummaryValues ProtocolCounts);$allowedClients=@(Get-TokenForgeSignInSummaryValues ClientTypeCounts)
     $allowedCredentials=@(Get-TokenForgeSignInSummaryValues CredentialTypeCounts);$allowedIncoming=@(Get-TokenForgeSignInSummaryValues IncomingTokenTypeCounts);$allowedMethods=@(Get-TokenForgeSignInSummaryValues AuthenticationMethodCounts)

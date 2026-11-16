@@ -259,6 +259,54 @@ Describe 'Sign-in timestamp kind preservation' {
  }
 }
 
+Describe 'Sign-in query and checkpoint use the exact UTC window' {
+ BeforeEach {
+  $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@()}
+  $since=[DateTimeOffset]'2026-10-31T15:00:00.5000001-09:00'
+  $until=[DateTimeOffset]'2026-11-02T01:00:00.7500002+01:00'
+ }
+ It 'keeps fractional bounds in the Graph filter and includes both exact edges' {
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {
+   @{value=@(
+    @{appId=$id;createdDateTime='2026-11-01T00:00:00.5000001Z';signInEventTypes=@('interactiveUser')},
+    @{appId=$id;createdDateTime='2026-11-02T00:00:00.7500002Z';signInEventTypes=@('interactiveUser')}
+   )}
+  }
+  $r=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until
+  $r.RecordCount|Should -Be 2
+  $r.Since|Should -BeExactly '2026-11-01T00:00:00.5000001+00:00'
+  $r.Until|Should -BeExactly '2026-11-02T00:00:00.7500002+00:00'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -Exactly -ParameterFilter {
+   [uri]::UnescapeDataString($Uri.Query).Contains('createdDateTime ge 2026-11-01T00:00:00.5000001Z and createdDateTime le 2026-11-02T00:00:00.7500002Z')
+  }
+ }
+ It 'rejects a row a tick outside either edge' -TestCases @(
+  @{Stamp='2026-11-01T00:00:00.5000000Z'},
+  @{Stamp='2026-11-02T00:00:00.7500003Z'}
+ ) {
+  param($Stamp)
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@(@{appId=$id;createdDateTime=$Stamp})}}
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until}|Should -Throw '*outside requested coverage*'
+ }
+ It 'reuses the same instant through a different offset but rejects even a one-tick bound change' {
+  $checkpoint=Join-Path (Join-Path $TestDrive fractional-private) summary.json
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@()}}
+  $r=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -CheckpointPath $checkpoint
+  $again=Get-TokenForgeSignInApplications $token $inventory -Since $since.ToUniversalTime() -Until $until.ToUniversalTime() -CheckpointPath $checkpoint
+  $again.CapturedAt|Should -BeExactly $r.CapturedAt
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since.AddTicks(1) -Until $until -CheckpointPath $checkpoint}|Should -Throw '*binding*'
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until.AddTicks(-1) -CheckpointPath $checkpoint}|Should -Throw '*binding*'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -Exactly
+ }
+ It 'keeps the original wire representation for whole-second windows' {
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@()}}
+  $null=Get-TokenForgeSignInApplications $token $inventory -Since ([DateTimeOffset]'2026-11-01T00:00:00Z') -Until ([DateTimeOffset]'2026-11-02T00:00:00Z')
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -Exactly -ParameterFilter {
+   [uri]::UnescapeDataString($Uri.Query).Contains('createdDateTime ge 2026-11-01T00:00:00Z and createdDateTime le 2026-11-02T00:00:00Z')
+  }
+ }
+}
+
 Describe 'Expired sign-in cursor recovery preserves distinct aggregates' {
  It 'charges HTTP410 without completing or replaying pages, then recomputes only in a fresh checkpoint' {
   $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@();DirectoryObjects=@()}

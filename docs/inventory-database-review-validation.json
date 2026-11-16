@@ -1,0 +1,43 @@
+{
+  "SchemaVersion": 1,
+  "BaseSourceCommit": "28487ba4f7c3dd2926c92162640a41451b8539dd",
+  "GeneratorSha256": "4dd1aba625961f79afcf3e28df86025038e971cc93035e021e0f96d762f6b1b4",
+  "FixtureSha256": "bcdbccd2cc241a5fe94447d99da52acdccc8cd949ae07a73a75e6fa7002fde93",
+  "PublishedDataBaseline": "be10da62595013477c13c3a693a257f6da22be1d",
+  "ReusedLocalPublicRelease": "6fcd8e91969c74069bc7bf6e415401b724974f6a",
+  "LatestMerillSha256": "81f9c620a6e798b95ae2a356f01cdfe56dbf0499470be928b7c882c9625ebe51",
+  "InventoryEraMerillSha256": "639df4125260c10ce78983caa7f059baf425f4b5ccca96319850542f63047f31",
+  "FocusedTests": {
+    "Passed": 23,
+    "Failed": 0
+  },
+  "Integration": {
+    "CandidateFiles": 82,
+    "ReusedPreparedFilesUnchanged": 81,
+    "ChangedPathsFromPublishedBaseline": 7,
+    "BaselinePathsUnchanged": 75,
+    "Removals": 0,
+    "PublicOnlyReplayByteIdentical": true,
+    "SyntheticPrivateMutationPublicOutputUnchanged": true,
+    "HistoricalIdsRunsVersionsAndDatesPreserved": true
+  },
+  "IndependentReview": "Three findings repaired: current version versus record lifetime dates, final copied/source-tree pin checks, and explicit failed-output marking with completion receipt last. Final source/artifacts accepted; final replay receipt inspection recorded separately.",
+  "Reuse": "Qualified public reconciliation, gzip/manifest/overlap/index bytes and existing native/runtime validation reused by complete input/byte equivalence; retained private inventory remains bound to its historical execution. No rebuild or broad suite.",
+  "Privacy": "Public proposal generated only from pinned public inputs. Private decisions, tenant-derived counts/identifiers and receipt bindings remain local. Synthetic fixtures are labeled separately from retained real evidence.",
+  "Limits": [
+    "Sidecar is a proposed additive data format; current reader/CLI does not consume it",
+    "Public-source metadata is not Microsoft ownership, consent, token or API-access proof",
+    "Positive reference facts are partial; conflicts and unresolved cases remain",
+    "Consistency under trusted local custody is not signed attestation or general DLP",
+    "Only local Linux checks; no new live validation"
+  ],
+  "Collection": "NotAttempted",
+  "Authentication": "NotAttempted",
+  "CatalogPublication": "NotAttempted",
+  "PrecedenceCorrection": {
+    "Behavior": "Union retained and current pinned public non-app definitions before ownership/role classification; retain original evidence unchanged",
+    "Regression": "Public permission/application conflict with directory-verified private client lacking retained definition stays AppNonAppConflict at priority zero",
+    "Replay": "Retained private classifications/evidence unchanged;81 reused public files byte-identical. Public-only sidecar replay using historical bindings is byte-identical. Newly source-bound sidecar/diff/manifest differ only in GeneratorSha256 and dependent hashes; normalized bytes match.",
+    "IndependentReview": "Accepted source,23 focused tests and actual pinned replay; no actionable findings"
+  }
+}

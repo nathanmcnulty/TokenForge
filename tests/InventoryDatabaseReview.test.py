@@ -61,6 +61,19 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(row['NonAppDefinitions'][0]['Kind'], 'Permission')
         self.assertEqual(m.encode(self.baseline), before)
 
+    def test_current_public_definition_precedes_verified_private_role(self):
+        self.baseline['Applications'][PERMISSION] = copy.deepcopy(self.baseline['Applications'][APP])
+        public = self.public()
+        row = private_row(identifier=PERMISSION, own=True, kinds=['ClientApplication'])
+        actual = self.private(row, public)
+        self.assertEqual(public['Rows'][PERMISSION]['Classification'], 'AppNonAppConflict')
+        self.assertEqual((actual['Bucket'], actual['Priority']), ('AppNonAppConflict', 0))
+        self.assertTrue(actual['DirectoryVerifiedMicrosoftOwnership'])
+        self.assertEqual(actual['EstablishedRoles'], ['ClientApplication'])
+        self.assertEqual(actual['NonAppDefinitions'], public['Rows'][PERMISSION]['NonAppDefinitions'])
+        self.assertEqual(actual['RetainedEvidence'], row)
+        self.assertNotIn('NonAppDefinitions', row)
+
     def test_positive_definition_without_app_claim_stays_typed_nonapp(self):
         self.assertEqual(self.public()['Rows'][PERMISSION]['Classification'], 'KnownNonAppIdentifier')
 

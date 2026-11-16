@@ -161,7 +161,10 @@ def private_review(retained, public, bindings):
             raise ValueError('Contradictory retained ownership evidence.')
         kinds = sorted({e['Kind'] for e in row['EntityEvidence']} & {'ClientApplication', 'ApiResource'})
         current_public = public['Rows'].get(row['Identifier'], {})
-        non_app = definitions.get(row['Identifier'], [])
+        non_app = list(definitions.get(row['Identifier'], []))
+        for definition in current_public.get('NonAppDefinitions', []):
+            if definition not in non_app:
+                non_app.append(definition)
         claim_conflict = ('ConflictingPublicClaims' in row['ReviewReasons'] or
                           current_public.get('CurrentClaimConflicts') or current_public.get('HistoricalClaimConflicts'))
         if non_app:

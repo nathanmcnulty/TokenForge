@@ -1,13 +1,16 @@
 {
   "SchemaVersion": 1,
   "BaseSourceCommit": "28487ba4f7c3dd2926c92162640a41451b8539dd",
-  "GeneratorSha256": "572a1cd3d6004da05f56e5768a0cc0e0989f3560e6ff51b6031d5fa64f52edeb",
-  "FixtureSha256": "335eedaf8b50f085042c5af9cfca7ed5daf64ebe09426d3e007024cc569b008d",
+  "GeneratorSha256": "4dd1aba625961f79afcf3e28df86025038e971cc93035e021e0f96d762f6b1b4",
+  "FixtureSha256": "bcdbccd2cc241a5fe94447d99da52acdccc8cd949ae07a73a75e6fa7002fde93",
   "PublishedDataBaseline": "be10da62595013477c13c3a693a257f6da22be1d",
   "ReusedLocalPublicRelease": "6fcd8e91969c74069bc7bf6e415401b724974f6a",
   "LatestMerillSha256": "81f9c620a6e798b95ae2a356f01cdfe56dbf0499470be928b7c882c9625ebe51",
   "InventoryEraMerillSha256": "639df4125260c10ce78983caa7f059baf425f4b5ccca96319850542f63047f31",
-  "FocusedTests": {"Passed": 22, "Failed": 0},
+  "FocusedTests": {
+    "Passed": 23,
+    "Failed": 0
+  },
   "Integration": {
     "CandidateFiles": 82,
     "ReusedPreparedFilesUnchanged": 81,
@@ -30,5 +33,11 @@
   ],
   "Collection": "NotAttempted",
   "Authentication": "NotAttempted",
-  "CatalogPublication": "NotAttempted"
+  "CatalogPublication": "NotAttempted",
+  "PrecedenceCorrection": {
+    "Behavior": "Union retained and current pinned public non-app definitions before ownership/role classification; retain original evidence unchanged",
+    "Regression": "Public permission/application conflict with directory-verified private client lacking retained definition stays AppNonAppConflict at priority zero",
+    "Replay": "Retained private classifications/evidence unchanged;81 reused public files byte-identical. Public-only sidecar replay using historical bindings is byte-identical. Newly source-bound sidecar/diff/manifest differ only in GeneratorSha256 and dependent hashes; normalized bytes match.",
+    "IndependentReview": "Accepted source,23 focused tests and actual pinned replay; no actionable findings"
+  }
 }

@@ -120,3 +120,244 @@ Describe 'Bounded sign-in protocol summaries' {
   {Update-TokenForgeApplicationMetadata "$TestDrive/protocols.json" $r SignIns}|Should -Throw '*summary value*'
  }
 }
+Describe 'Private client and resource discovery with bounded resume' {
+ BeforeEach {
+  $since=[DateTimeOffset]'2026-11-01T00:00:00Z';$until=[DateTimeOffset]'2026-11-02T00:00:00Z'
+  $resourceApp='00000003-0000-0000-c000-000000000000';$resourceObject='33333333-3333-3333-3333-333333333333'
+  $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@();DirectoryObjects=@([pscustomobject]@{AppId=$resourceApp;ServicePrincipalObjectId=$resourceObject;IdentifierUris=@('https://graph.microsoft.com/')})}
+ }
+ It 'discovers typed resource references across all four event types without promoting sign-in success to API proof' {
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {
+   @{value=@(foreach($type in @('interactiveUser','nonInteractiveUser','servicePrincipal','managedIdentity')){
+    @{appId=$id;servicePrincipalId='44444444-4444-4444-4444-444444444444';resourceId='https://graph.microsoft.com/';resourceServicePrincipalId=$resourceObject;createdDateTime='2026-11-01T12:00:00Z';signInEventTypes=@($type);status=@{errorCode=0};userPrincipalName='private-upn';ipAddress='private-ip';accessToken='private-token'}
+   })}
+  }
+  $r=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until
+  $r.Resources.Count|Should -Be 1
+  $r.Resources[0].Resolution|Should -Be DirectoryMatched
+  $r.Resources[0].ResolvedAppId|Should -Be $resourceApp
+  $r.Resources[0].ResourceServicePrincipalObjectId|Should -Be $resourceObject
+  $r.Resources[0].SignInResourceId|Should -Be 'https://graph.microsoft.com/'
+  $r.Resources[0].SignInCount|Should -Be 4
+  $r.TokenAudiences.Count|Should -Be 0
+  $r.Coverage.ByEventType.managedIdentity.RecordCount|Should -Be 1
+  $r.Coverage.ByEventType.managedIdentity.FirstObservedAt|Should -Be '2026-11-01T12:00:00.0000000+00:00'
+  $r.Coverage.RetentionAvailability|Should -Be 'Unknown_NotEstablishedByQueryCompletion'
+  ($r.IdentifierObservations|Where-Object Field -eq servicePrincipalId).Value|Should -Be '44444444-4444-4444-4444-444444444444'
+  ($r|ConvertTo-Json -Depth 20)|Should -Not -Match 'private-upn|private-ip|private-token|accessToken|userPrincipalName|ipAddress'
+ }
+ It 'keeps contradictory directory matches ambiguous and does not assign either app' {
+  $inventory.DirectoryObjects+= [pscustomobject]@{AppId=$id;ServicePrincipalObjectId='55555555-5555-5555-5555-555555555555';IdentifierUris=@()}
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@(@{appId=$id;resourceId=$id;resourceServicePrincipalId=$resourceObject})}}
+  $r=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until
+  $r.Resources[0].Resolution|Should -Be Ambiguous
+  $r.Resources[0].ResolvedAppId|Should -BeNullOrEmpty
+  $r.Resources[0].CandidateAppIds.Count|Should -Be 2
+ }
+ It 'retains resource-only discovery when the client ID is malformed, with absence still unresolved' {
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@(@{appId='bad';resourceId='99999999-9999-9999-9999-999999999999';signInEventTypes=@('managedIdentity')})}}
+  $r=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until
+  $r.Applications.Count|Should -Be 0;$r.InvalidAppIdCount|Should -Be 1
+  $r.Resources[0].Resolution|Should -Be Unresolved
+  $r.Coverage.ByEventType.managedIdentity.RecordCount|Should -Be 1
+ }
+ It 'resumes after a partial page failure without replaying committed counts and keeps the charged failed request' {
+  $checkpoint=Join-Path (Join-Path $TestDrive resume-private) summary.json
+  $script:signInResumeFailure=$true
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {
+   param($Uri)
+   if($Uri.Query -eq '?page=2'){
+    if($script:signInResumeFailure){$script:signInResumeFailure=$false;throw 'Synthetic interrupted GET'}
+    return @{value=@(@{appId=$id;resourceServicePrincipalId=$resourceObject})}
+   }
+   @{value=@(@{appId=$id;resourceId='https://graph.microsoft.com/';userPrincipalName='private-upn'});'@odata.nextLink'='https://graph.microsoft.com/beta/auditLogs/signIns?page=2'}
+  }
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -MaxPages 3 -CheckpointPath $checkpoint}|Should -Throw '*interrupted*'
+  $partial=Get-Content $checkpoint -Raw|ConvertFrom-Json
+  $partial.Payload.Enumeration|Should -Be Partial
+  $partial.Payload.Records|Should -Be 1
+  $partial.Payload.Requests|Should -Be 2
+  $r=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -MaxPages 3 -CheckpointPath $checkpoint
+  $r.Enumeration|Should -Be Complete;$r.PageCount|Should -Be 2;$r.RequestCount|Should -Be 3;$r.RecordCount|Should -Be 2
+  $r.Applications[0].SignInCount|Should -Be 2
+  $captured=$r.CapturedAt
+  $again=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -MaxPages 3 -CheckpointPath $checkpoint
+  $again.CapturedAt|Should -Be $captured
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -ParameterFilter {$Uri.Query -ne '?page=2'}
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 3
+  (Get-Content $checkpoint -Raw)|Should -Not -Match 'private-upn|userPrincipalName|GraphToken|synthetic'
+ }
+ It 'rejects an edited checkpoint and a changed window before a Graph call' {
+  $checkpoint=Join-Path (Join-Path $TestDrive tamper-private) summary.json
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@()}}
+  $null=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -CheckpointPath $checkpoint
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since.AddHours(1) -Until $until -CheckpointPath $checkpoint}|Should -Throw '*binding*'
+  $saved=Get-Content $checkpoint -Raw|ConvertFrom-Json -AsHashtable
+  $saved.Payload.Next='https://evil.test/'
+  $saved|ConvertTo-Json -Depth 100|Set-Content $checkpoint
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -CheckpointPath $checkpoint}|Should -Throw '*integrity*'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1
+ }
+}
+Describe 'Sign-in directory evidence boundaries' {
+ It 'does not resolve a published candidate as a directory app merely by an equal GUID' {
+  $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@([pscustomobject]@{AppId=$id;Registration='Missing';Ownership='Unverified';IdentifierUris=@('https://example.test/api')});DirectoryObjects=@()}
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@(@{appId=$id;resourceId=$id})}}
+  $r=Get-TokenForgeSignInApplications $token $inventory
+  $r.Resources[0].Resolution|Should -Be Unresolved
+  $r.Resources[0].ResolvedAppId|Should -BeNullOrEmpty
+ }
+ It 'rejects out-of-window events without committing a partial page as complete' {
+  $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@()}
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@(@{appId=$id;createdDateTime='2026-10-01T00:00:00Z';signInEventTypes=@('interactiveUser')})}}
+  $checkpoint=Join-Path (Join-Path $TestDrive outside-private) summary.json
+  {Get-TokenForgeSignInApplications $token $inventory -Since ([DateTimeOffset]'2026-11-01T00:00:00Z') -Until ([DateTimeOffset]'2026-11-02T00:00:00Z') -CheckpointPath $checkpoint}|Should -Throw '*outside requested coverage*'
+  $saved=Get-Content $checkpoint -Raw|ConvertFrom-Json
+  $saved.Payload.Enumeration|Should -Be Partial
+  $saved.Payload.Records|Should -Be 0
+  $saved.Payload.Requests|Should -Be 1
+ }
+}
+Describe 'Sign-in timestamp kind preservation' {
+ BeforeEach {
+  $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@()}
+  $since=[DateTimeOffset]'2026-11-01T23:00:00Z';$until=[DateTimeOffset]'2026-11-02T00:00:00Z'
+ }
+ It 'preserves a real ConvertFrom-Json UTC DateTime near the requested window end' {
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {
+   ('{"value":[{"appId":"11111111-1111-1111-1111-111111111111","createdDateTime":"2026-11-01T23:30:00Z","signInEventTypes":["interactiveUser"]}]}'|ConvertFrom-Json -AsHashtable)
+  }
+  $r=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until
+  $r.Enumeration|Should -Be Complete
+  $r.Coverage.ByEventType.interactiveUser.FirstObservedAt|Should -Be '2026-11-01T23:30:00.0000000+00:00'
+  $r.Coverage.ByEventType.interactiveUser.TimestampedRecordCount|Should -Be 1
+ }
+ It 'preserves typed DateTimeOffset and explicit offset strings as the same UTC instant' -TestCases @(
+  @{Stamp=[DateTimeOffset]'2026-11-01T14:30:00-09:00'},
+  @{Stamp='2026-11-01T14:30:00-09:00'},
+  @{Stamp='2026-11-01T23:30:00Z'},
+  @{Stamp=([DateTime]'2026-11-01T23:30:00Z').ToLocalTime()}
+ ) {
+  param($Stamp)
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@(@{appId=$id;createdDateTime=$Stamp;signInEventTypes=@('interactiveUser')})}}
+  $r=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until
+  $r.Coverage.ByEventType.interactiveUser.LastObservedAt|Should -Be '2026-11-01T23:30:00.0000000+00:00'
+ }
+ It 'refuses out-of-window typed dates without changing the fixed window' {
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {
+   ('{"value":[{"appId":"11111111-1111-1111-1111-111111111111","createdDateTime":"2026-11-02T00:30:00Z","signInEventTypes":["interactiveUser"]}]}'|ConvertFrom-Json -AsHashtable)
+  }
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until}|Should -Throw '*outside requested coverage*'
+ }
+ It 'refuses unspecified DateTime and timezone-free strings instead of assuming the host timezone' -TestCases @(
+  @{Stamp=[DateTime]::SpecifyKind([DateTime]'2026-11-01T23:30:00',[DateTimeKind]::Unspecified)},
+  @{Stamp='2026-11-01T23:30:00'}
+ ) {
+  param($Stamp)
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@(@{appId=$id;createdDateTime=$Stamp;signInEventTypes=@('interactiveUser')})}}
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until}|Should -Throw '*timezone context*'
+ }
+}
+
+Describe 'Sign-in query and checkpoint use the exact UTC window' {
+ BeforeEach {
+  $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@()}
+  $since=[DateTimeOffset]'2026-10-31T15:00:00.5000001-09:00'
+  $until=[DateTimeOffset]'2026-11-02T01:00:00.7500002+01:00'
+ }
+ It 'keeps fractional bounds in the Graph filter and includes both exact edges' {
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {
+   @{value=@(
+    @{appId=$id;createdDateTime='2026-11-01T00:00:00.5000001Z';signInEventTypes=@('interactiveUser')},
+    @{appId=$id;createdDateTime='2026-11-02T00:00:00.7500002Z';signInEventTypes=@('interactiveUser')}
+   )}
+  }
+  $r=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until
+  $r.RecordCount|Should -Be 2
+  $r.Since|Should -BeExactly '2026-11-01T00:00:00.5000001+00:00'
+  $r.Until|Should -BeExactly '2026-11-02T00:00:00.7500002+00:00'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -Exactly -ParameterFilter {
+   [uri]::UnescapeDataString($Uri.Query).Contains('createdDateTime ge 2026-11-01T00:00:00.5000001Z and createdDateTime le 2026-11-02T00:00:00.7500002Z')
+  }
+ }
+ It 'rejects a row a tick outside either edge' -TestCases @(
+  @{Stamp='2026-11-01T00:00:00.5000000Z'},
+  @{Stamp='2026-11-02T00:00:00.7500003Z'}
+ ) {
+  param($Stamp)
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@(@{appId=$id;createdDateTime=$Stamp})}}
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until}|Should -Throw '*outside requested coverage*'
+ }
+ It 'reuses the same instant through a different offset but rejects even a one-tick bound change' {
+  $checkpoint=Join-Path (Join-Path $TestDrive fractional-private) summary.json
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@()}}
+  $r=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -CheckpointPath $checkpoint
+  $again=Get-TokenForgeSignInApplications $token $inventory -Since $since.ToUniversalTime() -Until $until.ToUniversalTime() -CheckpointPath $checkpoint
+  $again.CapturedAt|Should -BeExactly $r.CapturedAt
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since.AddTicks(1) -Until $until -CheckpointPath $checkpoint}|Should -Throw '*binding*'
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until.AddTicks(-1) -CheckpointPath $checkpoint}|Should -Throw '*binding*'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -Exactly
+ }
+ It 'keeps the original wire representation for whole-second windows' {
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {@{value=@()}}
+  $null=Get-TokenForgeSignInApplications $token $inventory -Since ([DateTimeOffset]'2026-11-01T00:00:00Z') -Until ([DateTimeOffset]'2026-11-02T00:00:00Z')
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -Exactly -ParameterFilter {
+   [uri]::UnescapeDataString($Uri.Query).Contains('createdDateTime ge 2026-11-01T00:00:00Z and createdDateTime le 2026-11-02T00:00:00Z')
+  }
+ }
+}
+
+Describe 'Expired sign-in cursor recovery preserves distinct aggregates' {
+ It 'charges HTTP410 without completing or replaying pages, then recomputes only in a fresh checkpoint' {
+  $inventory=[pscustomobject]@{TenantFingerprint=$fp;Applications=@();DirectoryObjects=@()}
+  $since=[DateTimeOffset]'2026-11-01T00:00:00Z';$until=[DateTimeOffset]'2026-11-02T00:00:00Z'
+  $oldCheckpoint=Join-Path (Join-Path $TestDrive expired-cursor-private) summary.json
+  $freshCheckpoint=Join-Path (Join-Path $TestDrive fresh-cursor-private) summary.json
+  $script:expiredCursorPhase='InitialPartial'
+  Mock Invoke-TokenForgeGraph -ModuleName TokenForge {
+   param($Uri)
+   if($Uri.Query -eq '?page=expired'){
+    if($script:expiredCursorPhase -eq 'InitialPartial'){throw 'Synthetic interrupted page request'}
+    throw 'Graph request failed (HTTP 410); response details suppressed.'
+   }
+   if($script:expiredCursorPhase -eq 'FreshQuery'){
+    return @{value=@(
+     @{appId=$id;createdDateTime='2026-11-01T12:00:00Z';signInEventTypes=@('interactiveUser')},
+     @{appId=$id;createdDateTime='2026-11-01T13:00:00Z';signInEventTypes=@('nonInteractiveUser')}
+    )}
+   }
+   @{value=@(@{appId=$id;createdDateTime='2026-11-01T12:00:00Z';signInEventTypes=@('interactiveUser')});'@odata.nextLink'='https://graph.microsoft.com/beta/auditLogs/signIns?page=expired'}
+  }
+  {Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -MaxPages 5 -CheckpointPath $oldCheckpoint}|Should -Throw '*interrupted*'
+  $beforeExpiry=Get-Content $oldCheckpoint -Raw|ConvertFrom-Json
+  $beforeExpiry.Payload.Enumeration|Should -Be Partial
+  $beforeExpiry.Payload.Pages|Should -Be 1
+  $beforeExpiry.Payload.Records|Should -Be 1
+  $beforeExpiry.Payload.Requests|Should -Be 2
+
+  $script:expiredCursorPhase='ExpiredCursor'
+  $expiredResult=$null
+  {$expiredResult=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -MaxPages 5 -CheckpointPath $oldCheckpoint}|Should -Throw '*HTTP 410*'
+  $expiredResult|Should -BeNullOrEmpty
+  $afterExpiry=Get-Content $oldCheckpoint -Raw|ConvertFrom-Json
+  $afterExpiry.Payload.Enumeration|Should -Be Partial
+  $afterExpiry.Payload.Pages|Should -Be 1
+  $afterExpiry.Payload.Records|Should -Be 1
+  $afterExpiry.Payload.Requests|Should -Be 3
+  $afterExpiry.Payload.Next|Should -Be 'https://graph.microsoft.com/beta/auditLogs/signIns?page=expired'
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 1 -ParameterFilter {$Uri.Query -ne '?page=expired'}
+  $oldBytes=[Convert]::ToBase64String([IO.File]::ReadAllBytes($oldCheckpoint))
+
+  $script:expiredCursorPhase='FreshQuery'
+  $fresh=Get-TokenForgeSignInApplications $token $inventory -Since $since -Until $until -MaxPages 5 -CheckpointPath $freshCheckpoint
+  $fresh.Enumeration|Should -Be Complete
+  $fresh.RecordCount|Should -Be 2
+  $fresh.PageCount|Should -Be 1
+  $fresh.RequestCount|Should -Be 1
+  $fresh.Applications[0].SignInCount|Should -Be 2
+  $fresh.Coverage.ByEventType.interactiveUser.RecordCount|Should -Be 1
+  $fresh.Coverage.ByEventType.nonInteractiveUser.RecordCount|Should -Be 1
+  [Convert]::ToBase64String([IO.File]::ReadAllBytes($oldCheckpoint))|Should -BeExactly $oldBytes
+  Should -Invoke Invoke-TokenForgeGraph -ModuleName TokenForge -Times 4
+ }
+}

@@ -1,0 +1,64 @@
+{
+  "SchemaVersion": 1,
+  "BaseCommit": "e7c491bc4c5f5752610a1ebc184653160edbc8aa",
+  "PublishedBaselineCommit": "be10da62595013477c13c3a693a257f6da22be1d",
+  "SourceHashes": {
+    "scripts/New-TokenForgeFirstPartyInventory.py": "3ff4cbb2043f26c95a53bcd614f6fdf6d449828d681d1c877936b390c79923d8",
+    "src/TokenForge/Public/SignIns.ps1": "696695e9de00dd86a055de42e2873e0bea83f39aa2f78c662d3f7b2f88cd8cd7",
+    "src/TokenForge/Private/SignIns.ps1": "2bdc3caa146d77cdc252881016b9e2c63990fdc5415c9d615f4ed04917a7ce07",
+    "src/TokenForge/Public/Tenant.ps1": "d147725aad0f94b020b1f93dba9054707f27ed507fa9cbf6b174976574b715c8",
+    "tests/FirstPartyInventory.test.py": "18561bfac65fc51b199b998fbf7fcd129904aa389c85b6def7395cf49c69e318",
+    "tests/SignIns.Tests.ps1": "9634aa4fdbd2815ad9ff7dda2f1798ef0841d99ca4438ebe68f640d6caacb97c",
+    "tests/Inventory.Tests.ps1": "105ba2e0050fb9f3d8d5be46a9577271e15b52747cc86683abb2603522a6c017"
+  },
+  "OfflineChecks": {
+    "PesterPassed": 92,
+    "PesterFailed": 0,
+    "PythonFixturePassed": 20,
+    "PythonFixtureFailed": 0,
+    "PrivateIntegration": "Complete-window private report and replay byte-identical across all three outputs; actual artifacts and frozen input bindings independently inspected",
+    "ReferenceFacts": "Three positive typed public references checked against retained raw-document hashes",
+    "Privacy": "No raw-event/token/user/IP fields in private projection; tenant-derived reports and counts excluded from this source publication",
+    "PesterEvidence": "32 focused sign-in checks passed under America/Anchorage, including expired-cursor replacement; 60 unchanged inventory checks reused",
+    "PythonEvidence": "20 prior fixture checks reused: engine, fixtures and inputs unchanged"
+  },
+  "IndependentReview": "Final production overlay, completed-query receipts, actual private report/replay, added HTTP 410 regression and operator guide accepted; 32 focused sign-in checks independently passed under America/Anchorage",
+  "ReusedInputs": "Existing approved Linux x64 runtime and binary pair; no compiled changes or rebuild; historical live proofs remain separate from later offline qualification",
+  "Unproven": "Query completion does not establish the tenant retention policy or recover events unavailable to Graph. Historical issuance/API proofs are retained evidence, not a new token sweep.",
+  "Limitations": [
+    "Supplied private evidence is source-bound local custody, not independently signed attestation",
+    "Only Linux local checks performed",
+    "Reference facts are partial; missing identifiers remain unresolved"
+  ],
+  "Publication": "No catalog publication or merge",
+  "OriginalOfflineSourceCommit": "df0bd4bcf7a2209ace2639d1dbb05d7d093d69b2",
+  "TimestampCorrection": {
+    "Defect": "ConvertFromJson UTC DateTime converted to a timezone-free string before reparsing could shift the instant using local timezone",
+    "Fix": "Preserve typed DateTime/DateTimeOffset; require explicit zone for string timestamps; original window checks unchanged",
+    "SyntheticProof": "Real JSON parsing under America/Anchorage reproduced a nine-hour shift and in-window rejection; regression now preserves UTC",
+    "LiveAttributionLimit": "Approved read-only attempt stopped during first-page processing; exact live exception/event was not retained, so this defect is not claimed as proven attribution for that specific stop",
+    "Review": "Independent source review and31 focused tests accepted",
+    "LiveCoverage": "Exercised by the bounded partial resume and later complete identical-window query; the earlier deadline stop remains historical partial evidence."
+  },
+  "BoundedLiveValidation": {
+    "SourceCommit": "8fd0d4f5fae9081641a6d3743eae192e9f228a58",
+    "Status": "PartialAccepted",
+    "Outcome": "Approved read-only resume progressed through committed pages, then stopped at its absolute operation deadline. All four event types were observed.",
+    "Accounting": "Prior charges and the final uncertain canceled GET remain retained and charged; no implicit retry, reset, time extension or further authentication",
+    "IndependentReview": "Actual terminal receipts, cumulative accounting, frozen inputs, normalized checkpoint summary and private report directly inspected and accepted as partial only",
+    "Privacy": "Tenant-derived counts, identifiers, raw events and operational receipts remain local",
+    "Scope": "Historical partial attempt, preserved separately from later completion",
+    "RemainingAtThatTime": "Complete requested-window coverage is unproven; additional live work exceeds the spent session authorization"
+  },
+  "CompletedReadOnlyBackfill": {
+    "ExecutionSourceCommit": "374942bfb448f6eee568794f0c92123527d5d2ee",
+    "Status": "Complete_QueryResultsOnly",
+    "Outcome": "Under the later instruction to finish without an artificial collection deadline, a renewed attempt encountered HTTP 410 on the old cursor. A distinct fresh checkpoint then enumerated the identical frozen window to its terminal page; all four requested event types were observed.",
+    "Accounting": "Cumulative charges include all stopped attempts, opaque provider reservations and the prior uncertain canceled GET; no automatic HTTP retry or counter reset. Final receipt has no pending request and remains within the cumulative ceiling.",
+    "Aggregation": "Expired partial aggregates remain archived and are not added to the replacement window. The separate historical window remains separately labeled.",
+    "Retention": "Requested and observed UTC bounds are retained separately; no claim of complete tenant retention.",
+    "Evidence": "Actual receipts, immutable inputs, complete aggregate and report remain private and were directly inspected and accepted by the independent reviewer.",
+    "ReusedEvidence": "Unchanged Linux binary/runtime pair, frozen directory inventory, public ledger/Graph definitions and historical matched issuance/fixed-GET proofs; no rebuild, directory refresh, new token sweep or new API proof.",
+    "Publication": "Source, synthetic fixtures and sanitized summaries only; no catalog or operational evidence publication"
+  }
+}

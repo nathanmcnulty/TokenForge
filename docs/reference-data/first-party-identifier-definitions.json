@@ -1,0 +1,30 @@
+{
+  "Format": "TokenForgeIdentifierDefinitions",
+  "SchemaVersion": 1,
+  "Definitions": [
+    {
+      "Kind": "AAGUID",
+      "Id": "9ddd1817-af5a-4672-a2b9-3e3dd95000a9",
+      "Label": "Windows Hello VBS Hardware Authenticator",
+      "Source": "https://learn.microsoft.com/en-us/entra/identity/authentication/how-to-authentication-entra-passkeys-on-windows",
+      "SourceSha256": "206bb620c1b7ed7c8c0145045509ff1f7ce67b64acfb200585f45148e51cf4e3",
+      "Evidence": "ExplicitTypedMicrosoftDocumentation"
+    },
+    {
+      "Kind": "SKU",
+      "Id": "6fd2c87f-b296-42f0-b197-1e91e994b900",
+      "Label": "ENTERPRISEPACK",
+      "Source": "https://learn.microsoft.com/en-us/graph/api/cloudlicensing-admincloudlicensing-list-allotments?view=graph-rest-beta",
+      "SourceSha256": "d44c3a5b60d11edca277b66ede3db5812a27acfd01b0d0d1500b0b18b0fa5b12",
+      "Evidence": "ExplicitTypedMicrosoftDocumentation"
+    },
+    {
+      "Kind": "DirectoryRole",
+      "Id": "62e90394-69f5-4237-9190-012177145e10",
+      "Label": "Global Administrator role template",
+      "Source": "https://learn.microsoft.com/en-us/graph/api/resources/tenantgovernanceservices-roletemplate?view=graph-rest-beta",
+      "SourceSha256": "d7a42d50bfb9b9b65eac40db482fa6456f2c19c2694d1d2db1abd878ceae8214",
+      "Evidence": "ExplicitTypedMicrosoftDocumentation"
+    }
+  ]
+}

@@ -134,6 +134,17 @@ Describe 'Tenant inventory' {
         Mock Get-TokenForgeGraphCollection -ModuleName TokenForge { throw 'Graph request failed (HTTP 403)' } -ParameterFilter { $Uri.AbsolutePath -eq '/v1.0/oauth2PermissionGrants' }
         (Get-TokenForgeTenantInventory -GraphToken $jwt -Discovery $discovery).GrantEnumeration | Should -Be Forbidden
     }
+    It 'retains private object mappings only when explicitly requested without extra requests' {
+        $private = Get-TokenForgeTenantInventory -GraphToken $jwt -Discovery $discovery -SkipGrants -IncludeDirectoryObjects
+        $private.DirectoryObjects.Count | Should -Be 2
+        $private.DirectoryObjects[0].ServicePrincipalObjectId | Should -Be 'private-client-object'
+        $private.DirectoryObjects[0].AppId | Should -Be $clientId
+        $private.DirectoryObjects[0].Ownership | Should -Be VerifiedMicrosoftOwner
+        $default = Get-TokenForgeTenantInventory -GraphToken $jwt -Discovery $discovery -SkipGrants
+        $default.DirectoryObjects.Count | Should -Be 0
+        Should -Invoke Get-TokenForgeGraphCollection -ModuleName TokenForge -Times 2 -Exactly
+        ($private | ConvertTo-Json -Depth 30) | Should -Not -Match 'synthetic-tenant|synthetic-user'
+    }
 }
 
 Describe 'Service principal registration' {

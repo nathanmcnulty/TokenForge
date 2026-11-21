@@ -319,6 +319,7 @@ function Invoke-TfPublicationOperation {
   $stage='Candidate';$candidate=Join-Path $scratch candidate;$null=[IO.Directory]::CreateDirectory($candidate,[IO.UnixFileMode]448)
   Expand-TfPublicationArchive $archive $candidate
   $manifest=Assert-TfDiscoveryCandidate $candidate $approval.CandidateHash
+  if($manifest.SchemaVersion -ne 1){throw 'Hosted approval requires hosted-label candidate schema.'}
   if($manifest.SourceCommit -cne $approval.SourceCommit -or $manifest.ProducerRunId -cne $approval.ProducerRunId -or $manifest.ProducerAttempt -cne $approval.ProducerAttempt){throw 'Candidate/producer mismatch.'}
   $stage='Commit';Assert-TfPublicationCommit $context $approval $candidate
   $stage='Journal';$transaction=Get-TfCandidateHash ([ordered]@{Policy=$PolicySha256;ReviewerComment=$ReviewerComment;MaintainerComment=$MaintainerComment;Reviewer=$review.Actor;Maintainer=$main.Actor;ApprovalBodySha256=(Get-TokenForgePublicationPlanHash $review.Body)})

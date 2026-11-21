@@ -84,12 +84,13 @@ function Get-TfCandidateReviewText($Validation) {
  "# Saved discovery evidence candidate`n`nSelected pairs: $($Validation.SelectedPairs); structurally excluded pairs: $($Validation.StructurallyExcludedPairs); pairs with an unknown matrix: $($Validation.UnknownMatrixPairs).`n`nKnown planned cells: $($Validation.PlannedCells); terminal: $($Validation.TerminalCells); in-flight unknown: $($Validation.InFlightUnknownCells); pending: $($Validation.PendingCells); paused: $($Validation.PausedCells); request-blocked: $($Validation.RequestBlockedCells); transient failure: $($Validation.TransientFailureCells).`n`nInspect recipe.json, coverage.json, scopes.json and flows.json in full. Historical matched successes are observations for one account, not universal support, consent or API access. Started attempts remain unknown. This export does not authenticate or issue tokens. Integrity and privacy validation do not constitute semantic approval. Approval and publication require separate authority.`n"
 }
 function New-TfDiscoveryCandidate {
- [CmdletBinding()]param(
+ [CmdletBinding(DefaultParameterSetName='HostedLabels')]param(
   [Parameter(Mandatory)][string]$ScopePath,[Parameter(Mandatory)][string]$FlowPath,
   [Parameter(Mandatory)][ValidatePattern('^[a-f0-9]{64}$')][string]$CohortId,
   [Parameter(Mandatory)][string]$OutputPath,[Parameter(Mandatory)][ValidatePattern('^[a-f0-9]{40}$')][string]$SourceCommit,
-  [Parameter(Mandatory)][ValidatePattern('^[1-9][0-9]*$')][string]$ProducerRunId,
-  [Parameter(Mandatory)][ValidatePattern('^[1-9][0-9]*$')][string]$ProducerAttempt,
+  [Parameter(Mandatory,ParameterSetName='HostedLabels')][ValidatePattern('^[1-9][0-9]*$')][string]$ProducerRunId,
+  [Parameter(Mandatory,ParameterSetName='HostedLabels')][ValidatePattern('^[1-9][0-9]*$')][string]$ProducerAttempt,
+  [Parameter(Mandatory,ParameterSetName='Local')][Collections.IDictionary]$LocalOrigin,
   [Parameter(Mandatory)][string]$NativeExecutablePath)
  $ErrorActionPreference='Stop'
  if(-not $ScopePath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase) -or -not $FlowPath.EndsWith('.sqlite',[StringComparison]::OrdinalIgnoreCase)){throw 'Saved cohort candidates require existing SQLite stores.'}
@@ -161,6 +162,7 @@ function New-TfDiscoveryCandidate {
   [IO.File]::WriteAllText((Join-Path $stage 'review.md'),(Get-TfCandidateReviewText $validation),[Text.UTF8Encoding]::new($false))
   $files=@(Get-ChildItem -LiteralPath $stage -File|Sort-Object Name|ForEach-Object {[ordered]@{Path=$_.Name;Sha256=Get-TfCandidateFileHash $_.FullName}})
   $manifest=[ordered]@{SchemaVersion=1;SourceCommit=$SourceCommit;ProducerRunId=$ProducerRunId;ProducerAttempt=$ProducerAttempt;RecipeSha256=Get-TfCandidateFileHash (Join-Path $stage 'recipe.json');FrozenRecipeSha256=Get-TfCandidateHash $frozen;ScopeEvidenceSha256=$scopeHash;FlowEvidenceSha256=$flowHash;Files=$files}
+  if($PSCmdlet.ParameterSetName -ceq 'Local'){Assert-TfLocalCandidateOrigin $LocalOrigin;$manifest.Remove('ProducerRunId');$manifest.Remove('ProducerAttempt');$manifest.SchemaVersion=2;$manifest.Origin=$LocalOrigin}
   Write-TfCandidateJson $manifest (Join-Path $stage 'manifest.json')
   $candidateHash=Get-TfCandidateFileHash (Join-Path $stage 'manifest.json')
   $null=Assert-TfDiscoveryCandidate -CandidatePath $stage -CandidateHash $candidateHash
@@ -182,8 +184,15 @@ function Assert-TfDiscoveryCandidate {
  $manifestPath=Join-Path $CandidatePath 'manifest.json'
  if((Get-TfCandidateFileHash $manifestPath) -cne $CandidateHash){throw 'Candidate manifest hash mismatch.'}
  $m=Read-TfCandidateJson $manifestPath
- Assert-TfCiKeys $m @('SchemaVersion','SourceCommit','ProducerRunId','ProducerAttempt','RecipeSha256','FrozenRecipeSha256','ScopeEvidenceSha256','FlowEvidenceSha256','Files')
- if(($m.SchemaVersion -isnot [int] -and $m.SchemaVersion -isnot [long]) -or $m.SchemaVersion -ne 1 -or $m.SourceCommit -isnot [string] -or $m.SourceCommit -cnotmatch '^[a-f0-9]{40}$' -or $m.ProducerRunId -isnot [string] -or $m.ProducerRunId -cnotmatch '^[1-9][0-9]*$' -or $m.ProducerAttempt -isnot [string] -or $m.ProducerAttempt -cnotmatch '^[1-9][0-9]*$' -or $m.Files -isnot [array]){throw 'Invalid candidate manifest.'}
+ if($m.SchemaVersion -ceq 1){
+  Assert-TfCiKeys $m @('SchemaVersion','SourceCommit','ProducerRunId','ProducerAttempt','RecipeSha256','FrozenRecipeSha256','ScopeEvidenceSha256','FlowEvidenceSha256','Files')
+  foreach($name in @('ProducerRunId','ProducerAttempt')){if($m[$name] -isnot [string] -or $m[$name] -cnotmatch '^[1-9][0-9]*$'){throw 'Invalid candidate producer label.'}}
+ }elseif($m.SchemaVersion -ceq 2){
+  Assert-TfCiKeys $m @('SchemaVersion','SourceCommit','Origin','RecipeSha256','FrozenRecipeSha256','ScopeEvidenceSha256','FlowEvidenceSha256','Files')
+  Assert-TfLocalCandidateOrigin $m.Origin
+  if($ReviewPath){throw 'Local origin requires the separate authenticated publication approval path.'}
+ }else{throw 'Invalid candidate version.'}
+ if(($m.SchemaVersion -isnot [int] -and $m.SchemaVersion -isnot [long]) -or $m.SourceCommit -isnot [string] -or $m.SourceCommit -cnotmatch '^[a-f0-9]{40}$' -or $m.Files -isnot [array]){throw 'Invalid candidate manifest.'}
  foreach($field in @('RecipeSha256','FrozenRecipeSha256','ScopeEvidenceSha256','FlowEvidenceSha256')){if($m[$field] -isnot [string] -or $m[$field] -cnotmatch '^[a-f0-9]{64}$'){throw 'Invalid candidate evidence binding.'}}
  $required=@('coverage.json','flows.json','recipe.json','review.md','scopes.json','validation.json')
  $seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
@@ -208,4 +217,12 @@ function Assert-TfDiscoveryCandidate {
   if($review.ReviewedAt -isnot [string] -or -not [DateTimeOffset]::TryParse($review.ReviewedAt,[ref]$date) -or $date -gt [DateTimeOffset]::UtcNow){throw 'Invalid review timestamp.'}
  }
  $m
+}
+
+# Local provenance is typed evidence binding, never an authorization or hosted claim.
+function Assert-TfLocalCandidateOrigin($Origin) {
+ Assert-TfCiKeys $Origin @('Kind','ExportId','EvidenceManifestSha256','SelectionSha256','EvidenceSourceCommit','EvidencePackageManifestSha256','EvidenceCompilationSource')
+ if($Origin.Kind -cne 'LocalSnapshotV1' -or $Origin.ExportId -isnot [string] -or $Origin.ExportId -cnotmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'){throw 'Invalid local origin.'}
+ foreach($n in @('EvidenceManifestSha256','SelectionSha256','EvidencePackageManifestSha256')){if($Origin[$n] -isnot [string] -or $Origin[$n] -cnotmatch '^[a-f0-9]{64}$'){throw 'Invalid local evidence digest.'}}
+ foreach($n in @('EvidenceSourceCommit','EvidenceCompilationSource')){if($Origin[$n] -isnot [string] -or $Origin[$n] -cnotmatch '^[a-f0-9]{40}$'){throw 'Invalid local evidence source.'}}
 }

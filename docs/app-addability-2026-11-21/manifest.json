@@ -1,0 +1,78 @@
+{
+  "classificationSemantics": {
+    "couldntAdd": "Only an explicit app-specific refusal; historical failures without a specific reason remain pending.",
+    "currentConfirmed": "Only a current exact AppId Graph lookup or successful create followed by exact verification.",
+    "historicalPositiveEvidence": "Dated October observations kept separate from current results.",
+    "pending": "Current outcome is unverified, inconclusive, throttled, permission/session blocked, or historically failed without a specific reason."
+  },
+  "currentCheckpoint": {
+    "createdServicePrincipalCount": 0,
+    "queueCount": 5470,
+    "status": "Prepared"
+  },
+  "generatedForUtcDate": "2026-11-21",
+  "historicalSources": {
+    "octoberDiscovery": {
+      "capturedAtUtc": "2026-10-03T17:28:48.1716299+00:00",
+      "path": "discovery.json",
+      "recordCount": 5455,
+      "sha256": "7ae20232e841b45d3c22ce8f875705e184686d9d94d4334a5a42fa5f4a452df5"
+    },
+    "octoberInventory": {
+      "capturedAtUtc": "2026-10-04T18:22:30.9552572+00:00",
+      "path": "inventory.json",
+      "recordCount": 5514,
+      "sha256": "91a2733e4c8bdd3e05d9f21057817f0f4a7fb4a6201f1561bd14551585c34271"
+    },
+    "octoberRegistrationAttempts": {
+      "attemptCount": 5346,
+      "dateRangeUtc": [
+        "2026-10-03T06:29:05.0000000+00:00",
+        "2026-10-03T08:43:48.0000000+00:00"
+      ],
+      "path": "scopes.json",
+      "sha256": "ed60e2e2219f16c698983cfcddfc69d43b577cd667751aaf83db6ae73f14705c"
+    }
+  },
+  "schemaVersion": 1,
+  "sourceSnapshot": {
+    "appIdCount": 5470,
+    "branch": "discovery-data",
+    "commit": "a5200c8172f8487ea01cadd5480d3f9f7610a521",
+    "gitBlobSha1": "53d3c52efa10287470047158c8d39eeef4fc9b5b",
+    "path": "applications.json",
+    "repository": "nathanmcnulty/TokenForge",
+    "sha256": "930413f4bef996dfa2b4dc6257ddabc77896de9a443d0ad693aea47e1510910b"
+  },
+  "summary": {
+    "current": {
+      "confirmed": 0,
+      "couldntAdd": 0,
+      "currentResultsRecordedCount": 0,
+      "pending": 5470
+    },
+    "currentCheckpoint": {
+      "createdServicePrincipalCount": 0,
+      "queueCount": 5470,
+      "status": "Prepared"
+    },
+    "historical": {
+      "distinctAppsWithHistoricalPositiveCrossTenantEvidence": 1993,
+      "historicalPositiveEvidenceEvents": 3271,
+      "octoberDiscoveryMatches": 5454,
+      "octoberInventoryStatusCounts": {
+        "Missing": 3461,
+        "NoExactMatch": 15,
+        "OwnerMismatch": 1,
+        "Present": 1993
+      },
+      "octoberLatestRegistrationOutcomeCounts": {
+        "Created": 1278,
+        "Failed": 3457,
+        "NoAttempt": 731,
+        "OwnerRejected": 4
+      }
+    },
+    "snapshotAppIdCount": 5470
+  }
+}

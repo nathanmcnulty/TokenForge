@@ -158,6 +158,78 @@ Describe 'App addability context, transport, and restart safety' {
         Should -Invoke Set-MgRequestContext -Times 0
     }
 
+    It 'passes the exact alternate-key URI through the installed SDK surface' {
+        $script:capturedMethod=$null;$script:capturedUri=$null
+        Mock Invoke-MgGraphRequest {
+            $script:capturedMethod=[string]$Method
+            $script:capturedUri=[string]$Uri
+            [pscustomobject]@{error=[pscustomobject]@{code='Request_ResourceNotFound';message='not found'}}
+        }
+        $outcome=Invoke-AppAddabilityGraphRequest -Method GET -AppId $script:App.ToString() -TenantId $script:Tenant -ExpectedAccount $script:Account
+        $script:capturedMethod | Should -Be 'GET'
+        $script:capturedUri | Should -Be "https://graph.microsoft.com/v1.0/servicePrincipals(appId='$($script:App)')"
+        $outcome.ErrorCode | Should -Be 'Request_ResourceNotFound'
+    }
+
+    It 'normalizes HTTP status, Graph error, request ID, and Retry-After metadata' {
+        $metadata=Get-AppAddabilityHttpMetadata -Body ([pscustomobject]@{error=[pscustomobject]@{code='Request_ResourceNotFound'}}) -ResponseHeaders @{ 'request-id'='aaaaaaaa-0000-0000-0000-000000000001';'Retry-After'='30' } -StatusCode 404
+        $metadata.StatusCode | Should -Be 404
+        $metadata.ErrorCode | Should -Be 'Request_ResourceNotFound'
+        $metadata.RequestId | Should -Be 'aaaaaaaa-0000-0000-0000-000000000001'
+        $metadata.RetryAfterUtc | Should -Not -BeNullOrEmpty
+    }
+
+    It 'keeps SDK exception receipts sanitized and classifies local URI failures' {
+        Mock Invoke-MgGraphRequest { throw [UriFormatException]::new('synthetic-private-sentinel') }
+        $outcome=Invoke-AppAddabilityGraphRequest -Method GET -AppId $script:App.ToString() -TenantId $script:Tenant -ExpectedAccount $script:Account
+        $outcome.StatusCode | Should -Be 0
+        $outcome.TransportOutcome | Should -Be 'LocalInvocationError'
+        $outcome.Diagnostic.FailureStage | Should -Be 'GraphRequestInvocation'
+        $outcome.Diagnostic.ExceptionType | Should -Be 'System.UriFormatException'
+        (ConvertTo-Json -InputObject $outcome -Depth 20) | Should -Not -Match 'synthetic-private-sentinel'
+    }
+
+    It 'persists sanitized exception details in a stop receipt' {
+        $root=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'));[IO.Directory]::CreateDirectory($root)|Out-Null
+        $item=[ordered]@{AppId=$script:App.ToString();Source='Fixture';Metadata=@{Name='Fixture app'};RetryAfterUtc=$null}
+        $state=[ordered]@{Format='TokenForgeAppAddabilityCheckpoint';SchemaVersion=1;Status='Prepared';TenantId=$script:Tenant.ToString();ExpectedAccount=$script:Account;SnapshotSha256=('a'*64);CreatedAtUtc='2026-11-21T00:00:00Z';UpdatedAtUtc=$null;Queue=@($item);InFlight=$null;Results=[ordered]@{Confirmed=@();CouldntAdd=@();Pending=@()};CreatedServicePrincipals=@()}
+        $responses=[Collections.Queue]::new();$responses.Enqueue({throw [UriFormatException]::new('synthetic-private-sentinel')})
+        $calls=[Collections.Generic.List[string]]::new();$request=New-AppAddabilityRequest $responses $calls
+        $result=Invoke-AppAddabilityCatalog -State $state -CheckpointPath (Join-Path $root 'checkpoint.json') -TenantId $script:Tenant -ExpectedAccount $script:Account -Request $request
+        ($calls -join ',') | Should -Be 'GET'
+        $result.QueueCount | Should -Be 1
+        $saved=Get-Content (Join-Path $root 'checkpoint.json') -Raw | ConvertFrom-Json -AsHashtable
+        $saved.Status | Should -Be 'Pending'
+        $saved.StopReceipts.Count | Should -Be 1
+        $saved.StopReceipts[0].FailureStage | Should -Be 'RequestCallback'
+        $saved.StopReceipts[0].RequestMethod | Should -Be 'GET'
+        $saved.StopReceipts[0].ExceptionType | Should -Be 'System.UriFormatException'
+        [string](Get-Content (Join-Path $root 'checkpoint.json') -Raw) | Should -Not -Match 'synthetic-private-sentinel'
+        $receipt=@(Get-Content (Join-Path $root 'stop-receipts.json') -Raw | ConvertFrom-Json -AsHashtable)
+        $receipt[0].ExceptionType | Should -Be 'System.UriFormatException'
+    }
+
+    It 'persists Graph response code, request IDs, and retry time in a stop receipt' {
+        $root=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'));[IO.Directory]::CreateDirectory($root)|Out-Null
+        $item=[ordered]@{AppId=$script:App.ToString();Source='Fixture';Metadata=@{Name='Fixture app'};RetryAfterUtc=$null}
+        $state=[ordered]@{Format='TokenForgeAppAddabilityCheckpoint';SchemaVersion=1;Status='Prepared';TenantId=$script:Tenant.ToString();ExpectedAccount=$script:Account;SnapshotSha256=('a'*64);CreatedAtUtc='2026-11-21T00:00:00Z';UpdatedAtUtc=$null;Queue=@($item);InFlight=$null;Results=[ordered]@{Confirmed=@();CouldntAdd=@();Pending=@()};CreatedServicePrincipals=@()}
+        $retry=[DateTimeOffset]::UtcNow.AddSeconds(45).ToString('o')
+        $diagnostic=New-AppAddabilityDiagnostic -FailureStage 'GraphResponse' -RequestMethod GET -Operation 'LookupServicePrincipalByAppId' -TransportOutcome 'HttpFailure' -GraphStatusCode 503 -GraphErrorCode 'ServiceUnavailable' -RequestId 'aaaaaaaa-0000-0000-0000-000000000002' -ClientRequestId 'bbbbbbbb-0000-0000-0000-000000000002' -RetryAfterUtc $retry
+        $request={param($Method,$AppId)[pscustomobject]@{StatusCode=503;ErrorCode='ServiceUnavailable';ErrorMessage='';Body=$null;RetryAfter=$retry;TransportOutcome='HttpFailure';Diagnostic=$diagnostic}}.GetNewClosure()
+        $result=Invoke-AppAddabilityCatalog -State $state -CheckpointPath (Join-Path $root 'checkpoint.json') -TenantId $script:Tenant -ExpectedAccount $script:Account -Request $request
+        $result.QueueCount | Should -Be 1
+        $result.PendingCount | Should -Be 1
+        $saved=Get-Content (Join-Path $root 'checkpoint.json') -Raw | ConvertFrom-Json -AsHashtable
+        $receipt=$saved.StopReceipts[0]
+        $receipt.GraphStatusCode | Should -Be 503
+        $receipt.GraphErrorCode | Should -Be 'ServiceUnavailable'
+        $receipt.RequestId | Should -Be 'aaaaaaaa-0000-0000-0000-000000000002'
+        $receipt.ClientRequestId | Should -Be 'bbbbbbbb-0000-0000-0000-000000000002'
+        $actualRetry=[DateTimeOffset]::Parse($receipt.RetryAfterUtc).ToUniversalTime()
+        $expectedRetry=[DateTimeOffset]::Parse($retry).ToUniversalTime()
+        [math]::Abs(($actualRetry-$expectedRetry).TotalSeconds) | Should -BeLessThan 1
+    }
+
     It 'reconciles a saved POST intent before repeating after restart' {
         $root=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'));[IO.Directory]::CreateDirectory($root)|Out-Null
         $item=[ordered]@{AppId=$script:App.ToString();Source='Fixture';Metadata=@{Name='Fixture app'};RetryAfterUtc=$null}

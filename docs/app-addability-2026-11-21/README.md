@@ -8,6 +8,8 @@ No Microsoft Graph context matched the authorized lab account and tenant during 
 
 The private run checkpoint is prepared outside Git and contains the complete 5,470-ID queue. After a matching interactive Microsoft Graph sign-in is available, `scripts/Invoke-TokenForgeAppAddability.ps1` resumes that queue by exact AppId lookup. It only allows Graph `GET` and `POST`, disables SDK retries, and reconciles an uncertain POST with an exact lookup before any retry. It never grants consent, assigns app roles, signs in as catalog apps, collects logs, or deletes service principals.
 
+After preparation, the authorized interactive context was verified and the runner attempted one exact service-principal `GET`; it stopped before any `POST`. The old checkpoint retained only a generic transport/service reason, without an HTTP status, exception type, Graph error code, request ID, or retry delay, so the original failure cannot be reconstructed from saved evidence. The checkpoint still has 5,470 queued IDs, one pending observation, zero confirmed, zero couldn't-add, zero created principals, and no in-flight item. The runner now records sanitized stop diagnostics in the checkpoint and `stop-receipts.json` without saving raw exception messages. No additional sign-in or Graph request has occurred during this offline diagnosis.
+
 ## Pinned catalog and historical evidence
 
 - Discovery snapshot: `nathanmcnulty/TokenForge` `discovery-data` commit `a5200c8172f8487ea01cadd5480d3f9f7610a521`, blob `53d3c52efa10287470047158c8d39eeef4fc9b5b`, SHA-256 `930413f4bef996dfa2b4dc6257ddabc77896de9a443d0ad693aea47e1510910b`.
@@ -22,7 +24,8 @@ The October snapshots and attempt log are private inputs and are not copied into
 ## Review artifacts
 
 - `catalog-proposal.json`: complete catalog metadata plus separate current disposition and dated historical evidence for every AppId.
-- `confirmed.json`, `couldnt-add.json`, and `pending.json`: mutually exclusive current result lists.
+- `confirmed.json`, `couldnt-add.json`, and `pending.json`: mutually exclusive current result lists; a stopped request also remains pending.
+- `stop-receipts.json`: sanitized exception and Graph response metadata for a stopped request; raw exception text is omitted.
 - `existing-cross-tenant-evidence.json`: October evidence, kept separate from new Graph outcomes.
 - `fresh-successful-creations.json`: service principals newly created and verified during the current run; empty before Graph work.
 - `historical-evidence.json`: reproducible, sanitized October evidence covering all 5,470 IDs.
@@ -79,4 +82,4 @@ Invoke-Pester -Path ./tests/AppAddability.Tests.ps1
 python3 tests/AppAddabilityProposal.test.py
 ```
 
-They cover external non-Microsoft owners, exact-ID lookup/create/verification, ambiguous POST timeout reconciliation and retry, retry-delay handling, mismatch and permission stops, restart recovery, DELETE exclusion, and proposal sanitization.
+They cover external non-Microsoft owners, exact-ID lookup/create/verification, local invocation failure classification and sanitized stop receipts, ambiguous POST timeout reconciliation and retry, retry-delay handling, mismatch and permission stops, restart recovery, DELETE exclusion, and proposal sanitization.

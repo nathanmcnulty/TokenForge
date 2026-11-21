@@ -51,7 +51,7 @@ Use the supported Microsoft Graph PowerShell interactive sign-in on the parrot c
 
 ```powershell
 Import-Module Microsoft.Graph.Authentication -RequiredVersion 2.38.1
-Connect-MgGraph -TenantId <approved-lab-tenant-id> -Scopes Application.ReadWrite.All -NoWelcome
+Connect-MgGraph -TenantId <approved-lab-tenant-id> -Scopes Application.ReadWrite.All -ContextScope Process -NoWelcome
 Get-MgContext | Format-List TenantId,Account,AuthType,Scopes
 ```
 

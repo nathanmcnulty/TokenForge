@@ -169,3 +169,4 @@ for ($start = $since; $start -lt $until; $start = $end) {
     RequestedWindowTraversalComplete=(-not $paused); ProviderRetention='Unknown';
     Windows=$windows.ToArray(); CandidateAppIds=@($observed | Sort-Object) } | ConvertTo-Json -Depth 8
 if ($paused) { exit 2 }
+exit 0

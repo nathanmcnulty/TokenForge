@@ -149,6 +149,21 @@ Describe 'Attended Graph directory audit provisioning collector' {
         $r.Windows[0].Status | Should -Be 'UnexpectedResponseUri'
         $r.CandidateAppIds.Count | Should -Be 0
     }
+    It 'resets the exit status after an incomplete run in the same PowerShell caller' {
+        $argsForRun = @{TenantId=$tenant;Account=$account;CatalogRepository=$catalog;CatalogCommit=$commit;
+            Since=$start;Until=[DateTimeOffset]'2026-01-05T23:59:59Z'}
+        Add-Page @{} -Code 403 -Plain
+        $first = & $collector @argsForRun
+        $firstCode = $LASTEXITCODE
+        Add-Page @{value=@()}
+        $second = & $collector @argsForRun
+        $secondCode = $LASTEXITCODE
+        $firstCode | Should -Be 2
+        $secondCode | Should -Be 0
+        ($first | ConvertFrom-Json).RequestedWindowTraversalComplete | Should -BeFalse
+        ($second | ConvertFrom-Json).RequestedWindowTraversalComplete | Should -BeTrue
+    }
+
     It 'rejects duplicate JSON keys and non-commit catalog pins' {
         Add-Page @{} -Raw '{"value":[],"value":[]}'
         (Get-Run).Windows[0].Status | Should -Be 'InvalidPage'

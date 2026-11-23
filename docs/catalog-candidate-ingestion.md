@@ -35,6 +35,24 @@ The report distinguishes client `AppId` from Graph's GUID `resourceId`. Resource
 
 For an attended, bounded sample, use the [operator-owned Graph SDK process](operator-signin-gap-sample.md). The replay command also accepts an in-memory array through `-SnapshotRows` and reports its source-window coverage as unknown.
 
+## Assemble multiple local sign-in gap reports
+
+Save only the aggregate JSON from each successful or partial replay or operator sample to approved private storage. Use disjoint half-open UTC intervals and the same tenant, catalog commit, Graph version, and collection scope for all inputs. The aggregate intentionally contains no tenant or event IDs, so the assembler cannot independently establish that separate inputs came from the same tenant or deduplicate the same event if supplied with changed timestamps.
+
+```bash
+python3 -B scripts/Merge-TokenForgeSignInCatalogGaps.py \
+  --catalog-repo /path/to/discovery-data-checkout \
+  --catalog-commit FULL_DATA_COMMIT \
+  --since 2026-01-05T00:00:00Z --until 2026-01-07T00:00:00Z \
+  day-1.json day-2.json
+```
+
+Use `--graph-version beta` for a set of beta replay reports. The assembler accepts up to 128 aggregate files, each at most 8 MiB and at most 64 MiB combined. It reads both catalog partitions from local Git objects and rejects incompatible report pins, event shapes, candidate IDs, or counts.
+
+The receipt records the requested interval and a disjoint ledger of supplied coverage. Identical parsed reports count once. The receipt identifies them by SHA-256 of canonical JSON. Any conflicting overlap excludes each entire affected report from candidate totals because a summarized report cannot be split without event-level data. The ledger shows both the overlap and excluded tails. Counts from nonoverlapping partial reports are retained and labeled incomplete, and missing intervals are shown explicitly. Exit code 0 and `InputCoverageComplete: true` mean complete local inputs represent all requested intervals. Exit code 2 means there are gaps, overlaps, or partial inputs. Exit code 1 refuses invalid or unavailable inputs without an aggregate.
+
+Even with every requested interval represented, provider coverage and tenant history remain unknown. Counts summarize the included inputs. Client AppIds and Graph resource IDs remain separate, non-verified candidates. The actual JWT audience remains unknown.
+
 ```bash
 TOKENFORGE_TEST_NATIVE=/path/to/reviewed/package/tokenforge python3 -B tests/CatalogCandidateImport.test.py
 ```

@@ -29,3 +29,14 @@ The output shows pending Application IDs absent from both pinned catalog partiti
 Exit code 0 means the local CSV was parsed with no detected input issue. Exit code 2 emits an aggregate with incomplete reasons when the file reaches 100,000 rows, has invalid or out-of-window values, or the operator recorded an incomplete export. Exit code 1 refuses the file or catalog and emits no report. Exact upper-bound rows are skipped to preserve half-open intervals. A below-cap or empty file, successful download, or valid UTC interval leaves provider coverage unknown. [Entra download limits and caveats](https://learn.microsoft.com/en-us/entra/identity/monitoring-health/reports-faq)
 
 For a retained-window inventory, track each interval and category separately. Replace a capped, failed, or interrupted interval with smaller disjoint exports. Mark unavailable categories and unconfirmed intervals explicitly. Use one report per category and interval. Union pending Application IDs across reports for discovery, and avoid summing overlapping exports. Keep category and interval receipts with the private aggregates.
+
+## Plan windows and reconcile status receipts
+
+Run the local planner before exporting any data. The default is one window per UTC day for each standard category. Use a shorter `--window-hours` after a cap or repeated export failure. Use the same plan for all receipts in an inventory batch.
+
+```bash
+python3 -B scripts/Plan-TokenForgeEntraExportWindows.py \
+  --since 2026-01-05T00:00:00Z --until 2026-01-12T00:00:00Z --window-hours 24
+```
+
+To check progress, add `--receipts /private/path/status.json`. Supply an array with only `ExportKind`, `Since`, `UntilExclusive`, and `State` per exact planned window. Use `PortalReportedSuccess`, `Incomplete`, or `Unavailable`. Omit unattempted windows. Identical receipts count once, competing states are marked as conflicts, and missing windows remain explicit. The planner summarizes operator evidence and cannot authenticate successful exports or establish provider retention coverage. It does not read CSV data or combine candidate counts.

@@ -1,0 +1,81 @@
+# Inert activation candidate. Do not promote until hosted proof and separate authorization.
+name: Review sign-in application candidates
+"on":
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: tokenforge-signin-review
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    if: >-
+      github.repository == 'nathanmcnulty/TokenForge' &&
+      github.repository_id == '1402673320' && github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch'
+    environment: entra-audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      ciphertext: ${{ steps.collect.outputs.ciphertext }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - run: bash examples/signin-review/install-proof-age.sh
+      - id: collect
+        name: Read sign-in inventory
+        env:
+          TF_AUDIT_CLIENT_ID: ${{ secrets.TOKENFORGE_AUDIT_CLIENT_ID }}
+          TF_AUDIT_TENANT_ID: ${{ secrets.TOKENFORGE_AUDIT_TENANT_ID }}
+          TF_HANDOFF_RECIPIENT: ${{ vars.TOKENFORGE_AGE_RECIPIENT }}
+        run: |
+          set -euo pipefail
+          umask 077
+          git fetch --quiet --no-tags --depth=1 https://github.com/nathanmcnulty/TokenForge.git d9955781a7130793a5bba178a1b1aa1cf4003439
+          python3 -B examples/signin-review/review_ci.py collect
+
+  issue:
+    needs: collect
+    if: >-
+      needs.collect.result == 'success' &&
+      github.repository == 'nathanmcnulty/TokenForge' &&
+      github.repository_id == '1402673320' && github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch'
+    environment: entra-audit-issue
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Read exact public workflow source
+        env:
+          GIT_TERMINAL_PROMPT: '0'
+          GIT_CONFIG_NOSYSTEM: '1'
+          GIT_CONFIG_GLOBAL: /dev/null
+        run: |
+          set -euo pipefail
+          umask 077
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          mkdir "$RUNNER_TEMP/tokenforge-public-source"
+          cd "$RUNNER_TEMP/tokenforge-public-source"
+          git init --quiet
+          git -c credential.helper= fetch --quiet --no-tags --depth=1 https://github.com/nathanmcnulty/TokenForge.git "$GITHUB_SHA"
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+          git checkout --quiet --detach FETCH_HEAD
+          bash examples/signin-review/install-proof-age.sh
+      - name: Update the configured review queue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TF_HANDOFF_CIPHERTEXT: ${{ needs.collect.outputs.ciphertext }}
+          TF_HANDOFF_IDENTITY: ${{ secrets.TOKENFORGE_AGE_IDENTITY }}
+          TF_REVIEW_ISSUE: ${{ vars.TOKENFORGE_SIGNIN_REVIEW_ISSUE }}
+          TF_REVIEW_ISSUE_NODE: ${{ vars.TOKENFORGE_SIGNIN_REVIEW_ISSUE_NODE }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/tokenforge-public-source"
+          python3 -B examples/signin-review/review_ci.py issue

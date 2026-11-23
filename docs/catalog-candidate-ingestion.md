@@ -33,11 +33,7 @@ The default expects the Graph v1.0 `isInteractive` field. `-PreviewAllEventTypes
 
 The report distinguishes client `AppId` from Graph's GUID `resourceId`. Resource comparison is exact identifier equality, and the actual JWT audience remains unknown. Only scalar strings containing nonzero GUIDs missing from both catalogs become pending candidates. Reports contain aggregate counts, first and last observation times, and event type counts. Deduplication state stays in memory. Replay saves no raw events or continuation links.
 
-### Future operator-run collection
-
-This milestone provides replay only. A future official Graph SDK collector would need an explicit operator-run flow, an exact tenant check, an existing delegated `AuditLog.Read.All` scope, and a supported Entra role. An existing SDK context can still refresh credentials or prompt. Before enabling such a collector, test it in an isolated invocation that disables inherited PowerShell parameter defaults, including SDK file output, headers, and session defaults. Request only the fields needed for in-memory aggregation, and treat retention and paging failures as limits on coverage.
-
-Use v1.0 for retained user sign-ins. Beta is a separate preview option requiring explicit filters for interactive user, non-interactive user, service principal, and managed identity events. Keep client and resource identifiers labeled separately. [Microsoft Graph v1.0](https://learn.microsoft.com/en-us/graph/api/signin-list?view=graph-rest-1.0) · [Microsoft Graph beta](https://learn.microsoft.com/en-us/graph/api/signin-list?view=graph-rest-beta)
+For an attended, bounded sample, use the [operator-owned Graph SDK process](operator-signin-gap-sample.md). The replay command also accepts an in-memory array through `-SnapshotRows` and reports its source-window coverage as unknown.
 
 ```bash
 TOKENFORGE_TEST_NATIVE=/path/to/reviewed/package/tokenforge python3 -B tests/CatalogCandidateImport.test.py

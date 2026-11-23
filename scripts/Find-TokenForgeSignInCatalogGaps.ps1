@@ -3,6 +3,7 @@
 param(
     [Parameter(Mandatory,ParameterSetName='Pages')][string]$FixtureDirectory,
     [Parameter(Mandatory,ParameterSetName='Snapshot')][string]$SnapshotPath,
+    [Parameter(Mandatory,ParameterSetName='Memory')][AllowEmptyCollection()][object]$SnapshotRows,
     [Parameter(Mandatory)][string]$CatalogRepository,
     [Parameter(Mandatory)][ValidatePattern('^[0-9a-f]{40}$')][string]$CatalogCommit,
     [Parameter(Mandatory)][DateTimeOffset]$Since,
@@ -13,7 +14,8 @@ param(
 $PSDefaultParameterValues = @{ Disabled = $true }
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
-$snapshot = $PSCmdlet.ParameterSetName -eq 'Snapshot'
+$memory = $PSCmdlet.ParameterSetName -eq 'Memory'
+$snapshot = $memory -or $PSCmdlet.ParameterSetName -eq 'Snapshot'
 $since = $Since.ToUniversalTime()
 $until = $Until.ToUniversalTime()
 if ($since -ge $until -or ($until - $since).TotalDays -gt 31) {
@@ -138,7 +140,7 @@ for ($start = $since; $start -lt $until; $start = $end) {
         $pageCount++
         try {
             if ($snapshot) {
-                $rows = Read-ReplayJson $SnapshotPath
+                $rows = if ($memory) { ,$SnapshotRows } else { ,(Read-ReplayJson $SnapshotPath) }
                 if ($rows -isnot [array]) { $window.Status = 'InvalidPage'; break }
                 $page = @{ value = $rows }
             } else {
@@ -218,7 +220,7 @@ $candidates = foreach ($kind in @('AppId','GraphResourceId')) {
 }
 [ordered]@{
     Format = 'TokenForgeSignInCatalogGaps'; SchemaVersion = 1; CatalogCommit = $CatalogCommit
-    Source = if ($snapshot) { 'LocalSnapshot' } else { 'LocalPageReplay' }
+    Source = if ($memory) { 'InMemorySnapshot' } elseif ($snapshot) { 'LocalSnapshot' } else { 'LocalPageReplay' }
     GraphVersion = $version
     InputEventShape = if ($PreviewAllEventTypes) { 'GraphBetaEventTypes' } else { 'GraphV1IsInteractive' }
     ReplayComplete = $complete; SourceWindowCoverage = 'Unknown'; TenantHistoryComplete = $false

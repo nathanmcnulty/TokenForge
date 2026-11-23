@@ -23,7 +23,7 @@ def utc(value):
     return datetime.fromisoformat(value)
 
 
-def validate_handoff(raw, env, *, workflow_ref=WORKFLOW_REF):
+def validate_handoff(raw, env, *, workflow_ref=WORKFLOW_REF, categories=EVENTS):
     days = run_scope(env)
     if len(raw) > 65536:
         raise ValueError('Invalid handoff size')
@@ -34,7 +34,7 @@ def validate_handoff(raw, env, *, workflow_ref=WORKFLOW_REF):
     }:
         raise ValueError('Unexpected handoff shape')
     if (type(value['version']) is not int or any(value[k] != v for k, v in expected.items()) or
-            value['categories'] != list(EVENTS) or
+            value['categories'] != list(categories) or
             value['coverage'] != 'requested-windows-terminal;retention-unknown' or
             utc(value['until']) - utc(value['since']) != timedelta(days=days)):
         raise ValueError('Unexpected handoff evidence')
@@ -60,13 +60,13 @@ def validate_issue(issue, number, node):
     return ids
 
 
-def report(env, raw, api, *, workflow_ref=WORKFLOW_REF):
+def report(env, raw, api, *, workflow_ref=WORKFLOW_REF, categories=EVENTS):
     """Future issue-only job entry point; the transport is supplied by its caller."""
     number = env['TF_REVIEW_ISSUE']
     node = env['TF_REVIEW_ISSUE_NODE']
     if not re.fullmatch(r'[1-9][0-9]{0,9}', number) or not re.fullmatch(r'[A-Za-z0-9_=-]{3,128}', node):
         raise ValueError('Expected one configured issue identity')
-    candidates = validate_handoff(raw, env, workflow_ref=workflow_ref)
+    candidates = validate_handoff(raw, env, workflow_ref=workflow_ref, categories=categories)
     if not candidates:
         return
     target = f'repos/{REPOSITORY}/issues/{number}'

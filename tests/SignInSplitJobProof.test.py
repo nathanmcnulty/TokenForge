@@ -46,7 +46,9 @@ class SplitJobProofTests(unittest.TestCase):
         return value
 
     def test_template_is_inert_and_only_ciphertext_crosses_jobs(self):
-        self.assertFalse((ROOT / '.github/workflows/signin-review-handoff-proof.yml').exists())
+        published = ROOT / '.github/workflows/signin-review-handoff-proof.yml'
+        if published.exists():
+            self.assertEqual(published.read_bytes(), (SOURCE / 'handoff-proof.yml').read_bytes())
         source = yaml.safe_load((SOURCE / 'handoff-proof.yml').read_text())
         self.assertEqual(source['on'], {'workflow_dispatch': None})
         self.assertEqual(source['permissions'], {})

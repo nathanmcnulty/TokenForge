@@ -2,12 +2,9 @@
 
 from datetime import datetime, timedelta, timezone
 import json
-import os
 from pathlib import Path
 import re
-import subprocess
 import sys
-import time
 from urllib.parse import urlencode, urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -17,6 +14,7 @@ from tokenforge_offline_catalog import OfflineCatalog, app_id_is_canonical, deco
 HOST = 'graph.microsoft.com'
 PATH = '/beta/auditLogs/signIns'
 EVENTS = ('interactiveUser', 'nonInteractiveUser')
+GRAPH_EVENTS = EVENTS + ('servicePrincipal', 'managedIdentity')
 MODES = {'workflow_dispatch': 30, 'schedule': 2}
 REPOSITORY = 'nathanmcnulty/TokenForge'
 REPOSITORY_ID = '1402673320'
@@ -77,35 +75,6 @@ def valid_link(link):
         return False
 
 
-def az_json(arguments):
-    for attempt in range(4):
-        try:
-            response = subprocess.run(['az', *arguments, '--only-show-errors', '-o', 'json'],
-                                      capture_output=True, timeout=60, check=False)
-        except subprocess.TimeoutExpired as exc:
-            raise ValueError('Azure CLI read timed out') from exc
-        if response.returncode == 0:
-            if len(response.stdout) > 32 * 1024 * 1024:
-                raise ValueError('Graph page exceeded the local parsing bound')
-            return decode(response.stdout)
-        if not re.search(rb'(?im)^ERROR:\s*(?:Too Many Requests|Service Unavailable)\b', response.stderr) or attempt == 3:
-            raise ValueError('Azure CLI read failed or retry limit reached')
-        # az rest does not expose Retry-After through its normal JSON output.
-        time.sleep(30 * 2**attempt)
-
-
-def assert_context(tenant, client, run=az_json):
-    if not all(app_id_is_canonical(value) for value in (tenant, client)):
-        raise ValueError('Expected application and tenant GUIDs')
-    account = run(['account', 'show', '--query', '{tenant:tenantId,client:user.name,type:user.type,cloud:environmentName}'])
-    expected = {'tenant': tenant, 'client': client, 'type': 'servicePrincipal', 'cloud': 'AzureCloud'}
-    if account != expected:
-        raise ValueError('Unexpected app-only Azure CLI context')
-    endpoint = run(['cloud', 'show', '--name', 'AzureCloud', '--query', 'endpoints.microsoftGraphResourceId'])
-    if endpoint not in (f'https://{HOST}', f'https://{HOST}/'):
-        raise ValueError('Unexpected Graph origin')
-
-
 def collect_window(get, start, end, category, catalog_ids):
     predicate = (f"createdDateTime ge {utc(start)} and createdDateTime le {utc(end)} "
                  f"and signInEventTypes/any(t: t eq '{category}')")
@@ -145,32 +114,32 @@ def collect_window(get, start, end, category, catalog_ids):
     raise ValueError('Graph window page limit reached')
 
 
+class IncompleteCategory(ValueError):
+    pass
+
+
 def gather(get, end, days, catalog_ids):
     ids = set()
     for start, stop in intervals(end, days):
-        for category in EVENTS:
-            ids.update(collect_window(get, start, stop, category, catalog_ids))
+        for category in GRAPH_EVENTS:
+            try:
+                ids.update(collect_window(get, start, stop, category, catalog_ids))
+            except ValueError as exc:
+                status = getattr(exc, 'status', None)
+                suffix = f' (HTTP {status})' if type(status) is int and 300 <= status < 600 else ''
+                raise IncompleteCategory(f'Graph coverage incomplete for {category}{suffix}.') from None
             if len(ids) > MAX_IDS:
                 raise ValueError('Candidate handoff would exceed its safe bound')
     return sorted(ids)
 
 
-def main():
-    days = run_scope(os.environ)
-    assert_context(os.environ['TF_AUDIT_TENANT_ID'], os.environ['TF_AUDIT_CLIENT_ID'])
-    identity = handoff_identity(os.environ)
+def collect_envelope(environment, get):
+    days = run_scope(environment)
+    identity = handoff_identity(environment)
     catalog = OfflineCatalog(ROOT, CATALOG_COMMIT)
     known = catalog.app_ids(catalog.partition(True)['Applications'], catalog.partition(False)['Applications'])
     end = datetime.now(timezone.utc).replace(microsecond=0)
-    ids = gather(lambda url: az_json(['rest', '--method', 'get', '--url', url]), end, days, known)
-    handoff = identity | {'since': utc(end - timedelta(days=days)), 'until': utc(end),
-               'categories': list(EVENTS), 'coverage': 'requested-windows-terminal;retention-unknown', 'appIds': ids}
-    with Path(os.environ['TF_CANDIDATE_FILE']).open('x') as output:
-        json.dump(handoff, output, separators=(',', ':'))
-
-
-if __name__ == '__main__':
-    try:
-        main()
-    except (KeyError, ValueError, OSError, TypeError, AttributeError, subprocess.SubprocessError):
-        sys.exit('Audit collection did not produce a candidate handoff.')
+    ids = gather(get, end, days, known)
+    envelope = identity | {'since': utc(end - timedelta(days=days)), 'until': utc(end),
+                           'categories': list(GRAPH_EVENTS), 'coverage': 'requested-windows-terminal;retention-unknown', 'appIds': ids}
+    return json.dumps(envelope, separators=(',', ':')).encode()

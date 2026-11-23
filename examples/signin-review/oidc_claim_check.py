@@ -6,7 +6,7 @@ import os
 import re
 import sys
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 REPOSITORY = "nathanmcnulty/TokenForge"
 REPOSITORY_ID = "1402673320"
@@ -41,7 +41,7 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
-def get_claims(environment):
+def get_assertion(environment):
     url = urlsplit(environment['ACTIONS_ID_TOKEN_REQUEST_URL'])
     if (url.scheme != 'https' or not url.hostname or not url.hostname.endswith('.actions.githubusercontent.com')
             or url.username or url.password or url.port not in (None, 443) or url.fragment):
@@ -52,7 +52,7 @@ def get_claims(environment):
     args.append(('audience', AUDIENCE))
     request = Request(urlunsplit(url._replace(query=urlencode(args))),
                       headers={'Authorization': 'Bearer ' + environment['ACTIONS_ID_TOKEN_REQUEST_TOKEN']})
-    with build_opener(NoRedirect()).open(request, timeout=15) as response:
+    with build_opener(ProxyHandler({}), NoRedirect()).open(request, timeout=15) as response:
         body = response.read(65537)
     if len(body) > 65536:
         raise ValueError('Token response too large')
@@ -65,7 +65,11 @@ def get_claims(environment):
     claims = json.loads(base64.urlsafe_b64decode(payload + '=' * (-len(payload) % 4)))
     if not isinstance(claims, dict):
         raise ValueError('Unexpected OIDC claim shape')
-    return claims
+    return value, claims
+
+
+def get_claims(environment):
+    return get_assertion(environment)[1]
 
 
 if __name__ == '__main__':

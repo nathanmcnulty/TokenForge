@@ -1,7 +1,7 @@
 #Requires -Version 7.6
 [CmdletBinding()]
 param(
-    [ValidateSet('PublicHealth', 'Weekly', 'Native', 'Discovery', 'Collector', 'Changes', 'Admin', 'Refresh', 'Lab', 'Publication', 'Attestation', 'Sealer', 'ReleaseReadiness', 'ReleaseGuards')]
+    [ValidateSet('PublicHealth', 'Weekly', 'Native', 'Discovery', 'Collector', 'Changes', 'Admin', 'Refresh', 'Lab', 'Publication', 'LocalPublication', 'Attestation', 'Sealer', 'ReleaseReadiness', 'ReleaseGuards')]
     [string]$Preset = 'Weekly',
     [string]$NativeExecutable,
     [string]$BasePackage,
@@ -102,6 +102,7 @@ try {
             }
             $paths
         }
+        'LocalPublication' { @('./tests/LocalPublicationGit.Tests.ps1','./tests/LocalPublicationTransport.Tests.ps1','./tests/LocalPublicationPacket.Tests.ps1','./tests/LocalPublicationState.Tests.ps1','./tests/DiscoveryCandidate.Tests.ps1','./tests/PublicationAdapter.Tests.ps1','./tests/PublicationWriter.Tests.ps1','./tests/PublicationGitProtocol.Tests.ps1','./tests/PublicationRecovery.Tests.ps1') }
         'Publication' { @('./tests/PublicationAdapter.Tests.ps1', './tests/PublicationWriter.Tests.ps1', './tests/PublicationGitProtocol.Tests.ps1', './tests/PublicationRecovery.Tests.ps1', './tests/DiscoveryCandidate.Tests.ps1', './tests/ReleaseReadinessPolicy.Tests.ps1') }
         'Sealer' { @('./tests/Sealer.Tests.ps1', './tests/SealerPolicy.Tests.ps1', './tests/PublicationAdapter.Tests.ps1', './tests/DiscoveryCandidate.Tests.ps1', './tests/ReleaseReadinessPolicy.Tests.ps1') }
         'Attestation' { @('./tests/AttestationVerifier.Tests.ps1', './tests/PublicationAdapter.Tests.ps1', './tests/ReleaseReadinessPolicy.Tests.ps1') }

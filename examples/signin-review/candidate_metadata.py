@@ -47,10 +47,11 @@ def classify_principal(app, tenant, value, source):
         return [source, 'audience unknown', 'publisher unknown']
     if not isinstance(value, dict) or value.get('appId') != app:
         raise ValueError('Unverified service principal response')
-    audience = audience_label([value.get('signInAudience')])
+    raw_audience = value.get('signInAudience')
+    audience = audience_label([raw_audience])
     principal_type = value.get('servicePrincipalType')
     if principal_type in ('ManagedIdentity', 'Legacy'):
-        if value.get('appOwnerOrganizationId') == tenant and audience in (None, 'audience unknown'):
+        if value.get('appOwnerOrganizationId') == tenant and raw_audience in (None, 'AzureADMyOrg'):
             return None
         audience = 'audience unknown'
     if audience is None:

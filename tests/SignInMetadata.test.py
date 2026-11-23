@@ -65,6 +65,16 @@ class SignInMetadataTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             classify({'appId': TENANT})
 
+    def test_explicit_unrecognized_and_conflicting_audiences_stay_visible_for_local_types(self):
+        for principal_type in ('ManagedIdentity', 'Legacy'):
+            for raw in ('', 'unrecognized', ['AzureADMyOrg', 'AzureADMultipleOrgs'], [], {}):
+                value = principal(servicePrincipalType=principal_type, signInAudience=raw)
+                result = meta.classify_principal(APP, TENANT, value, 'sign-in')
+                self.assertEqual(result[1], 'audience unknown')
+            for raw in (None, 'AzureADMyOrg'):
+                value = principal(servicePrincipalType=principal_type, signInAudience=raw)
+                self.assertIsNone(meta.classify_principal(APP, TENANT, value, 'sign-in'))
+
     def test_encrypted_labels_and_issue_validation_reject_raw_values(self):
         api = Mock()
         for bad in ([TENANT, 'multi-tenant', 'verified publisher'], ['sign-in', 'unknown-canary', 'publisher unknown'],

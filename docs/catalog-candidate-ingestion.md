@@ -53,6 +53,10 @@ The receipt records the requested interval and a disjoint ledger of supplied cov
 
 Even with every requested interval represented, provider coverage and tenant history remain unknown. Counts summarize the included inputs. Client AppIds and Graph resource IDs remain separate, non-verified candidates. The actual JWT audience remains unknown.
 
+## Sentinel aggregate handoff
+
+The [offline Sentinel importer](sentinel-signin-aggregate.md) accepts a separate Azure Monitor aggregate format. Provider-specific resource fields remain separate from Graph replay fields.
+
 ```bash
 TOKENFORGE_TEST_NATIVE=/path/to/reviewed/package/tokenforge python3 -B tests/CatalogCandidateImport.test.py
 ```

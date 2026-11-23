@@ -89,6 +89,8 @@ def check_inventory(root, expected):
 def checked_baseline(baseline, expected):
     if git(baseline, 'rev-parse', 'HEAD') != expected or git(baseline, 'status', '--porcelain', '--untracked-files=all'):
         raise ValueError('Baseline moved or is dirty; choose a fresh reviewed baseline and work directory.')
+    if (baseline / 'applications.non-verified.json').exists():
+        raise ValueError('Split catalog baseline requires Diff-TokenForgePublicCatalog.py.')
 
 
 def ps(pwsh, script, args, log, timeout=300):

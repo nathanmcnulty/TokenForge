@@ -154,6 +154,8 @@ def reconcile(root, output, native, pwsh):
         raise ValueError('Choose a new immutable output; no overwrite or reset.')
     root = root.resolve()
     baseline = root / 'baseline'
+    if (baseline / 'applications.non-verified.json').exists():
+        raise ValueError('Split catalog baseline requires Diff-TokenForgePublicCatalog.py.')
     pin = read(regular(root / 'baseline-pin.json'))
     runtime = read(regular(root / 'runtime-equivalence.json'))
     for path in [*runtime['executedFiles'], *pin['files']]:

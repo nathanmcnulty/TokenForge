@@ -375,12 +375,13 @@ class OperatorRunbookTests(unittest.TestCase):
 
     def test_attended_runbook_uses_only_mocked_sdk_and_minimizes_report(self):
         docs = (ROOT / 'docs/operator-signin-gap-sample.md').read_text()
-        recipe = docs.split('```powershell\n', 1)[1].split('```', 1)[0]
+        connect, recipe = (block.split('```', 1)[0] for block in docs.split('```powershell\n')[1:])
         operator = self.repo / 'operator.ps1'
         operator.write_text("""param($TokenForge,$CatalogRepository,$CatalogCommit,$Scenario)
 $ErrorActionPreference = 'Stop'
 $global:FixtureScenario = $Scenario
 $global:FixtureReadPath = Join-Path $CatalogRepository 'read-called'
+$global:FixtureConnectPath = Join-Path $CatalogRepository 'connect-called'
 $TenantId = [guid]'11111111-2222-3333-4444-555555555555'
 $Since = [DateTimeOffset]'2026-01-05T00:00:00Z'
 $Until = if ($Scenario -eq 'Long') { $Since.AddDays(2) } elseif ($Scenario -eq 'Reverse') { $Since.AddDays(-1) } else { $Since.AddDays(1) }
@@ -389,8 +390,22 @@ $PSDefaultParameterValues = @{
     'Get-MgAuditLogSignIn:All' = $true
     'Get-MgAuditLogSignIn:Headers' = @{ 'Fixture' = 'never-send' }
     'Get-MgAuditLogSignIn:Debug' = $true
+    'Connect-MgGraph:UseDeviceAuthentication' = $true
+    'Connect-MgGraph:ClientId' = 'unexpected'
+    'Connect-MgGraph:Debug' = $true
 }
 New-Module -Name Microsoft.Graph.Authentication {
+    function Connect-MgGraph {
+        [CmdletBinding()] param($TenantId,$Scopes,$Environment,$ContextScope,[switch]$NoWelcome,
+                               [switch]$UseDeviceAuthentication,$ClientId)
+        if ($TenantId -ne [guid]'11111111-2222-3333-4444-555555555555' -or
+            $Scopes -ne 'AuditLog.Read.All' -or $Environment -ne 'Global' -or $ContextScope -ne 'Process' -or
+            -not $NoWelcome -or $UseDeviceAuthentication -or $ClientId -or
+            $PSBoundParameters['Debug'] -or $PSBoundParameters['Verbose']) {
+            throw 'Unexpected SDK sign-in arguments'
+        }
+        [IO.File]::WriteAllText($global:FixtureConnectPath, 'mock')
+    }
     function Get-MgContext {
         [CmdletBinding()] param()
         if ($global:FixtureScenario -eq 'NoContext') { return }
@@ -434,9 +449,16 @@ New-Module -Name Microsoft.Graph.Reports {
         if ($global:FixtureScenario -eq 'Cap') { for ($i=0; $i -lt 1000; $i++) { $row } }
     }
 } | Import-Module
-""" + recipe + "\nexit $LASTEXITCODE\n")
+""" + "if ($Scenario -eq 'OptionalConnect') {\n" + connect + "\nexit 0\n}\n" +
+                            recipe + "\nexit $LASTEXITCODE\n")
         command = ['pwsh', '-NoProfile', '-File', str(operator), str(ROOT), str(self.repo), self.commit]
         called = self.repo / 'read-called'
+        connect_called = self.repo / 'connect-called'
+        optional = subprocess.run([*command, 'OptionalConnect'], text=True, capture_output=True)
+        self.assertEqual(optional.returncode, 0, optional.stderr)
+        self.assertTrue(connect_called.exists())
+        self.assertFalse(called.exists())
+        connect_called.unlink()
         for reason in ('NoContext', 'WrongTenant', 'ArrayTenant', 'NoScope', 'AppOnly', 'SharedScope',
                        'WrongCloud', 'CustomCloud', 'HostMismatch', 'LoginMismatch', 'Long', 'Reverse', 'Future'):
             with self.subTest(reason=reason):
@@ -461,6 +483,7 @@ New-Module -Name Microsoft.Graph.Reports {
                 self.assertEqual(report['ReplayComplete'], reason != 'BadTime')
                 self.assertEqual(result.returncode, 2 if reason == 'BadTime' else 0)
                 self.assertEqual([r['Identifier'] for r in report['Candidates']], [NEW, TARGET] if reason == 'Sample' else [])
+        self.assertFalse(connect_called.exists())
         self.unchanged()
 
 

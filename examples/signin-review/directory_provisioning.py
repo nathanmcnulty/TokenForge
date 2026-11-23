@@ -65,9 +65,10 @@ def scan_window(get, start, stop):
                 counts['notSuccessful' if result in ('failure', 'timeout') else 'unknownResult'] += 1
                 continue
             resources = event.get('targetResources')
-            one_principal = isinstance(resources, list) and sum(
-                isinstance(row, dict) and row.get('type') == 'ServicePrincipal' for row in resources
-            ) == 1
+            one_principal = (
+                isinstance(resources, list) and len(resources) == 1 and isinstance(resources[0], dict)
+                and resources[0].get('type') == 'ServicePrincipal' and app_id_is_canonical(resources[0].get('id'))
+            )
             if not one_principal:
                 counts['ambiguousPrincipalTarget'] += 1
             details = event.get('additionalDetails')
@@ -78,12 +79,12 @@ def scan_window(get, start, stop):
                     if any(isinstance(item, dict) and item.get('key') == key for item in details):
                         counts[counter] += 1
                 matches = [
-                    item.get('value') for item in details if isinstance(item, dict)
+                    item for item in details if isinstance(item, dict)
                     and isinstance(item.get('key'), str) and item['key'].casefold() == 'appid'
                 ]
-            if (one_principal and len(matches) == 1 and isinstance(matches[0], str)
-                    and app_id_is_canonical(matches[0].lower())):
-                app_ids.add(matches[0].lower())
+            value = matches[0].get('value') if len(matches) == 1 and matches[0]['key'] == 'AppId' else None
+            if one_principal and isinstance(value, str) and app_id_is_canonical(value.lower()):
+                app_ids.add(value.lower())
                 counts['successfulTargetAppId'] += 1
                 if len(app_ids) > MAX_IDS:
                     raise ValueError('Provisioning candidate bound exceeded')

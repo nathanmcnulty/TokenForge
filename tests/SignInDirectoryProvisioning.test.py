@@ -78,6 +78,30 @@ class ProvisioningTests(unittest.TestCase):
             'ambiguousPrincipalTarget': 1, 'notSuccessful': 1,
         })
 
+    def test_rejects_extra_malformed_targets_and_noncanonical_appid_keys(self):
+        principal = {'type': 'ServicePrincipal', 'id': OTHER}
+        raw = {'key': 'AppId', 'value': APP}
+        bad_targets = (
+            [principal, {'type': 'Application', 'id': THIRD}],
+            [principal, {}], [principal, None], [principal, principal],
+            [{'type': 'ServicePrincipal'}], [{'type': 'ServicePrincipal', 'id': None}],
+            [{'type': 'ServicePrincipal', 'id': 'invalid'}],
+            [{'type': 'ServicePrincipal', 'id': '00000000-0000-0000-0000-000000000000'}],
+            [{'type': 'Application', 'id': OTHER}],
+        )
+        bad_keys = (
+            [raw, raw], [raw, {'key': 'appid', 'value': APP}],
+            [{'key': 'appid', 'value': APP}], [{'key': 'APPID', 'value': APP}],
+        )
+        events = [event(targetResources=value, additionalDetails=[raw]) for value in bad_targets]
+        events.extend(event(targetResources=[principal], additionalDetails=value) for value in bad_keys)
+        result = provisioning.scan_directory(Mock(return_value={'value': events}), END, 1)
+        self.assertEqual(result['appIds'], [])
+        self.assertEqual(result['windows'][0]['counts'], {
+            'ambiguousPrincipalTarget': len(bad_targets),
+            'successfulUnresolvedAppId': len(bad_targets) + len(bad_keys),
+        })
+
     def test_untrusted_continuation_or_wrong_interval_never_counts_complete(self):
         for bad in (NEXT.replace('graph.microsoft.com', 'example.invalid'), NEXT.replace('/v1.0', '/beta'), NEXT + '#frag'):
             get = Mock(return_value={'value': [], '@odata.nextLink': bad})

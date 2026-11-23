@@ -1,0 +1,31 @@
+{
+  "Format": "TokenForgePermissionIdentifierComparison",
+  "SchemaVersion": 1,
+  "Evidence": "PublicIdentifierOverlap",
+  "Catalog": {
+    "UpdatedAt": "2026-11-23T00:19:46.6925535+00:00",
+    "Identifiers": 2037,
+    "ContentSha256": "8e7220650c25e08a57d454fb597b693fdae6115bc31d312664c10fd25b7bb01c",
+    "HashKind": "ValidatedCompactJson"
+  },
+  "PermissionSnapshot": {
+    "ResourceId": "00000003-0000-0000-c000-000000000000",
+    "RetrievedAt": "2026-10-15T19:38:08.6085456+00:00",
+    "Source": {
+      "Repository": "https://github.com/microsoftgraph/microsoft-graph-devx-content",
+      "Path": "permissions/permissions-descriptions.json",
+      "Commit": "b9a67f126ee562c9ff20645f8a4fb6c0928d0a7a",
+      "RawSha256": "0afc5904f4c9e4fc278645532f452ea03032f25b2831a84c1d1cb4da437f366b"
+    },
+    "ContentSha256": "aa878a6f4d997314279df184f0b42d81f0de4fe033e05f464035fe8b407eaa78",
+    "HashKind": "ValidatedCompactJson"
+  },
+  "Counts": {
+    "MatchedIdentifiers": 0,
+    "UnmatchedCatalogIdentifiers": 2037,
+    "MatchedDefinitions": 0,
+    "DelegatedDefinitions": 0,
+    "ApplicationDefinitions": 0
+  },
+  "Matches": []
+}

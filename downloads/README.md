@@ -14,6 +14,10 @@ Snapshots are generated explicitly; they are not a rolling latest download. Insp
 
 The source ledger preserves historical IDs, observations and versions. Fifteen additions retain their actual evidence strength: nine documentation-only and six single-source Graph claims; none is a verified application. Earlier downloads remain immutable.
 
-## Current reviewed snapshot
+## Historical reviewed snapshot
 
 [Download](applications-53d3c52efa10287470047158c8d39eeef4fc9b5b.json.gz) · [Manifest](applications-53d3c52efa10287470047158c8d39eeef4fc9b5b.manifest.json) · [Classification changes](applications-53d3c52efa10287470047158c8d39eeef4fc9b5b.changes.md). Public metadata identifiers retain their recorded evidence strength; they are not verified apps.
+
+## Current reviewed snapshot
+
+[Download](applications-97d222338b9e05af7b8dd0c81fe9cab2c1deef96.json.gz) · [Manifest](applications-97d222338b9e05af7b8dd0c81fe9cab2c1deef96.manifest.json) · [Catalog changes](applications-97d222338b9e05af7b8dd0c81fe9cab2c1deef96.changes.md).

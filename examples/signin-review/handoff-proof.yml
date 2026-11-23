@@ -1,0 +1,56 @@
+# Inert template. Separate approval is required before promoting or dispatching it.
+name: Prove synthetic sign-in handoff
+"on":
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: tokenforge-synthetic-handoff-proof
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    if: >-
+      github.repository == 'nathanmcnulty/TokenForge' &&
+      github.repository_id == '1402673320' && github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      ciphertext: ${{ steps.fixture.outputs.ciphertext }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - run: bash examples/signin-review/install-proof-age.sh
+      - id: fixture
+        name: Encrypt synthetic AppIds
+        env:
+          TF_PROOF_AGE_RECIPIENT: ${{ vars.TOKENFORGE_SYNTHETIC_AGE_RECIPIENT }}
+        run: python3 -B examples/signin-review/handoff_proof.py collect
+
+  issue-proof:
+    needs: collect
+    if: >-
+      needs.collect.result == 'success' &&
+      github.repository == 'nathanmcnulty/TokenForge' &&
+      github.repository_id == '1402673320' && github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch'
+    environment: entra-audit-handoff-proof
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - run: bash examples/signin-review/install-proof-age.sh
+      - name: Check synthetic issue deduplication
+        env:
+          TF_PROOF_CIPHERTEXT: ${{ needs.collect.outputs.ciphertext }}
+          TF_PROOF_AGE_IDENTITY: ${{ secrets.TOKENFORGE_SYNTHETIC_AGE_IDENTITY }}
+        run: python3 -B examples/signin-review/handoff_proof.py issue-proof

@@ -78,7 +78,9 @@ The SDK streams rows through a five-field projection before the bounded aggregat
 
 After the sample succeeds, fails, or is cancelled, close the dedicated PowerShell process. Leave SDK error history in that process without inspecting, copying, or exporting it.
 
-## Proving full-window coverage later
+## Collecting bounded windows
+
+Use the [attended beta collector](graph-signin-collection.md) to follow continuation pages through explicit interactive and non-interactive UTC windows.
 
 A full-window collector needs a separate review of its provider and pagination behavior. Record the requested half-open interval, event categories, and retention limits. Prove that adjacent segments cover the interval, deduplicate boundary events, and reach the provider's last page in every segment. Verify endpoint and redirect constraints with a transport test. Any skipped segment, page limit, continuation failure, or provider error leaves coverage incomplete. Compare observed Graph resource IDs as separately labeled identifiers. A match does not establish a token audience or verify an application.
 

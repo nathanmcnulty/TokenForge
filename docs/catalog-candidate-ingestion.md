@@ -62,3 +62,7 @@ The [offline Sentinel importer](sentinel-signin-aggregate.md) accepts a separate
 ```bash
 TOKENFORGE_TEST_NATIVE=/path/to/reviewed/package/tokenforge python3 -B tests/CatalogCandidateImport.test.py
 ```
+
+## Entra portal CSV handoff
+
+Use the [offline Entra sign-in CSV adapter](entra-signin-csv-export.md) for a standard CSV from the Entra admin center. Its per-category reports preserve portal export semantics and record tenant coverage as unknown.

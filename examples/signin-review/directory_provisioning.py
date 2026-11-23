@@ -44,11 +44,12 @@ def within(event, start, stop):
 
 
 def scan_window(get, start, stop):
-    """Inspect documented shape only. No raw Graph field has been approved as target AppId."""
+    """Read successful service-principal provisioning and validated scalar AppIds."""
     predicate = f"activityDisplayName eq '{ACTIVITY}' and activityDateTime ge {utc(start)} and activityDateTime le {utc(stop)}"
     url = f'https://{HOST}{DIRECTORY_PATH}?' + urlencode({'$top': 1000, '$filter': predicate})
     seen = set()
     counts = Counter()
+    app_ids = set()
     for _ in range(100):
         if not valid_directory_link(url) or url in seen:
             raise ValueError('Invalid directory audit continuation')
@@ -63,20 +64,33 @@ def scan_window(get, start, stop):
             if result != 'success':
                 counts['notSuccessful' if result in ('failure', 'timeout') else 'unknownResult'] += 1
                 continue
-            counts['successfulUnresolvedAppId'] += 1
             resources = event.get('targetResources')
-            if not isinstance(resources, list) or sum(
+            one_principal = isinstance(resources, list) and sum(
                 isinstance(row, dict) and row.get('type') == 'ServicePrincipal' for row in resources
-            ) != 1:
+            ) == 1
+            if not one_principal:
                 counts['ambiguousPrincipalTarget'] += 1
             details = event.get('additionalDetails')
+            matches = []
             if isinstance(details, list):
                 for key, counter in (('ServicePrincipalProvisioningType', 'provisioningTypePresent'),
                                      ('AppOwnerOrganizationId', 'ownerCluePresent')):
                     if any(isinstance(item, dict) and item.get('key') == key for item in details):
                         counts[counter] += 1
+                matches = [
+                    item.get('value') for item in details if isinstance(item, dict)
+                    and isinstance(item.get('key'), str) and item['key'].casefold() == 'appid'
+                ]
+            if (one_principal and len(matches) == 1 and isinstance(matches[0], str)
+                    and app_id_is_canonical(matches[0].lower())):
+                app_ids.add(matches[0].lower())
+                counts['successfulTargetAppId'] += 1
+                if len(app_ids) > MAX_IDS:
+                    raise ValueError('Provisioning candidate bound exceeded')
+            else:
+                counts['successfulUnresolvedAppId'] += 1
         if '@odata.nextLink' not in page:
-            return dict(sorted(counts.items()))
+            return dict(sorted(counts.items())), app_ids
         url = page['@odata.nextLink']
     raise ValueError('Directory audit page limit reached')
 
@@ -85,9 +99,15 @@ def scan_directory(get, until, days):
     if type(days) is not int or not 1 <= days <= 31:
         raise ValueError('Unexpected directory audit window length')
     rows = []
+    app_ids = set()
     for start, stop in intervals(until, days):
-        rows.append({'since': utc(start), 'until': utc(stop), 'counts': scan_window(get, start, stop)})
-    return {'windows': rows, 'appIdMapping': 'unproven', 'providerRetention': 'unknown'}
+        counts, window_ids = scan_window(get, start, stop)
+        rows.append({'since': utc(start), 'until': utc(stop), 'counts': counts})
+        app_ids.update(window_ids)
+        if len(app_ids) > MAX_IDS:
+            raise ValueError('Provisioning candidate bound exceeded')
+    return {'windows': rows, 'appIds': sorted(app_ids), 'appIdMapping': 'additionalDetails.AppId',
+            'providerRetention': 'unknown'}
 
 
 def normalize_replay(value, known, sign_ins=()):

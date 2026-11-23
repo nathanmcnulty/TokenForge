@@ -51,12 +51,32 @@ class ProvisioningTests(unittest.TestCase):
                       event(result=None), event(activityDateTime='2026-01-05T00:00:00Z')],
         }])
         report = provisioning.scan_directory(get, END, 1)
-        self.assertEqual(report['appIdMapping'], 'unproven')
+        self.assertEqual(report['appIdMapping'], 'additionalDetails.AppId')
+        self.assertEqual(report['appIds'], [])
         self.assertEqual(report['windows'][0]['counts'], {'successfulUnresolvedAppId': 2, 'ambiguousPrincipalTarget': 1,
                          'notSuccessful': 1, 'unknownResult': 1, 'ownerCluePresent': 2, 'provisioningTypePresent': 2})
         self.assertIn("activityDisplayName eq 'Add service principal'", unquote(get.call_args_list[0].args[0]).replace('+', ' '))
         for hidden in (APP, OTHER, THIRD, FOURTH, FIFTH, 'private-canary', NEXT):
             self.assertNotIn(hidden, json.dumps(report))
+
+    def test_only_one_named_scalar_appid_on_one_principal_can_resolve(self):
+        canonical = 'a1234567-1111-4111-8111-111111111111'
+        raw = {'key': 'AppId', 'value': canonical.upper()}
+        get = Mock(return_value={'value': [
+            event(additionalDetails=[raw]),
+            event(additionalDetails=[raw]),
+            event(additionalDetails=[raw, {'key': 'appid', 'value': APP}]),
+            event(additionalDetails=[{'key': 'AppId', 'value': [APP]}]),
+            event(additionalDetails=[{'key': 'AppId', 'value': json.dumps(APP)}]),
+            event(additionalDetails=[raw], targetResources=[]),
+            event(additionalDetails=[raw], result='failure'),
+        ]})
+        result = provisioning.scan_directory(get, END, 1)
+        self.assertEqual(result['appIds'], [canonical])
+        self.assertEqual(result['windows'][0]['counts'], {
+            'successfulTargetAppId': 2, 'successfulUnresolvedAppId': 4,
+            'ambiguousPrincipalTarget': 1, 'notSuccessful': 1,
+        })
 
     def test_untrusted_continuation_or_wrong_interval_never_counts_complete(self):
         for bad in (NEXT.replace('graph.microsoft.com', 'example.invalid'), NEXT.replace('/v1.0', '/beta'), NEXT + '#frag'):

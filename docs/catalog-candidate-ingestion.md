@@ -1,6 +1,6 @@
 # Report gaps in the published application catalog
 
-Both commands pin a full Git commit ID. When they compare identifiers, they use `applications.json` and `applications.non-verified.json` from that commit. Novelty is measured against the union of those partitions. Keep any live sign-in report in private storage. These commands emit reports to standard output and leave Git and catalog verification state intact.
+Both commands pin a full Git commit ID and require its relevant Git objects to be present locally. They fail if a partial clone is missing an object needed for the report. When they compare identifiers, they use `applications.json` and `applications.non-verified.json` from that commit. Novelty is measured against the union of those partitions. Keep any live sign-in report in private storage. These commands emit reports to standard output and leave Git and catalog verification state intact.
 
 ## Compare retained public source observations
 

@@ -5,6 +5,7 @@ import argparse
 from datetime import datetime
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -147,13 +148,20 @@ def main():
     if not hex_id(args.baseline_commit, 40):
         raise ValueError('Use the full published catalog commit ID')
 
-    git = ['git', '--no-replace-objects', '-C', str(args.baseline_repo)]
-    object_type = subprocess.check_output([*git, 'cat-file', '-t', args.baseline_commit], timeout=30)
-    if object_type.strip() != b'commit':
+    git = ['git', '--no-replace-objects', '-c', 'protocol.allow=never', '-C', str(args.baseline_repo)]
+    git_env = {**os.environ, 'GIT_NO_LAZY_FETCH': '1', 'GIT_ALLOW_PROTOCOL': '', 'GIT_TERMINAL_PROMPT': '0'}
+
+    def git_read(*command):
+        try:
+            return subprocess.check_output([*git, *command], env=git_env, stderr=subprocess.DEVNULL, timeout=30)
+        except subprocess.CalledProcessError as exc:
+            raise ValueError('Pinned catalog objects must be available locally') from exc
+
+    if git_read('cat-file', '-t', args.baseline_commit).strip() != b'commit':
         raise ValueError('The pinned catalog object must be a Git commit')
 
     def git_blob(path):
-        return decode(subprocess.check_output([*git, 'show', args.baseline_commit + ':' + path], timeout=30))
+        return decode(git_read('cat-file', 'blob', args.baseline_commit + ':' + path))
 
     nonverified = git_blob('applications.non-verified.json')
     if (nonverified.get('Format') != 'TokenForgeNonVerifiedApplications'

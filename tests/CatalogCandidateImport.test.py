@@ -136,6 +136,61 @@ class CatalogCandidateTests(unittest.TestCase):
         self.assertIn('must be a Git commit', replay.stderr)
         self.unchanged()
 
+    def test_missing_promisor_blob_fails_without_remote_helper_or_env_mutation(self):
+        # The positive control only reaches a synthetic local helper. It attempts no network access.
+        helper_dir = self.repo / 'helpers'
+        helper_dir.mkdir()
+        marker = self.repo / 'helper-called'
+        helper = helper_dir / 'git-remote-probe'
+        helper.write_text('#!/bin/sh\nprintf called > "$TOKENFORGE_PROBE_MARKER"\nexit 1\n')
+        helper.chmod(0o700)
+        env = {**os.environ, 'PATH': str(helper_dir) + os.pathsep + os.environ['PATH'],
+               'GIT_ALLOW_PROTOCOL': 'probe', 'GIT_NO_LAZY_FETCH': '0',
+               'TOKENFORGE_PROBE_MARKER': str(marker)}
+        self.git('config', 'core.repositoryformatversion', '1')
+        self.git('config', 'extensions.partialClone', 'origin')
+        self.git('config', 'remote.origin.url', 'probe::fixture')
+        self.git('config', 'remote.origin.promisor', 'true')
+        self.git('config', 'protocol.probe.allow', 'always')
+        path = 'applications.non-verified.json'
+        blob = self.git('rev-parse', 'HEAD:' + path).stdout.strip()
+        (self.repo / '.git/objects' / blob[:2] / blob[2:]).unlink()
+        control = subprocess.run(['git', '-C', str(self.repo), 'cat-file', 'blob', self.commit + ':' + path],
+                                 env=env, capture_output=True)
+        self.assertNotEqual(control.returncode, 0)
+        self.assertTrue(marker.exists(), control.stderr)
+        marker.unlink()
+
+        stamps = self.repo / 'stamps.json'
+        stamps.write_text(json.dumps(self.observations()))
+        public = subprocess.run(
+            ['python3', '-B', str(ROOT / 'scripts/Diff-TokenForgePublicCatalog.py'),
+             '--baseline-repo', str(self.repo), '--baseline-commit', self.commit, '--observations', str(stamps)],
+            env=env, capture_output=True, text=True)
+        self.assertNotEqual(public.returncode, 0)
+        self.assertIn('must be available locally', public.stderr)
+        self.assertFalse(marker.exists())
+
+        wrapper = self.repo / 'parent-environment.ps1'
+        wrapper.write_text("""param($Script,$Repo,$Commit)
+$ErrorActionPreference = 'Stop'
+try {
+    & $Script -FixtureDirectory $Repo -CatalogRepository $Repo -CatalogCommit $Commit -Since '2026-01-05Z' -Until '2026-01-06Z'
+    throw 'Missing blob accepted'
+} catch {
+    if ($_.Exception.Message -notlike '*must be available locally*') { throw }
+}
+if ($env:GIT_ALLOW_PROTOCOL -cne 'probe' -or $env:GIT_NO_LAZY_FETCH -cne '0') { throw 'Parent environment changed' }
+'Local failure, environment preserved'
+""")
+        replay = subprocess.run(
+            ['pwsh', '-NoProfile', '-File', str(wrapper), str(ROOT / 'scripts/Find-TokenForgeSignInCatalogGaps.ps1'),
+             str(self.repo), self.commit], env=env, capture_output=True, text=True)
+        self.assertEqual(replay.returncode, 0, replay.stderr)
+        self.assertIn('environment preserved', replay.stdout)
+        self.assertFalse(marker.exists())
+        self.unchanged()
+
     def test_legacy_refresh_and_reconcile_refuse_split_catalog(self):
         spec = importlib.util.spec_from_file_location('refresh', ROOT / 'scripts/Refresh-TokenForgePublicCatalog.py')
         refresh = importlib.util.module_from_spec(spec)

@@ -2,16 +2,19 @@
 """Assemble local sign-in gap reports. Coverage describes inputs, never tenant history."""
 
 import argparse
+from bisect import bisect_right
 from collections import Counter
 from datetime import datetime
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
+import stat
 import subprocess
 import sys
 
-from tokenforge_offline_catalog import OfflineCatalog, app_id_is_canonical, decode
+from tokenforge_offline_catalog import OfflineCatalog, app_id_is_canonical, unique
 
 
 TYPES = {
@@ -22,11 +25,26 @@ KINDS = {'AppId': 'UnusableAppIds', 'GraphResourceId': 'UnusableGraphResourceIds
 STATUSES = {'Complete', 'PageLimit', 'InvalidNextLink', 'PaginationLoop', 'FixtureUnavailable',
             'InvalidPage', 'MalformedEvents'}
 SOURCES = {'LocalPageReplay', 'LocalSnapshot', 'InMemorySnapshot'}
+REPORT_FIELDS = {'Format', 'SchemaVersion', 'CatalogCommit', 'Source', 'GraphVersion', 'InputEventShape',
+                 'ReplayComplete', 'SourceWindowCoverage', 'TenantHistoryComplete', 'ActualAudience',
+                 'Since', 'UntilExclusive', 'Windows', 'Candidates'}
+WINDOW_FIELDS = {'Since', 'UntilExclusive', 'Pages', 'UniqueEvents', 'DuplicateEvents', 'MalformedEvents',
+                 'BoundaryEventsSkipped', 'UnusableAppIds', 'UnusableGraphResourceIds', 'Status'}
+CANDIDATE_FIELDS = {'IdentifierKind', 'Identifier', 'Disposition', 'Count',
+                    'FirstObservedAt', 'LastObservedAt', 'EventTypeCounts'}
 
 
 def require(condition, message):
     if not condition:
         raise ValueError(message)
+
+
+def require_fields(value, fields):
+    require(isinstance(value, dict) and value.keys() == fields, 'Invalid aggregate object fields')
+
+
+def reject_nonstandard_number(_):
+    raise ValueError('Nonstandard JSON number')
 
 
 def instant(value):
@@ -46,6 +64,7 @@ def count(value):
 
 
 def validated_report(report, commit, version, known, since, until):
+    require_fields(report, REPORT_FIELDS)
     shape, event_types = TYPES[version]
     require(report.get('Format') == 'TokenForgeSignInCatalogGaps' and
             type(report.get('SchemaVersion')) is int and report['SchemaVersion'] == 1 and
@@ -62,12 +81,14 @@ def validated_report(report, commit, version, known, since, until):
     require(isinstance(windows, list) and 1 <= len(windows) <= 31, 'Invalid replay windows')
     require(report['Source'] == 'LocalPageReplay' or len(windows) == 1, 'Snapshot must have one replay window')
     rows = []
-    capacity = Counter()
+    canonical_windows = []
+    available = {kind: [] for kind in KINDS}
     previous_end = start
     pages = 0
     observed_events = 0
     duplicates = 0
     for window in windows:
+        require_fields(window, WINDOW_FIELDS)
         window_start, window_end = instant(window['Since']), instant(window['UntilExclusive'])
         status = window['Status']
         require(previous_end == window_start < window_end <= end and status in STATUSES,
@@ -85,16 +106,21 @@ def validated_report(report, commit, version, known, since, until):
         for kind, field in KINDS.items():
             unusable = count(window[field])
             require(unusable <= unique_events, 'Unusable identifiers exceed observed events')
-            capacity[kind] += unique_events - unusable
+            available[kind].append(unique_events - unusable)
         rows.append((window_start, window_end, status))
+        canonical_windows.append({**window, 'Since': window_start, 'UntilExclusive': window_end})
         previous_end = window_end
-    require(previous_end == end and pages <= 500, 'Replay windows do not match the report interval')
+    page_limit = 500 if report['Source'] == 'LocalPageReplay' else 1
+    require(previous_end == end and pages <= page_limit, 'Replay windows or page count do not match the report source')
     require(report['ReplayComplete'] == all(row[2] == 'Complete' for row in rows), 'Inconsistent replay completeness')
 
     candidates = {}
-    totals = Counter()
+    canonical_candidates = {}
+    obligations = {kind: [] for kind in KINDS}
+    starts = [row[0] for row in rows]
     require(isinstance(report['Candidates'], list), 'Invalid candidate rows')
     for row in report['Candidates']:
+        require_fields(row, CANDIDATE_FIELDS)
         kind, identifier = row['IdentifierKind'], row['Identifier']
         require(kind in KINDS and app_id_is_canonical(identifier) and identifier not in known and
                 row['Disposition'] == 'Pending' and (kind, identifier) not in candidates,
@@ -103,26 +129,48 @@ def validated_report(report, commit, version, known, since, until):
         n = count(row['Count'])
         require(start <= first <= last < end and n > 0 and (n != 1 or first == last),
                 'Candidate time or count is incompatible with its report')
+        first_window = bisect_right(starts, first) - 1
+        last_window = bisect_right(starts, last) - 1
+        if first_window == last_window:
+            available[kind][first_window] -= n
+        else:
+            available[kind][first_window] -= 1
+            available[kind][last_window] -= 1
+            obligations[kind].append((last_window, first_window, n - 2))
         events = row['EventTypeCounts']
         require(isinstance(events, dict) and events and events.keys() <= event_types and
                 all(0 < count(x) <= n for x in events.values()) and sum(events.values()) >= n and
                 (version == 'beta' or sum(events.values()) == n), 'Invalid candidate event counts')
         candidates[kind, identifier] = (first, last, n, Counter(events))
-        totals[kind] += n
-    require(all(totals[kind] <= capacity[kind] for kind in KINDS), 'Candidate counts exceed observed events')
-    return {'start': start, 'end': end, 'windows': rows, 'candidates': candidates,
-            'source': report['Source'], 'complete': report['ReplayComplete'],
-            'pages': pages, 'observed_events': observed_events, 'duplicates': duplicates}
+        canonical_candidates[kind, identifier] = {**row, 'FirstObservedAt': first, 'LastObservedAt': last}
+    for kind in KINDS:
+        capacity = available[kind]
+        require(all(n >= 0 for n in capacity), 'Candidate endpoints exceed observations in a window')
+        # Earliest-deadline allocation checks feasibility without guessing where events actually occurred.
+        for deadline, release, remaining in sorted(obligations[kind]):
+            for index in range(release, deadline + 1):
+                taken = min(remaining, capacity[index])
+                capacity[index] -= taken
+                remaining -= taken
+                if not remaining:
+                    break
+            require(remaining == 0, 'Candidate counts exceed observations between their endpoints')
+    canonical = {**report, 'Since': start, 'UntilExclusive': end, 'Windows': canonical_windows,
+                 'Candidates': [canonical_candidates[key] for key in sorted(canonical_candidates)]}
+    fingerprint = hashlib.sha256(json.dumps(canonical, sort_keys=True, ensure_ascii=True, allow_nan=False,
+                                            separators=(',', ':')).encode()).hexdigest()
+    return fingerprint, {'start': start, 'end': end, 'windows': rows, 'candidates': candidates,
+                         'source': report['Source'], 'complete': report['ReplayComplete'],
+                         'pages': pages, 'observed_events': observed_events, 'duplicates': duplicates}
 
 
 def assemble(documents, commit, version, known, since, until):
     reports = {}
     duplicates = Counter()
     for document in documents:
-        fingerprint = hashlib.sha256(json.dumps(document, sort_keys=True, ensure_ascii=True,
-                                                 separators=(',', ':')).encode()).hexdigest()
+        fingerprint, report = validated_report(document, commit, version, known, since, until)
         if fingerprint not in reports:
-            reports[fingerprint] = validated_report(document, commit, version, known, since, until)
+            reports[fingerprint] = report
         else:
             duplicates[fingerprint] += 1
 
@@ -201,11 +249,14 @@ def main():
         remaining = 64 * 1024 * 1024
         for path in args.reports:
             limit = min(8 * 1024 * 1024, remaining)
-            with path.open('rb') as stream:
+            require(stat.S_ISREG(path.lstat().st_mode), 'Aggregate input must be a regular file')
+            flags = os.O_RDONLY | getattr(os, 'O_NONBLOCK', 0) | getattr(os, 'O_NOFOLLOW', 0)
+            with os.fdopen(os.open(path, flags), 'rb') as stream:
+                require(stat.S_ISREG(os.fstat(stream.fileno()).st_mode), 'Aggregate input must be a regular file')
                 raw = stream.read(limit + 1)
             require(len(raw) <= limit, 'Aggregate report size limit exceeded')
             remaining -= len(raw)
-            yield decode(raw)
+            yield json.loads(raw, object_pairs_hook=unique, parse_constant=reject_nonstandard_number)
 
     result = assemble(read_reports(), args.catalog_commit, args.graph_version, known, since, until)
     print(json.dumps(result, sort_keys=True, indent=2))
@@ -215,5 +266,5 @@ def main():
 if __name__ == '__main__':
     try:
         sys.exit(main())
-    except (OSError, ValueError, KeyError, TypeError, AttributeError, subprocess.SubprocessError):
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, RecursionError, subprocess.SubprocessError):
         sys.exit('Assembly refused: a catalog pin, report, or requested interval is invalid or unavailable.')

@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import unittest
@@ -42,13 +43,15 @@ class AssemblyTests(unittest.TestCase):
         return subprocess.run(
             ['python3', '-B', str(ROOT/'scripts/Merge-TokenForgeSignInCatalogGaps.py'),
              '--catalog-repo', str(self.repo), '--catalog-commit', self.commit, '--since', start,
-             '--until', end, '--graph-version', version, *map(str, reports)], text=True, capture_output=True)
+             '--until', end, '--graph-version', version, *map(str, reports)], text=True, capture_output=True, timeout=10)
 
     def test_adjacent_reports_and_duplicate_copy_are_deterministic(self):
         first = self.report('first', SINCE, MIDDLE, '2026-01-05T23:59:59.9999999Z')
         second = self.report('second', MIDDLE, UNTIL)
         copy = self.repo/'copy.json'
-        copy.write_text(json.dumps(json.loads(first.read_bytes()), sort_keys=True))
+        equivalent = json.loads(first.read_bytes().replace(b'+00:00', b'Z'))
+        equivalent['Candidates'].reverse()
+        copy.write_text(json.dumps(equivalent, sort_keys=True))
         result = self.merge(first, second, copy)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.merge(copy, second, first).stdout, result.stdout)
@@ -110,6 +113,122 @@ class AssemblyTests(unittest.TestCase):
             self.assertEqual(self.merge(modified).returncode, 1)
         self.assertEqual(self.merge(original, version='beta').returncode, 1)
         self.assertEqual(self.merge(original, start=MIDDLE).returncode, 1)
+        self.unchanged()
+
+    def test_extra_fields_and_nonstandard_json_never_affect_fingerprints(self):
+        original = self.report('original', SINCE, MIDDLE)
+        baseline = self.merge(original, end=MIDDLE)
+        self.assertEqual(baseline.returncode, 0, baseline.stderr)
+        invalid = self.repo / 'invalid.json'
+        for target in ('report', 'window', 'candidate', 'event_counts', 'wrong_nested_shape'):
+            with self.subTest(target=target):
+                value = json.loads(original.read_bytes())
+                locations = {'report': value, 'window': value['Windows'][0], 'candidate': value['Candidates'][0],
+                             'event_counts': value['Candidates'][0]['EventTypeCounts']}
+                if target == 'wrong_nested_shape':
+                    value['Windows'][0] = ['synthetic-private-extra']
+                else:
+                    locations[target]['synthetic-private-extra'] = {'payload': 'synthetic-private-value'}
+                invalid.write_text(json.dumps(value))
+                result = self.merge(original, invalid, end=MIDDLE)
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(result.stdout, '')
+                self.assertNotIn('synthetic-private', result.stderr)
+        for broken in ('NaN', 'Infinity', '-Infinity', '1e999', 'true'):
+            value = json.loads(original.read_bytes())
+            value['Candidates'][0]['Count'] = 'REPLACE_TEST_VALUE'
+            invalid.write_text(json.dumps(value).replace('"REPLACE_TEST_VALUE"', broken))
+            result = self.merge(original, invalid, end=MIDDLE)
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(result.stdout, '')
+        self.assertEqual(self.merge(original, end=MIDDLE).stdout, baseline.stdout)
+        self.unchanged()
+
+    def test_impossible_candidate_and_snapshot_counts_are_refused(self):
+        original = self.report('original', SINCE, MIDDLE)
+        changed = self.repo / 'changed.json'
+        mutations = ('over_total', 'snapshot_pages', 'per_kind_unusable', 'byCatalog')
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                value = json.loads(original.read_bytes())
+                if mutation == 'over_total':
+                    value['Candidates'].append({**value['Candidates'][0], 'Identifier': fixtures.TARGET})
+                elif mutation == 'snapshot_pages':
+                    value['Source'] = 'LocalSnapshot'
+                    value['Windows'][0]['Pages'] = 2
+                elif mutation == 'per_kind_unusable':
+                    value['Windows'][0]['UnusableAppIds'] = 1
+                else:
+                    value['byCatalog'] = {'Verified': 999999}
+                changed.write_text(json.dumps(value))
+                result = self.merge(changed)
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertEqual(result.stdout, '')
+        self.unchanged()
+
+    def test_candidate_endpoint_cannot_be_attributed_to_empty_or_unusable_window(self):
+        original = self.report('original', SINCE, MIDDLE)
+        changed = self.repo/'two-windows.json'
+        value = json.loads(original.read_bytes())
+        value['UntilExclusive'] = UNTIL
+        value['Windows'].append({**value['Windows'][0], 'Since': MIDDLE, 'UntilExclusive': UNTIL, 'UniqueEvents': 0})
+        changed.write_text(json.dumps(value))
+        self.assertEqual(self.merge(changed).returncode, 0)
+        value['Candidates'][0].update(FirstObservedAt=MIDDLE, LastObservedAt=MIDDLE)
+        for count, unusable in ((0, 0), (1, 1)):
+            value['Windows'][1].update(UniqueEvents=count, UnusableAppIds=unusable)
+            changed.write_text(json.dumps(value))
+            result = self.merge(changed)
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(result.stdout, '')
+        self.unchanged()
+
+    def test_candidates_cannot_compete_for_the_same_endpoint_capacity(self):
+        original = self.report('original', SINCE, MIDDLE)
+        changed = self.repo / 'two-candidates.json'
+        value = json.loads(original.read_bytes())
+        value['UntilExclusive'] = UNTIL
+        value['Windows'].append({**value['Windows'][0], 'Since': MIDDLE, 'UntilExclusive': UNTIL})
+        # Global count two fits two events, but both candidates claim the first window's only AppId event.
+        value['Candidates'].append({**value['Candidates'][0], 'Identifier': fixtures.TARGET})
+        changed.write_text(json.dumps(value))
+        rejected = self.merge(changed)
+        self.assertEqual(rejected.returncode, 1)
+        self.assertEqual(rejected.stdout, '')
+        value['Candidates'][-1].update(FirstObservedAt=MIDDLE, LastObservedAt=MIDDLE)
+        changed.write_text(json.dumps(value))
+        self.assertEqual(self.merge(changed).returncode, 0)
+        self.unchanged()
+
+    def test_candidate_interior_counts_must_fit_between_observed_endpoints(self):
+        original = self.report('original', SINCE, MIDDLE)
+        changed = self.repo / 'three-windows.json'
+        third = '2026-01-08T00:00:00Z'
+        value = json.loads(original.read_bytes())
+        value['UntilExclusive'] = third
+        for start, end in ((MIDDLE, UNTIL), (UNTIL, third)):
+            value['Windows'].append({**value['Windows'][0], 'Since': start, 'UntilExclusive': end})
+        candidate = value['Candidates'][0]
+        candidate.update(Count=3, LastObservedAt=UNTIL, EventTypeCounts={'interactiveUser': 3})
+        changed.write_text(json.dumps(value))
+        self.assertEqual(self.merge(changed, end=third).returncode, 0)
+        candidate['LastObservedAt'] = MIDDLE
+        changed.write_text(json.dumps(value))
+        result = self.merge(changed, end=third)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, '')
+        self.unchanged()
+
+    def test_nonregular_reports_fail_without_reading(self):
+        fifo = self.repo / 'not-a-file'
+        os.mkfifo(fifo)
+        real = self.report('original', SINCE, MIDDLE)
+        link = self.repo / 'linked.json'
+        link.symlink_to(real)
+        for path in (fifo, link, self.repo):
+            result = self.merge(path)
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(result.stdout, '')
         self.unchanged()
 
     def test_no_reports_yields_one_missing_interval(self):

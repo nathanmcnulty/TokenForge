@@ -4,6 +4,7 @@ param(
     [Parameter(Mandatory,ParameterSetName='Pages')][string]$FixtureDirectory,
     [Parameter(Mandatory,ParameterSetName='Snapshot')][string]$SnapshotPath,
     [Parameter(Mandatory,ParameterSetName='Memory')][AllowEmptyCollection()][object]$SnapshotRows,
+    [Parameter(ParameterSetName='Memory')][ValidateRange(1,100000)][int]$MaxInMemoryRows = 1000,
     [Parameter(Mandatory)][string]$CatalogRepository,
     [Parameter(Mandatory)][ValidatePattern('^[0-9a-f]{40}$')][string]$CatalogCommit,
     [Parameter(Mandatory)][DateTimeOffset]$Since,
@@ -16,6 +17,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $memory = $PSCmdlet.ParameterSetName -eq 'Memory'
 $snapshot = $memory -or $PSCmdlet.ParameterSetName -eq 'Snapshot'
+$maxRows = if ($memory) { $MaxInMemoryRows } else { 1000 }
 $since = $Since.ToUniversalTime()
 $until = $Until.ToUniversalTime()
 if ($since -ge $until -or ($until - $since).TotalDays -gt 31) {
@@ -151,7 +153,7 @@ for ($start = $since; $start -lt $until; $start = $end) {
             $window.Status = 'FixtureUnavailable'
             break
         }
-        if ($page -isnot [Collections.IDictionary] -or $page['value'] -isnot [array] -or $page['value'].Count -gt 1000) {
+        if ($page -isnot [Collections.IDictionary] -or $page['value'] -isnot [array] -or $page['value'].Count -gt $maxRows) {
             $window.Status = 'InvalidPage'; break
         }
         $window.Pages++

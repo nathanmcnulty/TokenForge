@@ -1,0 +1,35 @@
+{
+  "Format": "TokenForgeSentinelSignInAggregate",
+  "SchemaVersion": 1,
+  "Since": "2026-01-05T00:00:00Z",
+  "UntilExclusive": "2026-01-06T00:00:00Z",
+  "Tables": [
+    {
+      "Table": "SigninLogs",
+      "State": "Supplied",
+      "Rows": [
+        {"Field": "AppId", "Identifier": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Count": 2},
+        {"Field": "AppId", "Identifier": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "Count": 3},
+        {"Field": "ResourceId", "Identifier": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "Count": 2},
+        {"Field": "ResourceIdentity", "Identifier": "dddddddd-dddd-dddd-dddd-dddddddddddd", "Count": 1},
+        {"Field": "ResourceServicePrincipalId", "Identifier": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Count": 1}
+      ]
+    },
+    {
+      "Table": "AADNonInteractiveUserSignInLogs",
+      "State": "Supplied",
+      "Rows": [
+        {"Field": "AppId", "Identifier": "cccccccc-cccc-cccc-cccc-cccccccccccc", "Count": 4},
+        {"Field": "ResourceIdentity", "Identifier": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Count": 2}
+      ]
+    },
+    {
+      "Table": "AADServicePrincipalSignInLogs",
+      "State": "Supplied",
+      "Rows": [
+        {"Field": "AppId", "Identifier": "cccccccc-cccc-cccc-cccc-cccccccccccc", "Count": 1}
+      ]
+    },
+    {"Table": "AADManagedIdentitySignInLogs", "State": "Unavailable", "Rows": []}
+  ]
+}

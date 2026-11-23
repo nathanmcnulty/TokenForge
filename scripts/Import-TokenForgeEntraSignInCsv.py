@@ -4,33 +4,19 @@
 import argparse
 from collections import Counter
 import csv
-from datetime import datetime
 import json
 import os
 from pathlib import Path
-import re
 import stat
 import subprocess
 import sys
 
+from tokenforge_entra_csv import (COLUMNS, EXPORT_KINDS, EXPORT_STATES, PORTAL_ROW_CAP, incomplete_reasons,
+                                 instant, resource_match)
 from tokenforge_offline_catalog import OfflineCatalog, app_id_is_canonical
 
 
-EXPORT_KINDS = ('InteractiveUser', 'NonInteractiveUser', 'ServicePrincipal', 'ManagedIdentity')
-EXPORT_STATES = ('NotRecorded', 'PortalReportedSuccess', 'PortalReportedIncomplete')
-COLUMNS = ('Date (UTC)', 'Application ID', 'Resource ID')
-PORTAL_ROW_CAP = 100_000
 LOCAL_BYTE_LIMIT = 256 * 1024 * 1024
-ISO_UTC = re.compile(r'([0-9]{4}-[0-9]{2}-[0-9]{2})[T ]([0-9]{2}:[0-9]{2}:[0-9]{2})(?:\.([0-9]{1,7}))?(Z|\+00:00)?')
-
-
-def instant(value, *, require_zone=False):
-    stamp = ISO_UTC.fullmatch(value.strip())
-    if stamp is None or (require_zone and stamp[4] is None):
-        raise ValueError('Expected an ISO-format UTC timestamp')
-    whole = f'{stamp[1]}T{stamp[2]}'
-    datetime.fromisoformat(whole)
-    return f'{whole}.{(stamp[3] or "").ljust(7, "0")}Z'
 
 
 def read_counts(path, since, until):
@@ -103,20 +89,7 @@ def main():
     known = catalog.app_ids(verified, nonverified)
     totals, apps, resources = read_counts(args.csv, since, until)
 
-    incomplete = []
-    if totals['CsvRows'] == PORTAL_ROW_CAP:
-        incomplete.append('DocumentedRowCapReached')
-    if args.export_status == 'PortalReportedIncomplete':
-        incomplete.append('OperatorReportedIncompleteExport')
-    if totals['MalformedDates'] or totals['RowsOutsideWindow']:
-        incomplete.append('UnusableOrOutOfWindowDates')
-    if totals['UnusableApplicationIds'] or totals['UnusableResourceIds']:
-        incomplete.append('UnusableIdentifiers')
-
-    def match(identifier):
-        if identifier in verified:
-            return 'Verified'
-        return 'NonVerified' if identifier in nonverified else 'NoExactMatch'
+    incomplete = incomplete_reasons(totals, args.export_status)
 
     result = {
         'Format': 'TokenForgeEntraSignInCsvGapReport', 'SchemaVersion': 1, 'CatalogCommit': args.catalog_commit,
@@ -128,7 +101,7 @@ def main():
         'Candidates': [{'AppId': key, 'Disposition': 'Pending', 'CsvRows': apps[key]}
                        for key in sorted(apps.keys() - known)],
         'ObservedResources': [{'SourceColumn': 'Resource ID', 'Identifier': key, 'CsvRows': resources[key],
-                               'ExactCatalogAppIdMatch': match(key)} for key in sorted(resources)],
+                               'ExactCatalogAppIdMatch': resource_match(key, verified, nonverified)} for key in sorted(resources)],
     }
     print(json.dumps(result, sort_keys=True, indent=2))
     return 2 if incomplete else 0

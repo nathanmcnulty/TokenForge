@@ -40,3 +40,23 @@ python3 -B scripts/Plan-TokenForgeEntraExportWindows.py \
 ```
 
 To check progress, add `--receipts /private/path/status.json`. Supply an array with only `ExportKind`, `Since`, `UntilExclusive`, and `State` per exact planned window. Use `PortalReportedSuccess`, `Incomplete`, or `Unavailable`. Omit unattempted windows. Identical receipts count once, competing states are marked as conflicts, and missing windows remain explicit. The planner summarizes operator evidence and cannot authenticate successful exports or establish provider retention coverage. It does not read CSV data or combine candidate counts.
+
+## Assemble local CSV receipts
+
+Use the CSV assembler for aggregate JSON from this importer. Supply reports from a single verified tenant and the same public catalog commit. The receipt schema contains neither the tenant ID nor proof of the provider's filter or status. Catalog provenance is checked against exact local Git objects. Each selected aggregate records the SHA-256 of its normalized content and the exact input file digests after validation.
+
+```bash
+python3 -B scripts/Merge-TokenForgeEntraSignInCsvReports.py \
+  --catalog-repo /path/to/local/catalog-checkout \
+  --catalog-commit FULL_PUBLISHED_DATA_COMMIT \
+  --since 2026-01-05T00:00:00Z --until 2026-01-06T00:00:00Z \
+  /private/aggregates/interactive.json /private/aggregates/service-principal.json
+```
+
+The assembler interprets every report window as the half-open UTC interval used to validate the local CSV rows. A relative preset can have a wider validation envelope than the provider's unknown cutoff. Submit only the intended report for each covered window. Equivalent reports count once. When two different receipts for the same category overlap, both whole aggregates are excluded because their row counts cannot be split safely. Keep a preset proof separate from a later fixed-window inventory if their windows overlap. Counts stay separated by category and measure CSV rows. Grouped portal records, unique sign-ins, sign-in outcomes, and JWT audiences are outside this count.
+
+The ledger records missing, overlapping, excluded, and parsed ranges. It retains the original incomplete reasons, including the cap and operator-reported failures. Nonoverlapping incomplete receipts contribute only the CSV rows actually parsed, with the corresponding ledger issue. For failures or unavailable exports with no file, use `--no-file-receipts` with an array of planner-shaped receipts whose `State` is `Incomplete` or `Unavailable`. These remain operator evidence. Exit 2 flags missing, conflicting, or incomplete local inputs. Exit 0 means the requested windows have parsed inputs without a recorded issue. Provider coverage remains unknown in either case. Invalid reported counts or other schema errors exit 1 without an aggregate.
+
+### Check the custom time basis
+
+Microsoft documents that displayed sign-in times can be localized for the portal operator and that exported timestamps are UTC. The portal can show a UTC display option, but the public documentation does not specify how the custom date picker resolves its time zone. Record both the display setting and selected bounds. Before extending the run, confirm that a narrow custom window shows the expected activity and that every exported timestamp lies within the corresponding UTC bounds. Treat a preset with an uncertain cutoff as a sample, including after a successful download. [Portal sign-in time guidance](https://learn.microsoft.com/en-us/entra/identity/monitoring-health/concept-sign-in-log-activity-details#sign-in-details-and-considerations) · [Download considerations](https://learn.microsoft.com/en-us/entra/identity/monitoring-health/howto-download-logs#log-download-considerations)

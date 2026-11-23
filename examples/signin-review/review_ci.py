@@ -1,15 +1,17 @@
 """Inert production candidate for separated audit-reader and issue-writer jobs."""
 
 import base64
+import json
 import os
 from pathlib import Path
 import re
 import sys
 
-from collect import GRAPH_EVENTS, REPOSITORY, IncompleteCategory, collect_envelope, handoff_identity
+from candidate_metadata import classify_principal, principal_url
+from collect import GRAPH_EVENTS, REPOSITORY, IncompleteCategory, collect_envelope, decode, handoff_identity
 from handoff import MAX_CIPHERTEXT, open_envelope, seal
 from report import report
-from workload_http import graph_reader, request_json
+from workload_http import HTTPFailure, graph_reader, request_json
 
 MAX_ENCODED = 4 * ((MAX_CIPHERTEXT + 2) // 3)
 
@@ -18,8 +20,22 @@ def collect_job(env):
     if 'TF_HANDOFF_IDENTITY' in env or 'GH_TOKEN' in env:
         raise ValueError('Unexpected issue authorization in audit job')
     handoff_identity(env)
-    raw = collect_envelope(env, graph_reader(env))
-    ciphertext = seal(raw, env, env['TF_HANDOFF_RECIPIENT'], categories=GRAPH_EVENTS)
+    get = graph_reader(env)
+    envelope = decode(collect_envelope(env, get))
+    labels = {}
+    for app in envelope['appIds']:
+        try:
+            principal = get(principal_url(app))
+        except HTTPFailure as error:
+            if error.status != 404:
+                raise
+            principal = None
+        label = classify_principal(app, env['TF_AUDIT_TENANT_ID'], principal, 'sign-in')
+        if label is not None:
+            labels[app] = label
+    envelope.update(appIds=sorted(labels), labels=labels)
+    raw = json.dumps(envelope, separators=(',', ':')).encode()
+    ciphertext = seal(raw, env, env['TF_HANDOFF_RECIPIENT'], categories=GRAPH_EVENTS, labeled=True)
     with Path(env['GITHUB_OUTPUT']).open('a', encoding='ascii') as output:
         output.write('ciphertext=' + base64.b64encode(ciphertext).decode('ascii') + '\n')
 
@@ -55,8 +71,8 @@ def report_job(env, identity, api=issue_call):
     ciphertext = base64.b64decode(encoded, validate=True)
     if base64.b64encode(ciphertext).decode('ascii') != encoded:
         raise ValueError('Noncanonical candidate ciphertext encoding')
-    raw = open_envelope(ciphertext, env, identity, categories=GRAPH_EVENTS)
-    report(env, raw, api, categories=GRAPH_EVENTS)
+    raw = open_envelope(ciphertext, env, identity, categories=GRAPH_EVENTS, labeled=True)
+    report(env, raw, api, categories=GRAPH_EVENTS, labeled=True)
 
 
 if __name__ == '__main__':

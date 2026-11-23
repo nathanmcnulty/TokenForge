@@ -8,6 +8,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import ProxyHandler, Request, build_opener
 
+from candidate_metadata import is_principal_url
 from collect import app_id_is_canonical, decode, valid_link
 from oidc_claim_check import NoRedirect, check, get_assertion
 
@@ -77,7 +78,7 @@ def graph_reader(environment):
     headers = {'Authorization': 'Bearer ' + token, 'Accept': 'application/json'}
 
     def get(url):
-        if not valid_link(url):
+        if not valid_link(url) and not is_principal_url(url):
             raise ValueError('Unexpected Graph endpoint')
         for attempt in range(3):
             try:

@@ -18,6 +18,8 @@ import review_ci
 
 KNOWN = '22222222-2222-4222-8222-222222222222'
 APP = '33333333-3333-4333-8333-333333333333'
+TENANT = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+LABELS = ['sign-in', 'audience unknown', 'publisher unknown']
 ENV = {
     'GITHUB_REPOSITORY': 'nathanmcnulty/TokenForge', 'GITHUB_REPOSITORY_ID': '1402673320',
     'GITHUB_REF': 'refs/heads/main', 'GITHUB_EVENT_NAME': 'workflow_dispatch',
@@ -64,16 +66,17 @@ class ActivationCandidateTests(unittest.TestCase):
     def test_mocked_reader_and_issue_writer_update_only_new_fixture_ids(self):
         with TemporaryDirectory() as temp:
             output = Path(temp) / 'github-output'
-            read = ENV | {'GITHUB_OUTPUT': str(output), 'TF_HANDOFF_RECIPIENT': self.recipient}
-            with patch.object(review_ci, 'graph_reader'), patch.object(review_ci, 'collect_envelope', return_value=envelope([KNOWN, APP])):
+            read = ENV | {'GITHUB_OUTPUT': str(output), 'TF_HANDOFF_RECIPIENT': self.recipient, 'TF_AUDIT_TENANT_ID': TENANT}
+            get = Mock(side_effect=review_ci.HTTPFailure(404))
+            with patch.object(review_ci, 'graph_reader', return_value=get), patch.object(review_ci, 'collect_envelope', return_value=envelope([KNOWN, APP])):
                 review_ci.collect_job(read)
             encoded = output.read_text().removeprefix('ciphertext=').strip()
             self.assertNotIn(APP, encoded)
         write = ENV | {'TF_HANDOFF_CIPHERTEXT': encoded, 'TF_REVIEW_ISSUE': '57',
                        'TF_REVIEW_ISSUE_NODE': 'I_synthetic'}
         fixture = {'number': 57, 'node_id': 'I_synthetic', 'state': 'open',
-                   'user': {'id': OWNER_ID}, 'body': body_for([KNOWN])}
-        updated = fixture | {'body': body_for([KNOWN, APP])}
+                   'user': {'id': OWNER_ID}, 'body': body_for({KNOWN: LABELS}, labeled=True)}
+        updated = fixture | {'body': body_for({KNOWN: LABELS, APP: LABELS}, labeled=True)}
         api = Mock(side_effect=[fixture, updated, updated])
         review_ci.report_job(write, self.identity, api)
         review_ci.report_job(write, self.identity, api)

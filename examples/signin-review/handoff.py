@@ -27,17 +27,17 @@ def age(arguments, data, max_output, pass_fds=()):
     return result.stdout
 
 
-def seal(raw, environment, recipient, *, workflow_ref=WORKFLOW_REF, categories=EVENTS):
+def seal(raw, environment, recipient, *, workflow_ref=WORKFLOW_REF, categories=EVENTS, labeled=False):
     if not isinstance(raw, bytes) or not 0 < len(raw) <= MAX_PAYLOAD:
         raise ValueError('Invalid candidate envelope size')
-    validate_handoff(raw, environment, workflow_ref=workflow_ref, categories=categories)
+    validate_handoff(raw, environment, workflow_ref=workflow_ref, categories=categories, labeled=labeled)
     if not isinstance(recipient, str) or not re.fullmatch(f'age1[{BECH32}]{{58}}', recipient):
         raise ValueError('Expected one native age X25519 recipient')
     frame = len(raw).to_bytes(4, 'big') + raw.ljust(MAX_PAYLOAD, b'\x00')
     return age(['--encrypt', '--recipient', recipient], frame, MAX_CIPHERTEXT)
 
 
-def open_envelope(ciphertext, environment, identity, *, workflow_ref=WORKFLOW_REF, categories=EVENTS):
+def open_envelope(ciphertext, environment, identity, *, workflow_ref=WORKFLOW_REF, categories=EVENTS, labeled=False):
     if (not isinstance(ciphertext, bytes) or not FRAME_BYTES < len(ciphertext) <= MAX_CIPHERTEXT
             or not ciphertext.startswith(AGE_HEADER)):
         raise ValueError('Invalid encrypted candidate envelope')
@@ -58,5 +58,5 @@ def open_envelope(ciphertext, environment, identity, *, workflow_ref=WORKFLOW_RE
     if not 0 < length <= MAX_PAYLOAD or any(frame[4 + length:]):
         raise ValueError('Invalid decrypted candidate frame')
     raw = frame[4:4 + length]
-    validate_handoff(raw, environment, workflow_ref=workflow_ref, categories=categories)
+    validate_handoff(raw, environment, workflow_ref=workflow_ref, categories=categories, labeled=labeled)
     return raw

@@ -20,7 +20,8 @@ Describe 'Attended Graph beta sign-in collection' {
             }
             function Invoke-MgGraphRequest {
                 [CmdletBinding()]param($Method,$Uri,$OutputType,[switch]$SkipHttpErrorCheck,
-                    $OutputFilePath,[switch]$InferOutputFileName,$Headers,$GraphRequestSession)
+                    $OutputFilePath,[switch]$InferOutputFileName,$Headers,$GraphRequestSession,
+                    [string]$StatusCodeVariable,[string]$ResponseHeadersVariable)
                 $state = $global:TokenForgeSignInMock
                 $state.Calls.Add([string]$Uri)
                 if ($Method -ne 'GET' -or -not $SkipHttpErrorCheck -or $OutputType -ne 'HttpResponseMessage' -or
@@ -31,10 +32,20 @@ Describe 'Attended Graph beta sign-in collection' {
                 if (-not $state.Queue.Count) { throw 'synthetic-private-transport' }
                 $item = $state.Queue.Dequeue()
                 if ($item.Code -eq 0) { throw [OperationCanceledException]::new('synthetic-private-timeout') }
+                if (-not $item.OmitStatus) { $PSCmdlet.SessionState.PSVariable.Set($StatusCodeVariable,[int]$item.Code) }
+                if ($item.ContainsKey('Delay')) {
+                    $headers=[Collections.Generic.Dictionary[string,Collections.Generic.IEnumerable[string]]]::new()
+                    $headers.Add('retry-after',[string[]]@([string]$item.Delay))
+                    $PSCmdlet.SessionState.PSVariable.Set($ResponseHeadersVariable,$headers)
+                }
+                if ($item.PlainText) { return 'synthetic-private-plain-response' }
                 $response = [Net.Http.HttpResponseMessage]::new([Net.HttpStatusCode]$item.Code)
                 $effective = if ($item.Effective) { $item.Effective } else { 'https://graph.microsoft.com' + $Uri }
                 $response.RequestMessage = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Get,[uri]$effective)
-                $response.Content = [Net.Http.StringContent]::new((ConvertTo-Json -InputObject $item.Body -Depth 10 -Compress))
+                $content = if ($item.MalformedJson) { '{synthetic-private-malformed' } else {
+                    ConvertTo-Json -InputObject $item.Body -Depth 10 -Compress
+                }
+                $response.Content = [Net.Http.StringContent]::new($content)
                 if ($item.ContainsKey('Delay')) {
                     $response.Headers.RetryAfter = [Net.Http.Headers.RetryConditionHeaderValue]::new([TimeSpan]::FromSeconds($item.Delay))
                 }
@@ -128,6 +139,36 @@ Describe 'Attended Graph beta sign-in collection' {
         $global:TokenForgeSignInMock.Calls[0] | Should -Be $global:TokenForgeSignInMock.Calls[1]
         $global:TokenForgeSignInMock.Unsafe | Should -BeFalse
         Test-Path (Join-Path $TestDrive raw.json) | Should -BeFalse
+    }
+
+    It 'honors plain-text throttle responses using fresh status and header variables' {
+        $option=@{EventType=@('interactiveUser');Until=[DateTimeOffset]'2026-01-06T00:00:00Z';MaxRetryDelaySeconds=0}
+        $global:TokenForgeSignInMock.Queue.Enqueue(@{Code=503;PlainText=$true;Delay=60})
+        $deferred=Get-Run $option
+        $deferred.Windows[0].Status | Should -Be 'RetryDeferred'
+        $deferred.Windows[0].HttpStatus | Should -Be 503
+        $deferred.Windows[0].RetryAfterSeconds | Should -Be 60
+        $global:TokenForgeSignInMock.Queue.Enqueue(@{Code=429;PlainText=$true;Delay=0})
+        Add-Page @{value=@()}
+        $success=Get-Run $option
+        $success.CollectionComplete | Should -BeTrue
+        $success.Windows[0].Requests | Should -Be 2
+        $global:TokenForgeSignInMock.Calls[1] | Should -Be $global:TokenForgeSignInMock.Calls[2]
+    }
+
+    It 'fails on missing status after a retry and distinguishes malformed HTTP success' {
+        $option=@{EventType=@('interactiveUser');Until=[DateTimeOffset]'2026-01-06T00:00:00Z'}
+        $global:TokenForgeSignInMock.Queue.Enqueue(@{Code=429;PlainText=$true;Delay=0})
+        $global:TokenForgeSignInMock.Queue.Enqueue(@{Code=200;PlainText=$true;OmitStatus=$true})
+        $unknown=Get-Run $option
+        $unknown.Windows[0].Status | Should -Be 'MissingHttpStatus'
+        $unknown.Windows[0].HttpStatus | Should -BeNullOrEmpty
+        $unknown.Windows[0].Requests | Should -Be 2
+        $global:TokenForgeSignInMock.Queue.Enqueue(@{Code=200;MalformedJson=$true})
+        $invalid=Get-Run $option
+        $invalid.Windows[0].Status | Should -Be 'InvalidPage'
+        $invalid.Windows[0].HttpStatus | Should -Be 200
+        @(Get-ChildItem $checkpoint -Filter '*.json').Count | Should -Be 0
     }
 
     It 'restarts an interrupted window from its initial request and retains completed windows' {

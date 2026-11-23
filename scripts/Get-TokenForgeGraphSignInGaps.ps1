@@ -84,37 +84,68 @@ function Request-SignInPage([string]$Relative) {
         $status = $null
         $retryAfter = $null
         $response = $null
+        $graphStatus = $null
+        $graphHeaders = $null
         try {
             Get-VerifiedContext
         } catch { return @{ Status='ContextRejected'; Attempts=$attempt; HttpStatus=$null; RetryAfterSeconds=$null } }
         try {
             # A validated relative URI keeps the SDK bound to its built-in Global environment.
             $response = Microsoft.Graph.Authentication\Invoke-MgGraphRequest -Method GET -Uri $Relative `
-                -OutputType HttpResponseMessage -SkipHttpErrorCheck -ErrorAction Stop -Debug:$false -Verbose:$false `
-                -WarningAction SilentlyContinue -InformationAction Ignore
-            if ($response -isnot [Net.Http.HttpResponseMessage]) { throw 'Expected an HTTP response.' }
-            $status = [int]$response.StatusCode
-            $effective = $response.RequestMessage.RequestUri
-            if (-not (Get-RelativeSignInLink $effective.AbsoluteUri)) {
-                return @{ Status='UnexpectedResponseOrigin'; Attempts=$attempt+1; HttpStatus=$status; RetryAfterSeconds=$null }
+                -OutputType HttpResponseMessage -StatusCodeVariable graphStatus -ResponseHeadersVariable graphHeaders `
+                -SkipHttpErrorCheck -ErrorAction Stop -Debug:$false -Verbose:$false -WarningAction SilentlyContinue -InformationAction Ignore
+            $hasMessage = $response -is [Net.Http.HttpResponseMessage]
+            $validStatus = $graphStatus -is [int] -and $graphStatus -ge 100 -and $graphStatus -le 599
+            if ($hasMessage) {
+                $status = [int]$response.StatusCode
+                if ($status -lt 100 -or $status -gt 599 -or
+                    ($null -ne $graphStatus -and (-not $validStatus -or $graphStatus -ne $status))) {
+                    return @{ Status='InvalidHttpStatus'; Attempts=$attempt+1; HttpStatus=$null; RetryAfterSeconds=$null }
+                }
+                $effective = ($response.RequestMessage)?.RequestUri
+                if ($null -eq $effective -or -not (Get-RelativeSignInLink $effective.AbsoluteUri)) {
+                    return @{ Status='UnexpectedResponseOrigin'; Attempts=$attempt+1; HttpStatus=$status; RetryAfterSeconds=$null }
+                }
+            } elseif ($validStatus) {
+                # The SDK can emit plain text despite HttpResponseMessage mode. Trust only the fresh HTTP status.
+                $status = $graphStatus
+            } else {
+                return @{ Status='MissingHttpStatus'; Attempts=$attempt+1; HttpStatus=$null; RetryAfterSeconds=$null }
             }
             if ($status -eq 200) {
+                if (-not $hasMessage) {
+                    return @{ Status='InvalidPage'; Attempts=$attempt+1; HttpStatus=$status; RetryAfterSeconds=$null }
+                }
                 try { $page = Read-GraphPage $response }
                 catch { return @{ Status='InvalidPage'; Attempts=$attempt+1; HttpStatus=$status; RetryAfterSeconds=$null } }
                 return @{ Status='Page'; Attempts=$attempt+1; HttpStatus=$status; RetryAfterSeconds=$null; Page=$page }
             }
-            $header = $response.Headers.RetryAfter
-            if ($null -ne $header) {
-                $delta = if ($null -ne $header.Delta) { $header.Delta.TotalSeconds } elseif ($null -ne $header.Date) {
-                    ($header.Date - [DateTimeOffset]::UtcNow).TotalSeconds
-                } else { 0 }
-                $retryAfter = [Math]::Max(0,[Math]::Ceiling($delta))
+            if ($status -in @(429,503)) {
+                $header = if ($hasMessage) { $response.Headers.RetryAfter } else { $null }
+                if ($null -eq $header -and $graphHeaders -is [Collections.IDictionary]) {
+                    $headerNames = @($graphHeaders.Keys | Where-Object { $_ -is [string] -and $_ -ieq 'Retry-After' })
+                    if ($headerNames.Count) {
+                        $headerValues = @($graphHeaders[$headerNames[0]])
+                        if ($headerNames.Count -ne 1 -or $headerValues.Count -ne 1 -or $headerValues[0] -isnot [string] -or
+                            -not [Net.Http.Headers.RetryConditionHeaderValue]::TryParse($headerValues[0],[ref]$header)) {
+                            return @{ Status='InvalidRetryAfter'; Attempts=$attempt+1; HttpStatus=$status; RetryAfterSeconds=$null }
+                        }
+                    }
+                }
+                if ($null -ne $header) {
+                    $delta = if ($null -ne $header.Delta) { $header.Delta.TotalSeconds } else {
+                        ($header.Date - [DateTimeOffset]::UtcNow).TotalSeconds
+                    }
+                    $retryAfter = [Math]::Max(0,[Math]::Ceiling($delta))
+                }
             }
         } catch {
             $failure = if ($_.Exception -is [OperationCanceledException]) { 'TransportTimeout' } else { 'TransportFailure' }
             return @{ Status=$failure; Attempts=$attempt+1; HttpStatus=$status; RetryAfterSeconds=$null }
         } finally {
             if ($response -is [Net.Http.HttpResponseMessage]) { $response.Dispose() }
+            $response = $null
+            $graphHeaders = $null
         }
         if ($status -notin @(429,503)) {
             $failure = if ($status -in @(401,403)) { 'AccessDenied' } else { 'HttpFailure' }

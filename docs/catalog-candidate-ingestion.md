@@ -47,7 +47,7 @@ python3 -B scripts/Merge-TokenForgeSignInCatalogGaps.py \
   day-1.json day-2.json
 ```
 
-Use `--graph-version beta` for a set of beta replay reports. The assembler accepts up to 128 regular aggregate files, each at most 8 MiB and at most 64 MiB combined. It reads both catalog partitions from local Git objects and rejects incompatible report pins, event shapes, candidate IDs, or counts.
+Use `--graph-version beta` for a set of beta replay reports. The assembler accepts up to 128 regular aggregate files, each at most 8 MiB and at most 64 MiB combined. Each report is limited to 31 days. Page replay uses one-day slices, with a shorter final slice allowed. The assembled interval may be longer. The assembler reads both catalog partitions from local Git objects and rejects incompatible report pins, event shapes, candidate IDs, or counts.
 
 The receipt records the requested interval and a disjoint ledger of supplied coverage. Equivalent reports count once, regardless of candidate order or equivalent UTC timestamp spelling. The receipt identifies them by SHA-256 of normalized canonical JSON after strict aggregate schema validation. Inputs with extra fields or invalid JSON values are refused. Any conflicting overlap excludes each entire affected report from candidate totals because a summarized report cannot be split without event-level data. The ledger shows both the overlap and excluded tails. Counts from nonoverlapping partial reports are retained and labeled incomplete, and missing intervals are shown explicitly. Exit code 0 and `InputCoverageComplete: true` mean complete local inputs represent all requested intervals. Exit code 2 means there are gaps, overlaps, or partial inputs. Exit code 1 refuses invalid or unavailable inputs without an aggregate.
 

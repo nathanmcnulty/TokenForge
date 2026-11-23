@@ -32,6 +32,7 @@ WINDOW_FIELDS = {'Since', 'UntilExclusive', 'Pages', 'UniqueEvents', 'DuplicateE
                  'BoundaryEventsSkipped', 'UnusableAppIds', 'UnusableGraphResourceIds', 'Status'}
 CANDIDATE_FIELDS = {'IdentifierKind', 'Identifier', 'Disposition', 'Count',
                     'FirstObservedAt', 'LastObservedAt', 'EventTypeCounts'}
+TICKS_PER_DAY = 86400 * 10_000_000
 
 
 def require(condition, message):
@@ -49,13 +50,20 @@ def reject_nonstandard_number(_):
 
 def instant(value):
     # PowerShell emits seven fractional digits. Preserve the last digit for exact boundary ordering.
-    match = re.fullmatch(r'(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,7}))?(?:Z|\+00:00)', value)
+    match = re.fullmatch(r'(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,7}))?(?:Z|\+00:00)',
+                         value, flags=re.ASCII)
     require(match is not None, 'Expected a UTC timestamp')
     try:
         datetime.fromisoformat(match[1])
     except ValueError:
         raise ValueError('Invalid UTC calendar timestamp') from None
     return f'{match[1]}.{(match[2] or "").ljust(7, "0")}Z'
+
+
+def ticks(timestamp):
+    whole = datetime.fromisoformat(timestamp[:19])
+    seconds = whole.toordinal() * 86400 + whole.hour * 3600 + whole.minute * 60 + whole.second
+    return seconds * 10_000_000 + int(timestamp[20:27])
 
 
 def count(value):
@@ -76,6 +84,8 @@ def validated_report(report, commit, version, known, since, until):
             'Report format, catalog pin, event shape, or coverage is incompatible')
     start, end = instant(report['Since']), instant(report['UntilExclusive'])
     require(since <= start < end <= until, 'Report interval is outside the requested bounds')
+    end_ticks = ticks(end)
+    require(end_ticks - ticks(start) <= 31 * TICKS_PER_DAY, 'A replay report is limited to 31 days')
 
     windows = report['Windows']
     require(isinstance(windows, list) and 1 <= len(windows) <= 31, 'Invalid replay windows')
@@ -93,6 +103,10 @@ def validated_report(report, commit, version, known, since, until):
         status = window['Status']
         require(previous_end == window_start < window_end <= end and status in STATUSES,
                 'Report windows must form one contiguous interval')
+        if report['Source'] == 'LocalPageReplay':
+            start_ticks = ticks(window_start)
+            require(ticks(window_end) - start_ticks == min(TICKS_PER_DAY, end_ticks - start_ticks),
+                    'Page replay must use one-day slices with a shorter final window allowed')
         window_pages = count(window['Pages'])
         unique_events = count(window['UniqueEvents'])
         malformed = count(window['MalformedEvents'])

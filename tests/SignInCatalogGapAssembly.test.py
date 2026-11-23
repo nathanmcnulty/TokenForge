@@ -219,6 +219,103 @@ class AssemblyTests(unittest.TestCase):
         self.assertEqual(result.stdout, '')
         self.unchanged()
 
+    def test_non_ascii_fraction_is_not_a_timestamp(self):
+        original = self.report('original', SINCE, MIDDLE)
+        changed = self.repo / 'unicode-time.json'
+        value = json.loads(original.read_bytes())
+        value['Candidates'][0].update(FirstObservedAt='2026-01-05T12:00:00.١Z',
+                                      LastObservedAt='2026-01-05T12:00:00.١Z')
+        changed.write_text(json.dumps(value))
+        result = self.merge(changed, end=MIDDLE)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, '')
+        self.unchanged()
+
+    def test_provenance_is_neither_copied_nor_accepted_from_reports(self):
+        canary = 'synthetic-private-provenance-value'
+        self.verified['provenance'] = {'custom': canary}
+        self.nonverified['provenance'] = {'custom': canary}
+        for path, payload in zip(self.catalog_files, (self.verified, self.nonverified)):
+            path.write_text(json.dumps(payload))
+        self.git('add', *[path.name for path in self.catalog_files])
+        self.git('-c', 'user.name=Synthetic', '-c', 'user.email=test@example.invalid',
+                 '-c', 'commit.gpgsign=false', 'commit', '-qm', 'Synthetic catalog provenance')
+        self.commit = self.git('rev-parse', 'HEAD').stdout.strip()
+        local_report = self.report('original', SINCE, MIDDLE)
+        result = self.merge(local_report, end=MIDDLE)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn(canary, result.stdout + result.stderr)
+        modified = self.repo / 'claimed-provenance.json'
+        value = json.loads(local_report.read_bytes())
+        value['provenance'] = {'Path': '../alternate.json', 'Sha256': 'f' * 64, 'Custom': canary}
+        modified.write_text(json.dumps(value))
+        rejected = self.merge(modified, end=MIDDLE)
+        self.assertEqual(rejected.returncode, 1)
+        self.assertEqual(rejected.stdout, '')
+        self.assertNotIn(canary, rejected.stderr)
+        self.assertEqual(self.merge(local_report, end=MIDDLE).stdout, result.stdout)
+
+        # A report cannot point at a different commit or substitute a renamed partition path.
+        pinned = self.commit
+        self.git('mv', 'applications.non-verified.json', 'alternate.json')
+        self.git('-c', 'user.name=Synthetic', '-c', 'user.email=test@example.invalid',
+                 '-c', 'commit.gpgsign=false', 'commit', '-qm', 'Synthetic catalog with alternate path')
+        self.commit = self.git('rev-parse', 'HEAD').stdout.strip()
+        self.assertNotEqual(self.commit, pinned)
+        self.assertEqual(self.merge(local_report, end=MIDDLE).returncode, 1)
+        value = json.loads(local_report.read_bytes())
+        value['CatalogCommit'] = self.commit
+        modified.write_text(json.dumps(value))
+        rejected = self.merge(modified, end=MIDDLE)
+        self.assertEqual(rejected.returncode, 1)
+        self.assertEqual(rejected.stdout, '')
+        self.assertNotIn(canary, rejected.stderr)
+
+    def test_report_duration_and_daily_slices_follow_the_producer(self):
+        original = self.report('original', SINCE, MIDDLE)
+        changed = self.repo / 'interval.json'
+        for source in ('LocalPageReplay', 'LocalSnapshot'):
+            value = json.loads(original.read_bytes())
+            value['Source'] = source
+            value['UntilExclusive'] = '2026-03-01T00:00:00Z'
+            value['Windows'][0]['UntilExclusive'] = value['UntilExclusive']
+            changed.write_text(json.dumps(value))
+            result = self.merge(changed, end=value['UntilExclusive'])
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(result.stdout, '')
+        value = json.loads(original.read_bytes())
+        value['UntilExclusive'] = UNTIL
+        value['Windows'][0]['UntilExclusive'] = '2026-01-05T12:00:00Z'
+        value['Windows'].append({**value['Windows'][0], 'Since': '2026-01-05T12:00:00Z', 'UntilExclusive': UNTIL})
+        changed.write_text(json.dumps(value))
+        self.assertEqual(self.merge(changed).returncode, 1)
+        value['Windows'][0]['UntilExclusive'] = MIDDLE
+        value['Since'] = SINCE
+        value['UntilExclusive'] = '2026-01-06T12:00:00Z'
+        value['Windows'][1].update(Since=MIDDLE, UntilExclusive=value['UntilExclusive'])
+        changed.write_text(json.dumps(value))
+        self.assertEqual(self.merge(changed, end=value['UntilExclusive']).returncode, 0)
+        self.unchanged()
+
+    def test_assembled_interval_can_exceed_single_report_limit(self):
+        original = self.report('original', SINCE, MIDDLE)
+        value = json.loads(original.read_bytes())
+        first, second = (self.repo / name for name in ('snapshot-one.json', 'snapshot-two.json'))
+        split = '2026-02-04T00:00:00Z'
+        end = '2026-03-01T00:00:00Z'
+        value.update(Source='LocalSnapshot', UntilExclusive=split)
+        value['Windows'][0]['UntilExclusive'] = split
+        first.write_text(json.dumps(value))
+        value.update(Since=split, UntilExclusive=end)
+        value['Windows'][0].update(Since=split, UntilExclusive=end)
+        for candidate in value['Candidates']:
+            candidate.update(FirstObservedAt=split, LastObservedAt=split)
+        second.write_text(json.dumps(value))
+        result = self.merge(first, second, end=end)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(json.loads(result.stdout)['InputCoverageComplete'])
+        self.unchanged()
+
     def test_nonregular_reports_fail_without_reading(self):
         fifo = self.repo / 'not-a-file'
         os.mkfifo(fifo)

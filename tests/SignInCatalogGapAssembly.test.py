@@ -26,15 +26,19 @@ class AssemblyTests(unittest.TestCase):
         page = {'value': [event]}
         if failed:
             page['@odata.nextLink'] = 'https://graph.microsoft.com/v1.0/auditLogs/signIns?$skiptoken=synthetic-private-link'
+        return self.replay_pages(name, start, end, [page], expected_exit=2 if failed else 0)
+
+    def replay_pages(self, name, start, end, pages, *, expected_exit):
         folder = self.repo / name
         folder.mkdir()
-        (folder / 'window-1-page-1.json').write_text(json.dumps(page))
+        for number, page in enumerate(pages, start=1):
+            (folder / f'window-1-page-{number}.json').write_text(json.dumps(page))
         producer = subprocess.run(
             ['pwsh', '-NoProfile', '-File', str(ROOT/'scripts/Find-TokenForgeSignInCatalogGaps.ps1'),
              '-CatalogRepository', str(self.repo), '-CatalogCommit', self.commit,
              '-Since', start, '-Until', end, '-FixtureDirectory', str(folder)],
-            text=True, capture_output=True)
-        self.assertEqual(producer.returncode, 2 if failed else 0, producer.stderr)
+            text=True, capture_output=True, timeout=15)
+        self.assertEqual(producer.returncode, expected_exit, producer.stderr)
         report = self.repo / (name + '.json')
         report.write_text(producer.stdout)
         return report
@@ -67,6 +71,54 @@ class AssemblyTests(unittest.TestCase):
         self.assertEqual(report['Candidates'][0]['FirstObservedAt'], '2026-01-05T23:59:59.9999999Z')
         self.assertEqual(report['Candidates'][0]['LastObservedAt'], '2026-01-06T00:00:00.0000000Z')
         self.assertNotIn('synthetic-private', result.stdout)
+        self.unchanged()
+
+    def test_multipage_window_complete_interrupted_and_replacement(self):
+        first = {'id': 'synthetic-private-first', 'appId': fixtures.NEW, 'resourceId': fixtures.TARGET,
+                 'createdDateTime': SINCE, 'isInteractive': True}
+        second = {**first, 'id': 'synthetic-private-second', 'createdDateTime': '2026-01-05T12:00:00Z'}
+        endpoint = 'https://graph.microsoft.com/v1.0/auditLogs/signIns?$skiptoken=synthetic-private-'
+        page_one = {'value': [first], '@odata.nextLink': endpoint + 'two'}
+        page_two = {'value': [first, second]}
+        complete = self.replay_pages('complete-pages', SINCE, MIDDLE, [page_one, page_two], expected_exit=0)
+        interrupted = self.replay_pages('interrupted-pages', SINCE, MIDDLE,
+                                        [page_one, {**page_two, '@odata.nextLink': endpoint + 'three'}],
+                                        expected_exit=2)
+        adjacent = self.report('adjacent', MIDDLE, UNTIL)
+
+        partial_result = self.merge(interrupted, adjacent)
+        self.assertEqual(partial_result.returncode, 2, partial_result.stderr)
+        partial = json.loads(partial_result.stdout)
+        self.assertFalse(partial['InputCoverageComplete'])
+        self.assertEqual([row['Status'] for row in partial['Windows']], ['ReplayIncomplete', 'ReplayComplete'])
+        self.assertEqual(partial['Windows'][0]['Inputs'][0]['WindowStatus'], 'FixtureUnavailable')
+        self.assertEqual([row['Count'] for row in partial['Candidates']], [3, 3])
+
+        # A completed replay supersedes an interrupted attempt only when the old report is omitted.
+        overlap_result = self.merge(complete, interrupted, adjacent)
+        self.assertEqual(overlap_result.returncode, 2, overlap_result.stderr)
+        overlap = json.loads(overlap_result.stdout)
+        self.assertEqual([row['Status'] for row in overlap['Windows']], ['OverlappingReports', 'ReplayComplete'])
+        self.assertEqual([entry['Included'] for entry in overlap['Inputs']], [False, False, True])
+        self.assertEqual([row['Count'] for row in overlap['Candidates']], [1, 1])
+
+        copy = self.repo / 'copy-of-complete.json'
+        copy.write_bytes(complete.read_bytes())
+        result = self.merge(complete, adjacent, copy)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        assembled = json.loads(result.stdout)
+        self.assertTrue(assembled['InputCoverageComplete'])
+        self.assertFalse(assembled['TenantHistoryComplete'])
+        self.assertEqual(assembled['SourceWindowCoverage'], 'Unknown')
+        self.assertEqual(assembled['ActualAudience'], 'UnknownFromSignInLogs')
+        self.assertEqual({key: assembled['Inputs'][0][key] for key in
+                          ('Pages', 'UniqueEvents', 'DuplicateEvents', 'DuplicateCopiesIgnored')},
+                         {'Pages': 2, 'UniqueEvents': 2, 'DuplicateEvents': 1, 'DuplicateCopiesIgnored': 1})
+        self.assertEqual([(row['IdentifierKind'], row['Identifier'], row['Count']) for row in assembled['Candidates']],
+                         [('AppId', fixtures.NEW, 3), ('GraphResourceId', fixtures.TARGET, 3)])
+        for output in (complete.read_text(), interrupted.read_text(), partial_result.stdout,
+                       overlap_result.stdout, result.stdout):
+            self.assertNotIn('synthetic-private-', output)
         self.unchanged()
 
     def test_missing_and_incomplete_windows_are_explicit(self):

@@ -368,5 +368,101 @@ exit $LASTEXITCODE
         self.unchanged()
 
 
+class OperatorRunbookTests(unittest.TestCase):
+    setUp = CatalogCandidateTests.setUp
+    git = CatalogCandidateTests.git
+    unchanged = CatalogCandidateTests.unchanged
+
+    def test_attended_runbook_uses_only_mocked_sdk_and_minimizes_report(self):
+        docs = (ROOT / 'docs/operator-signin-gap-sample.md').read_text()
+        recipe = docs.split('```powershell\n', 1)[1].split('```', 1)[0]
+        operator = self.repo / 'operator.ps1'
+        operator.write_text("""param($TokenForge,$CatalogRepository,$CatalogCommit,$Scenario)
+$ErrorActionPreference = 'Stop'
+$global:FixtureScenario = $Scenario
+$global:FixtureReadPath = Join-Path $CatalogRepository 'read-called'
+$TenantId = [guid]'11111111-2222-3333-4444-555555555555'
+$Since = [DateTimeOffset]'2026-01-05T00:00:00Z'
+$Until = if ($Scenario -eq 'Long') { $Since.AddDays(2) } elseif ($Scenario -eq 'Reverse') { $Since.AddDays(-1) } else { $Since.AddDays(1) }
+if ($Scenario -eq 'Future') { $Since = [DateTimeOffset]::UtcNow.AddMinutes(1); $Until = $Since.AddMinutes(1) }
+$PSDefaultParameterValues = @{
+    'Get-MgAuditLogSignIn:All' = $true
+    'Get-MgAuditLogSignIn:Headers' = @{ 'Fixture' = 'never-send' }
+    'Get-MgAuditLogSignIn:Debug' = $true
+}
+New-Module -Name Microsoft.Graph.Authentication {
+    function Get-MgContext {
+        [CmdletBinding()] param()
+        if ($global:FixtureScenario -eq 'NoContext') { return }
+        [pscustomobject]@{
+            TenantId = if ($global:FixtureScenario -eq 'WrongTenant') { 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' } elseif ($global:FixtureScenario -eq 'ArrayTenant') { ,@('11111111-2222-3333-4444-555555555555') } else { '11111111-2222-3333-4444-555555555555' }
+            AuthType = if ($global:FixtureScenario -eq 'AppOnly') { 'AppOnly' } else { 'Delegated' }
+            ContextScope = if ($global:FixtureScenario -eq 'SharedScope') { 'CurrentUser' } else { 'Process' }
+            Scopes = if ($global:FixtureScenario -eq 'NoScope') { @('User.Read') } else { @('AuditLog.Read.All') }
+            Environment = if ($global:FixtureScenario -eq 'WrongCloud') { 'USGov' } else { 'Global' }
+        }
+    }
+    function Get-MgEnvironment {
+        [CmdletBinding()] param($Name)
+        if ($Name -ne 'Global') { throw 'Unexpected environment' }
+        [pscustomobject]@{
+            Name = 'Global'; Type = if ($global:FixtureScenario -eq 'CustomCloud') { 'User-defined' } else { 'Built-in' }
+            GraphEndpoint = if ($global:FixtureScenario -eq 'HostMismatch') { 'https://example.invalid' } else { 'https://graph.microsoft.com' }
+            AzureADEndpoint = if ($global:FixtureScenario -eq 'LoginMismatch') { 'https://example.invalid' } else { 'https://login.microsoftonline.com' }
+        }
+    }
+} | Import-Module
+New-Module -Name Microsoft.Graph.Reports {
+    function Get-MgAuditLogSignIn {
+        [CmdletBinding()] param($Filter,$Property,$Top,[switch]$All,$Headers)
+        [IO.File]::WriteAllText($global:FixtureReadPath, 'mock')
+        if ($All -or $Headers -or $PSBoundParameters['Debug'] -or $PSBoundParameters['Verbose'] -or
+            $Filter -ne 'createdDateTime ge 2026-01-05T00:00:00.0000000Z and createdDateTime le 2026-01-06T00:00:00.0000000Z' -or
+            $Top -ne 1000 -or ($Property -join ',') -ne 'id,appId,resourceId,createdDateTime,isInteractive') {
+            throw 'Unexpected SDK arguments'
+        }
+        if ($global:FixtureScenario -eq 'Empty') { return }
+        $row = [pscustomobject]@{
+            Id = 'private-event'; AppId = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
+            ResourceId = 'dddddddd-dddd-dddd-dddd-dddddddddddd'; IsInteractive = $true
+            CreatedDateTime = [DateTimeOffset]'2026-01-05T12:00:00Z'
+            UserPrincipalName = 'private-user'; IpAddress = 'private-ip'
+        }
+        if ($global:FixtureScenario -eq 'BadTime') { $row.CreatedDateTime = [DateTimeOffset]'2026-01-04T12:00:00Z' }
+        $row
+        if ($global:FixtureScenario -eq 'SdkError') { throw 'private-error' }
+        if ($global:FixtureScenario -eq 'Cap') { for ($i=0; $i -lt 1000; $i++) { $row } }
+    }
+} | Import-Module
+""" + recipe + "\nexit $LASTEXITCODE\n")
+        command = ['pwsh', '-NoProfile', '-File', str(operator), str(ROOT), str(self.repo), self.commit]
+        called = self.repo / 'read-called'
+        for reason in ('NoContext', 'WrongTenant', 'ArrayTenant', 'NoScope', 'AppOnly', 'SharedScope',
+                       'WrongCloud', 'CustomCloud', 'HostMismatch', 'LoginMismatch', 'Long', 'Reverse', 'Future'):
+            with self.subTest(reason=reason):
+                result = subprocess.run([*command, reason], text=True, capture_output=True)
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+                self.assertFalse(called.exists())
+        for reason in ('Sample', 'Empty', 'BadTime', 'Cap', 'SdkError'):
+            with self.subTest(reason=reason):
+                result = subprocess.run([*command, reason], text=True, capture_output=True)
+                self.assertTrue(called.exists(), result.stderr)
+                called.unlink()
+                self.assertNotRegex(result.stdout + result.stderr, 'private-user|private-ip|private-error|private-event')
+                if reason in ('Cap', 'SdkError'):
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn('Partial records were discarded', result.stderr)
+                    self.assertFalse(result.stdout.strip())
+                    continue
+                report = json.loads(result.stdout)
+                self.assertEqual(report['Source'], 'InMemorySnapshot')
+                self.assertEqual(report['SourceWindowCoverage'], 'Unknown')
+                self.assertEqual(report['ActualAudience'], 'UnknownFromSignInLogs')
+                self.assertEqual(report['ReplayComplete'], reason != 'BadTime')
+                self.assertEqual(result.returncode, 2 if reason == 'BadTime' else 0)
+                self.assertEqual([r['Identifier'] for r in report['Candidates']], [NEW, TARGET] if reason == 'Sample' else [])
+        self.unchanged()
+
+
 if __name__ == '__main__':
     unittest.main()

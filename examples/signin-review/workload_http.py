@@ -10,6 +10,7 @@ from urllib.request import ProxyHandler, Request, build_opener
 
 from candidate_metadata import is_principal_url
 from collect import app_id_is_canonical, decode, valid_link
+from directory_provisioning import valid_directory_link
 from oidc_claim_check import NoRedirect, check, get_assertion
 
 MAX_PAGE_BYTES = 32 * 1024 * 1024
@@ -54,7 +55,7 @@ def delay_for(value, attempt):
         raise ValueError('Unreadable Graph retry delay') from None
 
 
-def graph_reader(environment):
+def graph_reader(environment, *, include_directory_audit=False):
     tenant = environment['TF_AUDIT_TENANT_ID']
     client = environment['TF_AUDIT_CLIENT_ID']
     if not all(app_id_is_canonical(value) for value in (tenant, client)):
@@ -78,7 +79,7 @@ def graph_reader(environment):
     headers = {'Authorization': 'Bearer ' + token, 'Accept': 'application/json'}
 
     def get(url):
-        if not valid_link(url) and not is_principal_url(url):
+        if not (valid_link(url) or is_principal_url(url) or (include_directory_audit and valid_directory_link(url))):
             raise ValueError('Unexpected Graph endpoint')
         for attempt in range(3):
             try:

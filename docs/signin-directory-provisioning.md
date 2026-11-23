@@ -11,3 +11,15 @@ The companion reads both catalog partitions from the exact Git commit and emits 
 ```sh
 python3 -B examples/signin-review/directory_provisioning.py <normalized-evidence.json> <catalog-repository> <exact-catalog-commit>
 ```
+
+## Attended Microsoft Graph SDK companion
+
+Run `scripts/Get-TokenForgeGraphDirectoryProvisioningGaps.ps1` in a dedicated, attended PowerShell 7.6 process with an existing Global process-scoped delegated SDK context for the exact account and tenant, existing `AuditLog.Read.All`, and an authorized directory audit reader role. The script makes GET requests only and checks the existing context before each page. Keep required organizational auditing in place. The SDK may require reauthentication. Stop at a new consent prompt.
+
+```powershell
+./scripts/Get-TokenForgeGraphDirectoryProvisioningGaps.ps1 -TenantId $tenantId -Account $account -CatalogRepository $catalogRepository -CatalogCommit $catalogCommit -Since $sinceUtc -Until $untilUtc
+```
+
+Use a past interval of up to 31 days. The companion splits the interval at UTC midnight, checks both catalog partitions at the exact local Git commit and returns distinct candidate AppIds from terminal windows. Counts refer to returned rows. Missing or ambiguous AppIds stay unresolved. An interrupted window never supplies candidates, and later windows are marked unattempted. Exit code 2 denotes an incomplete run. The report contains candidate AppIds, fixed request status, bounded time windows and counts. Keep it private as it is tenant-derived. Raw event records, actor and object IDs, and continuation URLs stay out of the output. Hosted activation remains separate.
+
+The companion validates every explicit continuation and rejects an SDK response with a changed effective URI before processing its body. The installed SDK controls its internal redirects, buffering and retry behavior. The 16 MiB parsing bound applies after the SDK returns a response. [Microsoft Graph PowerShell request reference](https://learn.microsoft.com/en-us/powershell/module/microsoft.graph.authentication/invoke-mggraphrequest?view=graph-powershell-1.0)

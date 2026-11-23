@@ -81,3 +81,5 @@ After the sample succeeds, fails, or is cancelled, close the dedicated PowerShel
 ## Proving full-window coverage later
 
 A full-window collector needs a separate review of its provider and pagination behavior. Record the requested half-open interval, event categories, and retention limits. Prove that adjacent segments cover the interval, deduplicate boundary events, and reach the provider's last page in every segment. Verify endpoint and redirect constraints with a transport test. Any skipped segment, page limit, continuation failure, or provider error leaves coverage incomplete. Compare observed Graph resource IDs as separately labeled identifiers. A match does not establish a token audience or verify an application.
+
+For multiple samples, keep only each aggregate and use disjoint UTC intervals. The [offline assembly procedure](catalog-candidate-ingestion.md#assemble-multiple-local-sign-in-gap-reports) identifies missing, partial, and conflicting intervals.

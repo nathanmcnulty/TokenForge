@@ -5,25 +5,12 @@ import argparse
 from datetime import datetime
 import hashlib
 import json
-import os
 from pathlib import Path
 import re
 import subprocess
 import sys
-import uuid
 
-
-def unique(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError('Duplicate JSON key')
-        result[key] = value
-    return result
-
-
-def decode(raw):
-    return json.loads(raw, object_pairs_hook=unique)
+from tokenforge_offline_catalog import OfflineCatalog, app_id_is_canonical, decode
 
 
 def canonical(value):
@@ -46,16 +33,6 @@ def utc(value):
         return date.utcoffset() is not None and date.utcoffset().total_seconds() == 0
     except ValueError:
         return False
-
-
-def app_id_is_canonical(value):
-    if not isinstance(value, str):
-        return False
-    try:
-        app = uuid.UUID(value)
-    except ValueError:
-        return False
-    return app.int != 0 and str(app) == value
 
 
 def claims_for(claims, url):
@@ -145,40 +122,15 @@ def main():
     parser.add_argument('--captures', type=Path)
     parser.add_argument('--native', type=Path)
     args = parser.parse_args()
-    if not hex_id(args.baseline_commit, 40):
-        raise ValueError('Use the full published catalog commit ID')
-
-    git = ['git', '--no-replace-objects', '-c', 'protocol.allow=never', '-C', str(args.baseline_repo)]
-    git_env = {**os.environ, 'GIT_NO_LAZY_FETCH': '1', 'GIT_ALLOW_PROTOCOL': '', 'GIT_TERMINAL_PROMPT': '0'}
-
-    def git_read(*command):
-        try:
-            return subprocess.check_output([*git, *command], env=git_env, stderr=subprocess.DEVNULL, timeout=30)
-        except subprocess.CalledProcessError as exc:
-            raise ValueError('Pinned catalog objects must be available locally') from exc
-
-    if git_read('cat-file', '-t', args.baseline_commit).strip() != b'commit':
-        raise ValueError('The pinned catalog object must be a Git commit')
-
-    def git_blob(path):
-        return decode(git_read('cat-file', 'blob', args.baseline_commit + ':' + path))
-
-    nonverified = git_blob('applications.non-verified.json')
-    if (nonverified.get('Format') != 'TokenForgeNonVerifiedApplications'
-            or nonverified.get('SchemaVersion') != 1):
-        raise ValueError('Unsupported non-verified catalog format')
+    catalog = OfflineCatalog(args.baseline_repo, args.baseline_commit)
+    nonverified = catalog.partition(False)
 
     def load_ledger():
-        verified = git_blob('applications.json')
-        if verified.get('Format') != 'TokenForgeApplicationMetadata' or verified.get('SchemaVersion') != 2:
-            raise ValueError('Unsupported verified catalog format')
+        verified = catalog.partition(True)['Applications']
         excluded = nonverified['Applications']
-        if set(verified['Applications']) & set(excluded):
-            raise ValueError('Published catalog partitions overlap')
+        catalog.app_ids(verified, excluded)
         records = {key: row['CatalogRecord'] for key, row in excluded.items()}
-        records.update(verified['Applications'])
-        if not all(app_id_is_canonical(key) for key in records):
-            raise ValueError('Noncanonical ID in published catalog partitions')
+        records.update(verified)
         return {key: row['Records']['Discovery///']['Attributes']['SourceClaims'] for key, row in records.items()}
 
     def project(name, sha256):

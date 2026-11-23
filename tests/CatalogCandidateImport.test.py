@@ -5,10 +5,12 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'scripts'))
 spec = importlib.util.spec_from_file_location('delta', ROOT / 'scripts/Diff-TokenForgePublicCatalog.py')
 delta = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(delta)

@@ -94,11 +94,17 @@ class CatalogCandidateTests(unittest.TestCase):
         stamps['roadtools'].update(revision=NEW_REVISION)
         stamps['microsoftApps'] = {'status': 'Unavailable'}
         stamps['resources'].update(revision=NEW_REVISION, sha256=OLD_HASH)
-        result = delta.compare(self.nonverified, stamps, self.fail, self.fail)
+        def missing(*args):
+            raise FileNotFoundError
+
+        result = delta.compare(self.nonverified, stamps, self.fail, missing)
         self.assertFalse(result['complete'])
         self.assertEqual({k: v['status'] for k, v in result['sources'].items()},
                          {'roadtools': 'NeedsCapture', 'microsoftApps': 'Unavailable',
-                          'resources': 'RevisionChangedSameContent'})
+                          'resources': 'NeedsCapture'})
+        result = delta.compare(self.nonverified, stamps, self.fail, lambda *_: {})
+        self.assertEqual(result['sources']['resources']['status'], 'RevisionChangedSameContent')
+        self.assertEqual(result['sources']['resources']['verifiedCaptureSha256'], OLD_HASH)
         self.unchanged()
 
     def test_delta_cli_reads_pinned_git_not_worktree(self):
@@ -111,7 +117,24 @@ class CatalogCandidateTests(unittest.TestCase):
         first = subprocess.check_output(command)
         self.assertEqual(subprocess.check_output(command), first)
         self.assertEqual(json.loads(first)['baselineCommit'], self.commit)
+        self.assertFalse(json.loads(first)['revisionLabelsVerified'])
         self.assertEqual(before, [p.read_bytes() for p in self.catalog_files])
+
+    def test_both_importers_reject_tree_as_commit(self):
+        tree = self.git('rev-parse', 'HEAD^{tree}').stdout.strip()
+        stamps = self.repo / 'stamps.json'
+        stamps.write_text(json.dumps(self.observations()))
+        public = subprocess.run(
+            ['python3', '-B', str(ROOT / 'scripts/Diff-TokenForgePublicCatalog.py'),
+             '--baseline-repo', str(self.repo), '--baseline-commit', tree, '--observations', str(stamps)],
+            text=True, capture_output=True)
+        self.assertNotEqual(public.returncode, 0)
+        self.assertIn('must be a Git commit', public.stderr)
+        self.commit = tree
+        replay = self.replay()
+        self.assertNotEqual(replay.returncode, 0)
+        self.assertIn('must be a Git commit', replay.stderr)
+        self.unchanged()
 
     def test_legacy_refresh_and_reconcile_refuse_split_catalog(self):
         spec = importlib.util.spec_from_file_location('refresh', ROOT / 'scripts/Refresh-TokenForgePublicCatalog.py')
@@ -179,8 +202,9 @@ class CatalogCandidateTests(unittest.TestCase):
         result = self.replay()
         self.assertEqual(result.returncode, 0, result.stderr)
         value = json.loads(result.stdout)
-        self.assertTrue(value['EnumerationComplete'])
+        self.assertTrue(value['ReplayComplete'])
         self.assertFalse(value['TenantHistoryComplete'])
+        self.assertEqual(value['SourceWindowCoverage'], 'Unknown')
         self.assertEqual(value['ActualAudience'], 'UnknownFromSignInLogs')
         self.assertEqual(value['Windows'][0]['DuplicateEvents'], 1)
         self.assertEqual(value['Windows'][0]['BoundaryEventsSkipped'], 1)
@@ -225,47 +249,67 @@ class CatalogCandidateTests(unittest.TestCase):
         self.assertNotIn('for-dedupe-only', result.stdout)
         self.unchanged()
 
-    def test_sdk_context_and_get_sequence_are_mocked(self):
-        wrapper = self.repo / 'mock-sdk.ps1'
-        wrapper.write_text("""param($Script,$Repo,$Commit,$Scenario)
-$tid = [guid]'11111111-2222-3333-4444-555555555555'
-function Get-MgContext {
-    param($ErrorAction,$Debug,$Verbose)
-    $scopes = if ($Scenario -eq 'Scope') { @('User.Read') } else { @('AuditLog.Read.All') }
-    [pscustomobject]@{ TenantId = if ($Scenario -eq 'Tenant') { [guid]::Empty } else { $tid }
-        AuthType = 'Delegated'; Environment = 'Global'; Scopes = $scopes }
+    def test_bare_snapshot_does_not_claim_window_coverage_or_coerce_arrays(self):
+        snapshot = self.repo / 'snapshot.json'
+        event = {'id': 'do-not-retain-this-event-id', 'appId': [NEW], 'resourceId': [TARGET],
+                 'createdDateTime': '2026-01-06T12:00:00Z', 'isInteractive': True}
+        scalar = {**event, 'id': 'do-not-retain-this-second-id', 'appId': NEW, 'resourceId': TARGET}
+        snapshot.write_text(json.dumps([event, scalar]))
+        command = ['pwsh', '-NoProfile', '-File', str(ROOT / 'scripts/Find-TokenForgeSignInCatalogGaps.ps1'),
+                   '-CatalogRepository', str(self.repo), '-CatalogCommit', self.commit,
+                   '-Since', '2026-01-05T00:00:00Z', '-Until', '2026-01-07T00:00:00Z',
+                   '-SnapshotPath', str(snapshot)]
+        result = subprocess.run(command, text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        value = json.loads(result.stdout)
+        self.assertTrue(value['ReplayComplete'])
+        self.assertEqual(value['Source'], 'LocalSnapshot')
+        self.assertEqual(value['SourceWindowCoverage'], 'Unknown')
+        self.assertFalse(value['TenantHistoryComplete'])
+        self.assertEqual(len(value['Windows']), 1)
+        self.assertEqual(value['Windows'][0]['UnusableAppIds'], 1)
+        self.assertEqual(value['Windows'][0]['UnusableGraphResourceIds'], 1)
+        self.assertEqual([row['Count'] for row in value['Candidates']], [1, 1])
+        self.assertNotIn('do-not-retain', result.stdout)
+        snapshot.write_text(json.dumps([scalar]))
+        result = subprocess.run(command, text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)['Windows'][0]['UniqueEvents'], 1)
+        self.unchanged()
+
+    def test_duplicate_json_keys_cannot_hide_incomplete_pages(self):
+        (self.repo / 'window-1-page-1.json').write_text('{"value":[1],"value":[]}')
+        self.page('window-2-page-1.json', [])
+        result = self.replay()
+        self.assertEqual(result.returncode, 2, result.stderr)
+        value = json.loads(result.stdout)
+        self.assertFalse(value['ReplayComplete'])
+        self.assertEqual(value['Windows'][0]['Status'], 'FixtureUnavailable')
+        self.unchanged()
+
+    def test_replay_ignores_hostile_defaults_and_has_no_sdk_calls(self):
+        wrapper = self.repo / 'hostile-defaults.ps1'
+        raw_output = self.repo / 'unexpected.json'
+        wrapper.write_text("""param($Script,$Repo,$Commit,$RawOutput)
+$PSDefaultParameterValues = @{
+    'Invoke-MgGraphRequest:OutputFilePath' = $RawOutput
+    'Invoke-MgGraphRequest:InferOutputFileName' = $true
+    'Invoke-MgGraphRequest:Headers' = @{ Forced = 'NeverSend' }
+    'Invoke-MgGraphRequest:GraphRequestSession' = 'NeverUse'
+    'ConvertFrom-Json:Depth' = 1
 }
-function Invoke-MgGraphRequest {
-    param($Method,$Uri,$OutputType,$ErrorAction,$Debug,$Verbose)
-    if ($Scenario -in 'Tenant','Scope') { throw 'GET called with invalid context' }
-    if ($Method -ne 'GET' -or $Uri.Host -ne 'graph.microsoft.com' -or $OutputType -ne 'Hashtable' -or
-        $Uri.AbsolutePath -ne '/beta/auditLogs/signIns') { throw 'Unexpected SDK request' }
-    $q=[uri]::UnescapeDataString($Uri.Query)
-    if ($q -notmatch 'createdDateTime ge .+ and createdDateTime le ') { throw 'Missing date bounds' }
-    foreach ($category in @('interactiveUser','nonInteractiveUser','servicePrincipal','managedIdentity')) {
-        if ($q -notlike "*'$category'*") { throw 'Filter incomplete' }
-    }
-    if ($Scenario -eq 'Error') { throw 'private diagnostic sentinel' }
-    @{ value=@() }
-}
-& $Script -TenantId $tid -CatalogRepository $Repo -CatalogCommit $Commit -Since '2026-01-05Z' -Until '2026-01-07Z' -PreviewAllEventTypes
+function Get-MgContext { throw 'Unexpected context read' }
+function Invoke-MgGraphRequest { throw 'Unexpected request' }
+& $Script -FixtureDirectory $Repo -CatalogRepository $Repo -CatalogCommit $Commit -Since '2026-01-05Z' -Until '2026-01-06Z'
 exit $LASTEXITCODE
 """)
-        cmd = ['pwsh','-NoProfile','-File',str(wrapper),str(ROOT/'scripts/Find-TokenForgeSignInCatalogGaps.ps1'),
-               str(self.repo),self.commit]
-        for scenario in ('Tenant','Scope'):
-            result = subprocess.run([*cmd, scenario], capture_output=True, text=True)
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn('AuditLog.Read.All', result.stderr)
-            self.assertNotIn('GET called', result.stderr)
-        result = subprocess.run([*cmd, 'Good'], capture_output=True, text=True)
+        self.page('window-1-page-1.json', [])
+        result = subprocess.run(
+            ['pwsh', '-NoProfile', '-File', str(wrapper), str(ROOT / 'scripts/Find-TokenForgeSignInCatalogGaps.ps1'),
+             str(self.repo), self.commit, str(raw_output)], text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue(json.loads(result.stdout)['EnumerationComplete'])
-        result = subprocess.run([*cmd, 'Error'], capture_output=True, text=True)
-        self.assertEqual(result.returncode, 2)
-        self.assertEqual([w['Status'] for w in json.loads(result.stdout)['Windows']],
-                         ['GraphRequestFailed','NotAttemptedAfterReadFailure'])
-        self.assertNotIn('private diagnostic sentinel', result.stdout + result.stderr)
+        self.assertTrue(json.loads(result.stdout)['ReplayComplete'])
+        self.assertFalse(raw_output.exists())
         self.unchanged()
 
 

@@ -1,8 +1,8 @@
 #Requires -Version 7.6
-[CmdletBinding(DefaultParameterSetName='Graph')]
+[CmdletBinding(DefaultParameterSetName='Pages')]
 param(
-    [Parameter(Mandatory,ParameterSetName='Graph')][guid]$TenantId,
-    [Parameter(Mandatory,ParameterSetName='Replay')][string]$FixtureDirectory,
+    [Parameter(Mandatory,ParameterSetName='Pages')][string]$FixtureDirectory,
+    [Parameter(Mandatory,ParameterSetName='Snapshot')][string]$SnapshotPath,
     [Parameter(Mandatory)][string]$CatalogRepository,
     [Parameter(Mandatory)][ValidatePattern('^[0-9a-f]{40}$')][string]$CatalogCommit,
     [Parameter(Mandatory)][DateTimeOffset]$Since,
@@ -10,25 +10,32 @@ param(
     [ValidateRange(1,500)][int]$MaxPages = 100,
     [switch]$PreviewAllEventTypes
 )
+$PSDefaultParameterValues = @{ Disabled = $true }
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
-$replay = $PSCmdlet.ParameterSetName -eq 'Replay'
+$snapshot = $PSCmdlet.ParameterSetName -eq 'Snapshot'
 $since = $Since.ToUniversalTime()
 $until = $Until.ToUniversalTime()
-if ($since -ge $until -or ($until - $since).TotalDays -gt 31 -or (-not $replay -and $until -gt [DateTimeOffset]::UtcNow)) {
-    throw 'Choose an ordered UTC interval of at most 31 days. Live intervals must end in the past.'
+if ($since -ge $until -or ($until - $since).TotalDays -gt 31) {
+    throw 'Choose an ordered UTC interval of at most 31 days.'
 }
-if (-not $replay -and $TenantId -eq [guid]::Empty) { throw 'A nonzero tenant ID is required.' }
 
-function Assert-SignInReadContext {
-    try { $ctx = Get-MgContext -ErrorAction Stop -Debug:$false -Verbose:$false }
-    catch { throw 'Could not read the existing Microsoft Graph context.' }
-    $actual = [guid]::Empty
-    if (-not $ctx -or -not [guid]::TryParse([string]$ctx.TenantId, [ref]$actual) -or
-        $actual -ne $TenantId -or $ctx.AuthType -ne 'Delegated' -or $ctx.Environment -ne 'Global' -or
-        'AuditLog.Read.All' -notin $ctx.Scopes) {
-        throw 'The existing delegated Microsoft Graph context must match the requested tenant and have AuditLog.Read.All in the Global environment.'
-    }
+function Read-ReplayJson([string]$Path) {
+    $file = [IO.File]::Open($Path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+    try {
+        if ($file.Length -gt 4194304) { throw 'Replay file exceeds 4 MiB.' }
+        $bytes = [byte[]]::new([int]$file.Length)
+        $file.ReadExactly($bytes)
+        if ($file.ReadByte() -ne -1) { throw 'Replay file grew during reading.' }
+        $text = [Text.UTF8Encoding]::new($false,$true).GetString($bytes).TrimStart([char]0xFEFF)
+        $options = [Text.Json.JsonDocumentOptions]::new()
+        $options.AllowDuplicateProperties = $false
+        $json = [Text.Json.JsonDocument]::Parse($text,$options)
+        try {
+            # Enforce duplicate-key rejection before PowerShell materializes the object.
+            return ,(ConvertFrom-Json -InputObject $text -AsHashtable -DateKind String -NoEnumerate)
+        } finally { $json.Dispose() }
+    } finally { $file.Dispose() }
 }
 
 function ConvertTo-ObservedGuid($Value) {
@@ -38,6 +45,8 @@ function ConvertTo-ObservedGuid($Value) {
     }
 }
 
+$objectType = & git --no-replace-objects -C $CatalogRepository cat-file -t $CatalogCommit 2>$null
+if ($LASTEXITCODE -ne 0 -or $objectType -cne 'commit') { throw 'The pinned catalog object must be a Git commit.' }
 $known = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 foreach ($file in @('applications.json','applications.non-verified.json')) {
     $text = & git --no-replace-objects -C $CatalogRepository show ("${CatalogCommit}:$file") 2>$null
@@ -52,22 +61,15 @@ foreach ($file in @('applications.json','applications.non-verified.json')) {
         if (-not $id -or $id -cne $key -or -not $known.Add($id)) { throw 'Malformed or overlapping catalog partitions.' }
     }
 }
-if (-not $replay) { Assert-SignInReadContext }
-
 $version = if ($PreviewAllEventTypes) { 'beta' } else { 'v1.0' }
 $path = "/$version/auditLogs/signIns"
 $types = @('interactiveUser','nonInteractiveUser','servicePrincipal','managedIdentity')
-$eventFilter = if ($PreviewAllEventTypes) {
-    ' and (signInEventTypes/any(t: ' + (($types | ForEach-Object { "t eq '$_'" }) -join ' or ') + '))'
-} else { '' }
-$fields = if ($PreviewAllEventTypes) { 'id,appId,resourceId,createdDateTime,signInEventTypes' } else { 'id,appId,resourceId,createdDateTime,isInteractive' }
 $observations = @{ AppId = @{}; GraphResourceId = @{} }
 # Hashes stay in memory and are scoped to this run. Event IDs never appear in output.
 $seenEvents = [Collections.Generic.Dictionary[string,string]]::new([StringComparer]::Ordinal)
 $coverage = [Collections.Generic.List[object]]::new()
 $pageCount = 0
 $complete = $true
-$stopReason = $null
 
 function Add-Candidate($Kind, $Id, $When, $EventTypes) {
     if (-not $Id -or $known.Contains($Id)) { return }
@@ -83,7 +85,7 @@ function Add-Candidate($Kind, $Id, $When, $EventTypes) {
 }
 
 for ($start = $since; $start -lt $until; $start = $end) {
-    $end = $start.AddDays(1)
+    $end = if ($snapshot) { $until } else { $start.AddDays(1) }
     if ($end -gt $until) { $end = $until }
     $window = [ordered]@{
         Since = $start.ToString('o'); UntilExclusive = $end.ToString('o'); Pages = 0
@@ -91,40 +93,34 @@ for ($start = $since; $start -lt $until; $start = $end) {
         UnusableAppIds = 0; UnusableGraphResourceIds = 0; Status = 'Complete'
     }
     $coverage.Add($window)
-    if ($stopReason) { $window.Status = $stopReason; continue }
     if ($pageCount -ge $MaxPages) { $window.Status = 'PageLimit'; $complete = $false; continue }
-    # Graph documents ge/le. Apply the exclusive upper bound locally.
-    $filter = 'createdDateTime ge {0} and createdDateTime le {1}{2}' -f $start.UtcDateTime.ToString('o'),$end.UtcDateTime.ToString('o'),$eventFilter
-    $next = 'https://graph.microsoft.com' + $path + '?$select=' + $fields + '&$top=1000&$filter=' + [uri]::EscapeDataString($filter)
+    $next = $null
     $seenPages = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
-    while ($next) {
-        $uri = $null
-        if ($next -isnot [string] -or $next.Length -gt 16384 -or
-            -not [uri]::TryCreate($next,[UriKind]::Absolute,[ref]$uri) -or
-            $next -notmatch '\Ahttps://graph\.microsoft\.com(?::443)?/' -or
-            $uri.Scheme -ne 'https' -or $uri.Host -ne 'graph.microsoft.com' -or $uri.Port -ne 443 -or
-            $uri.UserInfo -or $uri.Fragment -or $uri.AbsolutePath -ine $path) {
-            $window.Status = 'InvalidNextLink'; break
+    do {
+        if ($null -ne $next) {
+            $uri = $null
+            if ($next -isnot [string] -or $next.Length -gt 16384 -or
+                -not [uri]::TryCreate($next,[UriKind]::Absolute,[ref]$uri) -or
+                $next -notmatch '\Ahttps://graph\.microsoft\.com(?::443)?/' -or
+                $uri.Scheme -ne 'https' -or $uri.Host -ne 'graph.microsoft.com' -or $uri.Port -ne 443 -or
+                $uri.UserInfo -or $uri.Fragment -or $uri.AbsolutePath -ine $path) {
+                $window.Status = 'InvalidNextLink'; break
+            }
+            if (-not $seenPages.Add($next)) { $window.Status = 'PaginationLoop'; break }
         }
-        if (-not $seenPages.Add($next)) { $window.Status = 'PaginationLoop'; break }
         if ($pageCount -ge $MaxPages) { $window.Status = 'PageLimit'; break }
         $pageCount++
-        if (-not $replay) {
-            try { Assert-SignInReadContext }
-            catch { $window.Status = 'ContextChanged'; break }
-        }
         try {
-            if ($replay) {
-                # Synthetic replay consumes the exact sequential page shape and the same next-link checks.
-                $fixture = Join-Path $FixtureDirectory ('window-{0}-page-{1}.json' -f $coverage.Count,($window.Pages + 1))
-                $source = Get-Item -LiteralPath $fixture
-                if ($source.Length -gt 4194304) { throw 'Fixture size limit.' }
-                $page = Get-Content -LiteralPath $fixture -Raw | ConvertFrom-Json -AsHashtable -DateKind String
+            if ($snapshot) {
+                $rows = Read-ReplayJson $SnapshotPath
+                if ($rows -isnot [array]) { $window.Status = 'InvalidPage'; break }
+                $page = @{ value = $rows }
             } else {
-                $page = Invoke-MgGraphRequest -Method GET -Uri $uri -OutputType Hashtable -ErrorAction Stop -Debug:$false -Verbose:$false
+                $fixture = Join-Path $FixtureDirectory ('window-{0}-page-{1}.json' -f $coverage.Count,($window.Pages + 1))
+                $page = Read-ReplayJson $fixture
             }
         } catch {
-            $window.Status = if ($replay) { 'FixtureUnavailable' } else { 'GraphRequestFailed' }
+            $window.Status = 'FixtureUnavailable'
             break
         }
         if ($page -isnot [Collections.IDictionary] -or $page['value'] -isnot [array] -or $page['value'].Count -gt 1000) {
@@ -180,10 +176,9 @@ for ($start = $since; $start -lt $until; $start = $end) {
         if ($null -ne $next -and ($next -isnot [string] -or [string]::IsNullOrWhiteSpace($next))) {
             $window.Status = 'InvalidNextLink'; break
         }
-    }
+    } while ($null -ne $next)
     if ($window.Status -eq 'Complete' -and $window.MalformedEvents) { $window.Status = 'MalformedEvents' }
     if ($window.Status -ne 'Complete') { $complete = $false }
-    if ($window.Status -in @('ContextChanged','GraphRequestFailed')) { $stopReason = 'NotAttemptedAfterReadFailure' }
 }
 
 $candidates = foreach ($kind in @('AppId','GraphResourceId')) {
@@ -197,10 +192,11 @@ $candidates = foreach ($kind in @('AppId','GraphResourceId')) {
 }
 [ordered]@{
     Format = 'TokenForgeSignInCatalogGaps'; SchemaVersion = 1; CatalogCommit = $CatalogCommit
-    Source = if ($replay) { 'SyntheticReplay' } else { 'MicrosoftGraph' }
+    Source = if ($snapshot) { 'LocalSnapshot' } else { 'LocalPageReplay' }
     GraphVersion = $version
-    CoverageScope = if ($PreviewAllEventTypes) { 'Retained Graph preview events for four explicitly filtered categories' } else { 'Retained user sign-ins returned by Graph v1.0' }
-    EnumerationComplete = $complete; TenantHistoryComplete = $false; ActualAudience = 'UnknownFromSignInLogs'
+    InputEventShape = if ($PreviewAllEventTypes) { 'GraphBetaEventTypes' } else { 'GraphV1IsInteractive' }
+    ReplayComplete = $complete; SourceWindowCoverage = 'Unknown'; TenantHistoryComplete = $false
+    ActualAudience = 'UnknownFromSignInLogs'
     Since = $since.ToString('o'); UntilExclusive = $until.ToString('o')
     Windows = $coverage.ToArray(); Candidates = @($candidates)
 } | ConvertTo-Json -Depth 12

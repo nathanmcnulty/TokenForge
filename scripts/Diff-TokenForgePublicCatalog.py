@@ -47,6 +47,16 @@ def utc(value):
         return False
 
 
+def app_id_is_canonical(value):
+    if not isinstance(value, str):
+        return False
+    try:
+        app = uuid.UUID(value)
+    except ValueError:
+        return False
+    return app.int != 0 and str(app) == value
+
+
 def claims_for(claims, url):
     return sorted({canonical(claim) for claim in claims if claim['Location'] == url})
 
@@ -84,17 +94,13 @@ def compare(baseline, observations, load_ledger, project):
         if not capture_hash:
             item['status'] = 'NeedsCapture'
             continue
-        if capture_hash == old['sha256']:
-            item.update(status='RevisionChangedSameContent', sha256=capture_hash)
-            continue
         try:
             projected = project(name, capture_hash)
             if not isinstance(projected, dict):
                 raise ValueError('Invalid projection')
             current = {}
             for app_id, claims in projected.items():
-                app = uuid.UUID(app_id)
-                if str(app) != app_id or not app.int or not isinstance(claims, list):
+                if not app_id_is_canonical(app_id) or not isinstance(claims, list):
                     raise ValueError('Invalid projected AppId or claims')
                 source_claims = claims_for(claims, old['url'])
                 if not source_claims or any(claim['Location'] != old['url'] for claim in claims):
@@ -105,6 +111,9 @@ def compare(baseline, observations, load_ledger, project):
             continue
         except (subprocess.SubprocessError, ValueError, KeyError, TypeError, OSError):
             item['status'] = 'InvalidCapture'
+            continue
+        if capture_hash == old['sha256']:
+            item.update(status='RevisionChangedSameContent', verifiedCaptureSha256=capture_hash)
             continue
         if ledger is None:
             ledger = load_ledger()
@@ -119,7 +128,7 @@ def compare(baseline, observations, load_ledger, project):
                 changes.append({'appId': app_id,
                                 'previousClaimsSha256': digest([c.decode() for c in before]) if before else None,
                                 'currentClaimsSha256': digest([c.decode() for c in after]) if after else None})
-        item.update(status='Compared', sha256=capture_hash, provenanceChanges=changes)
+        item.update(status='Compared', verifiedCaptureSha256=capture_hash, provenanceChanges=changes)
     complete = all(row['status'] in ('Unchanged', 'RevisionChangedSameContent', 'Compared')
                    for row in sources.values())
     return {'complete': complete, 'sources': sources,
@@ -138,10 +147,13 @@ def main():
     if not hex_id(args.baseline_commit, 40):
         raise ValueError('Use the full published catalog commit ID')
 
+    git = ['git', '--no-replace-objects', '-C', str(args.baseline_repo)]
+    object_type = subprocess.check_output([*git, 'cat-file', '-t', args.baseline_commit], timeout=30)
+    if object_type.strip() != b'commit':
+        raise ValueError('The pinned catalog object must be a Git commit')
+
     def git_blob(path):
-        raw = subprocess.check_output(['git', '--no-replace-objects', '-C', str(args.baseline_repo),
-                                       'show', args.baseline_commit + ':' + path], timeout=30)
-        return decode(raw)
+        return decode(subprocess.check_output([*git, 'show', args.baseline_commit + ':' + path], timeout=30))
 
     nonverified = git_blob('applications.non-verified.json')
     if (nonverified.get('Format') != 'TokenForgeNonVerifiedApplications'
@@ -157,6 +169,8 @@ def main():
             raise ValueError('Published catalog partitions overlap')
         records = {key: row['CatalogRecord'] for key, row in excluded.items()}
         records.update(verified['Applications'])
+        if not all(app_id_is_canonical(key) for key in records):
+            raise ValueError('Noncanonical ID in published catalog partitions')
         return {key: row['Records']['Discovery///']['Attributes']['SourceClaims'] for key, row in records.items()}
 
     def project(name, sha256):
@@ -177,7 +191,7 @@ def main():
     observations = decode(raw)
     receipt = compare(nonverified, observations, load_ledger, project)
     print(json.dumps({'format': 'TokenForgePublicCatalogDelta', 'schemaVersion': 1,
-                      'baselineCommit': args.baseline_commit, 'observationsSha256': hashlib.sha256(raw).hexdigest(),
+                      'baselineCommit': args.baseline_commit, 'revisionLabelsVerified': False, 'observationsSha256': hashlib.sha256(raw).hexdigest(),
                       **receipt}, sort_keys=True, indent=2))
     return 0 if receipt['complete'] else 2
 

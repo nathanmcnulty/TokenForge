@@ -1,5 +1,7 @@
 # Routine public catalog refresh
 
+For the current split catalog, use the [candidate-only delta and sign-in reports](catalog-candidate-ingestion.md). The legacy refresh below accepts historical single-ledger baselines.
+
 Run the refresh locally with the existing reviewed Linux x64 native package and PowerShell 7.6.7. The command reads only the three approved public metadata sources. It performs no tenant authentication, token collection, hosted execution, publication or CLI changes.
 
 ```bash

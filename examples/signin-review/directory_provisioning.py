@@ -18,12 +18,14 @@ MAX_REPLAY_BYTES = 1024 * 1024
 
 
 def valid_directory_link(link):
-    if not isinstance(link, str) or len(link) > 16384 or any(c.isspace() or ord(c) < 32 for c in link):
+    if (not isinstance(link, str) or len(link) > 16384 or '#' in link
+            or re.search(r'[^!-~]|%(?![0-9a-fA-F]{2})|%(?:[01][0-9a-f]|7f)', link, re.ASCII | re.IGNORECASE)):
         return False
     try:
         uri = urlsplit(link)
         return (uri.scheme == 'https' and uri.netloc.lower() in (HOST, f'{HOST}:443')
-                and uri.path.lower() == DIRECTORY_PATH.lower() and bool(uri.query) and not uri.fragment)
+                and uri.path.lower() == DIRECTORY_PATH.lower()
+                and re.fullmatch(r"[A-Za-z0-9._~!$&'()*+,;=:@/?%\-]+", uri.query) is not None)
     except ValueError:
         return False
 

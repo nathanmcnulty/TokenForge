@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from hashlib import sha256
 import io
 import os
+import subprocess
 from pathlib import Path
 import sys
 import unittest
@@ -15,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'examples' / 'signin-review'))
 import candidate_metadata
 import collect
+from directory_provisioning import valid_directory_link
 import validate_directory as probe
 import workload_http as http
 
@@ -109,6 +111,60 @@ class DirectoryValidationTests(unittest.TestCase):
                     get(url)
             self.assertEqual(request.call_count, 1)
             self.assertEqual(get(NEXT), {'value': []})
+
+    def test_malformed_continuations_are_rejected_before_transport(self):
+        self.assertTrue(valid_directory_link(ENDPOINT + '?%24skiptoken=fixture%2Fopaque%3D'))
+        for tail in ('\x00', '\t', '\x1f', '\x7f', 'é', '%00', '%1f', '%7F', '%', '%0', '%GG', '#', '\\'):
+            with self.subTest(tail=repr(tail)):
+                graph = lambda url: {'value': [], '@odata.nextLink': NEXT + tail}
+                with (patch.object(probe, 'EXPECTED_WORKLOAD', FIXTURE_DIGEST),
+                      patch.object(probe, 'datetime', wraps=datetime) as clock,
+                      patch.object(probe, 'pinned_catalog_app_ids', return_value={KNOWN}),
+                      patch.object(probe, 'graph_reader') as reader):
+                    clock.now.return_value = AFTER
+                    reader.return_value.side_effect = graph
+                    with self.assertRaisesRegex(ValueError, 'Invalid directory audit continuation'):
+                        probe.validate(ENV)
+                    self.assertEqual(reader.return_value.call_count, 1)
+
+    def test_cli_sanitizes_real_http_parser_and_deep_json_failures(self):
+        # Run the actual CLI boundary in a child interpreter so stderr is measured.
+        # The stdlib HTTP parser runs normally, with its connection call blocked.
+        harness = r"""
+import http.client
+import json
+import sys
+from unittest.mock import patch
+sys.path.insert(0, 'examples/signin-review')
+import validate_directory as probe
+
+def fail(_env):
+    if sys.argv[1] == 'http':
+        try:
+            http.client.HTTPConnection('fixture.invalid').request('GET', '/continuation?private-canary\x7f')
+        except http.client.InvalidURL as exc:
+            assert 'private-canary' in str(exc)
+            raise
+        raise AssertionError('Expected the actual HTTP parser to reject the continuation')
+    if sys.argv[1] == 'json':
+        json.loads('[' * 4000 + '"private-canary"' + ']' * 4000)
+        raise AssertionError('Expected the actual JSON parser to hit its recursion bound')
+    raise RuntimeError('private-canary upstream error')
+
+with patch.object(http.client.HTTPConnection, 'connect', side_effect=AssertionError('Socket forbidden')) as network:
+    with patch.object(probe, 'validate', side_effect=fail):
+        try:
+            probe.main()
+        finally:
+            network.assert_not_called()
+"""
+        for fault in ('http', 'json', 'unexpected'):
+            with self.subTest(fault=fault):
+                result = subprocess.run([sys.executable, '-B', '-c', harness, fault], cwd=ROOT,
+                                        text=True, capture_output=True, check=False, timeout=10)
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(result.stdout, '')
+                self.assertEqual(result.stderr, probe.INCOMPLETE + '\n')
 
     def test_scope_or_writer_material_fails_before_any_authentication(self):
         with (patch.object(probe, 'EXPECTED_WORKLOAD', FIXTURE_DIGEST),

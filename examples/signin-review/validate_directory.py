@@ -3,7 +3,6 @@
 from datetime import datetime, timezone
 from hashlib import sha256
 import os
-import sys
 
 from collect import app_id_is_canonical, pinned_catalog_app_ids
 from directory_provisioning import scan_window
@@ -42,8 +41,9 @@ def validate(env):
 def main():
     try:
         validate(os.environ)
-    except (KeyError, ValueError, TypeError, AttributeError, OSError):
-        sys.exit(INCOMPLETE)
+    except Exception:
+        # This command runs in public CI. Parser and transport exceptions can contain provider input.
+        raise SystemExit(INCOMPLETE) from None
     print(PASSED)
 
 

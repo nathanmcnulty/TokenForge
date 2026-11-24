@@ -98,8 +98,11 @@ class DirectoryHostedHandoffTests(unittest.TestCase):
             'since': '2026-01-30T00:00:00Z', 'until': '2026-01-31T00:00:00Z', 'unresolvedAppIdRows': 0,
         })
         self.assertTrue(all(a['until'] == b['since'] for a, b in zip(windows, windows[1:])))
-        self.assertEqual([obj['labels'][app][0] for app in obj['appIds']],
-                         ['sign-in and provisioning', 'provisioning', 'sign-in'])
+        self.assertEqual(obj['labels'], {
+            app: [source, 'audience unknown', 'publisher unknown']
+            for app, source in ((BOTH, 'sign-in and provisioning'), (ONLY_AUDIT, 'provisioning'),
+                                (ONLY_SIGNIN, 'sign-in'))
+        })
         self.assertEqual(lookups, [principal_url(app) for app in (BOTH, ONLY_AUDIT, ONLY_SIGNIN)])
         for secret in (VERIFIED, NONVERIFIED, TARGET, INITIATOR, 'synthetic-private-canary'):
             self.assertNotIn(secret, raw.decode())

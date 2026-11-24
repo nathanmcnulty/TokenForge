@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import os
 import runpy
@@ -13,7 +14,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'examples' / 'signin-review'
 sys.path.insert(0, str(SOURCE))
-from collect import CATALOG_COMMIT, GRAPH_EVENTS, WORKFLOW_REF, handoff_identity
+from collect import CATALOG_COMMIT, GRAPH_EVENTS, WORKFLOW_REF, handoff_identity, intervals, utc
 from report import OWNER_ID, body_for
 import review_ci
 
@@ -89,7 +90,13 @@ class ActivationCandidateTests(unittest.TestCase):
             output = Path(temp) / 'github-output'
             read = ENV | {'GITHUB_OUTPUT': str(output), 'TF_HANDOFF_RECIPIENT': self.recipient, 'TF_AUDIT_TENANT_ID': TENANT}
             get = Mock(side_effect=review_ci.HTTPFailure(404))
-            with patch.object(review_ci, 'graph_reader', return_value=get), patch.object(review_ci, 'collect_envelope', return_value=envelope([KNOWN, APP])):
+            with (patch.object(review_ci, 'graph_reader', return_value=get),
+                  patch.object(review_ci, 'pinned_catalog_app_ids', return_value=set()),
+                  patch.object(review_ci, 'scan_directory', return_value={'appIds': [], 'windows': [
+                      {'since': utc(start), 'until': utc(stop), 'counts': {}}
+                      for start, stop in intervals(datetime.fromisoformat('2026-01-31T00:00:00Z'), 30)
+                  ]}),
+                  patch.object(review_ci, 'collect_envelope', return_value=envelope([KNOWN, APP]))):
                 review_ci.collect_job(read)
             encoded = output.read_text().removeprefix('ciphertext=').strip()
             self.assertNotIn(APP, encoded)
@@ -116,7 +123,8 @@ class ActivationCandidateTests(unittest.TestCase):
         with TemporaryDirectory() as temp:
             output = Path(temp) / 'github-output'
             context = ENV | {'GITHUB_OUTPUT': str(output), 'TF_HANDOFF_RECIPIENT': self.recipient}
-            with patch.object(review_ci, 'graph_reader'), patch.object(review_ci, 'collect_envelope', side_effect=ValueError('fixture failure')) as gather:
+            with (patch.object(review_ci, 'graph_reader'), patch.object(review_ci, 'pinned_catalog_app_ids', return_value=set()),
+                  patch.object(review_ci, 'collect_envelope', side_effect=ValueError('fixture failure')) as gather):
                 with self.assertRaises(ValueError):
                     review_ci.collect_job(context | {'GH_TOKEN': 'fixture'})
                 gather.assert_not_called()

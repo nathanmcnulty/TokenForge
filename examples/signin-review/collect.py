@@ -133,11 +133,14 @@ def gather(get, end, days, catalog_ids):
     return sorted(ids)
 
 
-def collect_envelope(environment, get):
+def pinned_catalog_app_ids():
+    catalog = OfflineCatalog(ROOT, CATALOG_COMMIT)
+    return catalog.app_ids(catalog.partition(True)['Applications'], catalog.partition(False)['Applications'])
+
+
+def collect_envelope(environment, get, known):
     days = run_scope(environment)
     identity = handoff_identity(environment)
-    catalog = OfflineCatalog(ROOT, CATALOG_COMMIT)
-    known = catalog.app_ids(catalog.partition(True)['Applications'], catalog.partition(False)['Applications'])
     end = datetime.now(timezone.utc).replace(microsecond=0)
     ids = gather(get, end, days, known)
     envelope = identity | {'since': utc(end - timedelta(days=days)), 'until': utc(end),

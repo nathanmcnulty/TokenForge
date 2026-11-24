@@ -5,7 +5,7 @@ import json
 import re
 
 from candidate_metadata import valid_labels
-from collect import EVENTS, MAX_IDS, REPOSITORY, WORKFLOW_REF, app_id_is_canonical, decode, handoff_identity, run_scope
+from collect import EVENTS, MAX_IDS, REPOSITORY, WORKFLOW_REF, app_id_is_canonical, decode, handoff_identity, intervals, run_scope, utc as format_utc
 
 OWNER_ID = 6653432
 ISSUE_MARKER = '<!-- tokenforge-signin-review:v2 -->'
@@ -25,7 +25,7 @@ def utc(value):
     return datetime.fromisoformat(value)
 
 
-def validate_handoff(raw, env, *, workflow_ref=WORKFLOW_REF, categories=EVENTS, labeled=False):
+def validate_handoff(raw, env, *, workflow_ref=WORKFLOW_REF, categories=EVENTS, labeled=False, directory=False):
     days = run_scope(env)
     if len(raw) > 65536:
         raise ValueError('Invalid handoff size')
@@ -34,6 +34,8 @@ def validate_handoff(raw, env, *, workflow_ref=WORKFLOW_REF, categories=EVENTS, 
     keys = expected.keys() | {'since', 'until', 'categories', 'coverage', 'appIds'}
     if labeled:
         keys.add('labels')
+    if directory:
+        keys.add('directoryCoverage')
     if not isinstance(value, dict) or value.keys() != keys:
         raise ValueError('Unexpected handoff shape')
     if (type(value['version']) is not int or any(value[k] != v for k, v in expected.items()) or
@@ -41,6 +43,18 @@ def validate_handoff(raw, env, *, workflow_ref=WORKFLOW_REF, categories=EVENTS, 
             value['coverage'] != 'requested-windows-terminal;retention-unknown' or
             utc(value['until']) - utc(value['since']) != timedelta(days=days)):
         raise ValueError('Unexpected handoff evidence')
+    if directory:
+        coverage = value['directoryCoverage']
+        expected_windows = list(intervals(utc(value['until']), days))
+        if (not isinstance(coverage, dict) or coverage.keys() != {'status', 'windows'} or
+                coverage['status'] != 'requested-windows-terminal;retention-unknown' or
+                not isinstance(coverage['windows'], list) or len(coverage['windows']) != len(expected_windows)):
+            raise ValueError('Unexpected directory audit coverage')
+        for window, (start, stop) in zip(coverage['windows'], expected_windows, strict=True):
+            if (not isinstance(window, dict) or window.keys() != {'since', 'until', 'unresolvedAppIdRows'} or
+                    window['since'] != format_utc(start) or window['until'] != format_utc(stop) or
+                    type(window['unresolvedAppIdRows']) is not int or not 0 <= window['unresolvedAppIdRows'] <= 100000):
+                raise ValueError('Unexpected directory audit window')
     ids = valid_ids(value['appIds'])
     if not labeled:
         return ids
@@ -83,13 +97,13 @@ def validate_issue(issue, number, node, *, labeled=False):
     return ids
 
 
-def report(env, raw, api, *, workflow_ref=WORKFLOW_REF, categories=EVENTS, labeled=False):
+def report(env, raw, api, *, workflow_ref=WORKFLOW_REF, categories=EVENTS, labeled=False, directory=False):
     """Future issue-only job entry point; the transport is supplied by its caller."""
     number = env['TF_REVIEW_ISSUE']
     node = env['TF_REVIEW_ISSUE_NODE']
     if not re.fullmatch(r'[1-9][0-9]{0,9}', number) or not re.fullmatch(r'[A-Za-z0-9_=-]{3,128}', node):
         raise ValueError('Expected one configured issue identity')
-    candidates = validate_handoff(raw, env, workflow_ref=workflow_ref, categories=categories, labeled=labeled)
+    candidates = validate_handoff(raw, env, workflow_ref=workflow_ref, categories=categories, labeled=labeled, directory=directory)
     if not candidates:
         return
     target = f'repos/{REPOSITORY}/issues/{number}'

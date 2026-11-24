@@ -1,6 +1,7 @@
 """Inert production candidate for separated audit-reader and issue-writer jobs."""
 
 import base64
+from datetime import datetime
 import json
 import os
 from pathlib import Path
@@ -8,7 +9,9 @@ import re
 import sys
 
 from candidate_metadata import classify_principal, principal_url
-from collect import GRAPH_EVENTS, REPOSITORY, collect_envelope, decode, handoff_identity
+from collect import (GRAPH_EVENTS, MAX_IDS, REPOSITORY, collect_envelope, decode, handoff_identity,
+                     pinned_catalog_app_ids, run_scope)
+from directory_provisioning import scan_directory
 from handoff import MAX_CIPHERTEXT, open_envelope, seal
 from report import report
 from workload_http import HTTPFailure, graph_reader, request_json
@@ -20,22 +23,40 @@ def collect_job(env):
     if 'TF_HANDOFF_IDENTITY' in env or 'GH_TOKEN' in env:
         raise ValueError('Unexpected issue authorization in audit job')
     handoff_identity(env)
-    get = graph_reader(env)
-    envelope = decode(collect_envelope(env, get))
+    get = graph_reader(env, include_directory_audit=True)
+    known = pinned_catalog_app_ids()
+    envelope = decode(collect_envelope(env, get, known))
+    provisioned = scan_directory(get, datetime.fromisoformat(envelope['until']), run_scope(env), known)
+    sign_in_apps = set(envelope['appIds'])
+    provisioned_apps = set(provisioned['appIds'])
+    apps = sign_in_apps | provisioned_apps
+    if len(apps) > MAX_IDS:
+        raise ValueError('Combined candidate handoff exceeds its bound')
+    envelope['directoryCoverage'] = {
+        'status': 'requested-windows-terminal;retention-unknown',
+        'windows': [
+            {'since': window['since'], 'until': window['until'],
+             'unresolvedAppIdRows': window['counts'].get('successfulUnresolvedAppId', 0)}
+            for window in provisioned['windows']
+        ],
+    }
     labels = {}
-    for app in envelope['appIds']:
+    for app in sorted(apps):
         try:
             principal = get(principal_url(app))
         except HTTPFailure as error:
             if error.status != 404:
                 raise
             principal = None
-        label = classify_principal(app, env['TF_AUDIT_TENANT_ID'], principal, 'sign-in')
+        source = 'sign-in' if app in sign_in_apps else 'provisioning'
+        if app in sign_in_apps and app in provisioned_apps:
+            source = 'sign-in and provisioning'
+        label = classify_principal(app, env['TF_AUDIT_TENANT_ID'], principal, source)
         if label is not None:
             labels[app] = label
     envelope.update(appIds=sorted(labels), labels=labels)
     raw = json.dumps(envelope, separators=(',', ':')).encode()
-    ciphertext = seal(raw, env, env['TF_HANDOFF_RECIPIENT'], categories=GRAPH_EVENTS, labeled=True)
+    ciphertext = seal(raw, env, env['TF_HANDOFF_RECIPIENT'], categories=GRAPH_EVENTS, labeled=True, directory=True)
     with Path(env['GITHUB_OUTPUT']).open('a', encoding='ascii') as output:
         output.write('ciphertext=' + base64.b64encode(ciphertext).decode('ascii') + '\n')
 
@@ -71,8 +92,8 @@ def report_job(env, identity, api=issue_call):
     ciphertext = base64.b64decode(encoded, validate=True)
     if base64.b64encode(ciphertext).decode('ascii') != encoded:
         raise ValueError('Noncanonical candidate ciphertext encoding')
-    raw = open_envelope(ciphertext, env, identity, categories=GRAPH_EVENTS, labeled=True)
-    report(env, raw, api, categories=GRAPH_EVENTS, labeled=True)
+    raw = open_envelope(ciphertext, env, identity, categories=GRAPH_EVENTS, labeled=True, directory=True)
+    report(env, raw, api, categories=GRAPH_EVENTS, labeled=True, directory=True)
 
 
 if __name__ == '__main__':

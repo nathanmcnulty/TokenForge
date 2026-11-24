@@ -43,7 +43,7 @@ def within(event, start, stop):
     return observed < stop
 
 
-def scan_window(get, start, stop):
+def scan_window(get, start, stop, known=()):
     """Read successful service-principal provisioning and validated scalar AppIds."""
     predicate = f"activityDisplayName eq '{ACTIVITY}' and activityDateTime ge {utc(start)} and activityDateTime le {utc(stop)}"
     url = f'https://{HOST}{DIRECTORY_PATH}?' + urlencode({'$top': 1000, '$filter': predicate})
@@ -84,7 +84,8 @@ def scan_window(get, start, stop):
                 ]
             value = matches[0].get('value') if len(matches) == 1 and matches[0]['key'] == 'AppId' else None
             if one_principal and isinstance(value, str) and app_id_is_canonical(value.lower()):
-                app_ids.add(value.lower())
+                if value.lower() not in known:
+                    app_ids.add(value.lower())
                 counts['successfulTargetAppId'] += 1
                 if len(app_ids) > MAX_IDS:
                     raise ValueError('Provisioning candidate bound exceeded')
@@ -96,13 +97,13 @@ def scan_window(get, start, stop):
     raise ValueError('Directory audit page limit reached')
 
 
-def scan_directory(get, until, days):
+def scan_directory(get, until, days, known=()):
     if type(days) is not int or not 1 <= days <= 31:
         raise ValueError('Unexpected directory audit window length')
     rows = []
     app_ids = set()
     for start, stop in intervals(until, days):
-        counts, window_ids = scan_window(get, start, stop)
+        counts, window_ids = scan_window(get, start, stop, known)
         rows.append({'since': utc(start), 'until': utc(stop), 'counts': counts})
         app_ids.update(window_ids)
         if len(app_ids) > MAX_IDS:

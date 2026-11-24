@@ -138,9 +138,11 @@ def pinned_catalog_app_ids():
     return catalog.app_ids(catalog.partition(True)['Applications'], catalog.partition(False)['Applications'])
 
 
-def collect_envelope(environment, get, known):
+def collect_envelope(environment, get, known=None):
     days = run_scope(environment)
     identity = handoff_identity(environment)
+    if known is None:
+        known = pinned_catalog_app_ids()
     end = datetime.now(timezone.utc).replace(microsecond=0)
     ids = gather(get, end, days, known)
     envelope = identity | {'since': utc(end - timedelta(days=days)), 'until': utc(end),

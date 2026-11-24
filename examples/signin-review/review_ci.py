@@ -1,4 +1,4 @@
-"""Inert production candidate for separated audit-reader and issue-writer jobs."""
+"""Separated sign-in review jobs with an opt-in directory audit cohort."""
 
 import base64
 from datetime import datetime
@@ -19,27 +19,32 @@ from workload_http import HTTPFailure, graph_reader, request_json
 MAX_ENCODED = 4 * ((MAX_CIPHERTEXT + 2) // 3)
 
 
-def collect_job(env):
+def collect_job(env, *, directory=False):
     if 'TF_HANDOFF_IDENTITY' in env or 'GH_TOKEN' in env:
         raise ValueError('Unexpected issue authorization in audit job')
     handoff_identity(env)
-    get = graph_reader(env, include_directory_audit=True)
-    known = pinned_catalog_app_ids()
-    envelope = decode(collect_envelope(env, get, known))
-    provisioned = scan_directory(get, datetime.fromisoformat(envelope['until']), run_scope(env), known)
+    if directory:
+        get = graph_reader(env, include_directory_audit=True)
+        known = pinned_catalog_app_ids()
+        envelope = decode(collect_envelope(env, get, known))
+        provisioned = scan_directory(get, datetime.fromisoformat(envelope['until']), run_scope(env), known)
+        provisioned_apps = set(provisioned['appIds'])
+        envelope['directoryCoverage'] = {
+            'status': 'requested-windows-terminal;retention-unknown',
+            'windows': [
+                {'since': window['since'], 'until': window['until'],
+                 'unresolvedAppIdRows': window['counts'].get('successfulUnresolvedAppId', 0)}
+                for window in provisioned['windows']
+            ],
+        }
+    else:
+        get = graph_reader(env)
+        envelope = decode(collect_envelope(env, get))
+        provisioned_apps = set()
     sign_in_apps = set(envelope['appIds'])
-    provisioned_apps = set(provisioned['appIds'])
     apps = sign_in_apps | provisioned_apps
     if len(apps) > MAX_IDS:
         raise ValueError('Combined candidate handoff exceeds its bound')
-    envelope['directoryCoverage'] = {
-        'status': 'requested-windows-terminal;retention-unknown',
-        'windows': [
-            {'since': window['since'], 'until': window['until'],
-             'unresolvedAppIdRows': window['counts'].get('successfulUnresolvedAppId', 0)}
-            for window in provisioned['windows']
-        ],
-    }
     labels = {}
     for app in sorted(apps):
         try:
@@ -56,7 +61,7 @@ def collect_job(env):
             labels[app] = label
     envelope.update(appIds=sorted(labels), labels=labels)
     raw = json.dumps(envelope, separators=(',', ':')).encode()
-    ciphertext = seal(raw, env, env['TF_HANDOFF_RECIPIENT'], categories=GRAPH_EVENTS, labeled=True, directory=True)
+    ciphertext = seal(raw, env, env['TF_HANDOFF_RECIPIENT'], categories=GRAPH_EVENTS, labeled=True, directory=directory)
     with Path(env['GITHUB_OUTPUT']).open('a', encoding='ascii') as output:
         output.write('ciphertext=' + base64.b64encode(ciphertext).decode('ascii') + '\n')
 
@@ -80,7 +85,7 @@ def issue_call(*args, body=None):
     )
 
 
-def report_job(env, identity, api=issue_call):
+def report_job(env, identity, api=issue_call, *, directory=False):
     for key in ('ACTIONS_ID_TOKEN_REQUEST_TOKEN', 'ACTIONS_ID_TOKEN_REQUEST_URL',
                 'TF_AUDIT_TENANT_ID', 'TF_AUDIT_CLIENT_ID', 'TF_HANDOFF_RECIPIENT'):
         if key in env:
@@ -92,18 +97,18 @@ def report_job(env, identity, api=issue_call):
     ciphertext = base64.b64decode(encoded, validate=True)
     if base64.b64encode(ciphertext).decode('ascii') != encoded:
         raise ValueError('Noncanonical candidate ciphertext encoding')
-    raw = open_envelope(ciphertext, env, identity, categories=GRAPH_EVENTS, labeled=True, directory=True)
-    report(env, raw, api, categories=GRAPH_EVENTS, labeled=True, directory=True)
+    raw = open_envelope(ciphertext, env, identity, categories=GRAPH_EVENTS, labeled=True, directory=directory)
+    report(env, raw, api, categories=GRAPH_EVENTS, labeled=True, directory=directory)
 
 
 if __name__ == '__main__':
     try:
         if os.environ.get('GITHUB_EVENT_NAME') != 'workflow_dispatch':
             raise ValueError('The initial activation permits manual runs only')
-        if sys.argv[1:] == ['collect']:
-            collect_job(os.environ)
-        elif sys.argv[1:] == ['issue']:
-            report_job(os.environ, os.environ.pop('TF_HANDOFF_IDENTITY'))
+        if sys.argv[1:] in (['collect'], ['collect-directory']):
+            collect_job(os.environ, directory=sys.argv[1] == 'collect-directory')
+        elif sys.argv[1:] in (['issue'], ['issue-directory']):
+            report_job(os.environ, os.environ.pop('TF_HANDOFF_IDENTITY'), directory=sys.argv[1] == 'issue-directory')
         else:
             raise ValueError('Unexpected candidate review command')
     except (KeyError, ValueError, TypeError, AttributeError, OSError):

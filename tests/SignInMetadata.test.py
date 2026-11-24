@@ -1,4 +1,3 @@
-from datetime import datetime
 import json
 from pathlib import Path
 import sys
@@ -10,7 +9,7 @@ from urllib.parse import parse_qs, urlsplit
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'examples' / 'signin-review'))
 import candidate_metadata as meta
-from collect import GRAPH_EVENTS, REPOSITORY, REPOSITORY_ID, WORKFLOW_REF, handoff_identity, intervals, utc
+from collect import GRAPH_EVENTS, REPOSITORY, REPOSITORY_ID, WORKFLOW_REF, handoff_identity
 import report
 import review_ci
 
@@ -95,11 +94,6 @@ class SignInMetadataTests(unittest.TestCase):
             path = Path(tmp) / 'output'
             get = Mock(side_effect=review_ci.HTTPFailure(503))
             with (patch.object(review_ci, 'graph_reader', return_value=get),
-                  patch.object(review_ci, 'pinned_catalog_app_ids', return_value=set()),
-                  patch.object(review_ci, 'scan_directory', return_value={'appIds': [], 'windows': [
-                      {'since': utc(start), 'until': utc(stop), 'counts': {}}
-                      for start, stop in intervals(datetime.fromisoformat('2026-01-31T00:00:00Z'), 30)
-                  ]}),
                   patch.object(review_ci, 'collect_envelope', return_value=raw())):
                 with self.assertRaises(review_ci.HTTPFailure):
                     review_ci.collect_job(ENV | {'TF_AUDIT_TENANT_ID': TENANT, 'GITHUB_OUTPUT': str(path)})

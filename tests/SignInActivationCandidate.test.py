@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import os
 import runpy
@@ -7,6 +8,7 @@ import sys
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import Mock, patch
+from urllib.parse import parse_qs, urlsplit
 
 import yaml
 
@@ -14,11 +16,14 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'examples' / 'signin-review'
 sys.path.insert(0, str(SOURCE))
 from collect import CATALOG_COMMIT, GRAPH_EVENTS, WORKFLOW_REF, handoff_identity
-from report import OWNER_ID, body_for
+from report import OWNER_ID, body_for, validate_handoff
+import collect as collector
 import review_ci
 
 KNOWN = '22222222-2222-4222-8222-222222222222'
 APP = '33333333-3333-4333-8333-333333333333'
+PROMOTED = '44444444-4444-4444-8444-444444444444'
+PREVIOUS_CATALOG = 'd9955781a7130793a5bba178a1b1aa1cf4003439'
 TENANT = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 LABELS = ['sign-in', 'audience unknown', 'publisher unknown']
 ENV = {
@@ -55,7 +60,10 @@ class ActivationCandidateTests(unittest.TestCase):
         self.assertEqual(writer['needs'], 'collect')
         self.assertIn("needs.collect.result == 'success'", writer['if'])
         self.assertEqual(reader['outputs'], {'ciphertext': '${{ steps.collect.outputs.ciphertext }}'})
-        self.assertIn(CATALOG_COMMIT, reader['steps'][-1]['run'])
+        fetches = [line.split() for line in reader['steps'][-1]['run'].splitlines()
+                   if line.startswith('git fetch ')]
+        self.assertEqual(fetches, [['git', 'fetch', '--quiet', '--no-tags', '--depth=1',
+                                    'https://github.com/nathanmcnulty/TokenForge.git', CATALOG_COMMIT]])
         self.assertNotIn('GH_TOKEN', reader['steps'][-1]['env'])
         self.assertTrue(all('uses' not in step for step in writer['steps']))
         self.assertEqual(writer['steps'][-1]['env']['TF_HANDOFF_CIPHERTEXT'], '${{ needs.collect.outputs.ciphertext }}')
@@ -73,6 +81,31 @@ class ActivationCandidateTests(unittest.TestCase):
         self.assertIn(b'review_ci.py collect\n', workflow)
         self.assertIn(b'review_ci.py issue\n', workflow)
         self.assertNotIn(b'-directory', workflow)
+
+    def test_catalog_pin_excludes_promoted_ids_and_rejects_the_previous_handoff(self):
+        def get(url):
+            predicate = parse_qs(urlsplit(url).query)['$filter'][0]
+            if ("createdDateTime ge 2026-01-01T00:00:00Z" in predicate
+                    and "t eq 'interactiveUser'" in predicate):
+                return {'value': [{'appId': app, 'createdDateTime': '2026-01-01T10:00:00Z',
+                                   'signInEventTypes': ['interactiveUser']}
+                                  for app in (PROMOTED, KNOWN, APP)]}
+            return {'value': []}
+
+        catalog = Mock()
+        catalog.partition.side_effect = [{'Applications': {PROMOTED: {}}}, {'Applications': {KNOWN: {}}}]
+        catalog.app_ids = collector.OfflineCatalog.app_ids
+        with (patch.object(collector, 'OfflineCatalog', return_value=catalog) as load,
+              patch.object(collector, 'datetime', wraps=datetime) as clock):
+            clock.now.return_value = datetime.fromisoformat('2026-01-31T00:00:00Z')
+            raw = collector.collect_envelope(ENV, get)
+        load.assert_called_once_with(collector.ROOT, CATALOG_COMMIT)
+        candidate = json.loads(raw)
+        self.assertEqual(candidate['catalogCommit'], CATALOG_COMMIT)
+        self.assertEqual(validate_handoff(raw, ENV, categories=GRAPH_EVENTS), {APP})
+        with self.assertRaises(ValueError):
+            validate_handoff(json.dumps(candidate | {'catalogCommit': PREVIOUS_CATALOG}).encode(),
+                             ENV, categories=GRAPH_EVENTS)
 
     def test_failed_cli_reports_only_a_fixed_message_without_a_handoff(self):
         from collect import IncompleteCategory

@@ -43,14 +43,14 @@ def within(event, start, stop):
     return observed < stop
 
 
-def scan_window(get, start, stop, known=()):
+def scan_window(get, start, stop, known=(), *, max_pages=100):
     """Read successful service-principal provisioning and validated scalar AppIds."""
     predicate = f"activityDisplayName eq '{ACTIVITY}' and activityDateTime ge {utc(start)} and activityDateTime le {utc(stop)}"
     url = f'https://{HOST}{DIRECTORY_PATH}?' + urlencode({'$top': 1000, '$filter': predicate})
     seen = set()
     counts = Counter()
     app_ids = set()
-    for _ in range(100):
+    for _ in range(max_pages):
         if not valid_directory_link(url) or url in seen:
             raise ValueError('Invalid directory audit continuation')
         seen.add(url)

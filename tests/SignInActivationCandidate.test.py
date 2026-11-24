@@ -1,5 +1,6 @@
 import json
 import os
+import runpy
 from pathlib import Path
 import subprocess
 import sys
@@ -62,6 +63,26 @@ class ActivationCandidateTests(unittest.TestCase):
         self.assertNotIn('TF_HANDOFF_IDENTITY', reader['steps'][-1]['env'])
         self.assertNotIn('TOKENFORGE_AUDIT_', str(writer))
         self.assertTrue(all('artifact' not in str(job) for job in (reader, writer)))
+
+    def test_local_workflow_keeps_the_reviewed_manual_template_body(self):
+        active = ROOT / '.github' / 'workflows' / 'signin-review-candidates.yml'
+        template = SOURCE / 'activation.yml'
+        comment, _, workflow = active.read_bytes().partition(b'\n')
+        self.assertEqual(comment, b'# Manual workflow. Dispatch only after setup is verified and the specific run is authorized.')
+        self.assertEqual(workflow, template.read_bytes().partition(b'\n')[2])
+
+    def test_failed_cli_reports_only_a_fixed_message_without_a_handoff(self):
+        from collect import IncompleteCategory
+        with TemporaryDirectory() as tmp:
+            output = Path(tmp) / 'github-output'
+            env = ENV | {'GITHUB_OUTPUT': str(output)}
+            with (patch.dict(os.environ, env, clear=True), patch.object(sys, 'argv', ['review_ci.py', 'collect']),
+                  patch('workload_http.graph_reader', side_effect=IncompleteCategory(
+                      'Graph coverage incomplete for servicePrincipal (HTTP 403). synthetic-private-canary'))):
+                with self.assertRaises(SystemExit) as result:
+                    runpy.run_path(str(SOURCE / 'review_ci.py'), run_name='__main__')
+            self.assertEqual(result.exception.code, 'Sign-in candidate review stopped.')
+            self.assertFalse(output.exists())
 
     def test_mocked_reader_and_issue_writer_update_only_new_fixture_ids(self):
         with TemporaryDirectory() as temp:

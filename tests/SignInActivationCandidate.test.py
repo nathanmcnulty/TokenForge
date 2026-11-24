@@ -49,7 +49,10 @@ class ActivationCandidateTests(unittest.TestCase):
 
     def test_template_separates_environments_and_permissions_without_a_schedule(self):
         source = yaml.safe_load((SOURCE / 'activation.yml').read_text())
-        self.assertEqual(source['on'], {'workflow_dispatch': None})
+        self.assertEqual(source['on'], {'workflow_dispatch': {'inputs': {'mode': {
+            'description': 'Run sign-in review or the one-time directory audit validation',
+            'type': 'choice', 'default': 'sign-in', 'options': ['sign-in', 'directory-validation'],
+        }}}})
         self.assertEqual(source['permissions'], {})
         self.assertFalse(source['concurrency']['cancel-in-progress'])
         reader, writer = (source['jobs'][key] for key in ('collect', 'issue'))

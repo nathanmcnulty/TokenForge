@@ -55,7 +55,7 @@ def delay_for(value, attempt):
         raise ValueError('Unreadable Graph retry delay') from None
 
 
-def graph_reader(environment, *, include_directory_audit=False):
+def graph_reader(environment, *, include_directory_audit=False, directory_only=False):
     tenant = environment['TF_AUDIT_TENANT_ID']
     client = environment['TF_AUDIT_CLIENT_ID']
     if not all(app_id_is_canonical(value) for value in (tenant, client)):
@@ -79,7 +79,9 @@ def graph_reader(environment, *, include_directory_audit=False):
     headers = {'Authorization': 'Bearer ' + token, 'Accept': 'application/json'}
 
     def get(url):
-        if not (valid_link(url) or is_principal_url(url) or (include_directory_audit and valid_directory_link(url))):
+        allowed = valid_directory_link(url) if directory_only else (
+            valid_link(url) or is_principal_url(url) or (include_directory_audit and valid_directory_link(url)))
+        if not allowed:
             raise ValueError('Unexpected Graph endpoint')
         for attempt in range(3):
             try:

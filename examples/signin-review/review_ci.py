@@ -8,7 +8,7 @@ import re
 import sys
 
 from candidate_metadata import classify_principal, principal_url
-from collect import GRAPH_EVENTS, REPOSITORY, IncompleteCategory, collect_envelope, decode, handoff_identity
+from collect import GRAPH_EVENTS, REPOSITORY, collect_envelope, decode, handoff_identity
 from handoff import MAX_CIPHERTEXT, open_envelope, seal
 from report import report
 from workload_http import HTTPFailure, graph_reader, request_json
@@ -85,7 +85,5 @@ if __name__ == '__main__':
             report_job(os.environ, os.environ.pop('TF_HANDOFF_IDENTITY'))
         else:
             raise ValueError('Unexpected candidate review command')
-    except IncompleteCategory as exc:
-        sys.exit(str(exc))
     except (KeyError, ValueError, TypeError, AttributeError, OSError):
         sys.exit('Sign-in candidate review stopped.')

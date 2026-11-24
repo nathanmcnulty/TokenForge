@@ -216,6 +216,92 @@ class DirectoryHostedHandoffTests(unittest.TestCase):
         for unsupported_claim in ('successful', 'microsoft', 'consent', 'provisioning'):
             self.assertNotIn(unsupported_claim, issue_body.casefold())
 
+    def test_combined_cli_sanitizes_upstream_failures_without_a_handoff_or_issue_call(self):
+        harness = r"""
+import http.client
+import json
+import os
+import runpy
+import sys
+from unittest.mock import patch
+
+sys.path.insert(0, 'examples/signin-review')
+import collect
+import handoff
+import report
+import workload_http
+from directory_provisioning import DIRECTORY_PATH
+
+fault, app, canary = sys.argv[1:]
+sys.argv = ['review_ci.py', 'collect-directory']
+origin = 'https://graph.microsoft.com'
+link = origin + DIRECTORY_PATH + '?$skiptoken=' + canary
+event = {
+    'activityDisplayName': 'Add service principal', 'activityDateTime': '2026-01-01T00:00:00Z',
+    'result': 'success', 'targetResources': [{'type': 'ServicePrincipal', 'id': app}],
+    'additionalDetails': [{'key': 'AppId', 'value': app}], 'id': canary,
+}
+seen = []
+parser_raised = []
+
+def read(url):
+    seen.append(url)
+    if len(seen) == 1:
+        return {'value': [event], '@odata.nextLink': (link + '\x7f') if fault == 'continuation' else link}
+    if fault == 'http':
+        try:
+            http.client.HTTPConnection('fixture.invalid').request('GET', '/?' + canary + app + '\x7f')
+        except http.client.InvalidURL as error:
+            parser_raised.append(type(error))
+            assert canary in str(error)
+            raise
+    if fault == 'recursion':
+        try:
+            decoder = json.JSONDecoder()
+            decoder.scan_once = json.scanner.py_make_scanner(decoder)
+            return decoder.decode('[' * 4000 + json.dumps(canary) + ']' * 4000)
+        except RecursionError as error:
+            parser_raised.append(type(error))
+            raise
+    if fault == 'page':
+        return {'value': canary}
+    raise AssertionError('Unexpected network route')
+
+env = os.environ
+raw = json.dumps(collect.handoff_identity(env) | {
+    'since': '2026-01-01T00:00:00Z', 'until': '2026-01-31T00:00:00Z',
+    'categories': list(collect.GRAPH_EVENTS), 'coverage': 'requested-windows-terminal;retention-unknown',
+    'appIds': [app],
+}).encode()
+with (patch.object(http.client.HTTPConnection, 'connect', side_effect=AssertionError('Socket forbidden')) as network,
+      patch.object(workload_http, 'graph_reader', return_value=read),
+      patch.object(collect, 'collect_envelope', return_value=raw),
+      patch.object(collect, 'pinned_catalog_app_ids', return_value=set()),
+      patch.object(handoff, 'seal') as seal, patch.object(report, 'report') as write_issue):
+    try:
+        runpy.run_path('examples/signin-review/review_ci.py', run_name='__main__')
+    finally:
+        network.assert_not_called()
+        seal.assert_not_called()
+        write_issue.assert_not_called()
+        assert len(seen) == (1 if fault == 'continuation' else 2)
+        if fault == 'http':
+            assert parser_raised == [http.client.InvalidURL]
+        elif fault == 'recursion':
+            assert parser_raised == [RecursionError]
+"""
+        with TemporaryDirectory() as folder:
+            output = Path(folder) / 'github-output'
+            for fault in ('http', 'recursion', 'page', 'continuation'):
+                with self.subTest(fault=fault):
+                    result = subprocess.run(
+                        [sys.executable, '-B', '-c', harness, fault, ONLY_AUDIT, 'synthetic-private-canary'],
+                        cwd=ROOT, env=ENV | {'GITHUB_OUTPUT': str(output)}, timeout=10, capture_output=True, text=True,
+                        check=False)
+                    self.assertEqual((result.returncode, result.stdout, result.stderr),
+                                     (1, '', 'Sign-in candidate review stopped.\n'))
+                    self.assertFalse(output.exists())
+
     def test_directory_cli_requires_an_explicit_command_on_manual_runs(self):
         entry = ROOT / 'examples' / 'signin-review' / 'review_ci.py'
         for command, kwargs in (('collect', {}), ('collect-directory', {'include_directory_audit': True})):

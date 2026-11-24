@@ -70,6 +70,9 @@ class ActivationCandidateTests(unittest.TestCase):
         comment, _, workflow = active.read_bytes().partition(b'\n')
         self.assertEqual(comment, b'# Manual workflow. Dispatch only after setup is verified and the specific run is authorized.')
         self.assertEqual(workflow, template.read_bytes().partition(b'\n')[2])
+        self.assertIn(b'review_ci.py collect\n', workflow)
+        self.assertIn(b'review_ci.py issue\n', workflow)
+        self.assertNotIn(b'-directory', workflow)
 
     def test_failed_cli_reports_only_a_fixed_message_without_a_handoff(self):
         from collect import IncompleteCategory
@@ -89,8 +92,13 @@ class ActivationCandidateTests(unittest.TestCase):
             output = Path(temp) / 'github-output'
             read = ENV | {'GITHUB_OUTPUT': str(output), 'TF_HANDOFF_RECIPIENT': self.recipient, 'TF_AUDIT_TENANT_ID': TENANT}
             get = Mock(side_effect=review_ci.HTTPFailure(404))
-            with patch.object(review_ci, 'graph_reader', return_value=get), patch.object(review_ci, 'collect_envelope', return_value=envelope([KNOWN, APP])):
+            with (patch.object(review_ci, 'graph_reader', return_value=get) as auth,
+                  patch.object(review_ci, 'scan_directory') as directory,
+                  patch.object(review_ci, 'collect_envelope', return_value=envelope([KNOWN, APP])) as collect):
                 review_ci.collect_job(read)
+            auth.assert_called_once_with(read)
+            collect.assert_called_once_with(read, get)
+            directory.assert_not_called()
             encoded = output.read_text().removeprefix('ciphertext=').strip()
             self.assertNotIn(APP, encoded)
         write = ENV | {'TF_HANDOFF_CIPHERTEXT': encoded, 'TF_REVIEW_ISSUE': '57',
@@ -116,7 +124,8 @@ class ActivationCandidateTests(unittest.TestCase):
         with TemporaryDirectory() as temp:
             output = Path(temp) / 'github-output'
             context = ENV | {'GITHUB_OUTPUT': str(output), 'TF_HANDOFF_RECIPIENT': self.recipient}
-            with patch.object(review_ci, 'graph_reader'), patch.object(review_ci, 'collect_envelope', side_effect=ValueError('fixture failure')) as gather:
+            with (patch.object(review_ci, 'graph_reader'), patch.object(review_ci, 'pinned_catalog_app_ids', return_value=set()),
+                  patch.object(review_ci, 'collect_envelope', side_effect=ValueError('fixture failure')) as gather):
                 with self.assertRaises(ValueError):
                     review_ci.collect_job(context | {'GH_TOKEN': 'fixture'})
                 gather.assert_not_called()

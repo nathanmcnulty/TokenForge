@@ -49,14 +49,13 @@ class DirectoryValidationTests(unittest.TestCase):
         self.assertEqual(workflow['permissions'], {})
         jobs = workflow['jobs']
         self.assertEqual(set(jobs), {'collect', 'issue', 'directory_validation'})
-        for name, mode in (('collect', 'sign-in'), ('issue', 'sign-in'),
-                           ('directory_validation', 'directory-validation')):
-            condition = jobs[name]['if']
-            self.assertIn(f"inputs.mode == '{mode}' &&", condition)
-            self.assertIn("github.repository_id == '1402673320' && github.ref == 'refs/heads/main' &&", condition)
-            self.assertIn("github.event_name == 'workflow_dispatch'", condition)
-            self.assertEqual(condition.count('inputs.mode'), 1)
-            self.assertNotIn('||', condition)
+        guard = ("github.repository == 'nathanmcnulty/TokenForge' && "
+                 "github.repository_id == '1402673320' && github.ref == 'refs/heads/main' && "
+                 "github.event_name == 'workflow_dispatch'")
+        review_mode = "(inputs.mode == 'sign-in' || inputs.mode == 'sign-in-and-directory')"
+        self.assertEqual(jobs['collect']['if'].strip(), f'{review_mode} && {guard}')
+        self.assertEqual(jobs['issue']['if'].strip(), f"needs.collect.result == 'success' && {review_mode} && {guard}")
+        self.assertEqual(jobs['directory_validation']['if'].strip(), f"inputs.mode == 'directory-validation' && {guard}")
         self.assertEqual(jobs['issue']['needs'], 'collect')
         self.assertEqual(jobs['issue']['permissions'], {'issues': 'write'})
         self.assertEqual(jobs['collect']['permissions'], {'contents': 'read', 'id-token': 'write'})

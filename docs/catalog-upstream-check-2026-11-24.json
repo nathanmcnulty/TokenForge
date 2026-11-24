@@ -1,0 +1,35 @@
+{
+  "baselineCommit": "2aeeac91928d6147a93b56adf6302b157cc5c3eb",
+  "complete": true,
+  "format": "TokenForgePublicCatalogDelta",
+  "newApplications": [],
+  "observationsSha256": "8f5e3bd5fffcbf7e69c00a28388c7da830974734377677337165634527516201",
+  "revisionLabelsVerified": false,
+  "schemaVersion": 1,
+  "sources": {
+    "microsoftApps": {
+      "checkedAt": "2026-11-24T17:52:53Z",
+      "committedAt": "2026-11-23T16:19:40Z",
+      "previousRevision": "79f6738f9d40de112ae3d656769046ec6a76ed59",
+      "revision": "79f6738f9d40de112ae3d656769046ec6a76ed59",
+      "status": "Unchanged",
+      "url": "https://raw.githubusercontent.com/merill/microsoft-info/main/_info/MicrosoftApps.json"
+    },
+    "resources": {
+      "checkedAt": "2026-11-24T17:52:53Z",
+      "committedAt": "2025-08-20T08:22:02Z",
+      "previousRevision": "5a7624739f81b83cbc5c8df41e52cbc908a28e61",
+      "revision": "5a7624739f81b83cbc5c8df41e52cbc908a28e61",
+      "status": "Unchanged",
+      "url": "https://raw.githubusercontent.com/f-bader/entrascopes.com/main/resources.json"
+    },
+    "roadtools": {
+      "checkedAt": "2026-11-24T17:52:53Z",
+      "committedAt": "2026-04-27T12:01:30Z",
+      "previousRevision": "3b975e832aa543d6d1b2466a3a5be0bd9e01d304",
+      "revision": "3b975e832aa543d6d1b2466a3a5be0bd9e01d304",
+      "status": "Unchanged",
+      "url": "https://raw.githubusercontent.com/dirkjanm/ROADtools/master/roadtx/roadtools/roadtx/firstpartyscopes.json"
+    }
+  }
+}

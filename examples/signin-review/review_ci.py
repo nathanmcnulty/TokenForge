@@ -1,7 +1,6 @@
 """Separated sign-in review jobs with an opt-in directory audit cohort."""
 
 import base64
-from datetime import datetime
 import json
 import os
 from pathlib import Path
@@ -9,9 +8,10 @@ import re
 import sys
 
 from candidate_metadata import classify_principal, principal_url
-from collect import (GRAPH_EVENTS, MAX_IDS, REPOSITORY, collect_envelope, decode, handoff_identity,
-                     pinned_catalog_app_ids, run_scope)
-from directory_provisioning import scan_directory
+from collect import (CATALOG_COMMIT, GRAPH_EVENTS, MAX_IDS, REPOSITORY, IncompleteCategory,
+                     collect_envelope, collection_end, decode, handoff_identity, intervals,
+                     pinned_catalog_app_ids, run_scope, utc)
+from directory_provisioning import COVERAGE_SOURCE, scan_directory
 from handoff import MAX_CIPHERTEXT, open_envelope, seal
 from report import report
 from workload_http import HTTPFailure, graph_reader, request_json
@@ -19,15 +19,46 @@ from workload_http import HTTPFailure, graph_reader, request_json
 MAX_ENCODED = 4 * ((MAX_CIPHERTEXT + 2) // 3)
 
 
+def write_coverage(env, end, days, coverage):
+    if 'GITHUB_STEP_SUMMARY' not in env:
+        return
+    lines = [
+        '### Graph discovery coverage', '',
+        f'Requested {days} days ending at {utc(end)} (UTC, exclusive).',
+        f'Published catalog commit: `{CATALOG_COMMIT}`.',
+        'Provider retention is unknown. A terminal page with no rows can reflect no activity or missing retained data.',
+        'Incomplete or unattempted windows prevent a review issue update.', '',
+        '| Source | Start (UTC) | End (UTC, exclusive) | Result |',
+        '| --- | --- | --- | --- |',
+    ]
+    for source in (*GRAPH_EVENTS, COVERAGE_SOURCE):
+        for start, stop in intervals(end, days):
+            status = coverage.get((source, start, stop), 'Unattempted')
+            lines.append(f'| {source} | {utc(start)} | {utc(stop)} | {status} |')
+    with Path(env['GITHUB_STEP_SUMMARY']).open('a', encoding='ascii') as summary:
+        summary.write('\n'.join(lines) + '\n')
+
+
 def collect_job(env, *, directory=False):
     if 'TF_HANDOFF_IDENTITY' in env or 'GH_TOKEN' in env:
         raise ValueError('Unexpected issue authorization in audit job')
     handoff_identity(env)
     if directory:
-        get = graph_reader(env, include_directory_audit=True)
-        known = pinned_catalog_app_ids()
-        envelope = decode(collect_envelope(env, get, known))
-        provisioned = scan_directory(get, datetime.fromisoformat(envelope['until']), run_scope(env), known)
+        end, days = collection_end(), run_scope(env)
+        coverage = {}
+        sign_in_failure = None
+        try:
+            known = pinned_catalog_app_ids()
+            get = graph_reader(env, include_directory_audit=True)
+            try:
+                envelope = decode(collect_envelope(env, get, known, end=end, coverage=coverage))
+            except IncompleteCategory as error:
+                sign_in_failure = error
+            provisioned = scan_directory(get, end, days, known, coverage=coverage)
+            if sign_in_failure is not None:
+                raise sign_in_failure
+        finally:
+            write_coverage(env, end, days, coverage)
         provisioned_apps = set(provisioned['appIds'])
         envelope['directoryCoverage'] = {
             'status': 'requested-windows-terminal;retention-unknown',
@@ -105,16 +136,19 @@ if __name__ == '__main__':
     try:
         if os.environ.get('GITHUB_EVENT_NAME') != 'workflow_dispatch':
             raise ValueError('The initial activation permits manual runs only')
-        if sys.argv[1:] == ['collect-directory']:
+        command = sys.argv[1:]
+        if command in (['collect-directory'], ['issue-directory']) and os.environ.get('TF_CATALOG_TIP') != CATALOG_COMMIT:
+            raise SystemExit('Published catalog does not match the reviewed discovery pin.')
+        if command == ['collect-directory']:
             try:
                 collect_job(os.environ, directory=True)
             except Exception:
                 # Transport and parser errors can contain private provider data.
                 raise SystemExit('Sign-in candidate review stopped.') from None
-        elif sys.argv[1:] == ['collect']:
+        elif command == ['collect']:
             collect_job(os.environ)
-        elif sys.argv[1:] in (['issue'], ['issue-directory']):
-            report_job(os.environ, os.environ.pop('TF_HANDOFF_IDENTITY'), directory=sys.argv[1] == 'issue-directory')
+        elif command in (['issue'], ['issue-directory']):
+            report_job(os.environ, os.environ.pop('TF_HANDOFF_IDENTITY'), directory=command == ['issue-directory'])
         else:
             raise ValueError('Unexpected candidate review command')
     except (KeyError, ValueError, TypeError, AttributeError, OSError):

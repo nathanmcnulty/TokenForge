@@ -14,7 +14,7 @@ from unittest.mock import Mock, patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'examples' / 'signin-review'))
 from candidate_metadata import principal_url
-from collect import GRAPH_EVENTS, REPOSITORY, REPOSITORY_ID, WORKFLOW_REF, handoff_identity, intervals, utc
+from collect import CATALOG_COMMIT, GRAPH_EVENTS, REPOSITORY, REPOSITORY_ID, WORKFLOW_REF, handoff_identity, intervals, utc
 from directory_provisioning import DIRECTORY_PATH, valid_directory_link
 from handoff import open_envelope
 from report import OWNER_ID, body_for, validate_handoff
@@ -24,6 +24,7 @@ TENANT = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 ENV = {'GITHUB_REPOSITORY': REPOSITORY, 'GITHUB_REPOSITORY_ID': REPOSITORY_ID, 'GITHUB_REF': 'refs/heads/main',
        'GITHUB_WORKFLOW_REF': WORKFLOW_REF, 'GITHUB_SHA': 'e'*40, 'GITHUB_RUN_ID': '17',
        'GITHUB_RUN_ATTEMPT': '2', 'GITHUB_EVENT_NAME': 'workflow_dispatch', 'TF_AUDIT_TENANT_ID': TENANT}
+END = datetime(2026, 1, 31, tzinfo=timezone.utc)
 VERIFIED = '11111111-1111-4111-8111-111111111111'
 NONVERIFIED = '22222222-2222-4222-8222-222222222222'
 BOTH = '33333333-3333-4333-8333-333333333333'
@@ -59,43 +60,72 @@ class DirectoryHostedHandoffTests(unittest.TestCase):
 
     def test_terminal_audit_scan_filters_catalog_union_and_tags_each_origin(self):
         lookups = []
-        first_window = True
+        requests = []
+        end = datetime.fromisoformat('2026-01-31T04:05:06Z')
 
         def get(url):
-            nonlocal first_window
             if url == DIRECTORY_NEXT:
                 success = [event(app) for app in (VERIFIED, NONVERIFIED, BOTH, ONLY_AUDIT, 'bad-value')]
                 unresolved = event(ONLY_AUDIT) | {'additionalDetails': [], 'initiatedBy': {'app': {'appId': INITIATOR}}}
-                return {'value': [*success, event(ONLY_AUDIT), unresolved, event(INITIATOR) | {'result': 'failure'}]}
+                rows = [*success, event(ONLY_AUDIT), unresolved, event(INITIATOR) | {'result': 'failure'}]
+                for row in rows:
+                    row['activityDateTime'] = '2026-01-01T10:00:00Z'
+                return {'value': rows}
             if valid_directory_link(url):
-                if first_window:
-                    first_window = False
+                predicate = parse_qs(urlsplit(url).query)['$filter'][0]
+                requests.append(('directory', predicate))
+                if 'activityDateTime ge 2026-01-01T04:05:06Z' in predicate:
                     return {'value': [], '@odata.nextLink': DIRECTORY_NEXT}
+                return {'value': []}
+            if urlsplit(url).path == '/beta/auditLogs/signIns':
+                predicate = parse_qs(urlsplit(url).query)['$filter'][0]
+                requests.append(('sign-in', predicate))
+                if ('createdDateTime ge 2026-01-01T04:05:06Z' in predicate
+                        and "t eq 'interactiveUser'" in predicate):
+                    return {'value': [{'appId': app, 'signInEventTypes': ['interactiveUser'],
+                                       'createdDateTime': '2026-01-01T10:00:00Z'}
+                                      for app in (BOTH, ONLY_SIGNIN, NONVERIFIED)]}
                 return {'value': []}
             lookups.append(url)
             raise review_ci.HTTPFailure(404)
 
         with TemporaryDirectory() as folder:
             output = Path(folder) / 'github-output'
-            context = ENV | {'GITHUB_OUTPUT': str(output), 'TF_HANDOFF_RECIPIENT': self.public}
+            summary = Path(folder) / 'github-step-summary'
+            context = ENV | {'GITHUB_OUTPUT': str(output), 'TF_HANDOFF_RECIPIENT': self.public,
+                             'GITHUB_STEP_SUMMARY': str(summary)}
             with (patch.object(review_ci, 'graph_reader', return_value=get) as auth,
                   patch.object(review_ci, 'pinned_catalog_app_ids', return_value={VERIFIED, NONVERIFIED}),
-                  patch.object(review_ci, 'collect_envelope', return_value=signins())):
+                  patch.object(review_ci, 'collection_end', return_value=end)):
                 review_ci.collect_job(context, directory=True)
+            text = summary.read_text()
+            self.assertIn('Requested 30 days ending at 2026-01-31T04:05:06Z', text)
+            self.assertIn('| Directory provisioning | 2026-01-01T04:05:06Z | 2026-01-02T00:00:00Z | Terminal page, unresolved AppIds |', text)
+            self.assertNotIn(BOTH, text)
             auth.assert_called_once_with(context, include_directory_audit=True)
             encoded = output.read_text().removeprefix('ciphertext=').strip()
             raw = open_envelope(base64.b64decode(encoded), ENV, self.private, categories=GRAPH_EVENTS, labeled=True, directory=True)
+        expected = [
+            ('sign-in', f"createdDateTime ge {utc(start)} and createdDateTime le {utc(stop)} "
+                        f"and signInEventTypes/any(t: t eq '{category}')")
+            for start, stop in intervals(end, 30) for category in GRAPH_EVENTS
+        ] + [
+            ('directory', f"activityDisplayName eq 'Add service principal' and activityDateTime ge {utc(start)} "
+                          f"and activityDateTime le {utc(stop)}")
+            for start, stop in intervals(end, 30)
+        ]
+        self.assertEqual(requests, expected)
         obj = json.loads(raw)
         self.assertEqual(obj['appIds'], [BOTH, ONLY_AUDIT, ONLY_SIGNIN])
         coverage = obj['directoryCoverage']
         self.assertEqual(coverage['status'], 'requested-windows-terminal;retention-unknown')
         windows = coverage['windows']
-        self.assertEqual(len(windows), 30)
+        self.assertEqual(len(windows), 31)
         self.assertEqual(windows[0], {
-            'since': '2026-01-01T00:00:00Z', 'until': '2026-01-02T00:00:00Z', 'unresolvedAppIdRows': 2,
+            'since': '2026-01-01T04:05:06Z', 'until': '2026-01-02T00:00:00Z', 'unresolvedAppIdRows': 2,
         })
         self.assertEqual(windows[-1], {
-            'since': '2026-01-30T00:00:00Z', 'until': '2026-01-31T00:00:00Z', 'unresolvedAppIdRows': 0,
+            'since': '2026-01-31T00:00:00Z', 'until': '2026-01-31T04:05:06Z', 'unresolvedAppIdRows': 0,
         })
         self.assertTrue(all(a['until'] == b['since'] for a, b in zip(windows, windows[1:])))
         self.assertEqual(obj['labels'], {
@@ -165,6 +195,7 @@ class DirectoryHostedHandoffTests(unittest.TestCase):
             ])
             with (patch.object(review_ci, 'graph_reader', return_value=get),
                   patch.object(review_ci, 'pinned_catalog_app_ids', return_value=set()),
+                  patch.object(review_ci, 'collection_end', return_value=END),
                   patch.object(review_ci, 'collect_envelope', return_value=signins())):
                 with self.assertRaises(review_ci.HTTPFailure):
                     review_ci.collect_job(
@@ -263,8 +294,10 @@ def read(url):
         except RecursionError as error:
             parser_raised.append(type(error))
             raise
-    if fault == 'page':
+    if fault == 'page' and url == link:
         return {'value': canary}
+    if fault in ('page', 'continuation') and DIRECTORY_PATH in url:
+        return {'value': []}
     raise AssertionError('Unexpected network route')
 
 env = os.environ
@@ -275,6 +308,7 @@ raw = json.dumps(collect.handoff_identity(env) | {
 }).encode()
 with (patch.object(http.client.HTTPConnection, 'connect', side_effect=AssertionError('Socket forbidden')) as network,
       patch.object(workload_http, 'graph_reader', return_value=read),
+      patch.object(collect, 'collection_end', return_value=collect.datetime.fromisoformat('2026-01-31T00:00:00Z')),
       patch.object(collect, 'collect_envelope', return_value=raw),
       patch.object(collect, 'pinned_catalog_app_ids', return_value=set()),
       patch.object(handoff, 'seal') as seal, patch.object(report, 'report') as write_issue):
@@ -284,7 +318,7 @@ with (patch.object(http.client.HTTPConnection, 'connect', side_effect=AssertionE
         network.assert_not_called()
         seal.assert_not_called()
         write_issue.assert_not_called()
-        assert len(seen) == (1 if fault == 'continuation' else 2)
+        assert len(seen) == {'continuation': 30, 'page': 31, 'http': 2, 'recursion': 2}[fault]
         if fault == 'http':
             assert parser_raised == [http.client.InvalidURL]
         elif fault == 'recursion':
@@ -296,7 +330,8 @@ with (patch.object(http.client.HTTPConnection, 'connect', side_effect=AssertionE
                 with self.subTest(fault=fault):
                     result = subprocess.run(
                         [sys.executable, '-B', '-c', harness, fault, ONLY_AUDIT, 'synthetic-private-canary'],
-                        cwd=ROOT, env=ENV | {'GITHUB_OUTPUT': str(output)}, timeout=10, capture_output=True, text=True,
+                        cwd=ROOT, env=ENV | {'GITHUB_OUTPUT': str(output), 'TF_CATALOG_TIP': CATALOG_COMMIT},
+                        timeout=10, capture_output=True, text=True,
                         check=False)
                     self.assertEqual((result.returncode, result.stdout, result.stderr),
                                      (1, '', 'Sign-in candidate review stopped.\n'))
@@ -306,7 +341,7 @@ with (patch.object(http.client.HTTPConnection, 'connect', side_effect=AssertionE
         entry = ROOT / 'examples' / 'signin-review' / 'review_ci.py'
         for command, kwargs in (('collect', {}), ('collect-directory', {'include_directory_audit': True})):
             for event_name, called in (('workflow_dispatch', True), ('schedule', False)):
-                env = ENV | {'GITHUB_EVENT_NAME': event_name}
+                env = ENV | {'GITHUB_EVENT_NAME': event_name, 'TF_CATALOG_TIP': CATALOG_COMMIT}
                 with (patch.dict(os.environ, env, clear=True), patch.object(sys, 'argv', [str(entry), command]),
                       patch('workload_http.graph_reader', side_effect=ValueError('synthetic-private-canary')) as reader):
                     with self.assertRaises(SystemExit) as result:
@@ -316,6 +351,64 @@ with (patch.object(http.client.HTTPConnection, 'connect', side_effect=AssertionE
                         reader.assert_called_once_with(os.environ, **kwargs)
                     else:
                         reader.assert_not_called()
+
+    def test_combined_cli_refuses_a_stale_catalog_before_authentication_or_issue_update(self):
+        entry = ROOT / 'examples' / 'signin-review' / 'review_ci.py'
+        for command in ('collect-directory', 'issue-directory'):
+            with (patch.dict(os.environ, ENV | {'TF_CATALOG_TIP': '1' * 40}, clear=True),
+                  patch.object(sys, 'argv', [str(entry), command]),
+                  patch('workload_http.graph_reader') as reader,
+                  patch('report.report') as writer):
+                with self.assertRaisesRegex(SystemExit, 'Published catalog does not match'):
+                    runpy.run_path(str(entry), run_name='__main__')
+            reader.assert_not_called()
+            writer.assert_not_called()
+
+    def test_combined_summary_marks_empty_unresolved_incomplete_and_unattempted_windows(self):
+        def get(url):
+            if valid_directory_link(url):
+                predicate = parse_qs(urlsplit(url).query)['$filter'][0]
+                if 'activityDateTime ge 2026-01-02' in predicate:
+                    raise review_ci.HTTPFailure(503)
+                return {'value': [event('private-unresolved-canary')]} if 'activityDateTime ge 2026-01-01' in predicate else {'value': []}
+            predicate = parse_qs(urlsplit(url).query)['$filter'][0]
+            if "t eq 'servicePrincipal'" in predicate:
+                raise review_ci.HTTPFailure(403)
+            if "t eq 'nonInteractiveUser'" in predicate and 'createdDateTime ge 2026-01-02' in predicate:
+                raise review_ci.HTTPFailure(503)
+            if "t eq 'managedIdentity'" in predicate and 'createdDateTime ge 2026-01-01' in predicate:
+                return {'value': [{'signInEventTypes': ['managedIdentity'], 'appId': 'private-unresolved-canary',
+                                   'createdDateTime': '2026-01-01T10:00:00Z'}]}
+            return {'value': []}
+
+        with TemporaryDirectory() as folder:
+            output = Path(folder) / 'github-output'
+            summary = Path(folder) / 'github-step-summary'
+            context = ENV | {'GITHUB_OUTPUT': str(output), 'GITHUB_STEP_SUMMARY': str(summary)}
+            with (patch.object(review_ci, 'graph_reader', return_value=get),
+                  patch.object(review_ci, 'collection_end', return_value=END),
+                  patch.object(review_ci, 'pinned_catalog_app_ids', return_value=set())):
+                with self.assertRaises(review_ci.HTTPFailure) as failure:
+                    review_ci.collect_job(context, directory=True)
+            self.assertEqual(failure.exception.status, 503)
+            self.assertFalse(output.exists())
+            result = summary.read_text()
+        self.assertEqual(result.count('2026-01-31T00:00:00Z |'), 5)
+        for source, day, status in (
+            ('interactiveUser', 1, 'Terminal page, no rows'),
+            ('nonInteractiveUser', 2, 'Incomplete traversal (HTTP 503)'),
+            ('nonInteractiveUser', 3, 'Terminal page, no rows'),
+            ('servicePrincipal', 1, 'Incomplete traversal (HTTP 403)'),
+            ('servicePrincipal', 2, 'Unattempted'),
+            ('managedIdentity', 1, 'Terminal page, unresolved AppIds'),
+            ('managedIdentity', 30, 'Terminal page, no rows'),
+            ('Directory provisioning', 1, 'Terminal page, unresolved AppIds'),
+            ('Directory provisioning', 2, 'Incomplete traversal (HTTP 503)'),
+            ('Directory provisioning', 30, 'Terminal page, no rows'),
+        ):
+            self.assertIn(f'| {source} | 2026-01-{day:02d}T00:00:00Z | 2026-01-{day+1:02d}T00:00:00Z | {status} |', result)
+        self.assertNotIn('private-unresolved-canary', result)
+        self.assertIn('Provider retention is unknown', result)
 
 
 if __name__ == '__main__':

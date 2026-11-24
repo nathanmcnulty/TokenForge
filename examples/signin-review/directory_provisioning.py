@@ -10,10 +10,11 @@ import sys
 from urllib.parse import urlencode, urlsplit
 
 from candidate_metadata import audience_label
-from collect import HOST, MAX_IDS, OfflineCatalog, app_id_is_canonical, decode, intervals, utc
+from collect import HOST, MAX_IDS, OfflineCatalog, app_id_is_canonical, decode, http_status, intervals, utc
 
 DIRECTORY_PATH = '/v1.0/auditLogs/directoryAudits'
 ACTIVITY = 'Add service principal'
+COVERAGE_SOURCE = 'Directory provisioning'
 MAX_REPLAY_BYTES = 1024 * 1024
 
 
@@ -99,17 +100,40 @@ def scan_window(get, start, stop, known=(), *, max_pages=100):
     raise ValueError('Directory audit page limit reached')
 
 
-def scan_directory(get, until, days, known=()):
+def scan_directory(get, until, days, known=(), *, coverage=None):
     if type(days) is not int or not 1 <= days <= 31:
         raise ValueError('Unexpected directory audit window length')
     rows = []
     app_ids = set()
+    first_failure = None
     for start, stop in intervals(until, days):
-        counts, window_ids = scan_window(get, start, stop, known)
+        key = (COVERAGE_SOURCE, start, stop)
+        if coverage is not None:
+            coverage[key] = 'Incomplete traversal'
+        try:
+            counts, window_ids = scan_window(get, start, stop, known)
+        except ValueError as error:
+            if coverage is None:
+                raise
+            status = http_status(error)
+            if status is not None:
+                coverage[key] += f' (HTTP {status})'
+            if first_failure is None:
+                first_failure = error
+            if status in (401, 403):
+                break
+            continue
+        if coverage is not None:
+            if counts.get('successfulUnresolvedAppId'):
+                coverage[key] = 'Terminal page, unresolved AppIds'
+            else:
+                coverage[key] = 'Terminal page' if counts else 'Terminal page, no rows'
         rows.append({'since': utc(start), 'until': utc(stop), 'counts': counts})
         app_ids.update(window_ids)
         if len(app_ids) > MAX_IDS:
             raise ValueError('Provisioning candidate bound exceeded')
+    if first_failure is not None:
+        raise first_failure
     return {'windows': rows, 'appIds': sorted(app_ids), 'appIdMapping': 'additionalDetails.AppId',
             'providerRetention': 'unknown'}
 

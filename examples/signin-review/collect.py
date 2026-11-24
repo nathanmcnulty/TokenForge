@@ -75,12 +75,14 @@ def valid_link(link):
         return False
 
 
-def collect_window(get, start, end, category, catalog_ids):
+def collect_window(get, start, end, category, catalog_ids, *, allow_unresolved=False):
     predicate = (f"createdDateTime ge {utc(start)} and createdDateTime le {utc(end)} "
                  f"and signInEventTypes/any(t: t eq '{category}')")
     url = f'https://{HOST}{PATH}?' + urlencode({'$top': 1000, '$filter': predicate})
     seen_links = set()
     found = set()
+    coverage = 'Terminal page, no rows'
+    unresolved = False
     for _ in range(100):
         if not valid_link(url) or url in seen_links:
             raise ValueError('Invalid or cyclic Graph continuation')
@@ -103,33 +105,63 @@ def collect_window(get, start, end, category, catalog_ids):
                 raise ValueError('Graph event fell outside its requested window')
             if observed == end:
                 continue
+            coverage = 'Terminal page'
             app = item.get('appId')
             if not isinstance(app, str) or not app_id_is_canonical(app.lower()):
-                raise ValueError('Unreadable client application ID')
+                if not allow_unresolved:
+                    raise ValueError('Unreadable client application ID')
+                unresolved = True
+                continue
             if app.lower() not in catalog_ids:
                 found.add(app.lower())
         if '@odata.nextLink' not in document:
-            return found
+            return found, 'Terminal page, unresolved AppIds' if unresolved else coverage
         url = document['@odata.nextLink']
     raise ValueError('Graph window page limit reached')
+
+
+def http_status(error):
+    status = getattr(error, 'status', None)
+    return status if type(status) is int and 300 <= status < 600 else None
 
 
 class IncompleteCategory(ValueError):
     pass
 
 
-def gather(get, end, days, catalog_ids):
+def gather(get, end, days, catalog_ids, *, coverage=None):
     ids = set()
+    denied_categories = set()
+    first_failure = None
     for start, stop in intervals(end, days):
         for category in GRAPH_EVENTS:
+            if category in denied_categories:
+                continue
+            key = (category, start, stop)
+            if coverage is not None:
+                coverage[key] = 'Incomplete traversal'
             try:
-                ids.update(collect_window(get, start, stop, category, catalog_ids))
+                found, status = collect_window(
+                    get, start, stop, category, catalog_ids, allow_unresolved=coverage is not None)
             except ValueError as exc:
-                status = getattr(exc, 'status', None)
-                suffix = f' (HTTP {status})' if type(status) is int and 300 <= status < 600 else ''
-                raise IncompleteCategory(f'Graph coverage incomplete for {category}{suffix}.') from None
+                status = http_status(exc)
+                suffix = f' (HTTP {status})' if status is not None else ''
+                failure = IncompleteCategory(f'Graph coverage incomplete for {category}{suffix}.')
+                if coverage is None:
+                    raise failure from None
+                coverage[key] += suffix
+                if first_failure is None:
+                    first_failure = failure
+                if status in (401, 403):
+                    denied_categories.add(category)
+                continue
+            if coverage is not None:
+                coverage[key] = status
+            ids.update(found)
             if len(ids) > MAX_IDS:
                 raise ValueError('Candidate handoff would exceed its safe bound')
+    if first_failure is not None:
+        raise first_failure
     return sorted(ids)
 
 
@@ -138,13 +170,17 @@ def pinned_catalog_app_ids():
     return catalog.app_ids(catalog.partition(True)['Applications'], catalog.partition(False)['Applications'])
 
 
-def collect_envelope(environment, get, known=None):
+def collection_end():
+    return datetime.now(timezone.utc).replace(microsecond=0)
+
+
+def collect_envelope(environment, get, known=None, *, end=None, coverage=None):
     days = run_scope(environment)
     identity = handoff_identity(environment)
     if known is None:
         known = pinned_catalog_app_ids()
-    end = datetime.now(timezone.utc).replace(microsecond=0)
-    ids = gather(get, end, days, known)
+    end = end if end is not None else collection_end()
+    ids = gather(get, end, days, known, coverage=coverage)
     envelope = identity | {'since': utc(end - timedelta(days=days)), 'until': utc(end),
                            'categories': list(GRAPH_EVENTS), 'coverage': 'requested-windows-terminal;retention-unknown', 'appIds': ids}
     return json.dumps(envelope, separators=(',', ':')).encode()

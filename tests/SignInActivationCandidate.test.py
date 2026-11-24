@@ -50,8 +50,9 @@ class ActivationCandidateTests(unittest.TestCase):
     def test_template_separates_environments_and_permissions_without_a_schedule(self):
         source = yaml.safe_load((SOURCE / 'activation.yml').read_text())
         self.assertEqual(source['on'], {'workflow_dispatch': {'inputs': {'mode': {
-            'description': 'Run sign-in review or the one-time directory audit validation',
-            'type': 'choice', 'default': 'sign-in', 'options': ['sign-in', 'directory-validation'],
+            'description': 'Run sign-in review, combined review, or the one-time directory audit validation',
+            'type': 'choice', 'default': 'sign-in',
+            'options': ['sign-in', 'directory-validation', 'sign-in-and-directory'],
         }}}})
         self.assertEqual(source['permissions'], {})
         self.assertFalse(source['concurrency']['cancel-in-progress'])
@@ -75,15 +76,42 @@ class ActivationCandidateTests(unittest.TestCase):
         self.assertNotIn('TOKENFORGE_AUDIT_', str(writer))
         self.assertTrue(all('artifact' not in str(job) for job in (reader, writer)))
 
-    def test_local_workflow_keeps_the_reviewed_manual_template_body(self):
-        active = ROOT / '.github' / 'workflows' / 'signin-review-candidates.yml'
-        template = SOURCE / 'activation.yml'
-        comment, _, workflow = active.read_bytes().partition(b'\n')
-        self.assertEqual(comment, b'# Manual workflow. Dispatch only after setup is verified and the specific run is authorized.')
-        self.assertEqual(workflow, template.read_bytes().partition(b'\n')[2])
-        self.assertIn(b'review_ci.py collect\n', workflow)
-        self.assertIn(b'review_ci.py issue\n', workflow)
-        self.assertNotIn(b'-directory', workflow)
+    def test_combined_mode_is_inert_and_changes_only_review_routing(self):
+        active = yaml.safe_load((ROOT / '.github/workflows/signin-review-candidates.yml').read_bytes())
+        draft = yaml.safe_load((SOURCE / 'activation.yml').read_bytes())
+        current_mode = active['on']['workflow_dispatch']['inputs']['mode']
+        draft_mode = draft['on']['workflow_dispatch']['inputs']['mode']
+        self.assertEqual(current_mode['options'], ['sign-in', 'directory-validation'])
+        self.assertEqual(draft_mode['options'], [*current_mode['options'], 'sign-in-and-directory'])
+        self.assertEqual(draft_mode['default'], current_mode['default'])
+        draft_mode.update(current_mode)
+        for key in ('collect', 'issue'):
+            current = active['jobs'][key]
+            proposed = draft['jobs'][key]
+            self.assertEqual(
+                proposed['if'], current['if'].replace("inputs.mode == 'sign-in'",
+                                                      "(inputs.mode == 'sign-in' || inputs.mode == 'sign-in-and-directory')"))
+            proposed['if'] = current['if']
+            step = proposed['steps'][-1]
+            self.assertEqual(step['env'].pop('TF_REVIEW_MODE'), '${{ inputs.mode }}')
+            run = current['steps'][-1]['run'].splitlines(keepends=True)
+            preamble = ''.join(run[:-1])
+            self.assertTrue(step['run'].startswith(preamble + 'case '))
+            with TemporaryDirectory() as folder:
+                (Path(folder) / 'tokenforge-public-source').mkdir()
+                for mode, command in (('sign-in', key), ('sign-in-and-directory', key + '-directory'),
+                                      ('directory-validation', None), ('unknown', None)):
+                    script = r"""git() { :; }
+python3() { printf '%s\n' "$*"; }
+""" + step['run']
+                    result = subprocess.run(['bash', '-c', script], cwd=folder,
+                                            env=os.environ | {'RUNNER_TEMP': folder, 'TF_REVIEW_MODE': mode},
+                                            capture_output=True, text=True, timeout=10, check=False)
+                    self.assertEqual((result.returncode, result.stdout, result.stderr),
+                                     (0, f'-B examples/signin-review/review_ci.py {command}\n', '') if command
+                                     else (2, '', ''))
+            step['run'] = current['steps'][-1]['run']
+        self.assertEqual(draft, active)
 
     def test_catalog_pin_excludes_promoted_ids_and_rejects_the_previous_handoff(self):
         def get(url):

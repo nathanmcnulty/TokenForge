@@ -105,8 +105,14 @@ if __name__ == '__main__':
     try:
         if os.environ.get('GITHUB_EVENT_NAME') != 'workflow_dispatch':
             raise ValueError('The initial activation permits manual runs only')
-        if sys.argv[1:] in (['collect'], ['collect-directory']):
-            collect_job(os.environ, directory=sys.argv[1] == 'collect-directory')
+        if sys.argv[1:] == ['collect-directory']:
+            try:
+                collect_job(os.environ, directory=True)
+            except Exception:
+                # Transport and parser errors can contain private provider data.
+                raise SystemExit('Sign-in candidate review stopped.') from None
+        elif sys.argv[1:] == ['collect']:
+            collect_job(os.environ)
         elif sys.argv[1:] in (['issue'], ['issue-directory']):
             report_job(os.environ, os.environ.pop('TF_HANDOFF_IDENTITY'), directory=sys.argv[1] == 'issue-directory')
         else:

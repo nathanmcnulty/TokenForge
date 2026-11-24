@@ -24,3 +24,11 @@ The directory follow-up stages adjacent UTC-day collection of successful v1.0 **
 ### One-time hosted directory validation
 
 The manual workflow defaults to `sign-in`. After review, merge and coordination of the intended run, choose `directory-validation` on exact `main` to run only the validation job. It uses the existing `entra-audit` workload and only the Graph v1.0 directory-audit endpoint. Its fixed window is 2026-11-24 01:00–02:00 UTC with a five-page cap and a ten-minute job timeout. The reader requires a terminal traversal and at least one canonical target AppId in the pinned catalog. Public output is a fixed pass or incomplete message. Provider retention remains unknown. The validation mode has no issue writer, handoff, artifact or schedule.
+
+### Pending opt-in for combined review
+
+The [inert workflow template](../examples/signin-review/activation.yml) proposes `sign-in-and-directory` as a separate choice for the existing manual workflow. The deployed workflow lacks this choice. A separately approved workflow-only update can add it on the same trusted path and keep `sign-in` as the default. Both jobs receive the same choice and use matching handoff commands. Directory validation remains a separate read-only job.
+
+Combined review requires complete traversal of the requested sign-in categories and of every directory UTC window. Directory coverage and unresolved row counts travel separately in the encrypted handoff. Provider retention is unknown for both sources. A failed traversal prevents an issue update. New queue entries use `sign-in`, `provisioning`, or both as observation sources and retain unknown audience or publisher labels. Sign-in observations can include failures. Provisioning establishes an audit observation only. Neither implies consent, successful authentication, or Microsoft ownership. Existing queue entries keep their original text.
+
+After approval, review exact template promotion separately from any live dispatch. Verify the protected branch, catalog pin, two existing roles, environments, and reserved issue. The first combined run should be explicitly selected, with its result and issue diff checked before any wider use.

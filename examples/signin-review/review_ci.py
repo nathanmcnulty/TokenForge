@@ -1,6 +1,7 @@
 """Separated sign-in review jobs with an opt-in directory audit cohort."""
 
 import base64
+from collections import Counter
 import json
 import os
 from pathlib import Path
@@ -31,12 +32,19 @@ def write_coverage(env, end, days, coverage, catalog):
         '| Source | Start (UTC) | End (UTC, exclusive) | Result |',
         '| --- | --- | --- | --- |',
     ]
+    windows = list(intervals(end, days))
+    counts = {}
     for source in (*GRAPH_EVENTS, COVERAGE_SOURCE):
-        for start, stop in intervals(end, days):
+        counts[source] = Counter()
+        for start, stop in windows:
             status = coverage.get((source, start, stop), 'Unattempted')
+            counts[source][status] += 1
             lines.append(f'| {source} | {utc(start)} | {utc(stop)} | {status} |')
     with Path(env['GITHUB_STEP_SUMMARY']).open('a', encoding='ascii') as summary:
         summary.write('\n'.join(lines) + '\n')
+    receipt = {'catalogCommit': catalog, 'since': utc(windows[0][0]), 'until': utc(end),
+               'providerRetention': 'unknown', 'windowCounts': counts}
+    print('Graph discovery coverage receipt ' + json.dumps(receipt, sort_keys=True, separators=(',', ':')))
 
 
 def collect_job(env, *, directory=False):

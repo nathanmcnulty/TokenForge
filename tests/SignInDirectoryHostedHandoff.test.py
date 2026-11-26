@@ -1,5 +1,7 @@
 import base64
+from contextlib import redirect_stdout
 from datetime import datetime, timezone
+from io import StringIO
 import json
 import os
 import runpy
@@ -94,7 +96,8 @@ class DirectoryHostedHandoffTests(unittest.TestCase):
             summary = Path(folder) / 'github-step-summary'
             context = ENV | {'GITHUB_OUTPUT': str(output), 'TF_HANDOFF_RECIPIENT': self.public,
                              'GITHUB_STEP_SUMMARY': str(summary)}
-            with (patch.object(review_ci, 'graph_reader', return_value=get) as auth,
+            log = StringIO()
+            with (redirect_stdout(log), patch.object(review_ci, 'graph_reader', return_value=get) as auth,
                   patch.object(review_ci, 'pinned_catalog_app_ids', return_value={VERIFIED, NONVERIFIED}),
                   patch.object(review_ci, 'collection_end', return_value=end)):
                 review_ci.collect_job(context, directory=True)
@@ -102,6 +105,19 @@ class DirectoryHostedHandoffTests(unittest.TestCase):
             self.assertIn('Requested 30 days ending at 2026-01-31T04:05:06Z', text)
             self.assertIn('| Directory provisioning | 2026-01-01T04:05:06Z | 2026-01-02T00:00:00Z | Terminal page, unresolved AppIds |', text)
             self.assertNotIn(BOTH, text)
+            self.assertNotIn(BOTH, log.getvalue())
+            prefix = 'Graph discovery coverage receipt '
+            self.assertTrue(log.getvalue().startswith(prefix))
+            receipt = json.loads(log.getvalue()[len(prefix):])
+            self.assertEqual(receipt, {
+                'catalogCommit': CATALOG_COMMIT, 'since': '2026-01-01T04:05:06Z',
+                'until': '2026-01-31T04:05:06Z', 'providerRetention': 'unknown',
+                'windowCounts': {
+                    'interactiveUser': {'Terminal page': 1, 'Terminal page, no rows': 30},
+                    **{category: {'Terminal page, no rows': 31} for category in GRAPH_EVENTS[1:]},
+                    'Directory provisioning': {'Terminal page, unresolved AppIds': 1, 'Terminal page, no rows': 30},
+                },
+            })
             auth.assert_called_once_with(context, include_directory_audit=True)
             encoded = output.read_text().removeprefix('ciphertext=').strip()
             raw = open_envelope(base64.b64decode(encoded), ENV, self.private, categories=GRAPH_EVENTS, labeled=True, directory=True)
@@ -394,7 +410,8 @@ with (patch.object(http.client.HTTPConnection, 'connect', side_effect=AssertionE
             output = Path(folder) / 'github-output'
             summary = Path(folder) / 'github-step-summary'
             context = ENV | {'GITHUB_OUTPUT': str(output), 'GITHUB_STEP_SUMMARY': str(summary)}
-            with (patch.object(review_ci, 'graph_reader', return_value=get),
+            log = StringIO()
+            with (redirect_stdout(log), patch.object(review_ci, 'graph_reader', return_value=get),
                   patch.object(review_ci, 'collection_end', return_value=END),
                   patch.object(review_ci, 'pinned_catalog_app_ids', return_value=set())):
                 with self.assertRaises(review_ci.HTTPFailure) as failure:
@@ -418,6 +435,13 @@ with (patch.object(http.client.HTTPConnection, 'connect', side_effect=AssertionE
             self.assertIn(f'| {source} | 2026-01-{day:02d}T00:00:00Z | 2026-01-{day+1:02d}T00:00:00Z | {status} |', result)
         self.assertNotIn('private-unresolved-canary', result)
         self.assertIn('Provider retention is unknown', result)
+        self.assertNotIn('private-unresolved-canary', log.getvalue())
+        receipt = json.loads(log.getvalue().removeprefix('Graph discovery coverage receipt '))
+        self.assertEqual(receipt['windowCounts']['servicePrincipal'],
+                         {'Incomplete traversal (HTTP 403)': 1, 'Unattempted': 29})
+        self.assertEqual(receipt['windowCounts']['Directory provisioning'],
+                         {'Incomplete traversal (HTTP 503)': 1, 'Terminal page, unresolved AppIds': 1,
+                          'Terminal page, no rows': 28})
 
 
 if __name__ == '__main__':

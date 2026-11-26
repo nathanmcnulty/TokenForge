@@ -18,6 +18,7 @@ GRAPH_EVENTS = EVENTS + ('servicePrincipal', 'managedIdentity')
 MODES = {'workflow_dispatch': 30, 'schedule': 2}
 REPOSITORY = 'nathanmcnulty/TokenForge'
 REPOSITORY_ID = '1402673320'
+# Historical validation and synthetic handoff catalog.
 CATALOG_COMMIT = 'ec3d72d75241c69bb9ca46528b32a1e7fd2a0b62'
 WORKFLOW_REF = f'{REPOSITORY}/.github/workflows/signin-review-candidates.yml@refs/heads/main'
 MAX_IDS = 1000
@@ -48,10 +49,13 @@ def handoff_identity(environment, *, workflow_ref=WORKFLOW_REF):
         raise ValueError('Unexpected source commit')
     if environment.get('GITHUB_WORKFLOW_REF') != workflow_ref:
         raise ValueError('Unexpected workflow source')
+    catalog = environment.get('TF_CATALOG_TIP', '') if workflow_ref == WORKFLOW_REF else CATALOG_COMMIT
+    if not re.fullmatch(r'[0-9a-f]{40}', catalog):
+        raise ValueError('Missing or invalid published catalog commit')
     return {
         'version': 2, 'repository': REPOSITORY, 'repositoryId': REPOSITORY_ID,
         'ref': environment['GITHUB_REF'], 'event': environment['GITHUB_EVENT_NAME'],
-        'sourceCommit': source, 'workflowRef': workflow_ref, 'catalogCommit': CATALOG_COMMIT,
+        'sourceCommit': source, 'workflowRef': workflow_ref, 'catalogCommit': catalog,
         'run': environment['GITHUB_RUN_ID'], 'attempt': environment['GITHUB_RUN_ATTEMPT'],
     }
 
@@ -165,8 +169,8 @@ def gather(get, end, days, catalog_ids, *, coverage=None):
     return sorted(ids)
 
 
-def pinned_catalog_app_ids():
-    catalog = OfflineCatalog(ROOT, CATALOG_COMMIT)
+def pinned_catalog_app_ids(commit=CATALOG_COMMIT):
+    catalog = OfflineCatalog(ROOT, commit)
     return catalog.app_ids(catalog.partition(True)['Applications'], catalog.partition(False)['Applications'])
 
 
@@ -178,7 +182,7 @@ def collect_envelope(environment, get, known=None, *, end=None, coverage=None):
     days = run_scope(environment)
     identity = handoff_identity(environment)
     if known is None:
-        known = pinned_catalog_app_ids()
+        known = pinned_catalog_app_ids(identity['catalogCommit'])
     end = end if end is not None else collection_end()
     ids = gather(get, end, days, known, coverage=coverage)
     envelope = identity | {'since': utc(end - timedelta(days=days)), 'until': utc(end),

@@ -9,14 +9,14 @@ from urllib.parse import parse_qs, urlsplit
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'examples' / 'signin-review'))
 import candidate_metadata as meta
-from collect import GRAPH_EVENTS, REPOSITORY, REPOSITORY_ID, WORKFLOW_REF, handoff_identity
+from collect import CATALOG_COMMIT, GRAPH_EVENTS, REPOSITORY, REPOSITORY_ID, WORKFLOW_REF, handoff_identity
 import report
 import review_ci
 
 APP = '33333333-3333-4333-8333-333333333333'
 TENANT = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 ENV = {'GITHUB_REPOSITORY': REPOSITORY, 'GITHUB_REPOSITORY_ID': REPOSITORY_ID, 'GITHUB_REF': 'refs/heads/main',
-       'GITHUB_WORKFLOW_REF': WORKFLOW_REF, 'GITHUB_SHA': 'e' * 40, 'GITHUB_RUN_ID': '17',
+       'GITHUB_WORKFLOW_REF': WORKFLOW_REF, 'TF_CATALOG_TIP': CATALOG_COMMIT, 'GITHUB_SHA': 'e' * 40, 'GITHUB_RUN_ID': '17',
        'GITHUB_RUN_ATTEMPT': '2', 'GITHUB_EVENT_NAME': 'workflow_dispatch',
        'TF_REVIEW_ISSUE': '57', 'TF_REVIEW_ISSUE_NODE': 'I_synthetic'}
 
@@ -94,6 +94,7 @@ class SignInMetadataTests(unittest.TestCase):
             path = Path(tmp) / 'output'
             get = Mock(side_effect=review_ci.HTTPFailure(503))
             with (patch.object(review_ci, 'graph_reader', return_value=get),
+                  patch.object(review_ci, 'pinned_catalog_app_ids', return_value=set()),
                   patch.object(review_ci, 'collect_envelope', return_value=raw())):
                 with self.assertRaises(review_ci.HTTPFailure):
                     review_ci.collect_job(ENV | {'TF_AUDIT_TENANT_ID': TENANT, 'GITHUB_OUTPUT': str(path)})

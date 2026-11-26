@@ -22,7 +22,7 @@ WORKLOAD = {
 ENV = WORKLOAD | {
     'GITHUB_REPOSITORY': collect.REPOSITORY, 'GITHUB_REPOSITORY_ID': collect.REPOSITORY_ID,
     'GITHUB_REF': 'refs/heads/main', 'GITHUB_EVENT_NAME': 'workflow_dispatch',
-    'GITHUB_WORKFLOW_REF': collect.WORKFLOW_REF, 'GITHUB_SHA': 'e' * 40,
+    'GITHUB_WORKFLOW_REF': collect.WORKFLOW_REF, 'TF_CATALOG_TIP': collect.CATALOG_COMMIT, 'GITHUB_SHA': 'e' * 40,
     'GITHUB_RUN_ID': '17', 'GITHUB_RUN_ATTEMPT': '2', 'TF_HANDOFF_RECIPIENT': 'unused-on-failure',
 }
 NEXT = 'https://graph.microsoft.com/beta/auditLogs/signIns?$skiptoken=fixture'
@@ -117,7 +117,7 @@ class NoRedirectTests(unittest.TestCase):
         issue = Mock()
         with patch.object(review_ci, 'open_envelope') as decrypt:
             with self.assertRaisesRegex(ValueError, 'Noncanonical'):
-                writer = {key: value for key, value in ENV.items() if key.startswith('GITHUB_')}
+                writer = {key: value for key, value in ENV.items() if key.startswith('GITHUB_') or key == 'TF_CATALOG_TIP'}
                 review_ci.report_job(writer | {'TF_HANDOFF_CIPHERTEXT': 'Zh=='}, 'unused', issue)
             decrypt.assert_not_called()
         issue.assert_not_called()

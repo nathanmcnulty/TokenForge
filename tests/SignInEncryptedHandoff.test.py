@@ -15,7 +15,7 @@ APP = '33333333-3333-4333-8333-333333333333'
 ENV = {'GITHUB_REPOSITORY': 'nathanmcnulty/TokenForge', 'GITHUB_REPOSITORY_ID': '1402673320',
        'GITHUB_REF': 'refs/heads/main', 'GITHUB_EVENT_NAME': 'schedule',
        'GITHUB_RUN_ID': '17', 'GITHUB_RUN_ATTEMPT': '2',
-       'GITHUB_SHA': 'e' * 40, 'GITHUB_WORKFLOW_REF': collect.WORKFLOW_REF}
+       'GITHUB_SHA': 'e' * 40, 'GITHUB_WORKFLOW_REF': collect.WORKFLOW_REF, 'TF_CATALOG_TIP': collect.CATALOG_COMMIT}
 
 
 def pair():

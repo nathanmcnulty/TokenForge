@@ -65,10 +65,17 @@ class ActivationCandidateTests(unittest.TestCase):
         self.assertIn("needs.collect.result == 'success'", writer['if'])
         self.assertEqual(reader['outputs'], {'ciphertext': '${{ steps.collect.outputs.ciphertext }}'})
         fetches = [line.split() for line in reader['steps'][-1]['run'].splitlines()
-                   if line.startswith('git fetch ')]
-        self.assertEqual(fetches, [['git', 'fetch', '--quiet', '--no-tags', '--depth=1',
-                                    'https://github.com/nathanmcnulty/TokenForge.git', CATALOG_COMMIT]])
+                   if line.lstrip().startswith('git fetch ')]
+        self.assertEqual(fetches, [
+            ['git', 'fetch', '--quiet', '--no-tags', '--depth=1',
+             'https://github.com/nathanmcnulty/TokenForge.git', ref]
+            for ref in (CATALOG_COMMIT, 'refs/heads/discovery-data')
+        ])
         self.assertNotIn('GH_TOKEN', reader['steps'][-1]['env'])
+        self.assertNotIn('GH_TOKEN', writer['steps'][0]['env'])
+        self.assertEqual(writer['steps'][-1]['env']['TF_CATALOG_TIP'], '${{ steps.source.outputs.catalog-tip }}')
+        self.assertIn('ls-remote --exit-code https://github.com/nathanmcnulty/TokenForge.git refs/heads/discovery-data',
+                      writer['steps'][0]['run'])
         self.assertTrue(all('uses' not in step for step in writer['steps']))
         self.assertEqual(writer['steps'][-1]['env']['TF_HANDOFF_CIPHERTEXT'], '${{ needs.collect.outputs.ciphertext }}')
         self.assertEqual(writer['steps'][-1]['env']['TF_HANDOFF_IDENTITY'], '${{ secrets.TOKENFORGE_AGE_IDENTITY }}')
@@ -76,42 +83,29 @@ class ActivationCandidateTests(unittest.TestCase):
         self.assertNotIn('TOKENFORGE_AUDIT_', str(writer))
         self.assertTrue(all('artifact' not in str(job) for job in (reader, writer)))
 
-    def test_combined_mode_is_inert_and_changes_only_review_routing(self):
-        active = yaml.safe_load((ROOT / '.github/workflows/signin-review-candidates.yml').read_bytes())
-        draft = yaml.safe_load((SOURCE / 'activation.yml').read_bytes())
-        current_mode = active['on']['workflow_dispatch']['inputs']['mode']
-        draft_mode = draft['on']['workflow_dispatch']['inputs']['mode']
-        self.assertEqual(current_mode['options'], ['sign-in', 'directory-validation'])
-        self.assertEqual(draft_mode['options'], [*current_mode['options'], 'sign-in-and-directory'])
-        self.assertEqual(draft_mode['default'], current_mode['default'])
-        draft_mode.update(current_mode)
+    def test_combined_mode_routes_only_the_matching_reader_and_writer(self):
+        workflow = yaml.safe_load((ROOT / '.github/workflows/signin-review-candidates.yml').read_bytes())
+        self.assertEqual(workflow, yaml.safe_load((SOURCE / 'activation.yml').read_bytes()))
         for key in ('collect', 'issue'):
-            current = active['jobs'][key]
-            proposed = draft['jobs'][key]
-            self.assertEqual(
-                proposed['if'], current['if'].replace("inputs.mode == 'sign-in'",
-                                                      "(inputs.mode == 'sign-in' || inputs.mode == 'sign-in-and-directory')"))
-            proposed['if'] = current['if']
-            step = proposed['steps'][-1]
-            self.assertEqual(step['env'].pop('TF_REVIEW_MODE'), '${{ inputs.mode }}')
-            run = current['steps'][-1]['run'].splitlines(keepends=True)
-            preamble = ''.join(run[:-1])
-            self.assertTrue(step['run'].startswith(preamble + 'case '))
+            job = workflow['jobs'][key]
+            self.assertIn("inputs.mode == 'sign-in-and-directory'", job['if'])
+            self.assertIn("github.ref == 'refs/heads/main'", job['if'])
+            step = job['steps'][-1]
+            self.assertEqual(step['env']['TF_REVIEW_MODE'], '${{ inputs.mode }}')
             with TemporaryDirectory() as folder:
                 (Path(folder) / 'tokenforge-public-source').mkdir()
                 for mode, command in (('sign-in', key), ('sign-in-and-directory', key + '-directory'),
                                       ('directory-validation', None), ('unknown', None)):
-                    script = r"""git() { :; }
-python3() { printf '%s\n' "$*"; }
+                    script = r"""git() { if [[ "$1" == 'rev-parse' ]]; then printf 'fixture-tip'; fi; }
+python3() { printf '%s:%s\n' "${TF_CATALOG_TIP:-}" "$*"; }
 """ + step['run']
                     result = subprocess.run(['bash', '-c', script], cwd=folder,
                                             env=os.environ | {'RUNNER_TEMP': folder, 'TF_REVIEW_MODE': mode},
                                             capture_output=True, text=True, timeout=10, check=False)
+                    tip = 'fixture-tip' if key == 'collect' and mode == 'sign-in-and-directory' else ''
                     self.assertEqual((result.returncode, result.stdout, result.stderr),
-                                     (0, f'-B examples/signin-review/review_ci.py {command}\n', '') if command
+                                     (0, f'{tip}:-B examples/signin-review/review_ci.py {command}\n', '') if command
                                      else (2, '', ''))
-            step['run'] = current['steps'][-1]['run']
-        self.assertEqual(draft, active)
 
     def test_catalog_pin_excludes_promoted_ids_and_rejects_the_previous_handoff(self):
         def get(url):

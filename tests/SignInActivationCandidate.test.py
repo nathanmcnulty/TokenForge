@@ -23,7 +23,7 @@ import review_ci
 KNOWN = '22222222-2222-4222-8222-222222222222'
 APP = '33333333-3333-4333-8333-333333333333'
 PROMOTED = '44444444-4444-4444-8444-444444444444'
-PREVIOUS_CATALOG = '2aeeac91928d6147a93b56adf6302b157cc5c3eb'
+PREVIOUS_CATALOG = '8bdce9ca411c340284c4df76d70924365db6ae14'
 TENANT = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 LABELS = ['sign-in', 'audience unknown', 'publisher unknown']
 ENV = {

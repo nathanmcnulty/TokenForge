@@ -49,7 +49,7 @@ jobs:
           umask 077
           case "$TF_REVIEW_MODE" in
             sign-in)
-              git fetch --quiet --no-tags --depth=1 https://github.com/nathanmcnulty/TokenForge.git 2aeeac91928d6147a93b56adf6302b157cc5c3eb
+              git fetch --quiet --no-tags --depth=1 https://github.com/nathanmcnulty/TokenForge.git 8bdce9ca411c340284c4df76d70924365db6ae14
               python3 -B examples/signin-review/review_ci.py collect
               ;;
             sign-in-and-directory)
@@ -139,5 +139,5 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
-          git fetch --quiet --no-tags --depth=1 https://github.com/nathanmcnulty/TokenForge.git 2aeeac91928d6147a93b56adf6302b157cc5c3eb
+          git fetch --quiet --no-tags --depth=1 https://github.com/nathanmcnulty/TokenForge.git 8bdce9ca411c340284c4df76d70924365db6ae14
           python3 -B examples/signin-review/validate_directory.py

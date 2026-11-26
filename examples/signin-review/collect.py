@@ -18,7 +18,7 @@ GRAPH_EVENTS = EVENTS + ('servicePrincipal', 'managedIdentity')
 MODES = {'workflow_dispatch': 30, 'schedule': 2}
 REPOSITORY = 'nathanmcnulty/TokenForge'
 REPOSITORY_ID = '1402673320'
-CATALOG_COMMIT = '2aeeac91928d6147a93b56adf6302b157cc5c3eb'
+CATALOG_COMMIT = '8bdce9ca411c340284c4df76d70924365db6ae14'
 WORKFLOW_REF = f'{REPOSITORY}/.github/workflows/signin-review-candidates.yml@refs/heads/main'
 MAX_IDS = 1000
 

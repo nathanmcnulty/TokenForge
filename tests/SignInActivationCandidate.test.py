@@ -29,7 +29,7 @@ LABELS = ['sign-in', 'audience unknown', 'publisher unknown']
 ENV = {
     'GITHUB_REPOSITORY': 'nathanmcnulty/TokenForge', 'GITHUB_REPOSITORY_ID': '1402673320',
     'GITHUB_REF': 'refs/heads/main', 'GITHUB_EVENT_NAME': 'workflow_dispatch',
-    'GITHUB_WORKFLOW_REF': WORKFLOW_REF, 'GITHUB_SHA': 'e' * 40, 'GITHUB_RUN_ID': '17', 'GITHUB_RUN_ATTEMPT': '2',
+    'GITHUB_WORKFLOW_REF': WORKFLOW_REF, 'TF_CATALOG_TIP': CATALOG_COMMIT, 'GITHUB_SHA': 'e' * 40, 'GITHUB_RUN_ID': '17', 'GITHUB_RUN_ATTEMPT': '2',
 }
 
 
@@ -65,12 +65,11 @@ class ActivationCandidateTests(unittest.TestCase):
         self.assertIn("needs.collect.result == 'success'", writer['if'])
         self.assertEqual(reader['outputs'], {'ciphertext': '${{ steps.collect.outputs.ciphertext }}'})
         fetches = [line.split() for line in reader['steps'][-1]['run'].splitlines()
-                   if line.lstrip().startswith('git fetch ')]
-        self.assertEqual(fetches, [
-            ['git', 'fetch', '--quiet', '--no-tags', '--depth=1',
-             'https://github.com/nathanmcnulty/TokenForge.git', ref]
-            for ref in (CATALOG_COMMIT, 'refs/heads/discovery-data')
-        ])
+                   if ' fetch ' in line]
+        self.assertEqual(fetches, [[
+            'git', '-c', 'credential.helper=', 'fetch', '--quiet', '--no-tags', '--depth=1',
+            'https://github.com/nathanmcnulty/TokenForge.git', 'refs/heads/discovery-data',
+        ]])
         self.assertNotIn('GH_TOKEN', reader['steps'][-1]['env'])
         self.assertNotIn('GH_TOKEN', writer['steps'][0]['env'])
         self.assertEqual(writer['steps'][-1]['env']['TF_CATALOG_TIP'], '${{ steps.source.outputs.catalog-tip }}')
@@ -82,6 +81,38 @@ class ActivationCandidateTests(unittest.TestCase):
         self.assertNotIn('TF_HANDOFF_IDENTITY', reader['steps'][-1]['env'])
         self.assertNotIn('TOKENFORGE_AUDIT_', str(writer))
         self.assertTrue(all('artifact' not in str(job) for job in (reader, writer)))
+
+    def test_writer_source_only_accepts_one_exact_catalog_ref(self):
+        workflow = yaml.safe_load((SOURCE / 'activation.yml').read_text())
+        step = workflow['jobs']['issue']['steps'][0]
+        script = r"""git() {
+  case "$*" in
+    'rev-parse FETCH_HEAD') printf '%s\n' "$GITHUB_SHA" ;;
+    *' ls-remote --exit-code '*)
+      printf '%s\n' "$FIXTURE_CATALOG_REF"
+      return "$FIXTURE_GIT_EXIT"
+      ;;
+  esac
+}
+bash() { test "$*" = 'examples/signin-review/install-proof-age.sh'; }
+""" + step['run']
+        tip = 'b' * 40
+        good = f'{tip}\trefs/heads/discovery-data'
+        cases = ((good, 0, True), (good, 1, False), ('', 0, False),
+                 (f'{tip}\trefs/heads/main', 0, False),
+                 (f'{tip[:-1]}Z\trefs/heads/discovery-data', 0, False),
+                 (f'{good}\n{good}', 0, False))
+        for response, git_exit, accepted in cases:
+            with self.subTest(response=response, git_exit=git_exit), TemporaryDirectory() as folder:
+                output = Path(folder) / 'github-output'
+                env = os.environ | {'GITHUB_SHA': ENV['GITHUB_SHA'], 'RUNNER_TEMP': folder,
+                                    'GITHUB_OUTPUT': str(output), 'FIXTURE_CATALOG_REF': response,
+                                    'FIXTURE_GIT_EXIT': str(git_exit)}
+                result = subprocess.run(['bash', '-c', script], env=env, capture_output=True, timeout=10, check=False)
+                self.assertEqual(result.returncode == 0, accepted)
+                self.assertEqual(output.exists(), accepted)
+                if accepted:
+                    self.assertEqual(output.read_text(), f'catalog-tip={tip}\n')
 
     def test_combined_mode_routes_only_the_matching_reader_and_writer(self):
         workflow = yaml.safe_load((ROOT / '.github/workflows/signin-review-candidates.yml').read_bytes())
@@ -102,12 +133,12 @@ python3() { printf '%s:%s\n' "${TF_CATALOG_TIP:-}" "$*"; }
                     result = subprocess.run(['bash', '-c', script], cwd=folder,
                                             env=os.environ | {'RUNNER_TEMP': folder, 'TF_REVIEW_MODE': mode},
                                             capture_output=True, text=True, timeout=10, check=False)
-                    tip = 'fixture-tip' if key == 'collect' and mode == 'sign-in-and-directory' else ''
+                    tip = 'fixture-tip' if key == 'collect' else ''
                     self.assertEqual((result.returncode, result.stdout, result.stderr),
                                      (0, f'{tip}:-B examples/signin-review/review_ci.py {command}\n', '') if command
                                      else (2, '', ''))
 
-    def test_catalog_pin_excludes_promoted_ids_and_rejects_the_previous_handoff(self):
+    def test_current_catalog_excludes_promoted_ids_and_rejects_a_previous_handoff(self):
         def get(url):
             predicate = parse_qs(urlsplit(url).query)['$filter'][0]
             if ("createdDateTime ge 2026-01-01T00:00:00Z" in predicate
@@ -117,20 +148,22 @@ python3() { printf '%s:%s\n' "${TF_CATALOG_TIP:-}" "$*"; }
                                   for app in (PROMOTED, KNOWN, APP)]}
             return {'value': []}
 
+        current_tip = 'b' * 40
+        env = ENV | {'TF_CATALOG_TIP': current_tip}
         catalog = Mock()
         catalog.partition.side_effect = [{'Applications': {PROMOTED: {}}}, {'Applications': {KNOWN: {}}}]
         catalog.app_ids = collector.OfflineCatalog.app_ids
         with (patch.object(collector, 'OfflineCatalog', return_value=catalog) as load,
               patch.object(collector, 'datetime', wraps=datetime) as clock):
             clock.now.return_value = datetime.fromisoformat('2026-01-31T00:00:00Z')
-            raw = collector.collect_envelope(ENV, get)
-        load.assert_called_once_with(collector.ROOT, CATALOG_COMMIT)
+            raw = collector.collect_envelope(env, get)
+        load.assert_called_once_with(collector.ROOT, current_tip)
         candidate = json.loads(raw)
-        self.assertEqual(candidate['catalogCommit'], CATALOG_COMMIT)
-        self.assertEqual(validate_handoff(raw, ENV, categories=GRAPH_EVENTS), {APP})
+        self.assertEqual(candidate['catalogCommit'], current_tip)
+        self.assertEqual(validate_handoff(raw, env, categories=GRAPH_EVENTS), {APP})
         with self.assertRaises(ValueError):
             validate_handoff(json.dumps(candidate | {'catalogCommit': PREVIOUS_CATALOG}).encode(),
-                             ENV, categories=GRAPH_EVENTS)
+                             env, categories=GRAPH_EVENTS)
 
     def test_failed_cli_reports_only_a_fixed_message_without_a_handoff(self):
         from collect import IncompleteCategory
@@ -138,6 +171,7 @@ python3() { printf '%s:%s\n' "${TF_CATALOG_TIP:-}" "$*"; }
             output = Path(tmp) / 'github-output'
             env = ENV | {'GITHUB_OUTPUT': str(output)}
             with (patch.dict(os.environ, env, clear=True), patch.object(sys, 'argv', ['review_ci.py', 'collect']),
+                  patch('collect.pinned_catalog_app_ids', return_value=set()),
                   patch('workload_http.graph_reader', side_effect=IncompleteCategory(
                       'Graph coverage incomplete for servicePrincipal (HTTP 403). synthetic-private-canary'))):
                 with self.assertRaises(SystemExit) as result:
@@ -151,11 +185,13 @@ python3() { printf '%s:%s\n' "${TF_CATALOG_TIP:-}" "$*"; }
             read = ENV | {'GITHUB_OUTPUT': str(output), 'TF_HANDOFF_RECIPIENT': self.recipient, 'TF_AUDIT_TENANT_ID': TENANT}
             get = Mock(side_effect=review_ci.HTTPFailure(404))
             with (patch.object(review_ci, 'graph_reader', return_value=get) as auth,
+                  patch.object(review_ci, 'pinned_catalog_app_ids', return_value={KNOWN}) as load,
                   patch.object(review_ci, 'scan_directory') as directory,
                   patch.object(review_ci, 'collect_envelope', return_value=envelope([KNOWN, APP])) as collect):
                 review_ci.collect_job(read)
             auth.assert_called_once_with(read)
-            collect.assert_called_once_with(read, get)
+            load.assert_called_once_with(CATALOG_COMMIT)
+            collect.assert_called_once_with(read, get, {KNOWN})
             directory.assert_not_called()
             encoded = output.read_text().removeprefix('ciphertext=').strip()
             self.assertNotIn(APP, encoded)
@@ -171,7 +207,7 @@ python3() { printf '%s:%s\n' "${TF_CATALOG_TIP:-}" "$*"; }
         self.assertEqual(api.call_args_list[1].args,
                          ('--method', 'PATCH', 'repos/nathanmcnulty/TokenForge/issues/57', '--input', '-'))
         self.assertEqual(json.loads(api.call_args_list[1].kwargs['body']), {'body': updated['body']})
-        for delta in ({'GITHUB_RUN_ATTEMPT': '3'}, {'ACTIONS_ID_TOKEN_REQUEST_TOKEN': 'not-live'},
+        for delta in ({'GITHUB_RUN_ATTEMPT': '3'}, {'TF_CATALOG_TIP': 'b' * 40}, {'ACTIONS_ID_TOKEN_REQUEST_TOKEN': 'not-live'},
                       {'TF_AUDIT_CLIENT_ID': 'not-live'}):
             rejected = Mock()
             with self.assertRaises(ValueError):

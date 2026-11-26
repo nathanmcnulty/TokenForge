@@ -22,7 +22,7 @@ import review_ci
 
 TENANT = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 ENV = {'GITHUB_REPOSITORY': REPOSITORY, 'GITHUB_REPOSITORY_ID': REPOSITORY_ID, 'GITHUB_REF': 'refs/heads/main',
-       'GITHUB_WORKFLOW_REF': WORKFLOW_REF, 'GITHUB_SHA': 'e'*40, 'GITHUB_RUN_ID': '17',
+       'GITHUB_WORKFLOW_REF': WORKFLOW_REF, 'TF_CATALOG_TIP': CATALOG_COMMIT, 'GITHUB_SHA': 'e'*40, 'GITHUB_RUN_ID': '17',
        'GITHUB_RUN_ATTEMPT': '2', 'GITHUB_EVENT_NAME': 'workflow_dispatch', 'TF_AUDIT_TENANT_ID': TENANT}
 END = datetime(2026, 1, 31, tzinfo=timezone.utc)
 VERIFIED = '11111111-1111-4111-8111-111111111111'
@@ -142,7 +142,7 @@ class DirectoryHostedHandoffTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 validate_handoff(json.dumps(changed).encode(), ENV, categories=GRAPH_EVENTS, labeled=True, directory=True)
 
-        writer = {k: v for k, v in ENV.items() if k.startswith('GITHUB_')}
+        writer = {k: v for k, v in ENV.items() if k.startswith('GITHUB_') or k == 'TF_CATALOG_TIP'}
         writer.update(TF_HANDOFF_CIPHERTEXT=encoded, TF_REVIEW_ISSUE='151', TF_REVIEW_ISSUE_NODE='I_fixture151')
         prior_labels = ['sign-in', 'audience unknown', 'publisher unknown']
         initial = {'number': 151, 'node_id': 'I_fixture151', 'state': 'open', 'user': {'id': OWNER_ID},
@@ -153,6 +153,11 @@ class DirectoryHostedHandoffTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             review_ci.report_job(writer, self.private, rejected)
         rejected.assert_not_called()
+
+        stale = Mock()
+        with self.assertRaisesRegex(review_ci.CatalogMismatch, 'does not match the current published catalog'):
+            review_ci.report_job(writer | {'TF_CATALOG_TIP': 'b' * 40}, self.private, stale, directory=True)
+        stale.assert_not_called()
 
         api = Mock(side_effect=[initial, updated, updated])
         review_ci.report_job(writer, self.private, api, directory=True)
@@ -352,17 +357,21 @@ with (patch.object(http.client.HTTPConnection, 'connect', side_effect=AssertionE
                     else:
                         reader.assert_not_called()
 
-    def test_combined_cli_refuses_a_stale_catalog_before_authentication_or_issue_update(self):
+    def test_combined_cli_requires_a_catalog_commit_before_authentication_or_issue_update(self):
         entry = ROOT / 'examples' / 'signin-review' / 'review_ci.py'
         for command in ('collect-directory', 'issue-directory'):
-            with (patch.dict(os.environ, ENV | {'TF_CATALOG_TIP': '1' * 40}, clear=True),
-                  patch.object(sys, 'argv', [str(entry), command]),
-                  patch('workload_http.graph_reader') as reader,
-                  patch('report.report') as writer):
-                with self.assertRaisesRegex(SystemExit, 'Published catalog does not match'):
-                    runpy.run_path(str(entry), run_name='__main__')
-            reader.assert_not_called()
-            writer.assert_not_called()
+            for tip in ('', 'not-a-commit'):
+                env = ENV | {'TF_CATALOG_TIP': tip}
+                if command == 'issue-directory':
+                    env['TF_HANDOFF_IDENTITY'] = 'fixture'
+                with (patch.dict(os.environ, env, clear=True),
+                      patch.object(sys, 'argv', [str(entry), command]),
+                      patch('workload_http.graph_reader') as reader,
+                      patch('report.report') as writer):
+                    with self.assertRaisesRegex(SystemExit, 'Sign-in candidate review stopped'):
+                        runpy.run_path(str(entry), run_name='__main__')
+                reader.assert_not_called()
+                writer.assert_not_called()
 
     def test_combined_summary_marks_empty_unresolved_incomplete_and_unattempted_windows(self):
         def get(url):

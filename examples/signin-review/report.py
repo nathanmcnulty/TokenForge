@@ -12,6 +12,10 @@ ISSUE_MARKER = '<!-- tokenforge-signin-review:v2 -->'
 LABELED_MARKER = '<!-- tokenforge-signin-review:v3 -->'
 
 
+class CatalogMismatch(ValueError):
+    pass
+
+
 def valid_ids(ids):
     if (not isinstance(ids, list) or len(ids) > MAX_IDS or
             any(not app_id_is_canonical(app) for app in ids) or ids != sorted(set(ids))):
@@ -38,11 +42,14 @@ def validate_handoff(raw, env, *, workflow_ref=WORKFLOW_REF, categories=EVENTS, 
         keys.add('directoryCoverage')
     if not isinstance(value, dict) or value.keys() != keys:
         raise ValueError('Unexpected handoff shape')
-    if (type(value['version']) is not int or any(value[k] != v for k, v in expected.items()) or
+    if (type(value['version']) is not int or
+            any(value[k] != v for k, v in expected.items() if k != 'catalogCommit') or
             value['categories'] != list(categories) or
             value['coverage'] != 'requested-windows-terminal;retention-unknown' or
             utc(value['until']) - utc(value['since']) != timedelta(days=days)):
         raise ValueError('Unexpected handoff evidence')
+    if value['catalogCommit'] != expected['catalogCommit']:
+        raise CatalogMismatch('The handoff catalog does not match the current published catalog.')
     if directory:
         coverage = value['directoryCoverage']
         expected_windows = list(intervals(utc(value['until']), days))

@@ -41,6 +41,9 @@ jobs:
         name: Read requested Graph audit windows
         env:
           TF_REVIEW_MODE: ${{ inputs.mode }}
+          GIT_TERMINAL_PROMPT: '0'
+          GIT_CONFIG_NOSYSTEM: '1'
+          GIT_CONFIG_GLOBAL: /dev/null
           TF_AUDIT_CLIENT_ID: ${{ secrets.TOKENFORGE_AUDIT_CLIENT_ID }}
           TF_AUDIT_TENANT_ID: ${{ secrets.TOKENFORGE_AUDIT_TENANT_ID }}
           TF_HANDOFF_RECIPIENT: ${{ vars.TOKENFORGE_AGE_RECIPIENT }}
@@ -48,16 +51,13 @@ jobs:
           set -euo pipefail
           umask 077
           case "$TF_REVIEW_MODE" in
-            sign-in)
-              git fetch --quiet --no-tags --depth=1 https://github.com/nathanmcnulty/TokenForge.git ec3d72d75241c69bb9ca46528b32a1e7fd2a0b62
-              python3 -B examples/signin-review/review_ci.py collect
-              ;;
-            sign-in-and-directory)
-              git fetch --quiet --no-tags --depth=1 https://github.com/nathanmcnulty/TokenForge.git refs/heads/discovery-data
-              TF_CATALOG_TIP="$(git rev-parse --verify FETCH_HEAD)" python3 -B examples/signin-review/review_ci.py collect-directory
-              ;;
+            sign-in) command=collect ;;
+            sign-in-and-directory) command=collect-directory ;;
             *) exit 2 ;;
           esac
+          git -c credential.helper= fetch --quiet --no-tags --depth=1 https://github.com/nathanmcnulty/TokenForge.git refs/heads/discovery-data
+          catalog="$(git rev-parse --verify FETCH_HEAD)"
+          TF_CATALOG_TIP="$catalog" python3 -B examples/signin-review/review_ci.py "$command"
 
   issue:
     needs: collect
@@ -76,7 +76,6 @@ jobs:
       - name: Read exact public workflow source and catalog tip
         id: source
         env:
-          TF_REVIEW_MODE: ${{ inputs.mode }}
           GIT_TERMINAL_PROMPT: '0'
           GIT_CONFIG_NOSYSTEM: '1'
           GIT_CONFIG_GLOBAL: /dev/null
@@ -91,11 +90,9 @@ jobs:
           test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
           git checkout --quiet --detach FETCH_HEAD
           bash examples/signin-review/install-proof-age.sh
-          if [[ "$TF_REVIEW_MODE" == 'sign-in-and-directory' ]]; then
-            catalog_tip="$(git -c credential.helper= ls-remote --exit-code https://github.com/nathanmcnulty/TokenForge.git refs/heads/discovery-data)"
-            [[ "$catalog_tip" =~ ^([0-9a-f]{40})$'\t'refs/heads/discovery-data$ ]]
-            printf 'catalog-tip=%s\n' "${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
-          fi
+          catalog_tip="$(git -c credential.helper= ls-remote --exit-code https://github.com/nathanmcnulty/TokenForge.git refs/heads/discovery-data)"
+          [[ "$catalog_tip" =~ ^([0-9a-f]{40})$'\t'refs/heads/discovery-data$ ]]
+          printf 'catalog-tip=%s\n' "${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
       - name: Update the configured review queue
         env:
           TF_REVIEW_MODE: ${{ inputs.mode }}

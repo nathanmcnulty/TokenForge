@@ -16,7 +16,8 @@ Validation on 2026-11-28 used Debian GNU/Linux 13.8 (trixie), kernel
 7.0.14-17-pve, x86_64, .NET SDK 10.0.401, .NET runtime packs 10.0.12,
 PowerShell 7.6.6 and Pester 6.2.0. The archive and manifests are retained
 locally under `/tmp/tokenforge-m4-build`. The hashes identify the locally
-built candidate. Independent review of its provenance is pending.
+built candidate. See the [independent reproduction receipt](m4-linux-x64-reproduction.md)
+for the rebuild and repeated capability checks.
 
 | Item | SHA-256 |
 | --- | --- |
@@ -166,5 +167,5 @@ Live sign-in, consent, issuance, API acceptance, browser and passkey
 behavior, and vault persistence are untested for this package. The
 qualification covers Debian 13.8 x64 on the tested host. Other Linux
 environments, architectures and operating systems remain unqualified.
-Published-archive provenance and independent reproduction remain pending.
+Published-archive provenance remains untested.
 Discovery and hosted validation were outside this milestone.

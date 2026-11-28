@@ -35,7 +35,7 @@ Acceptance criteria
 
 ### B1 · Measure discovery coverage
 
-Build a deterministic offline report from pinned partitions, upstream captures, and retained review receipts. Measure distinct IDs, overlap and unique contributions by source, review dispositions, and gaps in ownership and tenancy evidence.
+Build a [deterministic offline report](discovery-coverage.md) from pinned partitions, upstream captures, and retained review receipts. Measure distinct IDs, overlap and unique contributions by source, review dispositions, and gaps in ownership and tenancy evidence.
 
 Acceptance criteria
 

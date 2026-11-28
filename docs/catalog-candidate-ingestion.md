@@ -17,6 +17,41 @@ Matching file revisions skip capture and projection. A different revision requir
 
 The deterministic receipt identifies only previously unknown IDs and per-source claim differences for known IDs. Multiple sources for the same new ID are combined, and all additions are pending. Exit code 2 means at least one source was unavailable, conflicting or unvalidated. A complete receipt describes the supplied observations, including any source-level revision changes.
 
+## Hand public changes to candidate review
+
+Use the previous published snapshot as the baseline and supply newer retained captures with their observation stamps. Add `--review` to produce a review handoff alongside the existing delta. This example uses the post-review snapshot pinned by [B1](discovery-coverage.md).
+
+```bash
+python3 -B scripts/Diff-TokenForgePublicCatalog.py \
+  --baseline-repo /path/to/local/catalog-repo \
+  --baseline-commit ec3d72d75241c69bb9ca46528b32a1e7fd2a0b62 \
+  --observations /path/to/observations.json --captures /path/to/captures \
+  --native /path/to/reviewed-package/tokenforge --review > replay.json
+```
+
+The handoff emits at most one item per exact AppId, with all new evidence for that case. Each evidence entry supplies the source URL, previous and current revision and capture hashes, check time, and before and after claims. The reason identifies an AppId absent from both partitions, a source claim added or removed for a known AppId, or a change to existing claims. A verified catalog entry can receive a claim-review item.
+
+Use the item in the [attended exact-AppId review](signin-review-provisioning-plan.md#combined-review). `Open` starts a case, `Update` adds evidence to a pending case, and `Reopen` adds evidence to an unresolved case. For B1's post-review pin, a first run without prior state seeds the 13 issue #151 cases without exact ownership receipts. Their issue number is retained so new evidence goes to the existing case. B1 could identify one managed identity only at aggregate level, so all 13 remain eligible for exact review.
+
+Archive the replay receipt for provenance. Once the handoff is accepted, retain its `review.nextState` object in a separate JSON file and pass it with `--review-state` on subsequent runs, including when the catalog pin advances. Use one accepted state at a time. An operator can record a case as `Unresolved` and attach its issue number in that file. Carry forward its evidence IDs. Previously seen source claim transitions are deduplicated even if capture revisions or check times differ. Each emitted item has disposition `Pending`. Verified promotion requires the existing exact-AppId Microsoft ownership evidence and separate review.
+
+A complete replay with no new evidence reports `reviewItemCount: 0`. A missing, invalid or timed-out capture yields exit code 2 with source statuses in `review.coverageGaps`. The review item count, items and next state are all JSON `null`; retain the previous state and retry once the gaps are filled. A handled SIGINT or SIGTERM during source comparison marks the comparison interrupted. If the process is killed outright or the receipt cannot be read as complete JSON, retain the previous state and rerun. The coverage receipt describes the supplied inputs. Upstream revision authenticity and global application coverage remain unknown.
+
+### B2 local verification
+
+Run from the TokenForge checkout on Linux x64 with the B1 capture directory and catalog Git objects available. The verification used the published `public-health-e2e-1d6617e` Linux package (archive SHA-256 `3e396f3486b9671ba5a71b6afd53a0e7a869fcb466e428beea30df596923446f`) and PowerShell 7.6.7.
+
+```bash
+export PATH="/tmp/tokenforge-b2-validation/powershell:$PATH"
+export TOKENFORGE_TEST_NATIVE=/tmp/tokenforge-b2-validation/native/tokenforge
+export TOKENFORGE_B1_CAPTURES=/tmp/tokenforge-b1-public-captures
+python3 -B tests/CatalogCandidateImport.test.py -v
+python3 -B tests/DiscoveryCoverage.test.py -v
+git diff --check
+```
+
+Observed 18 candidate-import and six discovery-coverage passes, with zero skips or failures. The B1-pinned replay returned zero items for unchanged stamps. A synthetic newer resources capture derived from the retained B1 bytes produced three items across two new-to-catalog AppIds and one changed claim. One AppId reopened the existing issue #151 case. Replaying with accepted state produced zero items. A missing capture and a projector-triggered SIGTERM each exited 2 with coverage gaps and unknown review counts. The synthetic capture establishes replay behavior. Current upstream revisions, provider coverage and ownership for unresolved candidates still require separate evidence.
+
 ## Replay local Entra sign-in data
 
 ```powershell

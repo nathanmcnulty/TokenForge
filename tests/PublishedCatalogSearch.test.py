@@ -28,7 +28,7 @@ def search(snapshot, *options):
     return json.loads(run(snapshot, "search", *options))
 
 
-def fixture(snapshot, *claim_grants):
+def fixture(snapshot, *claim_grants, owner_outside=True):
     claims = [
         {"SourceName": f"fixture-{i}", "Name": f"Sample {i}", "Grants": [
             {"ResourceId": resource, "Scopes": scopes} for resource, scopes in grants
@@ -42,8 +42,9 @@ def fixture(snapshot, *claim_grants):
     evidence = {
         "EvidenceSource": "fixture exact lookup",
         "ObservedAtUtc": "2026-11-22",
-        "OwnerOutsideTargetTenant": True,
     }
+    if owner_outside is not ...:
+        evidence["OwnerOutsideTargetTenant"] = owner_outside
     for (file, (kind, version)), applications in zip(FILES.items(), [
         {APP: {"AppId": APP, "Records": {"Discovery///": record}}},
         {},
@@ -96,6 +97,22 @@ def check():
         assert search(snapshot, "--include-non-verified", "--tenancy-evidence", "unknown")["Count"] == 3434
         assert search(snapshot, "--tenancy-evidence", "owner-outside-target-tenant")["Count"] == 2066
 
+        negative_tenancy = ["--tenancy-evidence", "owner-not-outside-target-tenant"]
+        assert search(snapshot, "--include-non-verified", *negative_tenancy)["Count"] == 0
+
+        fixture(snapshot, owner_outside=False)
+        negative, = search(snapshot, *negative_tenancy)["Applications"]
+        assert negative["VerificationEvidence"]["OwnerOutsideTargetTenant"] is False
+        assert negative["UnknownFields"] == ["SignInAudience"]
+        assert search(snapshot, "--tenancy-evidence", "owner-outside-target-tenant")["Count"] == 0
+        assert search(snapshot, "--tenancy-evidence", "unknown")["Count"] == 0
+
+        for unknown_value in (None, ...):
+            fixture(snapshot, owner_outside=unknown_value)
+            unknown, = search(snapshot, "--tenancy-evidence", "unknown")["Applications"]
+            assert "OwnerOutsideTargetTenant" in unknown["UnknownFields"]
+            assert search(snapshot, *negative_tenancy)["Count"] == 0
+
         filters = ["--resource", RESOURCE, "--scope", "Read", "--scope", "Write"]
         fixture(snapshot, [(RESOURCE, ["Read"])], [(RESOURCE, ["Write"])])
         assert search(snapshot, *filters)["Count"] == 0  # Two claims, same resource.
@@ -125,7 +142,8 @@ def check():
         assert search(snapshot, "--id", OTHER)["Count"] == 0
         assert search(snapshot, "--tenancy-evidence", "unknown")["Count"] == 0
     print("A1 passed: 2066 verified, 5500 total, 3434 unknown tenancy; exact detail, provenance, "
-          "byte-stable JSON round-trip, audience, conflicts, no-match and scope isolation.")
+          "explicit false vs. missing/null tenancy, byte-stable JSON round-trip, audience, "
+          "conflicts, no-match and scope isolation.")
 
 
 if __name__ == "__main__":

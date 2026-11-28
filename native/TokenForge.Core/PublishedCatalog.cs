@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace TokenForge.Core;
 
-public enum CatalogTenancyEvidence { OwnerOutsideTargetTenant, Unknown }
+public enum CatalogTenancyEvidence { OwnerOutsideTargetTenant, Unknown, OwnerNotOutsideTargetTenant }
 
 public sealed record PublishedCatalogQuery(Guid? AppId = null, string? Name = null,
     Guid? ResourceId = null, IReadOnlyList<string>? Scopes = null,
@@ -85,9 +85,14 @@ public sealed class PublishedCatalog
         {
             if (!candidate.Verified && !query.IncludeNonVerified)
                 continue;
-            bool outside = candidate.Evidence is JsonElement observation &&
-                Field(observation, "OwnerOutsideTargetTenant")?.ValueKind == JsonValueKind.True;
-            var tenancy = outside ? CatalogTenancyEvidence.OwnerOutsideTargetTenant : CatalogTenancyEvidence.Unknown;
+            var ownerOutside = candidate.Evidence is JsonElement observation
+                ? Field(observation, "OwnerOutsideTargetTenant") : null;
+            var tenancy = ownerOutside?.ValueKind switch
+            {
+                JsonValueKind.True => CatalogTenancyEvidence.OwnerOutsideTargetTenant,
+                JsonValueKind.False => CatalogTenancyEvidence.OwnerNotOutsideTargetTenant,
+                _ => CatalogTenancyEvidence.Unknown
+            };
             if (query.TenancyEvidence.HasValue && query.TenancyEvidence.Value != tenancy)
                 continue;
 
@@ -119,7 +124,7 @@ public sealed class PublishedCatalog
 
             // The published schema has no configured sign-in audience field.
             var unknown = new List<string> { "SignInAudience" };
-            if (!outside)
+            if (tenancy == CatalogTenancyEvidence.Unknown)
                 unknown.Add("OwnerOutsideTargetTenant");
             matches.Add(new PublishedCatalogMatch(candidate.Id, candidate.Verified ? "Verified" : "NonVerified",
                 candidate.Evidence, candidate.Disposition, candidate.Reason, metadata, unknown));

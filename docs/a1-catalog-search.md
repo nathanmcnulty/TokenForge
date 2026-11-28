@@ -26,7 +26,12 @@ lock file for the Linux-only framework-dependent configuration.
 ```sh
 DOTNET_CLI_HOME=/tmp/tokenforge-a1-dotnet DOTNET_NOLOGO=1 /tmp/tokenforge-a1-sdk.B8p4La/dotnet build native/TokenForge.Cli -c Release -r linux-x64 --no-restore -p:RuntimeIdentifiers=linux-x64 -p:SelfContained=false -p:PublishSingleFile=false -p:EnableRuntimePackDownload=false -p:UseSharedCompilation=false -m:1 -nr:false
 python3 tests/PublishedCatalogSearch.test.py /tmp/tokenforge-a1-sdk.B8p4La/dotnet native/TokenForge.Cli/bin/Release/net10.0/linux-x64/tokenforge.dll
+a1_index=$(mktemp -d)/index
+export GIT_INDEX_FILE="$a1_index"
+git read-tree db2191a887a6ddb50bb3bacad96f96fd6267b9d6
 git diff --check
+git diff --name-only
+unset GIT_INDEX_FILE
 ```
 
 - Build passed with zero warnings and zero errors. Source scope and fixtures
@@ -36,7 +41,10 @@ git diff --check
   checked exact-ID detail and partition parity, exact verification records,
   byte-stable JSON and parsed round-trip, unknown configured audience,
   conflicting metadata, no match, and grant isolation across claim rows
-  and resources.
+  and resources. Review round 1 added explicit false tenancy coverage.
+  The negative filter matched the false fixture, and only the absent and
+  null fixtures matched the unknown filter. The pinned snapshot had zero
+  explicit false observations.
 - The diff whitespace check passed. `paseo usage --json` returned
   `DAEMON_NOT_RUNNING`, so usage was unavailable.
 - The framework-dependent CLI was exercised directly. Release-package

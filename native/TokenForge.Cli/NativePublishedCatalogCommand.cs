@@ -40,6 +40,7 @@ internal static class NativePublishedCatalogCommand
                     tenancy = value switch
                     {
                         "owner-outside-target-tenant" => CatalogTenancyEvidence.OwnerOutsideTargetTenant,
+                        "owner-not-outside-target-tenant" => CatalogTenancyEvidence.OwnerNotOutsideTargetTenant,
                         "unknown" => CatalogTenancyEvidence.Unknown,
                         _ => throw new InvalidOperationException()
                     };

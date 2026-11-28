@@ -580,8 +580,9 @@ case-insensitive `--name` substring filters. Resource filters take the exact
 resource application ID in a published grant. Repeat `--scope` for multiple
 case-sensitive scopes, which must all occur in one grant row within one source
 claim. When combined, name and grant filters must match the same source claim.
-`--tenancy-evidence` accepts `owner-outside-target-tenant` or `unknown`. Use
-`--include-non-verified` on either command to include the second partition.
+`--tenancy-evidence` accepts `owner-outside-target-tenant` for an explicit true
+flag, `owner-not-outside-target-tenant` for an explicit false flag, or `unknown`
+when the flag is absent or null. Use `--include-non-verified` on either command to include the second partition.
 A valid query with no match returns an empty `Applications` array and exits
 successfully. Detail uses the same response envelope and returns at most one ID.
 
@@ -591,5 +592,6 @@ checks the verified evidence join by AppId. Verification observations carry
 their own source and observation date. Metadata claims carry their original
 source and the catalog record's last-seen timestamp. Metadata conflicts are
 retained, and configured sign-in audience appears in `UnknownFields`.
-The outside-owner filter uses the explicit verification evidence flag.
+The tenancy filter reads the verification evidence flag. A false flag leaves
+configured sign-in audience unknown.
 Published grants are catalog observations and confer no authorization.

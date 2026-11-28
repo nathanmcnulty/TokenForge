@@ -130,8 +130,10 @@ git -c credential.helper= clone --no-checkout https://github.com/nathanmcnulty/T
 git -C source worktree add --detach candidate fe3937669ec0dc06bd6df203e57e4b645335015a
 curl.exe -fsSL https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.401/dotnet-sdk-10.0.401-win-x64.zip -o sdk.zip
 curl.exe -fsSL --max-time 90 https://www.python.org/ftp/python/3.13.9/python-3.13.9-embed-amd64.zip -o python.zip
+$pythonHash=(Get-FileHash python.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+if($pythonHash -ne '91d828c2da3a029b41699e918674a0cb379c02cf20dab9c501306885f837402a'){throw 'Python ZIP checksum mismatch'}
+$pythonHash
 Expand-Archive python.zip python
-(Get-FileHash python.zip).Hash
 & "$r/python/python.exe" --version
 $sdkHash=(Get-FileHash sdk.zip -Algorithm SHA512).Hash.ToLowerInvariant()
 if($sdkHash -ne '24b670ad3d923bfcf47df6c3b034152398b42f6dbc388e10d783aee1cfb5e5817d399fc0ae2a12cfa822a55e61d34830ccb15c50ef6efee437ab874bb7c79430'){throw 'SDK checksum mismatch'}

@@ -47,9 +47,9 @@ class ActivationCandidateTests(unittest.TestCase):
         cls.recipient = key.stderr.strip().removeprefix('Public key: ')
         cls.identity = key.stdout.splitlines()[-1]
 
-    def test_template_separates_environments_and_permissions_without_a_schedule(self):
+    def test_template_separates_environments_and_requires_schedule_opt_in(self):
         source = yaml.safe_load((SOURCE / 'activation.yml').read_text())
-        self.assertEqual(source['on'], {'workflow_dispatch': {'inputs': {'mode': {
+        self.assertEqual(source['on'], {'schedule': [{'cron': '37 16 * * *'}], 'workflow_dispatch': {'inputs': {'mode': {
             'description': 'Run sign-in review, combined review, or the one-time directory audit validation',
             'type': 'choice', 'default': 'sign-in',
             'options': ['sign-in', 'directory-validation', 'sign-in-and-directory'],
@@ -61,6 +61,11 @@ class ActivationCandidateTests(unittest.TestCase):
         self.assertEqual(reader['environment'], 'entra-audit')
         self.assertEqual(writer['permissions'], {'issues': 'write'})
         self.assertEqual(writer['environment'], 'entra-audit-issue')
+        for job in (reader, writer):
+            self.assertIn("github.event_name == 'schedule' && vars.TOKENFORGE_SIGNIN_SCHEDULE_ENABLED == 'true'", job['if'])
+        validation = source['jobs']['directory_validation']
+        self.assertIn("github.event_name == 'workflow_dispatch'", validation['if'])
+        self.assertNotIn("github.event_name == 'schedule'", validation['if'])
         self.assertEqual(writer['needs'], 'collect')
         self.assertIn("needs.collect.result == 'success'", writer['if'])
         self.assertEqual(reader['outputs'], {'ciphertext': '${{ steps.collect.outputs.ciphertext }}'})
@@ -122,7 +127,7 @@ bash() { test "$*" = 'examples/signin-review/install-proof-age.sh'; }
             self.assertIn("inputs.mode == 'sign-in-and-directory'", job['if'])
             self.assertIn("github.ref == 'refs/heads/main'", job['if'])
             step = job['steps'][-1]
-            self.assertEqual(step['env']['TF_REVIEW_MODE'], '${{ inputs.mode }}')
+            self.assertEqual(step['env']['TF_REVIEW_MODE'], "${{ github.event_name == 'schedule' && 'sign-in-and-directory' || inputs.mode }}")
             with TemporaryDirectory() as folder:
                 (Path(folder) / 'tokenforge-public-source').mkdir()
                 for mode, command in (('sign-in', key), ('sign-in-and-directory', key + '-directory'),

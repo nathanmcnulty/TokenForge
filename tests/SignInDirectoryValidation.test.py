@@ -44,18 +44,20 @@ AFTER = datetime(2026, 11, 24, 3, tzinfo=timezone.utc)
 class DirectoryValidationTests(unittest.TestCase):
     def test_exact_workflow_routes_and_privileges(self):
         workflow = yaml.safe_load((ROOT / '.github/workflows/signin-review-candidates.yml').read_bytes())
-        self.assertEqual(set(workflow['on']), {'workflow_dispatch'})
+        self.assertEqual(set(workflow['on']), {'workflow_dispatch', 'schedule'})
         self.assertEqual(workflow['on']['workflow_dispatch']['inputs']['mode']['default'], 'sign-in')
         self.assertEqual(workflow['permissions'], {})
         jobs = workflow['jobs']
         self.assertEqual(set(jobs), {'collect', 'issue', 'directory_validation'})
         guard = ("github.repository == 'nathanmcnulty/TokenForge' && "
-                 "github.repository_id == '1402673320' && github.ref == 'refs/heads/main' && "
-                 "github.event_name == 'workflow_dispatch'")
-        review_mode = "(inputs.mode == 'sign-in' || inputs.mode == 'sign-in-and-directory')"
-        self.assertEqual(jobs['collect']['if'].strip(), f'{review_mode} && {guard}')
-        self.assertEqual(jobs['issue']['if'].strip(), f"needs.collect.result == 'success' && {review_mode} && {guard}")
-        self.assertEqual(jobs['directory_validation']['if'].strip(), f"inputs.mode == 'directory-validation' && {guard}")
+                 "github.repository_id == '1402673320' && github.ref == 'refs/heads/main'")
+        review_mode = ("((github.event_name == 'workflow_dispatch' && "
+                       "(inputs.mode == 'sign-in' || inputs.mode == 'sign-in-and-directory')) || "
+                       "(github.event_name == 'schedule' && vars.TOKENFORGE_SIGNIN_SCHEDULE_ENABLED == 'true'))")
+        self.assertEqual(jobs['collect']['if'].strip(), f'{guard} && {review_mode}')
+        self.assertEqual(jobs['issue']['if'].strip(), f"needs.collect.result == 'success' && {guard} && {review_mode}")
+        self.assertEqual(jobs['directory_validation']['if'].strip(),
+                         f"inputs.mode == 'directory-validation' && {guard} && github.event_name == 'workflow_dispatch'")
         self.assertEqual(jobs['issue']['needs'], 'collect')
         self.assertEqual(jobs['issue']['permissions'], {'issues': 'write'})
         self.assertEqual(jobs['collect']['permissions'], {'contents': 'read', 'id-token': 'write'})

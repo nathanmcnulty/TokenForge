@@ -358,12 +358,44 @@ with (patch.object(http.client.HTTPConnection, 'connect', side_effect=AssertionE
                                      (1, '', 'Sign-in candidate review stopped.\n'))
                     self.assertFalse(output.exists())
 
-    def test_directory_cli_requires_an_explicit_command_on_manual_runs(self):
+    def test_scheduled_combined_review_uses_two_days_and_leaves_empty_result_alone(self):
+        scheduled = ENV | {'GITHUB_EVENT_NAME': 'schedule'}
+        end = datetime.fromisoformat('2026-01-31T04:05:06Z')
+        expected = list(intervals(end, 2))
+        get = Mock(return_value={'value': []})
+        with TemporaryDirectory() as folder:
+            output = Path(folder) / 'github-output'
+            context = scheduled | {'GITHUB_OUTPUT': str(output), 'TF_HANDOFF_RECIPIENT': self.public}
+            with (patch.object(review_ci, 'graph_reader', return_value=get),
+                  patch.object(review_ci, 'pinned_catalog_app_ids', return_value=set()),
+                  patch.object(review_ci, 'collection_end', return_value=end)):
+                review_ci.collect_job(context, directory=True)
+            encoded = output.read_text().removeprefix('ciphertext=').strip()
+        self.assertEqual(get.call_count, len(expected) * (len(GRAPH_EVENTS) + 1))
+        raw = open_envelope(base64.b64decode(encoded), scheduled, self.private,
+                            categories=GRAPH_EVENTS, labeled=True, directory=True)
+        self.assertEqual(json.loads(raw)['since'], '2026-01-29T04:05:06Z')
+        self.assertEqual(validate_handoff(raw, scheduled, categories=GRAPH_EVENTS,
+                                          labeled=True, directory=True), {})
+        writer = {k: v for k, v in scheduled.items() if k != 'TF_AUDIT_TENANT_ID'}
+        writer.update(TF_REVIEW_ISSUE='151', TF_REVIEW_ISSUE_NODE='fixture-node',
+                      TF_HANDOFF_CIPHERTEXT=encoded)
+        api = Mock(return_value={
+            'number': 151, 'node_id': 'fixture-node', 'state': 'open',
+            'user': {'id': OWNER_ID}, 'body': body_for({}, labeled=True),
+            'labels': [],
+        })
+        review_ci.report_job(writer, self.private, api, directory=True)
+        api.assert_not_called()
+
+    def test_cli_restricts_automated_runs_to_combined_review(self):
         entry = ROOT / 'examples' / 'signin-review' / 'review_ci.py'
         for command, kwargs in (('collect', {}), ('collect-directory', {'include_directory_audit': True})):
-            for event_name, called in (('workflow_dispatch', True), ('schedule', False)):
+            for event_name, called in (('workflow_dispatch', True), ('schedule', command == 'collect-directory'), ('push', False)):
                 env = ENV | {'GITHUB_EVENT_NAME': event_name, 'TF_CATALOG_TIP': CATALOG_COMMIT}
-                with (patch.dict(os.environ, env, clear=True), patch.object(sys, 'argv', [str(entry), command]),
+                with (self.subTest(command=command, trigger=event_name),
+                      patch.dict(os.environ, env, clear=True), patch.object(sys, 'argv', [str(entry), command]),
+                      patch('collect.pinned_catalog_app_ids', return_value=set()),
                       patch('workload_http.graph_reader', side_effect=ValueError('synthetic-private-canary')) as reader):
                     with self.assertRaises(SystemExit) as result:
                         runpy.run_path(str(entry), run_name='__main__')

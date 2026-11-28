@@ -553,3 +553,45 @@ It uses the SQLite backup API, validates typed contents and creates a new privat
 ### Scope explanation without observation history
 
 `tokenforge scopes explain --profile lab --resource <resource-app-id> --scope User.Read --json` accepts a nonempty resource GUID as well as `graph` and `arm`. A configured profile with expected tenant/account fingerprints and a matching `inventory.json` is still required for account-specific planning. Missing `scopes.sqlite` and `scopes.json` now means `NotObserved`; published hints and applicable configured grants can still be explained, without creating an empty store. Existing malformed history remains an error, not an empty-history fallback. For public-only lookup without a profile or inventory, use `Find-TokenForgeApplicationEvidence` instead. Neither output guarantees token acquisition.
+
+## Search the published application catalog offline
+
+On Linux x64, pass a local directory containing the three published files and the
+full Git revision from which they were extracted. For example, from a checkout
+that already has the pinned discovery-data commit:
+
+```sh
+revision=ec3d72d75241c69bb9ca46528b32a1e7fd2a0b62
+snapshot=$(mktemp -d)
+for file in applications.json applications.non-verified.json applications.verified-evidence.json; do
+  GIT_NO_LAZY_FETCH=1 GIT_ALLOW_PROTOCOL= git --no-replace-objects show "$revision:$file" > "$snapshot/$file" || exit 1
+done
+
+tokenforge catalog search --snapshot "$snapshot" --revision "$revision"
+tokenforge catalog search --snapshot "$snapshot" --revision "$revision" --include-non-verified --name Azure
+tokenforge catalog search --snapshot "$snapshot" --revision "$revision" \
+  --resource 00000003-0000-0000-c000-000000000000 --scope openid --scope profile \
+  --tenancy-evidence owner-outside-target-tenant
+tokenforge catalog get --snapshot "$snapshot" --revision "$revision" --id 00000001-0000-0000-c000-000000000000
+```
+
+Both commands print JSON to stdout. Search accepts optional exact `--id` and
+case-insensitive `--name` substring filters. Resource filters take the exact
+resource application ID in a published grant. Repeat `--scope` for multiple
+case-sensitive scopes, which must all occur in one grant row within one source
+claim. When combined, name and grant filters must match the same source claim.
+`--tenancy-evidence` accepts `owner-outside-target-tenant` for an explicit true
+flag, `owner-not-outside-target-tenant` for an explicit false flag, or `unknown`
+when the flag is absent or null. Use `--include-non-verified` on either command to include the second partition.
+A valid query with no match returns an empty `Applications` array and exits
+successfully. Detail uses the same response envelope and returns at most one ID.
+
+Results are ordered by AppId and identify the supplied catalog revision and each
+result's partition. Choose the revision that matches your local files. The CLI
+checks the verified evidence join by AppId. Verification observations carry
+their own source and observation date. Metadata claims carry their original
+source and the catalog record's last-seen timestamp. Metadata conflicts are
+retained, and configured sign-in audience appears in `UnknownFields`.
+The tenancy filter reads the verification evidence flag. A false flag leaves
+configured sign-in audience unknown.
+Published grants are catalog observations and confer no authorization.

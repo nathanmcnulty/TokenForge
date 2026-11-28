@@ -56,6 +56,13 @@ class OfflineCatalog:
             raise ValueError('Unsupported verified catalog format' if verified else 'Unsupported non-verified catalog format')
         return document
 
+    def verified_evidence(self):
+        path = self.commit + ':applications.verified-evidence.json'
+        document = decode(self._read('cat-file', 'blob', path))
+        if document.get('Format') != 'TokenForgeVerifiedApplicationEvidence' or document.get('SchemaVersion') != 1:
+            raise ValueError('Unsupported verified evidence format')
+        return document['Applications']
+
     @staticmethod
     def app_ids(verified, excluded):
         if not isinstance(verified, dict) or not isinstance(excluded, dict):

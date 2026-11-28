@@ -1,0 +1,179 @@
+{
+  "preReviewCommit": "2aeeac91928d6147a93b56adf6302b157cc5c3eb",
+  "postReviewCommit": "ec3d72d75241c69bb9ca46528b32a1e7fd2a0b62",
+  "issue": 151,
+  "run": 45735818610,
+  "aggregateDispositions": {
+    "servicePrincipalOwnerVerified": 2,
+    "signInOwnerVerified": 2,
+    "managedIdentity": 1,
+    "ownershipUnresolved": 12
+  },
+  "candidates": [
+    {
+      "appId": "0016caef-2ec6-45cb-9731-80a22f0f7d6a",
+      "sources": [
+        "sign-in",
+        "provisioning"
+      ],
+      "audienceLabel": "audience unknown",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": null
+    },
+    {
+      "appId": "02cda65a-71c5-46d3-823b-2259059f187c",
+      "sources": [
+        "provisioning"
+      ],
+      "audienceLabel": "audience unknown",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": null
+    },
+    {
+      "appId": "032854b2-ba65-4dd6-bdd4-4e86b8756667",
+      "sources": [
+        "provisioning"
+      ],
+      "audienceLabel": "multi-tenant",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": 158
+    },
+    {
+      "appId": "1551c0c1-c575-40b0-b25c-f0bbeff1ea58",
+      "sources": [
+        "provisioning"
+      ],
+      "audienceLabel": "audience unknown",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": null
+    },
+    {
+      "appId": "22bfbae3-f4e7-485f-be43-8cee15065084",
+      "sources": [
+        "sign-in"
+      ],
+      "audienceLabel": "audience unknown",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": 160
+    },
+    {
+      "appId": "33127c46-c849-464b-9d7b-a0f6962b1cf0",
+      "sources": [
+        "provisioning"
+      ],
+      "audienceLabel": "audience unknown",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": null
+    },
+    {
+      "appId": "3452ea10-5986-42c7-9a9d-a6264b19dac1",
+      "sources": [
+        "provisioning"
+      ],
+      "audienceLabel": "audience unknown",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": null
+    },
+    {
+      "appId": "387f3a10-0631-4416-9990-c4781b046ee8",
+      "sources": [
+        "sign-in",
+        "provisioning"
+      ],
+      "audienceLabel": "audience unknown",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": null
+    },
+    {
+      "appId": "4278cbaa-bfde-426b-84e7-992124a523d6",
+      "sources": [
+        "provisioning"
+      ],
+      "audienceLabel": "audience unknown",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": null
+    },
+    {
+      "appId": "44ef669a-9ac2-4ad4-b9a5-41011d25df36",
+      "sources": [
+        "provisioning"
+      ],
+      "audienceLabel": "audience unknown",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": null
+    },
+    {
+      "appId": "55dc1ddf-6642-4e59-a35a-ba6dc710e0f8",
+      "sources": [
+        "provisioning"
+      ],
+      "audienceLabel": "audience unknown",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": null
+    },
+    {
+      "appId": "8db2d008-cead-4394-8d21-eca75b7a4b60",
+      "sources": [
+        "sign-in"
+      ],
+      "audienceLabel": "audience unknown",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": 160
+    },
+    {
+      "appId": "9ad612b9-784b-4a4b-9faa-4588aa33e5dd",
+      "sources": [
+        "provisioning"
+      ],
+      "audienceLabel": "multi-tenant",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": 158
+    },
+    {
+      "appId": "a48c62ae-f050-42e8-8798-f53fa799b001",
+      "sources": [
+        "provisioning"
+      ],
+      "audienceLabel": "audience unknown",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": null
+    },
+    {
+      "appId": "c4e66810-a202-44ad-a9a7-c15854edc791",
+      "sources": [
+        "provisioning"
+      ],
+      "audienceLabel": "audience unknown",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": null
+    },
+    {
+      "appId": "ca894b84-a5b4-45d7-96da-2b2ecdf15a83",
+      "sources": [
+        "provisioning"
+      ],
+      "audienceLabel": "audience unknown",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": null
+    },
+    {
+      "appId": "fba16501-c09b-4f85-9c36-66a0c432b15a",
+      "sources": [
+        "sign-in"
+      ],
+      "audienceLabel": "audience unknown",
+      "publisherLabel": "publisher unknown",
+      "ownershipReview": null
+    }
+  ],
+  "issueEdits": [
+    {
+      "editedAt": "2026-11-24T00:55:50Z",
+      "nodeId": "UCE_lAHOU5sYqM8AAAABh7W69s8AAAABNl6KYg"
+    },
+    {
+      "editedAt": "2026-11-26T01:55:03Z",
+      "nodeId": "UCE_lAHOU5sYqM8AAAABh7W69s8AAAABOVb2NQ"
+    }
+  ]
+}

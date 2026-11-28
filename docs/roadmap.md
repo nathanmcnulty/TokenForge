@@ -64,7 +64,7 @@ Acceptance criteria
 
 ### M4 · Qualify cross-platform distribution
 
-Apply the A2 walkthrough and M3 configured-client scenarios to each platform, starting with Linux x64. Windows and macOS qualification begins on explicit request.
+Apply the A2 walkthrough and M3 configured-client scenarios to each platform, starting with Linux x64. Windows and macOS qualification begins on explicit request. See the [Linux x64 package receipt](m4-linux-x64-qualification.md) for the pinned candidate and capability results.
 
 Acceptance criteria
 

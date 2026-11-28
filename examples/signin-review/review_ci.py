@@ -143,9 +143,13 @@ def report_job(env, identity, api=issue_call, *, directory=False):
 
 if __name__ == '__main__':
     try:
-        if os.environ.get('GITHUB_EVENT_NAME') != 'workflow_dispatch':
-            raise ValueError('The initial activation permits manual runs only')
         command = sys.argv[1:]
+        event = os.environ.get('GITHUB_EVENT_NAME')
+        if event == 'schedule':
+            if command not in (['collect-directory'], ['issue-directory']):
+                raise ValueError('Scheduled runs must use combined review')
+        elif event != 'workflow_dispatch':
+            raise ValueError('Unexpected candidate review trigger')
         if command == ['collect-directory']:
             try:
                 collect_job(os.environ, directory=True)

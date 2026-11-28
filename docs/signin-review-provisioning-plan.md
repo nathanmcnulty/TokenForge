@@ -1,6 +1,6 @@
 # TokenForge manual sign-in review provisioning
 
-The sign-in and combined modes use the same manual workflow path. Hosted dispatch requires specific authorization. The initial activation replaced only the claim-proof workflow at its proved path with the tested split-job template. Its only trigger is manual dispatch. It scans the preceding 30 days of the four supported beta sign-in categories and uses exact v1.0 service-principal candidate enrichment. The attended directory provisioner and its v1.0 AppId parser are separate sources. The completed initial hosted run excluded directory provisioning.
+The sign-in and combined modes use the same manual workflow path. Hosted dispatch requires specific authorization. The initial activation replaced only the claim-proof workflow at its proved path with the tested split-job template. The initial activation was manual-only; see the schedule rollout below. It scans the preceding 30 days of the four supported beta sign-in categories and uses exact v1.0 service-principal candidate enrichment. The attended directory provisioner and its v1.0 AppId parser are separate sources. The completed initial hosted run excluded directory provisioning.
 
 ## Scope and order
 
@@ -42,3 +42,11 @@ The published non-verified partition is dated 2026-11-23 at 19:43:46 UTC and car
 The first combined hosted check reached terminal pages for the requested 30 days across all five sources. It updated the single reserved issue with 17 distinct AppIds absent from both catalog partitions. The coverage table records empty and unresolved windows, and provider retention remains unknown. [Hosted run](https://github.com/nathanmcnulty/TokenForge/actions/runs/45735818610) · [Reserved review issue](https://github.com/nathanmcnulty/TokenForge/issues/151)
 
 On November 25 in Alaska, separate ownership review verified two AppIds through exact service-principal reads and two through exact sign-in records with a Microsoft application-owner tenant. All four were published. One other AppId was a managed identity. The remaining 12 had no exact service principal in the designated disposable tenant, and their creation requests returned HTTP 400 `Request_BadRequest`. The refusals leave ownership unresolved. [Service-principal evidence](https://github.com/nathanmcnulty/TokenForge/pull/158) · [Sign-in owner evidence](https://github.com/nathanmcnulty/TokenForge/pull/160)
+
+## Scheduled rollout
+
+The workflow can run daily at 16:37 UTC, but scheduled jobs skip unless the repository variable `TOKENFORGE_SIGNIN_SCHEDULE_ENABLED` is set to `true`. Manual modes are unchanged. Scheduled runs always use the combined Graph sign-in and directory provisioning mode with an overlapping 48-hour window. Both jobs keep their existing permissions, environments and exact-main restrictions; the one-time directory-validation mode remains manual. Do not configure new Graph roles for this rollout.
+
+Before opting in, verify the existing environment branch rules, read-only roles and intended review issue. Verify the first scheduled run reports completed windows for all five sources and updates the reserved queue only for new candidates. An incomplete run never writes to the issue. To stop scheduled access, unset the variable and cancel any in-progress scheduled run; the manual workflow remains usable.
+
+GitHub can delay or drop scheduled runs. Compare successful coverage windows and use one authorized 30-day manual combined run to backfill a gap that exceeds the rolling window. An empty terminal window proves traversal, not retention. Advanced Hunting and live Sentinel queries are outside this change.

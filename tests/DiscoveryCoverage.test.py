@@ -111,5 +111,70 @@ class DiscoveryCoverageTests(unittest.TestCase):
             self.assertEqual(evidence['catalogClaimOnlyIds'], 0)
 
 
+    @unittest.skipUnless(RAW_CAPTURES and os.environ.get('TOKENFORGE_TEST_NATIVE'),
+                         'Set TOKENFORGE_B1_CAPTURES and TOKENFORGE_TEST_NATIVE')
+    def test_b2_review_against_pinned_b1_snapshot(self):
+        pin = self.report['catalog']['postReviewCommit']
+        baseline = REPORTER['OfflineCatalog'](ROOT, pin).partition(False)
+        stamps = {row['source']: {'revision': row['revision'], 'sha256': row['sha256'],
+                                  'checkedAt': '2026-11-28T00:00:00Z'} for row in baseline['Upstream']}
+        unresolved = '0016caef-2ec6-45cb-9731-80a22f0f7d6a'
+        novel = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
+        with tempfile.TemporaryDirectory() as temp:
+            capture = Path(temp) / 'resources.json'
+            observations = Path(temp) / 'observations.json'
+            state = Path(temp) / 'state.json'
+            command = [sys.executable, '-B', str(ROOT / 'scripts/Diff-TokenForgePublicCatalog.py'),
+                       '--baseline-repo', str(ROOT), '--baseline-commit', pin,
+                       '--observations', str(observations), '--captures', temp,
+                       '--native', os.environ['TOKENFORGE_TEST_NATIVE'], '--review']
+            observations.write_text(json.dumps(stamps))
+            self.assertEqual(json.loads(subprocess.check_output(command))['review']['reviewItemCount'], 0)
+
+            original = (Path(RAW_CAPTURES) / capture.name).read_bytes()
+            self.assertEqual(hashlib.sha256(original).hexdigest(), stamps['resources']['sha256'])
+            rows = json.loads(original)
+            changed = rows[0]['resourceId']
+            rows[0]['displayName'] += ' (replay fixture)'
+            rows.extend({'resourceId': app_id, 'displayName': 'Synthetic replay evidence'}
+                        for app_id in (unresolved, novel))
+            capture.write_text(json.dumps(rows))
+            stamps['resources'].update(revision='d' * 40, sha256=hashlib.sha256(capture.read_bytes()).hexdigest())
+            observations.write_text(json.dumps(stamps))
+            output = subprocess.check_output(command)
+            self.assertEqual(output, subprocess.check_output(command))
+            review = json.loads(output)['review']
+            items = {row['appId']: row for row in review['reviewItems']}
+            self.assertEqual(review['reviewItemCount'], 3)
+            self.assertEqual(set(items), {changed, unresolved, novel})
+            self.assertEqual(items[changed]['evidence'][0]['reason'], 'SourceClaimChanged')
+            self.assertEqual(items[novel]['action'], 'Open')
+            self.assertEqual((items[unresolved]['action'], items[unresolved]['issue']), ('Reopen', 151))
+            self.assertEqual(len(review['nextState']['cases']), 15)
+            state.write_text(json.dumps(review['nextState']))
+            retry = [*command, '--review-state', str(state)]
+            self.assertEqual(json.loads(subprocess.check_output(retry))['review']['reviewItemCount'], 0)
+
+            interrupted_env = {**os.environ, 'PATH': temp + os.pathsep + os.environ['PATH']}
+            projector = Path(temp) / 'pwsh'
+            projector.write_text('#!/bin/sh\nkill -TERM "$PPID"\n')
+            projector.chmod(0o700)
+            interrupted = subprocess.run(retry, env=interrupted_env, capture_output=True)
+            self.assertEqual(interrupted.returncode, 2, interrupted.stderr)
+            gap = json.loads(interrupted.stdout)['review']
+            self.assertIsNone(gap['reviewItemCount'])
+            self.assertIsNone(gap['nextState'])
+            self.assertEqual(gap['coverageGaps'], dict.fromkeys(stamps, 'Interrupted'))
+
+            capture.unlink()
+            incomplete = subprocess.run(retry, capture_output=True)
+            self.assertEqual(incomplete.returncode, 2, incomplete.stderr)
+            gap = json.loads(incomplete.stdout)['review']
+            self.assertEqual(gap['coverageGaps'], {'resources': 'NeedsCapture'})
+            self.assertIsNone(gap['reviewItemCount'])
+            self.assertIsNone(gap['nextState'])
+            self.assertEqual(json.loads(state.read_text()), review['nextState'])
+
+
 if __name__ == '__main__':
     unittest.main()

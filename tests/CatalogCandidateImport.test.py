@@ -91,6 +91,72 @@ class CatalogCandidateTests(unittest.TestCase):
         self.assertEqual(result['sources']['resources']['provenanceChanges'], [])
         self.unchanged()
 
+    def test_review_handoff_reopens_one_case_and_deduplicates_evidence(self):
+        stamps = self.observations()
+        for name in ('roadtools', 'resources'):
+            stamps[name].update(revision=NEW_REVISION, sha256=NEW_HASH)
+        ledger = {NONVERIFIED: [claim('roadtools', 'old')]}
+        captures = {'roadtools': {NONVERIFIED: [claim('roadtools', 'revised')],
+                                  NEW: [claim('roadtools', 'new')]},
+                    'resources': {NEW: [claim('resources', 'new')]}}
+        prior = delta.load_review_state(None, self.commit)
+        prior['cases'][NEW] = {'status': 'Unresolved', 'issue': 151, 'evidenceIds': []}
+
+        def replay():
+            evidence = {}
+            receipt = delta.compare(self.nonverified, stamps, lambda: ledger,
+                                    lambda name, _: captures[name], evidence)
+            return delta.review_handoff(receipt, prior, evidence)
+
+        first = replay()
+        self.assertEqual(first['reviewItemCount'], 2)
+        changed, reopened = first['reviewItems']
+        self.assertEqual((changed['appId'], changed['action']), (NONVERIFIED, 'Open'))
+        self.assertEqual(changed['evidence'][0]['reason'], 'SourceClaimChanged')
+        self.assertEqual(changed['evidence'][0]['previousClaims'], ledger[NONVERIFIED])
+        self.assertEqual((reopened['appId'], reopened['action'], reopened['issue']), (NEW, 'Reopen', 151))
+        self.assertEqual([row['source'] for row in reopened['evidence']], ['resources', 'roadtools'])
+        self.assertEqual(len(first['nextState']['cases']), 2)
+        prior['cases'][NEW]['status'] = 'Unresolved'
+        stamps['roadtools'].update(revision='3' * 40, checkedAt='2026-01-07T00:00:00Z')
+        self.assertEqual(replay()['reviewItemCount'], 0)
+        self.assertEqual(prior['cases'][NEW]['status'], 'Unresolved')
+        captures['roadtools'][NEW] = [claim('roadtools', 'new evidence')]
+        second = replay()
+        self.assertEqual(second['reviewItemCount'], 1)
+        self.assertEqual(second['reviewItems'][0]['action'], 'Reopen')
+        self.assertEqual(len(second['reviewItems'][0]['evidence']), 1)
+        self.assertEqual(len(second['nextState']['cases']), 2)
+
+    def test_review_handoff_records_gaps_without_advancing_state(self):
+        stamps = self.observations()
+        for name in ('resources', 'roadtools'):
+            stamps[name].update(revision=NEW_REVISION, sha256=NEW_HASH)
+        del stamps['microsoftApps']
+
+        def project(name, _):
+            if name == 'roadtools':
+                raise subprocess.TimeoutExpired('projector', 180)
+            return {NEW: [claim('resources', 'new')]}
+
+        state = delta.load_review_state(None, self.commit)
+        evidence = {}
+        receipt = delta.compare(self.nonverified, stamps, lambda: {}, project, evidence)
+        self.assertIn(NEW, evidence)
+        self.assertEqual(delta.review_handoff(receipt, state, evidence), {
+            'coverageGaps': {'roadtools': 'Interrupted', 'microsoftApps': 'Unavailable'},
+            'reviewItemCount': None, 'reviewItems': None, 'nextState': None})
+        self.assertEqual(state['cases'], {})
+
+    def test_review_handoff_seeds_only_unresolved_b1_cases(self):
+        issue = delta.decode(delta.ISSUE_RECEIPT.read_bytes())
+        state = delta.load_review_state(None, issue['postReviewCommit'])
+        self.assertEqual(len(state['cases']), 13)
+        self.assertEqual(set(state['cases']),
+                         {row['appId'] for row in issue['candidates'] if row['ownershipReview'] is None})
+        self.assertTrue(all(case == {'status': 'Unresolved', 'issue': 151, 'evidenceIds': []}
+                            for case in state['cases'].values()))
+
     def test_incomplete_and_stamp_only_changes_avoid_reads(self):
         stamps = self.observations()
         stamps['roadtools'].update(revision=NEW_REVISION)
@@ -121,6 +187,12 @@ class CatalogCandidateTests(unittest.TestCase):
         self.assertEqual(json.loads(first)['baselineCommit'], self.commit)
         self.assertFalse(json.loads(first)['revisionLabelsVerified'])
         self.assertEqual(before, [p.read_bytes() for p in self.catalog_files])
+        review_command = command + ['--review']
+        unchanged = subprocess.check_output(review_command)
+        self.assertEqual(subprocess.check_output(review_command), unchanged)
+        review = json.loads(unchanged)['review']
+        self.assertEqual(review['reviewItemCount'], 0)
+        self.assertEqual(review['coverageGaps'], {})
 
     def test_both_importers_reject_tree_as_commit(self):
         tree = self.git('rev-parse', 'HEAD^{tree}').stdout.strip()
@@ -228,11 +300,24 @@ if ($env:GIT_ALLOW_PROTOCOL -cne 'probe' -or $env:GIT_NO_LAZY_FETCH -cne '0') { 
         result = subprocess.run(command, capture_output=True, check=True)
         self.assertEqual(json.loads(result.stdout)['newApplications'],
                          [{'appId': NEW, 'disposition': 'Pending', 'sources': ['resources']}])
+        first = json.loads(subprocess.check_output(command + ['--review']))['review']
+        self.assertEqual(first['reviewItemCount'], 1)
+        self.assertEqual(first['reviewItems'][0]['appId'], NEW)
+        self.assertEqual(first['reviewItems'][0]['evidence'][0]['captureSha256'], stamps['resources']['sha256'])
+        state = self.repo / 'review-state.json'
+        state.write_text(json.dumps(first['nextState']))
+        retry = command + ['--review-state', str(state)]
+        self.assertEqual(json.loads(subprocess.check_output(retry))['review']['reviewItemCount'], 0)
         before = [p.read_bytes() for p in self.catalog_files]
         source.write_text('[]')
-        rejected = subprocess.run(command, capture_output=True)
+        rejected = subprocess.run(retry, capture_output=True)
         self.assertEqual(rejected.returncode, 2)
-        self.assertEqual(json.loads(rejected.stdout)['sources']['resources']['status'], 'InvalidCapture')
+        partial = json.loads(rejected.stdout)
+        self.assertEqual(partial['sources']['resources']['status'], 'InvalidCapture')
+        self.assertEqual(partial['review']['coverageGaps'], {'resources': 'InvalidCapture'})
+        self.assertIsNone(partial['review']['reviewItemCount'])
+        self.assertIsNone(partial['review']['nextState'])
+        self.assertEqual(json.loads(state.read_text()), first['nextState'])
         self.assertEqual(before, [p.read_bytes() for p in self.catalog_files])
 
     def page(self, filename, rows, link=None):

@@ -6,6 +6,7 @@ internal static class NativePublishedCatalogCommand
     public static int Run(string[] args)
     {
         bool detail = args[1] == "get";
+        bool mcp = args[1] == "mcp";
         string? snapshot = null, revision = null, name = null;
         Guid? id = null, resource = null;
         CatalogTenancyEvidence? tenancy = null;
@@ -15,6 +16,8 @@ internal static class NativePublishedCatalogCommand
         for (int i = 2; i < args.Length; i++)
         {
             string option = args[i];
+            if (mcp && option is not ("--snapshot" or "--revision"))
+                throw new InvalidOperationException("MCP requires --snapshot and --revision.");
             if (!seen.Add(option) && option != "--scope")
                 throw new InvalidOperationException();
             if (option == "--include-non-verified")
@@ -37,13 +40,7 @@ internal static class NativePublishedCatalogCommand
                 case "--resource" when !detail: resource = Guid.ParseExact(value, "D"); break;
                 case "--scope" when !detail: scopes.Add(value); break;
                 case "--tenancy-evidence" when !detail:
-                    tenancy = value switch
-                    {
-                        "owner-outside-target-tenant" => CatalogTenancyEvidence.OwnerOutsideTargetTenant,
-                        "owner-not-outside-target-tenant" => CatalogTenancyEvidence.OwnerNotOutsideTargetTenant,
-                        "unknown" => CatalogTenancyEvidence.Unknown,
-                        _ => throw new InvalidOperationException()
-                    };
+                    tenancy = ParseTenancy(value);
                     break;
                 default: throw new InvalidOperationException();
             }
@@ -51,15 +48,31 @@ internal static class NativePublishedCatalogCommand
         if (snapshot == null || revision == null || (detail && !id.HasValue))
             throw new InvalidOperationException();
 
-        using var verified = Read(snapshot, "applications.json");
-        using var nonVerified = Read(snapshot, "applications.non-verified.json");
-        using var evidence = Read(snapshot, "applications.verified-evidence.json");
-        var catalog = new PublishedCatalog(revision, verified.RootElement, nonVerified.RootElement, evidence.RootElement);
+        var catalog = Load(snapshot, revision);
+        if (mcp)
+            return NativeCatalogMcpServer.Run(catalog);
+
         var result = detail
             ? catalog.GetApplication(id!.Value, includeNonVerified)
             : catalog.Search(new PublishedCatalogQuery(id, name, resource, scopes, tenancy, includeNonVerified));
         Console.WriteLine(JsonSerializer.Serialize(result));
         return 0;
+    }
+
+    internal static CatalogTenancyEvidence ParseTenancy(string value) => value switch
+    {
+        "owner-outside-target-tenant" => CatalogTenancyEvidence.OwnerOutsideTargetTenant,
+        "owner-not-outside-target-tenant" => CatalogTenancyEvidence.OwnerNotOutsideTargetTenant,
+        "unknown" => CatalogTenancyEvidence.Unknown,
+        _ => throw new InvalidOperationException("Invalid tenancy evidence filter.")
+    };
+
+    private static PublishedCatalog Load(string snapshot, string revision)
+    {
+        using var verified = Read(snapshot, "applications.json");
+        using var nonVerified = Read(snapshot, "applications.non-verified.json");
+        using var evidence = Read(snapshot, "applications.verified-evidence.json");
+        return new PublishedCatalog(revision, verified.RootElement, nonVerified.RootElement, evidence.RootElement);
     }
 
     private static JsonDocument Read(string directory, string file)

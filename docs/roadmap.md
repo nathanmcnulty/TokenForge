@@ -26,7 +26,7 @@ Acceptance criteria
 
 ### A2 · Release searchable CLI and MCP interfaces
 
-After A1, expose the same query implementation through a local stdio MCP server with `search_applications` and `get_application`. Ship a Linux walkthrough that uses one catalog snapshot through both interfaces.
+After A1, expose the same query implementation through a local stdio MCP server with `search_applications` and `get_application`. The [Linux walkthrough and receipt](a2-catalog-mcp.md) use one catalog snapshot through both interfaces.
 
 Acceptance criteria
 

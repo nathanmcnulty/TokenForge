@@ -1,0 +1,25 @@
+{
+  "revision": "ec3d72d75241c69bb9ca46528b32a1e7fd2a0b62",
+  "searches": [
+    {"label": "verified", "arguments": {}, "count": 2066},
+    {"label": "both partitions", "arguments": {"includeNonVerified": true}, "count": 5500},
+    {"label": "name, resource, scopes and tenancy", "arguments": {
+      "appId": "0032593d-6a05-4847-8ca4-4b6220ed2a1e",
+      "name": "microsoft_azure_elmadmin",
+      "resourceId": "00000003-0000-0000-c000-000000000000",
+      "scopes": ["AccessReview.Read.All", "AccessReview.ReadWrite.All"],
+      "tenancyEvidence": "owner-outside-target-tenant"
+    }, "count": 1},
+    {"label": "case-sensitive scope miss", "arguments": {
+      "appId": "0032593d-6a05-4847-8ca4-4b6220ed2a1e",
+      "resourceId": "00000003-0000-0000-c000-000000000000",
+      "scopes": ["AccessReview.Read.All", "accessreview.readwrite.all"]
+    }, "count": 0}
+  ],
+  "details": [
+    {"arguments": {"appId": "0000000C-0000-0000-C000-000000000000"}, "count": 1},
+    {"arguments": {"appId": "00000000-0000-0000-0000-000000000001"}, "count": 0},
+    {"arguments": {"appId": "00000000-0000-0000-0000-000000000001", "includeNonVerified": true}, "count": 1},
+    {"arguments": {"appId": "ffffffff-ffff-ffff-ffff-ffffffffffff"}, "count": 0}
+  ]
+}

@@ -1,7 +1,14 @@
 BeforeAll {
-    Import-Module "$PSScriptRoot/../src/TokenForge/TokenForge.psd1" -Force
+    $root = if ($env:TOKENFORGE_M3_PACKAGE) { $env:TOKENFORGE_M3_PACKAGE } else { "$PSScriptRoot/.." }
+    $manifest = Join-Path $root 'src/TokenForge/TokenForge.psd1'
+    Import-Module $manifest -Force
+    if ($env:TOKENFORGE_M3_PACKAGE) {
+        $credentials = Join-Path $root 'src/TokenForge/lib/net10.0/TokenForge.Credentials.dll'
+        $loaded = [AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.GetName().Name -eq 'TokenForge.Credentials' }
+        $loaded.Location | Should -BeExactly $credentials
+    }
     $plan=Get-Content -LiteralPath $env:TOKENFORGE_M3_HANDOFF -Raw | ConvertFrom-Json -AsHashtable
-    $cli=Join-Path "$PSScriptRoot/.." $plan.Script
+    $cli=Join-Path $root $plan.Script
     $configuredClient=[string]$plan.Parameters.ClientId
     $alternativeClient='11111111-1111-1111-1111-111111111111'
     $bootstrapClient='14d82eec-204b-4c2f-b7e8-296a70dab67e'

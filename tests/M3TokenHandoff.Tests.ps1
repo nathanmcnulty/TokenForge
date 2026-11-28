@@ -53,7 +53,7 @@ Describe 'M3 operator-run scoped-token handoff' -Skip:(-not $env:TOKENFORGE_M3_H
         $options.EstsAuth=ConvertTo-SecureString synthetic-cookie -AsPlainText -Force
         $requests=[Collections.Generic.List[string]]::new()
         # Keep the already imported real module and its mocked identity transport.
-        Mock Import-Module {} -ParameterFilter {$Name -like '*/src/TokenForge/TokenForge.psd1'}
+        Mock Import-Module {} -ParameterFilter {($Name -replace '\\','/') -like '*/src/TokenForge/TokenForge.psd1'}
         Mock Invoke-TokenForgeGraph -ModuleName TokenForge { @{id=$observer} }
         Mock Invoke-TokenForgeHttp -ModuleName TokenForge {
             param($Client,$Uri,$Form,$Origin)

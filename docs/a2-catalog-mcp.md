@@ -43,6 +43,9 @@ command and prepend the absolute path to `tokenforge.dll` to the arguments.
   partition, provenance, observation dates, matching claims and grants,
   and unknown fields.
 
+The optional [M3 CLI handoff](m3-cli-handoff.md) uses a client AppId configured
+at server startup.
+
 ## Local validation receipt
 
 The source baseline was `c0c0380a515e85bcb2aefba8b434fddaa6687d33`

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using TokenForge.Core;
 
 internal static class NativeCatalogMcpServer
@@ -15,7 +16,7 @@ internal static class NativeCatalogMcpServer
         AllowDuplicateProperties = false
     };
 
-    private static readonly JsonElement ToolList = JsonSerializer.Deserialize<JsonElement>("""
+    private static readonly JsonElement CatalogToolList = JsonSerializer.Deserialize<JsonElement>("""
         {"tools":[
           {
             "name":"search_applications",
@@ -50,14 +51,37 @@ internal static class NativeCatalogMcpServer
         ]}
         """);
 
+    private static readonly JsonElement PlanTool = JsonSerializer.Deserialize<JsonElement>("""
+        {
+          "name":"plan_token_request",
+          "description":"Prepare a PowerShell CLI handoff for the operator using the configured authorized client. Requires local private state and fresh observer coverage when run.",
+          "annotations":{"readOnlyHint":true,"openWorldHint":false},
+          "inputSchema":{
+            "type":"object","additionalProperties":false,"required":["resourceId","scopes"],
+            "properties":{
+              "resourceId":{"type":"string","format":"uuid"},
+              "scopes":{"type":"array","minItems":1,"maxItems":64,"items":{
+                "type":"string","maxLength":256,"pattern":"^[A-Za-z0-9_-][A-Za-z0-9_.-]*$",
+                "not":{"enum":["openid","profile","email","offline_access"]}
+              }}
+            }
+          }
+        }
+        """);
+
+    private sealed record PlanArguments(string ResourceId, string[] Scopes);
+
     private sealed record SearchArguments(string? AppId, string? Name, string? ResourceId,
         string[]? Scopes, string? TenancyEvidence, bool IncludeNonVerified = false,
         int PageSize = DefaultPageSize, int Offset = 0);
 
     private sealed record GetArguments(string AppId, bool IncludeNonVerified = false);
 
-    public static int Run(PublishedCatalog catalog)
+    public static int Run(PublishedCatalog catalog, Guid? authorizedClient)
     {
+        object toolList = authorizedClient.HasValue
+            ? new { tools = CatalogToolList.GetProperty("tools").EnumerateArray().Append(PlanTool).ToArray() }
+            : CatalogToolList;
         string? version = null;
         bool ready = false;
         string? line;
@@ -109,10 +133,10 @@ internal static class NativeCatalogMcpServer
                         result = new { };
                         break;
                     case "tools/list" when ready:
-                        result = ToolList;
+                        result = toolList;
                         break;
                     case "tools/call" when ready:
-                        result = Call(catalog, parameters, version != "2025-03-26");
+                        result = Call(catalog, authorizedClient, parameters, version != "2025-03-26");
                         break;
                     default:
                         errorCode = -32601;
@@ -131,7 +155,7 @@ internal static class NativeCatalogMcpServer
         return 0;
     }
 
-    private static object Call(PublishedCatalog catalog, JsonElement parameters, bool structured)
+    private static object Call(PublishedCatalog catalog, Guid? authorizedClient, JsonElement parameters, bool structured)
     {
         var tool = RequiredProperty(parameters, "name").GetString();
         var arguments = parameters.TryGetProperty("arguments", out var provided)
@@ -144,10 +168,38 @@ internal static class NativeCatalogMcpServer
         {
             "search_applications" => Search(catalog, arguments.Deserialize<SearchArguments>(ToolArguments)!),
             "get_application" => Get(catalog, arguments.Deserialize<GetArguments>(ToolArguments)!),
+            "plan_token_request" when authorizedClient.HasValue =>
+                Plan(catalog, authorizedClient.Value, arguments.Deserialize<PlanArguments>(ToolArguments)!),
             _ => throw new InvalidOperationException("Unknown catalog tool.")
         };
         var content = new[] { new { type = "text", text = JsonSerializer.Serialize(result) } };
         return structured ? new { content, structuredContent = result } : new { content };
+    }
+
+    private static object Plan(PublishedCatalog catalog, Guid client, PlanArguments args)
+    {
+        var resource = ParseId(args.ResourceId, "resourceId");
+        if (resource == Guid.Empty)
+            throw new InvalidOperationException("resourceId must be a non-empty GUID.");
+        if (args.Scopes is not { Length: >= 1 and <= 64 } || args.Scopes.Any(scope =>
+            scope == null || !Regex.IsMatch(scope, @"\A[A-Za-z0-9_-][A-Za-z0-9_.-]{0,255}\z") ||
+            scope is "openid" or "profile" or "email" or "offline_access"))
+            throw new InvalidOperationException("Provide 1 to 64 explicit API scope names.");
+
+        return new
+        {
+            SchemaVersion = 1,
+            CatalogRevision = catalog.Revision,
+            Script = "./scripts/Invoke-TokenForge.ps1",
+            Parameters = new
+            {
+                Action = "Token",
+                ClientId = client,
+                ResourceId = resource,
+                Scope = args.Scopes.Distinct(StringComparer.Ordinal).ToArray()
+            },
+            RequiredLocalParameters = new[] { "StatePath" }
+        };
     }
 
     private static object Search(PublishedCatalog catalog, SearchArguments args)

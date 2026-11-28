@@ -33,10 +33,12 @@ param(
  [ValidateRange(1,168)][int]$SessionRetentionHours=8,
  [ValidatePattern('^[a-f0-9]{64}$')][string]$TokenId,
  [switch]$RefreshOnly,
- [string]$OutputPath
+ [string]$OutputPath,
+ [guid]$ClientId
 )
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot '../src/TokenForge/TokenForge.psd1') -Force
+if($PSBoundParameters.ContainsKey('ClientId') -and $Action -ne 'Token'){throw 'ClientId requires the Token action.'}
 $ownedVaultPassword=$null
 try {
 if($VaultPath -and -not $VaultPassword){$ownedVaultPassword=Read-Host 'Vault passphrase' -AsSecureString;$VaultPassword=$ownedVaultPassword}
@@ -83,6 +85,7 @@ if($Action -eq 'Token') {
  if($ResourceId -eq [guid]::Empty -or -not $Scope){throw 'Token requires ResourceId and Scope, or ManifestPath and CheckId.'}
  $options=@{Inventory=$inventory;Database=$database;ResourceId=$ResourceId;Scope=$Scope;Tenant=$Tenant;BootstrapClientId=$BootstrapClientId;MaxBootstrapAdditionalScopes=$MaxBootstrapAdditionalScopes;MaxAgeHours=$MaxAgeHours;MaxAdditionalScopes=$MaxAdditionalScopes;OfflineAccess=$OfflineAccess;TimeoutSeconds=$TimeoutSeconds}
  if($VaultPath){if(-not $SessionName){throw 'Vault persistence requires an explicit SessionName.'};$options.VaultPath=$VaultPath;$options.VaultPassword=$VaultPassword;$options.SessionName=$SessionName;$options.SessionRetentionHours=$SessionRetentionHours}
+ if($PSBoundParameters.ContainsKey('ClientId')){$options.ClientId=$ClientId}
  if($ApiUri){$options.ApiUri=$ApiUri}
  if($PasskeyPath){if(-not $XdrModulePath){throw 'Passkey authentication requires XdrModulePath.'};$options.PasskeyPath=$PasskeyPath;$options.XdrModulePath=$XdrModulePath}
  elseif($EstsAuth){$options.EstsAuth=$EstsAuth;$options.CookieName=$CookieName}

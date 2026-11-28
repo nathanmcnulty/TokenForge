@@ -1,8 +1,10 @@
 # Project only planner metadata. Never serialize arbitrary token or inventory object properties.
 function ConvertTo-TokenForgePlanningDatabase {
- param($Database)
+ param($Database,[guid]$ClientId=[guid]::Empty)
  $fields=@('ClientId','ResourceId','TenantFingerprint','PrincipalFingerprint','ObservedAt','Outcome','NamespaceVerification','RequestVerification','ScpScopes','RedirectFingerprint','Protocol','Spa','RequestedScopes')
- @{SchemaVersion=$Database.SchemaVersion;Observations=@($Database.Observations|Select-Object -Property $fields)}|ConvertTo-Json -Depth 8 -Compress
+ $observations=$Database.Observations
+ if($ClientId -ne [guid]::Empty){$observations=@($observations|Where-Object ClientId -eq $ClientId.ToString())}
+ @{SchemaVersion=$Database.SchemaVersion;Observations=@($observations|Select-Object -Property $fields)}|ConvertTo-Json -Depth 8 -Compress
 }
 # Select-Object does not project BCL OrderedDictionary keys. Preserve its
 # ordered allowlist and missing-member-as-null behavior for saved snapshots.
@@ -54,8 +56,8 @@ function ConvertFrom-TokenForgePlanningResult {
 
 function New-TokenForgePlannedScopeRequests {
  param($Inventory,$Database,[string]$ResourceId,[string[]]$Scope,[string]$PrincipalFingerprint,[string]$Tenant,
-  [bool]$Warm,[bool]$Browser=$false,[bool]$OfflineAccess=$false,[int]$MaxCandidates=8,[int]$MaxRedirects=2,[int]$MaxAgeHours=24)
- $json=[TokenForge.Core.ScopePlanning]::BuildRequests((ConvertTo-TokenForgePlanningInventory $Inventory),(ConvertTo-TokenForgePlanningDatabase $Database),
+  [bool]$Warm,[bool]$Browser=$false,[bool]$OfflineAccess=$false,[int]$MaxCandidates=8,[int]$MaxRedirects=2,[int]$MaxAgeHours=24,[guid]$ClientId=[guid]::Empty)
+ $json=[TokenForge.Core.ScopePlanning]::BuildRequests((ConvertTo-TokenForgePlanningInventory $Inventory),(ConvertTo-TokenForgePlanningDatabase $Database $ClientId),
   $ResourceId,$Scope,$PrincipalFingerprint,$Tenant,$Warm,$Browser,$OfflineAccess,$MaxCandidates,$MaxRedirects,$MaxAgeHours)
  foreach($request in @(ConvertFrom-TokenForgePlanningResult $json)){
   $request.PSObject.TypeNames.Insert(0,'TokenForge.Request')

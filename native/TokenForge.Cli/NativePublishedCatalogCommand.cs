@@ -8,7 +8,7 @@ internal static class NativePublishedCatalogCommand
         bool detail = args[1] == "get";
         bool mcp = args[1] == "mcp";
         string? snapshot = null, revision = null, name = null;
-        Guid? id = null, resource = null;
+        Guid? id = null, resource = null, authorizedClient = null;
         CatalogTenancyEvidence? tenancy = null;
         bool includeNonVerified = false;
         var scopes = new List<string>();
@@ -16,8 +16,8 @@ internal static class NativePublishedCatalogCommand
         for (int i = 2; i < args.Length; i++)
         {
             string option = args[i];
-            if (mcp && option is not ("--snapshot" or "--revision"))
-                throw new InvalidOperationException("MCP requires --snapshot and --revision.");
+            if (mcp && option is not ("--snapshot" or "--revision" or "--authorized-client-id"))
+                throw new InvalidOperationException("MCP accepts --snapshot, --revision, and optional --authorized-client-id.");
             if (!seen.Add(option) && option != "--scope")
                 throw new InvalidOperationException();
             if (option == "--include-non-verified")
@@ -35,6 +35,11 @@ internal static class NativePublishedCatalogCommand
             {
                 case "--snapshot": snapshot = value; break;
                 case "--revision": revision = value; break;
+                case "--authorized-client-id" when mcp:
+                    if (!Guid.TryParseExact(value, "D", out var client) || client == Guid.Empty)
+                        throw new InvalidOperationException("Expected a non-empty authorized client GUID.");
+                    authorizedClient = client;
+                    break;
                 case "--id": id = Guid.ParseExact(value, "D"); break;
                 case "--name" when !detail: name = value; break;
                 case "--resource" when !detail: resource = Guid.ParseExact(value, "D"); break;
@@ -50,7 +55,7 @@ internal static class NativePublishedCatalogCommand
 
         var catalog = Load(snapshot, revision);
         if (mcp)
-            return NativeCatalogMcpServer.Run(catalog);
+            return NativeCatalogMcpServer.Run(catalog, authorizedClient);
 
         var result = detail
             ? catalog.GetApplication(id!.Value, includeNonVerified)

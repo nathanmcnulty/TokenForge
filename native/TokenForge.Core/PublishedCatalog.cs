@@ -23,7 +23,7 @@ public sealed record PublishedCatalogClaim(string? Source, IReadOnlyDictionary<s
 
 public sealed class PublishedCatalog
 {
-    private readonly string revision;
+    public string Revision { get; }
     private readonly SortedDictionary<string, Entry> entries = new(StringComparer.Ordinal);
 
     private sealed record Entry(Guid Id, bool Verified, JsonElement Records,
@@ -35,7 +35,7 @@ public sealed class PublishedCatalog
     {
         if (revision.Length != 40 || !revision.All(Uri.IsHexDigit))
             throw new ArgumentException("Expected a full catalog revision.", nameof(revision));
-        this.revision = revision.ToLowerInvariant();
+        Revision = revision.ToLowerInvariant();
 
         var evidence = Applications(verifiedEvidence, "TokenForgeVerifiedApplicationEvidence", 1)
             .EnumerateObject().ToDictionary(row => Guid.ParseExact(row.Name, "D"), row => row.Value);
@@ -129,7 +129,7 @@ public sealed class PublishedCatalog
             matches.Add(new PublishedCatalogMatch(candidate.Id, candidate.Verified ? "Verified" : "NonVerified",
                 candidate.Evidence, candidate.Disposition, candidate.Reason, metadata, unknown));
         }
-        return new PublishedCatalogResult(1, revision, matches.Count, matches);
+        return new PublishedCatalogResult(1, Revision, matches.Count, matches);
     }
 
     private static bool MatchesGrant(JsonElement grant, Guid? resource, IReadOnlyList<string> scopes)

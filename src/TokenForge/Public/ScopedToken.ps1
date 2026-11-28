@@ -5,6 +5,7 @@ function Get-TokenForgeScopedToken {
     .DESCRIPTION
     Graph User.Read bootstraps API-confirmed observer context; its token is disposed before return.
     Candidates use fresh private observations, published redirects and explicit PKCE requests.
+    ClientId optionally pins the final request to one client with fresh observer-specific coverage.
     The optional GET API result is separate from token success. Caller owns returned token secrets.
     #>
     [CmdletBinding(DefaultParameterSetName='Vault')]
@@ -32,9 +33,11 @@ function Get-TokenForgeScopedToken {
         [ValidateRange(1,8)][int]$MaxRedirects=2,
         [ValidateRange(0,2147483647)][int]$MaxAdditionalScopes=2147483647,
         [switch]$OfflineAccess,
-        [uri]$ApiUri
+        [uri]$ApiUri,
+        [guid]$ClientId=[guid]::Empty
     )
     if(@($Scope|Where-Object {$_ -notmatch '^[A-Za-z0-9_-][A-Za-z0-9_.-]*$' -or $_ -cin @('openid','profile','email','offline_access')}).Count){throw 'Provide explicit API scope names.'}
+    if($PSBoundParameters.ContainsKey('ClientId') -and $ClientId -eq [guid]::Empty){throw 'ClientId must be a non-empty GUID.'}
     if(($VaultPath -or $VaultPassword -or $SessionName) -and (-not $VaultPath -or -not $VaultPassword -or -not $SessionName)){throw 'Vault persistence requires VaultPath, VaultPassword, and an explicit SessionName.'}
     $now=[DateTimeOffset]::UtcNow
     $captured=[TokenForge.Core.V0240.TimestampPolicy]::Parse($Inventory.CapturedAt)
@@ -48,6 +51,10 @@ function Get-TokenForgeScopedToken {
     $resource=@($Inventory.Applications|Where-Object {$_.AppId -eq $ResourceId.ToString() -and $_.Registration -eq 'Present' -and $_.Ownership -eq 'VerifiedMicrosoftOwner' -and $_.AccountEnabled})
     $graph=@($Inventory.Applications|Where-Object {$_.AppId -eq $graphId -and $_.Registration -eq 'Present' -and $_.Ownership -eq 'VerifiedMicrosoftOwner' -and $_.AccountEnabled})
     if($bootstrapApp.Count -ne 1 -or $resource.Count -ne 1 -or $graph.Count -ne 1){throw 'Enabled, ownership-verified bootstrap client, Graph, and resource records are required.'}
+    if($ClientId -ne [guid]::Empty){
+        $configuredClient=@($Inventory.Applications|Where-Object {$_.AppId -eq $ClientId.ToString() -and $_.Registration -eq 'Present' -and $_.Ownership -eq 'VerifiedMicrosoftOwner' -and $_.AccountEnabled})
+        if($configuredClient.Count -ne 1){throw 'The configured client must be enabled and ownership-verified in the inventory.'}
+    }
     $bootstrapRedirect=@($bootstrapApp[0].RedirectUris|Where-Object {
         $u=$null
         [uri]::TryCreate($_,[UriKind]::Absolute,[ref]$u) -and -not $u.UserInfo -and -not $u.Query -and -not $u.Fragment -and
@@ -90,8 +97,9 @@ function Get-TokenForgeScopedToken {
         $principal=$claims.PrincipalFingerprint;$tenantFingerprint=$claims.TenantFingerprint
         $bootstrap.AccessToken.Dispose();if($bootstrap.RefreshToken){$bootstrap.RefreshToken.Dispose()};$bootstrap=$null;$payload=$null;$me=$null
         $candidates=@(Get-TokenForgeAssessmentCoverage -Database $Database -ResourceId $ResourceId -Scope $Scope -TenantFingerprint $tenantFingerprint -PrincipalFingerprint $principal -MaxAgeHours $MaxAgeHours|Where-Object CoversAll)
+        if($ClientId -ne [guid]::Empty -and $ClientId.ToString() -notin @($candidates|ForEach-Object ClientId)){throw 'No fresh scope coverage for the configured client and authenticated observer.'}
         if(-not $candidates.Count){throw 'No fresh coverage for the authenticated observer; run scope discovery for this account.'}
-        $plans=@(New-TokenForgePlannedScopeRequests -Inventory $Inventory -Database $Database -ResourceId $ResourceId -Scope $Scope -PrincipalFingerprint $principal -Tenant $tid.ToString() -Warm $true -Browser ([bool]$Browser) -OfflineAccess ([bool]$OfflineAccess) -MaxCandidates $MaxCandidates -MaxRedirects $MaxRedirects -MaxAgeHours $MaxAgeHours)
+        $plans=@(New-TokenForgePlannedScopeRequests -Inventory $Inventory -Database $Database -ResourceId $ResourceId -Scope $Scope -PrincipalFingerprint $principal -Tenant $tid.ToString() -Warm $true -Browser ([bool]$Browser) -OfflineAccess ([bool]$OfflineAccess) -MaxCandidates $MaxCandidates -MaxRedirects $MaxRedirects -MaxAgeHours $MaxAgeHours -ClientId $ClientId)
         foreach($request in $plans){
             try{
                 $instant=[DateTimeOffset]::UtcNow
